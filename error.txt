@@ -1,0 +1,25 @@
+
+> mapafome@0.1.0 dev
+> next dev
+
+   ▲ Next.js 16.0.1 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.109:3000
+
+ ✓ Starting...
+ ✓ Ready in 1071ms
+ ○ Compiling / ...
+ GET / 500 in 9.0s (compile: 8.7s, render: 261ms)
+   ▲ Next.js 16.0.1 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.109:3000
+
+ ✓ Starting...
+ ✓ Ready in 61.5s
+   ▲ Next.js 16.0.1 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.109:3000
+
+ ✓ Starting...
+ ✓ Ready in 949ms
+[?25h

@@ -1,0 +1,42 @@
+{
+  "name": "mapafome",
+  "version": "0.1.0",
+  "private": true,
+  "homepage": "https://rslgp.github.io/mapafome_homolog",
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "eslint",
+    "export": "next build",
+    "predeploy": "npm run build && node -e \"const fs=require('fs'); fs.writeFileSync('out/.nojekyll',''); try{fs.unlinkSync('out/CNAME')}catch(e){}\"",
+    "deploy": "gh-pages -d out --dotfiles"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.4",
+    "@mui/material": "^7.3.9",
+    "aes-encryption": "^1.0.4",
+    "google-spreadsheet": "^3.0.10",
+    "javascript-time-ago": "^2.5.12",
+    "leaflet": "^1.9.4",
+    "leaflet-geosearch": "^4.2.2",
+    "leaflet.markercluster": "^1.5.3",
+    "next": "16.0.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-leaflet": "^5.0.0",
+    "react-leaflet-markercluster": "^5.0.0-rc.0",
+    "twemoji": "^14.0.2",
+    "universal-cookie": "^8.0.1"
+  },
+  "devDependencies": {
+    "babel-plugin-react-compiler": "1.0.0",
+    "baseline-browser-mapping": "^2.10.0",
+    "dotenv": "^17.2.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.1",
+    "gh-pages": "^6.3.0"
+  }
+}
