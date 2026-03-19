@@ -62,7 +62,10 @@ class NameForm extends Component {
     static getDerivedStateFromProps(nextProps, state) {
       if(state){
 
-        if (nextProps.alimento !== state.alimento){ 
+        if (nextProps.location !== state.location) {
+          state.location = nextProps.location;
+        }
+        if (nextProps.alimento !== state.alimento){
           state.alimento=nextProps.alimento;
         }
         if (nextProps.telefone !== state.telefone){ 

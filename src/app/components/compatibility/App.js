@@ -566,12 +566,8 @@ class App extends Component {
 
     var self = this;
 
-    //current location    
-    navigator.geolocation.getCurrentPosition(function (position) {
-      envVariables.currentLocation = [position.coords.latitude, position.coords.longitude];
-      self.setState({ center: [position.coords.latitude, position.coords.longitude] })
-    });
-
+    //current location
+    function runMain(self) {
     (async function main(self) {
       // Use service account creds
       await doc.useServiceAccountAuth({
@@ -698,6 +694,25 @@ class App extends Component {
       self.setState({ isLoading: false })
 
     })(self);
+    } // end runMain
+
+    console.log('[geo] requesting device location...');
+    navigator.geolocation.getCurrentPosition(
+      function (position) {
+        const coords = [position.coords.latitude, position.coords.longitude];
+        console.log('[geo] SUCCESS - device coords:', coords);
+        envVariables.currentLocation = coords;
+        self.setState({ center: coords }, function () {
+          console.log('[geo] state.center after setState:', self.state.center);
+          runMain(self);
+        });
+      },
+      function (err) {
+        console.warn('[geo] FAILED (code=' + err.code + '):', err.message, '- using default center:', self.state.center);
+        runMain(self);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
 
     window.fixarPonto = function (endereco, coords) {
       (async function main(endereco, coords) {

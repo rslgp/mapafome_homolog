@@ -38,6 +38,7 @@ import {
 import {
     TileLayersControl,
     MapClickHandler,
+    MapViewUpdater,
 } from './mapComponents';
 import envVariables from './variaveisAmbiente';
 
@@ -211,6 +212,9 @@ const CoffeeMap = ({
                 <TileLayersControl />
 
                 <SearchField />
+
+                {/* Pans map when GPS location arrives — MapContainer.center is not reactive */}
+                <MapViewUpdater center={center} />
 
                 {/* Encapsulated click handler: was inline whenReady arrow in V1 and V2 */}
                 <MapClickHandler onMapClick={handleMapClick} />

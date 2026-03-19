@@ -130,3 +130,21 @@ export const MapClickHandler = ({ onMapClick }) => {
 
     return null;
 };
+
+// ─── MapViewUpdater ───────────────────────────────────────────────────────────
+// MapContainer.center is only used on first render and is NOT reactive.
+// This child component uses useMap() to imperatively pan the map whenever
+// the `center` prop changes (i.e. when the device GPS position arrives).
+
+export const MapViewUpdater = ({ center }) => {
+    const map = useMap();
+
+    useEffect(() => {
+        if (center && center.length === 2) {
+            console.log('[map] MapViewUpdater setView:', center);
+            map.setView(center);
+        }
+    }, [center, map]);
+
+    return null;
+};
