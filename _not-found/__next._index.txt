@@ -1,4 +1,4 @@
 1:"$Sreact.fragment"
 2:I[68172,[],""]
 3:I[97210,[],""]
-0:{"buildId":"fVlaIDjv7CuPK2WYSSOz3","rsc":["$","$1","c",{"children":[null,["$","html",null,{"lang":"pt-br","suppressHydrationWarning":true,"children":[["$","head",null,{"children":[["$","link",null,{"rel":"canonical","href":"https://mapafome.com.br/"}],["$","meta",null,{"name":"referrer","content":"no-referrer"}]]}],["$","body",null,{"suppressHydrationWarning":true,"children":["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]}]]}]]}],"loading":null,"isPartial":false}
+0:{"buildId":"fiILLjZD8_D9gt9qS0fBT","rsc":["$","$1","c",{"children":[null,["$","html",null,{"lang":"pt-br","suppressHydrationWarning":true,"children":[["$","head",null,{"children":[["$","link",null,{"rel":"canonical","href":"https://mapafome.com.br/"}],["$","meta",null,{"name":"referrer","content":"no-referrer"}]]}],["$","body",null,{"suppressHydrationWarning":true,"children":["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]}]]}]]}],"loading":null,"isPartial":false}
