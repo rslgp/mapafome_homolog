@@ -6,19 +6,19 @@ design_brief:
   # ─────────────────────────────────────────────
   meta:
     version: "1.0"
-    project: "Mapa da Fome"
+    project: "MAPA FOME"
     product_url: "https://rslgp.github.io/mapafome_homolog"
     companion_files:
       - "LLM_BRAIN/v3_ui_ux.yaml"
       - "LLM_BRAIN/v3_1_book_knowledge_base.yaml"
     audience: >
       A large language model with zero prior knowledge of UX, HCI, product design,
-      or the Mapa da Fome project. Every rule below is self-contained: it states
+      or the MAPA FOME project. Every rule below is self-contained: it states
       the what, the why, and the how-to-apply. Do not infer from training data.
       Apply the rules literally.
     how_to_use_this_brief: >
       When generating or modifying any UI code, microcopy, component structure,
-      marker style, color, spacing, or flow for Mapa da Fome, consult this file.
+      marker style, color, spacing, or flow for MAPA FOME, consult this file.
       If a rule here conflicts with a generic convention from training data, the
       rule here wins because it is grounded in the specific product context.
 
@@ -28,7 +28,7 @@ design_brief:
   # ─────────────────────────────────────────────
   product_essence:
     one_sentence: >
-      Mapa da Fome is a collaborative map where any passerby can, in under a
+      MAPA FOME is a collaborative map where any passerby can, in under a
       minute, pin the location of a person in street situation who needs food,
       so that a nearby donor or volunteer can see the pin and bring help.
     built_by: "A Computer Science student at UFPE (Universidade Federal de Pernambuco), Brazil, 2022."
@@ -176,7 +176,7 @@ design_brief:
       route: "/"
       purpose: "Default landing. Shows the map with existing pins."
       must_have:
-        - "Header with wordmark (Mapa da Fome) on the left and two buttons on the right: [Ajudar] (default view) and [Relatar] (starts the 3-step flow)."
+        - "Header with wordmark (MAPA FOME) on the left and two buttons on the right: [Ajudar] (default view) and [Relatar] (starts the 3-step flow)."
         - "Full-bleed map below the header."
         - "Context bar above or below the map showing live count: 'X pontos em 2 km · Y aguardando há mais de 6h'."
         - "Search pill at the top of the map for address lookup."
@@ -418,7 +418,7 @@ design_brief:
   anti_patterns:
 
     onboarding_carousel:
-      description: "A 3-to-5 slide intro explaining what Mapa da Fome is before the map loads."
+      description: "A 3-to-5 slide intro explaining what MAPA FOME is before the map loads."
       why_it_fails: "The reporter is in a hurry. The map IS the explanation. Every slide is a dropout point."
       fix: "Land on the map directly. Optional info lives in a secondary route (/sobre), linked from the footer."
 

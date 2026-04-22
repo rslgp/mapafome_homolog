@@ -217,7 +217,7 @@ const MainControls = ({
 
           <div className='relativePosition'>
             <input className="TextField tfMarginUp" type="text" placeholder='Insira DDD telefone se quiser' onBlur={onTelefoneChange} />
-            <input className='nLocal' type="text" placeholder='nº' onBlur={onNumeroChange} />
+            <input className='nLocal' type="text" placeholder='nº casa' onBlur={onNumeroChange} />
             <br />
             <select style={{ "display": "none" }} ref={dropDownMenuRedeSocial}>
               <option value="instagram.com/">Insta</option>
@@ -226,8 +226,8 @@ const MainControls = ({
             <input ref={redesocialRef} style={{ "display": "none" }} className="TextField" type="text" placeholder='@' onBlur={onRedeSocialChange} />
             <br></br>
 
-            <fieldset>
-              <legend>Marcar Localização</legend>
+            <fieldset id="mdf-target-confirm">
+              <legend>Passo 3 — Marcar Localização</legend>
               <MyLocationButton
                 location={center}
                 alimento={alimento}
@@ -241,8 +241,12 @@ const MainControls = ({
               {false ? (
                 <CircularProgress />
               ) : (
-                <button className="SubmitButton marcar-local" onClick={onClickMap}>
-                  Tocada
+                <button
+                  className="SubmitButton marcar-local"
+                  onClick={onClickMap}
+                  aria-label="Confirmar ponto no mapa"
+                >
+                  Confirmar ponto
                 </button>
               )}
             </fieldset>

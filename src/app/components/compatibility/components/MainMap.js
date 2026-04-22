@@ -19,9 +19,8 @@ const MainMap = ({
       <Paper
         elevation={3}
         style={{
-          // padding: '10px',
           textAlign: 'center',
-          color: '#4d4d4d',
+          color: 'var(--mdf-ink-muted)',
           height: '84vh',
           overflow: 'hidden'
         }}

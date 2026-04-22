@@ -1,282 +1,47 @@
-@import url(https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap);
+/*
+ * MAPA FOME — legacy app shell + form styles.
+ * Tokens (color, spacing, radius, motion) live in /components/ux/tokens.css
+ * and are imported globally via globals.css. Hardcoded hex/px in this file
+ * are technical debt — extract to a token before adding new ones.
+ */
+
 @import url(https://unpkg.com/leaflet-geosearch@2.6.0/assets/css/leaflet.css);
-body {
-  background-color: #eef1f5;
+
+/* ── Main shell ─────────────────────────────────────── */
+.hidden {
+  display: none !important
+}
+.mdf-main {
+  padding: var(--mdf-space-3) var(--mdf-space-2);
+  background: var(--mdf-surface-0);
+  min-height: calc(100vh - var(--mdf-header-h) - var(--mdf-steps-hint-h));
 }
 
-a {
-  color: #3f51b5;
+@media (min-width: 768px) {
+  .mdf-main {
+    padding: var(--mdf-space-4) var(--mdf-space-4);
+  }
 }
 
-a:hover {
-  text-decoration: none;
-}
+/* ── Controls card (MainControls Paper#CoffeeTable) ──
+ * .toolPanel2 strips MUI Paper's default styling so we can re-skin
+ * the card with tokens. Without it MUI's elevation fights ours. */
 
-header {
-  background-color: #3F51B5 !important;
-}
-
-header a {
-  text-decoration: none;
-}
-
-a:visited {
-  color: #000;
-}
-
-#header #logo {
-  flex-grow: 0.1;
-}
-
-#header .emoji {
-  height: 1.5em;
-  vertical-align: middle;
-  padding-right: 0.25em;
-}
-
-#header .TableCount {
-  padding: 1em;
-  font-size: 0.8125rem;
-}
-
-#header .GitHub[type="button"] {
-  margin-left: 0.7125em;
-}
-
-#header .GitHub img {
-  height: 1.25em;
-}
-
-.GitHub.MuiIconButton-sizeSmall {
-  padding: 0px;
-}
-
-body, p {
-  font-family: 'Roboto', sans-serif;
-}
-
-
-/* CUSTOM */
-
-.filtro-tel {
-  display: flex;
-  flex-direction: column; /* Arrange children vertically */
-  justify-content: center;
-  /* gap: 20px; */
-}
-.parte {
-  display: flex;
-  align-items: center;
-}
-.parte.filtro {
-  grid-gap: 10px;
-  gap: 10px;
-}
-
-.list-cat {
-  width: -webkit-max-content;
-  width: max-content;
-}
-
-.alignElementCenter {
-  display: flex;
-  margin: auto;
-}
-/* CSS for the border container and label */
-.borderContainer {
-  border: 2px solid #ccc; /* Customize the border style, color, and width */
-  padding: 10px; /* Add padding to create space between the border and content */
-  display: inline-block; /* Display as inline-block to fit content width */
-}
-
-.borderLabel {
-  font-weight: bold; /* Make the label bold if needed */
-  margin-bottom: 5px; /* Add spacing between the label and content */
-}
-
-
-.MuiRating-root > label{
-  padding-right: 4px;
-  padding-left: 4px;
-}
-.leaflet-control-zoom{
-  opacity: 0.5;
-}
-.leaflet-bottom.leaflet-left{
-  opacity: 0.7;
-}
-.leaflet-popup-content{
-  width: 80%;
-}
-.ods{
-  width: 100px;
-  height: 100px;
-}
-.directionIcon{
-  width: 18px;
-  height: 18px;
-}
-.floatRight{
-  float: right;
-}
-.buttonsSidebySide{ 
-  text-align: center;
-  margin: 0 auto;
-  display: inline;
-}
-.nLocal{
-  width: 54px;
-}
-.relativePosition{
-  position: relative;
-  padding: 0 2%;
-}
-.toolPanel2{
-  background-color: transparent !important;
+.toolPanel2 {
+  background: transparent !important;
   box-shadow: none !important;
 }
-button, .SubmitButton {
-  background-color: #3897f0;
-  border: 1px solid #3897f0;
-  padding: 5px 12px;
-  color: #fff;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: 8px;
-  transition-duration: .4s;
-}
-.SubmitButton:hover {
-  background-color: #2d7ac2;
-}
-.SubmitButton:active {
-  background-color: #215b92;
-  transition-duration: .2s;
-}
-select{
-  border-radius: 4px;
-}
-.uxLi{  
+
+#CoffeeTable.toolPanel2 {
   display: block;
-  padding: 7px 0px;
-  cursor: pointer;
-}
-.greenHub{
-  background-color: #baffb8;
-  border-radius: 8px;
-}
-.blueHub{
-  background-color: #cfd7fa;
-  border-radius: 8px;
-}
-.yellowHub{
-  background-color: #ffdf9d;
-  border-radius: 8px;
-}
-.redHub{
-  background-color: #fca099;
-  border-radius: 8px;
+  background: var(--mdf-surface-1) !important;
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+  box-shadow: var(--mdf-elev-1) !important;
+  padding: var(--mdf-space-4);
 }
 
-
-.leaflet-touch .leaflet-control-layers-toggle {  
-  width: 28px !important;
-  height: 28px !important;
-}
-.leaflet-control-layers{
-  background: #9191b8 !important;
-}
-.leaflet-control-layers-toggle{
-  background-image: url(https://fonts.gstatic.com/s/i/googlematerialicons/layers/v9/white-18dp/1x/gm_layers_white_18dp.png) !important
-}
-textarea{
-  width: 95%;
-  height: 100px;
-}
-.beta {
-  font-size: 11px;
-}
-input[type="text"] {
-  padding: 8px 12px;
-  border: 1px solid #dbdbdb;
-  box-sizing: border-box;
-  border-radius: 8px;  
-  height: 44px;
-}
-
-input[type="radio"] { /* IE 9 */ /* Chrome, Safari, Opera */
-  transform: scale(1.5);
-  margin: 8px;
-}
-
-ul {
-  list-style: none;
-  margin: 0 0 20px;
-  /* margin-top: 20px; */
-  padding: 0;
-}
-
-figure {
-  background: rgb(201, 201, 201);
-  height: 1px;
-}
-img.telegram {
-  box-sizing: border-box;
-  background: url(https://telegram.org/img/WidgetButton_LogoSmall.png) no-repeat 0 0;
-  width: 20px;
-  height: 20px;
-  line-height: 20px;
-  display: inline-block;
-  vertical-align: middle;
-}
-a.tgme_widget_share_btn {
-  box-sizing: border-box;
-  height: 26px;
-  width: 60px;
-  display: block;
-  background-color: #54A9EB;
-  border-radius: 5px;
-  overflow: hidden;
-  line-height: 0;
-  padding: 3px 0px 0px 19px;
-  margin-top: 10px;
-  text-decoration: none;
-}
-
-.SubmitButton{
-  margin-right: 10px;
-  /*margin-bottom:22px;*/
-  height: 36px;
-}
-.SubmitButton.marcar-local {
-  width: 40%;
-}
-
-.form-endereco {
-  display: flex;
-  align-items: center;
-  grid-gap: 0.5em;
-  gap: 0.5em;
-  margin: 32px auto 22px;
-}
-
-
-.wp
-    {
-        width: 25px;
-        margin-top: 5px;
-
-    }
-.wpbtn
-    {
-        border: none;
-        background-color:white;
-    }
-
-/* Table Styling */
-
-#CoffeeTable {
-  display: flex;
-}
+/* ── Loading state ──────────────────────────────────── */
 
 .flexLoading {
   display: flex;
@@ -287,62 +52,465 @@ a.tgme_widget_share_btn {
 .loading {
   align-self: center;
   margin: 0 auto;
-  font-weight: bold;
-  color: #3f51b5;
+  font-weight: 600;
+  color: var(--mdf-ink-muted);
 }
 
-.MuiTableCell-head {
-  font-weight: bold !important;
+/* ── Form structure: filter row + category list ─────── */
+
+.relativePosition {
+  position: relative;
+  padding: 0;
 }
 
-.MuiTableCell-root {
-  min-width: 125px;
+.filtro-tel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-2);
+  margin-bottom: var(--mdf-space-4);
 }
 
-#CoffeeTable [class$="head"] {
-  text-transform: capitalize;
+.parte {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target);
 }
 
-#CoffeeTable [class$="head"] th:last-child {
-  text-align: right;
+.parte.filtro {
+  gap: var(--mdf-space-3);
+  flex-wrap: wrap;
 }
 
-/* Map Layout Styling */
-
-#map {
-  width: 100vw !important;
+.list-cat {
+  width: 100%;
+  list-style: none;
+  margin: 0 0 var(--mdf-space-4) 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-1);
 }
 
-#CoffeeMap {
-  /* CHANGED: corrected animation shorthand order (ease was misplaced before duration) */
-  animation: fadeIn 2s ease;
-  -webkit-animation: fadeIn 2s ease;
-  -moz-animation: fadeIn ease 2s;
-  -o-animation: fadeIn ease 2s;
-  -ms-animation: fadeIn ease 2s;
+.uxLi {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mdf-space-2);
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+  cursor: pointer;
+  transition: border-color var(--mdf-dur-fast) var(--mdf-ease-out),
+              background var(--mdf-dur-fast) var(--mdf-ease-out);
 }
 
-.MuiPaper-elevation1 {
-  height: 89vh;
+.uxLi:hover {
+  border-color: var(--mdf-ink-muted);
+  background: var(--mdf-surface-2);
 }
 
-.MuiPaper-elevation4 {
-  box-shadow: none !important;
+.uxLi:has(input[type="radio"]:checked) {
+  border-color: var(--mdf-ink);
+  background: var(--mdf-surface-2);
 }
 
-.MuiPaper-rounded {
-  border-radius: 0px 0px 4px 4px !important;
+/* ── Red + Green options: 2-row × 2-col grid ─────────
+ * Row 1 (merged across both columns, centered): the colored label span.
+ * Row 2 (two columns): the day/time selects side by side.
+ * A third select (frequency) wraps onto a half-row spanning both columns.
+ * The radio input is visually hidden but remains keyboard-focusable;
+ * `.uxLi:has(input:checked)` (above) supplies the visible selection cue
+ * via the parent label's border + background. */
+
+.uxLi:has(.redHub),
+.uxLi:has(.greenHub) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--mdf-space-2);
+  row-gap: var(--mdf-space-3);
+  align-items: center;
+  text-align: center;
+  padding: var(--mdf-space-3);
 }
 
-.MuiAppBar-root {
-  border-radius: 4px 4px 0px 0px;
+.uxLi:has(.redHub) > input[type="radio"],
+.uxLi:has(.greenHub) > input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+  transform: none;
 }
 
-/* Leaflet styling */
+.uxLi:has(.redHub) > .redHub,
+.uxLi:has(.greenHub) > .greenHub {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  text-align: center;
+}
 
-/* .leaflet-container a {
-  color: #8a4b38 !important;
-} */
+/* Drop the legacy <br> separator — row 2 is laid out by the grid. */
+.uxLi:has(.redHub) > br,
+.uxLi:has(.greenHub) > br {
+  display: none;
+}
+
+.uxLi:has(.redHub) > select,
+.uxLi:has(.greenHub) > select {
+  width: 100%;
+  min-width: 0;
+}
+
+/* If a third select is present (frequency), let it span both columns
+ * so the side-by-side pair on row 2 stays balanced. */
+.uxLi:has(.redHub) > select:nth-of-type(3),
+.uxLi:has(.greenHub) > select:nth-of-type(3) {
+  grid-column: 1 / -1;
+}
+
+/* Keyboard focus: the hidden radio still receives focus — relay the ring
+ * to the visible colored span so keyboard users see what's selected. */
+.uxLi:has(.redHub) > input[type="radio"]:focus-visible ~ .redHub,
+.uxLi:has(.greenHub) > input[type="radio"]:focus-visible ~ .greenHub {
+  box-shadow: 0 0 0 3px var(--mdf-brand);
+  border-radius: var(--mdf-radius-chip);
+}
+
+/* ── Category color chips (paired with text + border for a11y) ──
+ * Foundation 4: color is never the sole signal. Each hub keeps its
+ * recognized color from the marker legend, but text contrast is enforced
+ * (≥ 4.5:1) and a left border supplies a redundant cue. */
+
+.greenHub,
+.blueHub,
+.yellowHub,
+.redHub {
+  display: inline-block;
+  padding: var(--mdf-space-1) var(--mdf-space-2);
+  border-radius: var(--mdf-radius-chip);
+  font-weight: 500;
+  color: var(--mdf-ink);
+}
+
+.greenHub  { background: #d4f4cf; border-left: 3px solid #2f7a36; }
+.blueHub   { background: #cfd7fa; border-left: 3px solid #1f3d8a; }
+.yellowHub { background: #ffe7b3; border-left: 3px solid #8a5a00; }
+.redHub    { background: #fbcdc6; border-left: 3px solid #8a2a1f; }
+
+/* ── Form fields ────────────────────────────────────── */
+
+input[type="text"] {
+  padding: 0 var(--mdf-space-3);
+  height: var(--mdf-touch-target);
+  width: 100%;
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  color: var(--mdf-ink);
+  transition: border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+input[type="text"]:hover {
+  border-color: var(--mdf-ink-muted);
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--mdf-ink);
+  box-shadow: 0 0 0 2px var(--mdf-surface-0), 0 0 0 4px var(--mdf-brand);
+}
+
+input[type="text"]::placeholder {
+  color: var(--mdf-ink-subtle);
+}
+
+.tfMarginUp {
+  margin-top: var(--mdf-space-3);
+  margin-bottom: var(--mdf-space-2);
+}
+
+.nLocal {
+  width: 80px !important;
+  margin-left: var(--mdf-space-2);
+}
+
+input[type="radio"] {
+  transform: scale(1.4);
+  margin: var(--mdf-space-2);
+  accent-color: var(--mdf-brand);
+}
+
+select {
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  color: var(--mdf-ink);
+  cursor: pointer;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--mdf-ink);
+  box-shadow: 0 0 0 2px var(--mdf-surface-0), 0 0 0 4px var(--mdf-brand);
+}
+
+textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  resize: vertical;
+}
+
+fieldset {
+  margin-top: var(--mdf-space-4);
+  padding: var(--mdf-space-3);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+}
+
+legend {
+  padding: 0 var(--mdf-space-2);
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  color: var(--mdf-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Buttons ────────────────────────────────────────── */
+
+.SubmitButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-4);
+  background: var(--mdf-brand);
+  color: var(--mdf-brand-ink);
+  border: 1px solid var(--mdf-brand);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              transform var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.SubmitButton:hover {
+  background: var(--mdf-brand-hover);
+  border-color: var(--mdf-brand-hover);
+}
+
+.SubmitButton:active {
+  transform: scale(0.98);
+}
+
+.SubmitButton.marcar-local {
+  width: 100%;
+  margin-top: var(--mdf-space-3);
+}
+
+@media (min-width: 768px) {
+  .SubmitButton.marcar-local {
+    width: auto;
+    min-width: 200px;
+  }
+}
+
+/* Plain <button> elements outside the design system (InfoPanel toggles,
+ * Sugestao). Keep them tappable but visually quiet so they do not compete
+ * with the brand-red SubmitButton. */
+.alignElementCenter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-4);
+  margin: var(--mdf-space-2) auto;
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.alignElementCenter:hover {
+  background: var(--mdf-surface-2);
+}
+
+/* ── "OU" divider (figure>center pattern from MainControls) ── */
+
+figure {
+  position: relative;
+  margin: var(--mdf-space-4) 0;
+  text-align: center;
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+figure::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--mdf-border);
+  z-index: 0;
+}
+
+figure center {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  padding: 0 var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+}
+
+/* ── Address form row ──────────────────────────────── */
+
+.form-endereco {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  margin: var(--mdf-space-4) 0 var(--mdf-space-3);
+}
+
+/* ── Helpers retained from legacy ──────────────────── */
+
+.alignElementCenter {
+  display: flex;
+  margin: var(--mdf-space-2) auto;
+}
+
+.borderContainer {
+  border: 1px solid var(--mdf-border);
+  padding: var(--mdf-space-3);
+  border-radius: var(--mdf-radius-card);
+  display: inline-block;
+}
+
+.borderLabel {
+  font-weight: 600;
+  margin-bottom: var(--mdf-space-1);
+}
+
+.MuiRating-root > label {
+  padding-right: var(--mdf-space-1);
+  padding-left: var(--mdf-space-1);
+}
+
+.directionIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.floatRight {
+  float: right;
+}
+
+.buttonsSidebySide {
+  text-align: center;
+  margin: 0 auto;
+  display: inline;
+}
+
+.ods {
+  width: 100px;
+  height: 100px;
+}
+
+/* ── InfoPanel share buttons (WhatsApp + Telegram) ─── */
+
+.wpbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  text-decoration: none;
+  color: var(--mdf-ink);
+  font-weight: 600;
+  font-size: var(--mdf-fs-small);
+}
+
+.wpbtn:hover {
+  background: var(--mdf-surface-2);
+}
+
+.wp {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+
+img.telegram {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+a.tgme_widget_share_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target);
+  min-width: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-3);
+  background: #54A9EB;
+  border-radius: var(--mdf-radius-pill);
+  text-decoration: none;
+  margin-left: var(--mdf-space-2);
+}
+
+/* ── Leaflet overrides ─────────────────────────────── */
+
+.leaflet-control-zoom {
+  opacity: 0.85;
+}
+
+.leaflet-bottom.leaflet-left {
+  opacity: 0.8;
+}
+
+.leaflet-popup-content {
+  width: auto !important;
+  min-width: 240px;
+  max-width: 80vw;
+}
 
 .leaflet-tooltip span {
   display: block;
@@ -350,198 +518,124 @@ a.tgme_widget_share_btn {
 }
 
 .leaflet-pane.leaflet-tooltip-pane span:first-of-type {
-  font-weight: bold;
+  font-weight: 600;
 }
 
 .leaflet-container .leaflet-control-attribution {
   opacity: 0.75;
+  font-size: 11px;
 }
 
-/* react-leaflet-markercluster overrides for CircleMarker */
-
-.leaflet-marker-icon.marker-cluster.marker-cluster-small.leaflet-zoom-animated.leaflet-interactive {
-  font-weight: bold !important;
-  color: #000 !important;
+.leaflet-touch .leaflet-control-layers-toggle {
+  width: 32px !important;
+  height: 32px !important;
 }
 
-.marker-cluster-small-anjosCluster {
-  background-color: rgb(0, 70, 102);
+.leaflet-control-layers {
+  background: var(--mdf-surface-1) !important;
+  border-radius: var(--mdf-radius-card) !important;
+  box-shadow: var(--mdf-elev-2) !important;
 }
 
-.marker-cluster-small-anjosCluster div {
-  background-color: #bdd5db !important;
-}
-
-.marker-cluster-medium-anjosCluster {
-  background-color: rgb(0, 50, 102) !important;
-}
-
-.marker-cluster-medium-anjosCluster div {
-  background-color: #bdcadb !important;
-}
-
-.marker-cluster-large-anjosCluster {
-  background-color: rgb(22, 0, 102) !important;
-}
-
-.marker-cluster-large-anjosCluster div {
-  background-color: #c0bddb !important;
-}
-
-
-.marker-cluster-small-precisandoCluster {
-  background-color: rgb(212, 162, 64);
-}
-
-.marker-cluster-small-precisandoCluster div {
-  background-color: #dbdbbd !important;
-}
-
-.marker-cluster-medium-precisandoCluster {
-  background-color: rgb(216, 174, 59) !important;
-}
-
-.marker-cluster-medium-precisandoCluster div {
-  background-color: #dbd3bd !important;
-}
-
-.marker-cluster-large-precisandoCluster {
-  background-color: rgb(163, 97, 5) !important;
-}
-
-.marker-cluster-large-precisandoCluster div {
-  background-color: #dbcdbd !important;
-}
-
-.marker-cluster-small:hover, .marker-cluster-medium:hover, .marker-cluster-large:hover {
-  box-shadow: inset 0 0 0 25px #003238 !important;
+.leaflet-control-layers-toggle {
+  background-image: url(https://fonts.gstatic.com/s/i/googlematerialicons/layers/v9/black-18dp/1x/gm_layers_black_18dp.png) !important;
 }
 
 .leaflet-bean-icon {
-  border: 0px !important;
-  background-color: transparent !important;
+  border: 0 !important;
+  background: transparent !important;
 }
 
 .leaflet-marker-icon span {
   font-weight: 500;
-  color: #000 !important;
+  color: var(--mdf-ink) !important;
 }
 
 .leaflet-marker-icon {
-  opacity: 0.8 !important;
+  opacity: 0.9 !important;
 }
 
-/* Mobile responsive breakpoints */
+/* ── Marker cluster colors ─────────────────────────── */
 
-/* Media query for screens with a maximum height of 630px */
-@media screen and (max-width: 600px) {
-/* @media screen and (max-width: 1200px) {*/
-  
-  body{
-    font-size: 1.25em;
-  }
+.leaflet-marker-icon.marker-cluster.marker-cluster-small.leaflet-zoom-animated.leaflet-interactive {
+  font-weight: 600 !important;
+  color: var(--mdf-ink) !important;
+}
 
-  #CoffeeMap {
-    height: 60vh;
-  }
+.marker-cluster-small-anjosCluster      { background: rgb(0, 70, 102); }
+.marker-cluster-small-anjosCluster div  { background: #bdd5db !important; }
+.marker-cluster-medium-anjosCluster     { background: rgb(0, 50, 102) !important; }
+.marker-cluster-medium-anjosCluster div { background: #bdcadb !important; }
+.marker-cluster-large-anjosCluster      { background: rgb(22, 0, 102) !important; }
+.marker-cluster-large-anjosCluster div  { background: #c0bddb !important; }
+
+.marker-cluster-small-precisandoCluster      { background: rgb(212, 162, 64); }
+.marker-cluster-small-precisandoCluster div  { background: #dbdbbd !important; }
+.marker-cluster-medium-precisandoCluster     { background: rgb(216, 174, 59) !important; }
+.marker-cluster-medium-precisandoCluster div { background: #dbd3bd !important; }
+.marker-cluster-large-precisandoCluster      { background: rgb(163, 97, 5) !important; }
+.marker-cluster-large-precisandoCluster div  { background: #dbcdbd !important; }
+
+.marker-cluster-small:hover,
+.marker-cluster-medium:hover,
+.marker-cluster-large:hover {
+  box-shadow: inset 0 0 0 25px rgba(0, 50, 56, 0.85) !important;
+}
+
+/* ── Map shell (kept selector-compatible with map.js) ── */
+
+#map {
+  width: 100% !important;
+}
+
+#CoffeeMap {
+  animation: mdf-fade-in var(--mdf-dur-slow) var(--mdf-ease-out);
+}
+
+/* ── Mobile (single consolidated breakpoint) ───────── */
+
+@media (max-width: 600px) {
+  /* Map shrinks so the controls panel sits visibly below the fold,
+   * not buried 84vh down (Foundation 1 perceptual_limits). */
+  #CoffeeMap,
   .leaflet-container {
     height: 60vh !important;
     overflow: hidden !important;
   }
 
-  .relativePosition{
-    padding: 5% 5% 0;
+  .mdf-main [style*="height: 84vh"],
+  .mdf-main [style*="height:84vh"] {
+    height: 60vh !important;
   }
-    
+
+  #CoffeeTable.toolPanel2 {
+    padding: var(--mdf-space-3);
+  }
+
   .filtro-tel {
-    grid-gap: 10px;
-    gap: 10px;
-  }
-  .parte.filtro {
-    grid-gap: 8px;
-    gap: 8px;
+    gap: var(--mdf-space-3);
   }
 
-  .list-cat {
-    width: -webkit-fit-content;
-    width: -moz-fit-content;
-    width: fit-content;
+  .nLocal {
+    width: 72px !important;
   }
-
-  #header .emoji {
-    height: 1.4em;
-  }
-  #header h6 {
-    font-size: 0.9em;
-  }
-  .MuiPaper-rounded {
-    border-radius: 4px !important;
-  }
-  .MuiButton-containedSizeSmall {
-    font-size: 0.7125rem !important;
-  }
-  #header .TableCount {
-    display: none;
-  }
-  #header #RoasterButtonMobile {
-    display: none;
-  }
-  #CoffeeTable {
-    height: 58vh;
-  }
-
-  
 }
 
+/* ── Animations ─────────────────────────────────────── */
 
-/* Media query for screens with a height greater than 630px */
-@media screen and (min-height: 631px) and (max-width: 600px) {
-
-	#CoffeeMap {
-	height: 65vh;
-	}
-
-	.leaflet-container {
-	height: 65vh !important;
-	overflow: hidden !important;
-	}
-	body{
-		font-size: 1.25em;
-	}
-
-	#header .emoji {
-	height: 1.4em;
-	}
-	#header h6 {
-	font-size: 1.25em;
-	}
-	.MuiPaper-rounded {
-	border-radius: 4px !important;
-	}
-	.MuiButton-containedSizeSmall {
-	font-size: 0.7125rem !important;
-	}
-	#header .TableCount {
-	display: none;
-	}
-	#header #RoasterButtonMobile {
-	display: none;
-	}
-	#CoffeeTable {
-	height: 58vh;
-	}
-
+@keyframes mdf-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-/* fadeIn Animation */
-
-/* CHANGED: updated stop keyword from 100% to `to` (equivalent, matches current bundle) */
+/* Backwards compatibility for any code still referencing the old name. */
 @keyframes fadeIn {
-  0% {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #CoffeeMap {
+    animation: none;
   }
 }
-/*version current*/

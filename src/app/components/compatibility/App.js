@@ -10,6 +10,9 @@ import Sugestao from './components/googlesheets/sugestao';
 import MainMap from './components/MainMap';
 import MainControls from './components/MainControls';
 import InfoPanel from './components/InfoPanel';
+import StepsHint from './components/ux/StepsHint';
+import GuidedTutorial, { hasSeenTour } from './components/ux/GuidedTutorial';
+import { trackReportStarted } from './components/ux/analytics';
 // import CoffeeTable from './components/table';
 // import ReactGA from 'react-ga';
 
@@ -88,8 +91,12 @@ class App extends Component {
       ultimoAnoLocal: false,
       site: '',
       redesocial: '',
-
+      tourOpen: false,
+      activeStep: 1,
     }
+
+    this.handleStartTour = this.handleStartTour.bind(this);
+    this.handleCloseTour = this.handleCloseTour.bind(this);
 
     this.dropDownMenuSemanaEntregaAlimentoPronto = React.createRef();
     this.dropDownMenuHorarioEntregaAlimentoPronto = React.createRef();
@@ -372,6 +379,10 @@ class App extends Component {
     });
   }
   setTipoAlimento(event) {
+    if (!this._reportStartedFired) {
+      this._reportStartedFired = true;
+      trackReportStarted({ entryPoint: 'main_controls' });
+    }
     this.setState({
       alimento: event.target.value
     });
@@ -559,7 +570,21 @@ class App extends Component {
     })(this);
   }
 
+  handleStartTour() {
+    this.setState({ tourOpen: true });
+  }
+
+  handleCloseTour() {
+    this.setState({ tourOpen: false });
+  }
+
   componentDidMount() {
+
+    // First-visit guided tutorial — cookie-gated, contextual, never blocks the map.
+    // Defer one tick so the DOM nodes referenced by tour stops exist.
+    if (typeof window !== 'undefined' && !hasSeenTour()) {
+      setTimeout(() => this.setState({ tourOpen: true }), 600);
+    }
 
     // Google Sheets API
     // Based on https://github.com/theoephraim/node-google-spreadsheet
@@ -1011,9 +1036,15 @@ class App extends Component {
   render() {
     return (
       <div className="App">
-        <Header rowCountProp={this.state.rowCount} />
-        {/* <InserirEndereco/>
-        <MyLocationButton location={this.state.center}/> */}
+        <Header
+          rowCountProp={this.state.rowCount}
+          onStartTour={this.handleStartTour}
+        />
+        <StepsHint
+          activeStep={this.state.activeStep}
+          onStartTour={this.handleStartTour}
+        />
+        <main id="mdf-main" className="mdf-main">
         <Grid container spacing={2}>
           {/* Top row: MainMap (left) and MainControls (right) */}
           <MainMap
@@ -1067,6 +1098,12 @@ class App extends Component {
           <InfoPanel rowCount={this.state.rowCount} />
 
         </Grid>
+        </main>
+
+        <GuidedTutorial
+          open={this.state.tourOpen}
+          onClose={this.handleCloseTour}
+        />
 
       </div >
     );

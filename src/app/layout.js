@@ -1,12 +1,12 @@
 // app/layout.js
-// import './globals.css'; // your styles
+import './globals.css';
 
 export const metadata = {
   title: 'MAPA FOME',
   description: 'Vamos acabar com a fome juntos. Construído usando React, Material-UI e LeafletJS conectado ao Google Sheets para facilitar a edição da comunidade!',
   themeColor: '#000000',
   openGraph: {
-    title: 'MAPA da FOME',
+    title: 'MAPA FOME',
     description: 'Vamos acabar com a fome juntos. Construído usando React, Material-UI e LeafletJS conectado ao Google Sheets para facilitar a edição da comunidade!',
     images: ['/app_screenshot2.png'],
     url: 'https://github.com/rslgp/mapafome',
@@ -25,7 +25,7 @@ export const viewport = {
 // app/layout.js
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-br" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <link rel="canonical" href="https://mapafome.com.br/" />
         <meta name="referrer" content="no-referrer" />
