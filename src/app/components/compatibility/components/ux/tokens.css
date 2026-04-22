@@ -46,6 +46,26 @@
   --mdf-accent-water: #2E6E9E;
   --mdf-accent-shelter: #6B4C93;
 
+  /* Color — risk scale (statistics surfaces only; never in primary flow) */
+  --mdf-risk-none-bg: #E6EFE7;
+  --mdf-risk-none-ink: #2F5A35;
+  --mdf-risk-low-bg: #FFF2CF;
+  --mdf-risk-low-ink: #7A5A00;
+  --mdf-risk-mod-bg: #FFE1B8;
+  --mdf-risk-mod-ink: #7A4500;
+  --mdf-risk-high-bg: #FBCDC6;
+  --mdf-risk-high-ink: #7A2A1F;
+  --mdf-risk-very-high-bg: #F5B3AA;
+  --mdf-risk-very-high-ink: #5A1A10;
+
+  /* Color — info-page table zebra */
+  --mdf-table-zebra: #C8DFF5;
+
+  /* Color — tour chooser swatches (illustrative preview of pin colors) */
+  --mdf-tour-swatch-yellow: #FFDF9D;
+  --mdf-tour-swatch-blue: #CFD7FA;
+  --mdf-tour-swatch-red: #FCA099;
+
   /* Typography */
   --mdf-font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mdf-fs-body: 16px;

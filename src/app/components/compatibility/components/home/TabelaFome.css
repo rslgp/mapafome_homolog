@@ -1,0 +1,13 @@
+.tf-table {
+  width: 94%;
+  text-align: center;
+  margin: auto;
+}
+
+.tf-row--zebra {
+  background-color: var(--mdf-table-zebra);
+}
+
+.tf-cell--desc {
+  padding: 3%;
+}

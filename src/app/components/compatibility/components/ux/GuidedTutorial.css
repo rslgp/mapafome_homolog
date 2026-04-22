@@ -30,6 +30,9 @@
   position: fixed;
   width: min(320px, calc(100vw - 24px));
   max-width: 320px;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--mdf-surface-1);
   color: var(--mdf-ink);
   border-radius: var(--mdf-radius-sheet);
@@ -37,6 +40,12 @@
   padding: var(--mdf-space-6);
   pointer-events: auto;
   animation: mdf-tour-pop var(--mdf-dur-base) var(--mdf-ease-out-back) both;
+}
+
+@media (max-width: 380px) {
+  .mdf-tour__card {
+    padding: var(--mdf-space-4);
+  }
 }
 
 .mdf-tour__card:focus {
@@ -67,6 +76,7 @@
 
 .mdf-tour__actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: var(--mdf-space-2);
@@ -74,7 +84,23 @@
 
 .mdf-tour__nav {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--mdf-space-2);
+  margin-left: auto;
+}
+
+@media (max-width: 380px) {
+  .mdf-tour__actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .mdf-tour__nav {
+    margin-left: 0;
+    justify-content: space-between;
+  }
+  .mdf-tour__nav .mdf-tour__btn {
+    flex: 1 1 0;
+  }
 }
 
 .mdf-tour__btn {
@@ -120,6 +146,19 @@
   max-width: 380px;
 }
 
+/* Short viewports (landscape phones) — let the card scroll rather than clip. */
+@media (max-height: 520px) {
+  .mdf-tour__card {
+    padding: var(--mdf-space-4);
+  }
+  .mdf-tour__body {
+    margin-bottom: var(--mdf-space-4);
+  }
+  .mdf-tour__choice {
+    min-height: 52px;
+  }
+}
+
 .mdf-tour__choices {
   display: flex;
   flex-direction: column;
@@ -162,11 +201,15 @@
 }
 
 .mdf-tour__swatch--yellow {
-  background: #ffdf9d;
+  background: var(--mdf-tour-swatch-yellow);
 }
 
 .mdf-tour__swatch--bluered {
-  background: linear-gradient(135deg, #cfd7fa 0 50%, #fca099 50% 100%);
+  background: linear-gradient(
+    135deg,
+    var(--mdf-tour-swatch-blue) 0 50%,
+    var(--mdf-tour-swatch-red) 50% 100%
+  );
 }
 
 .mdf-tour__choice-text {

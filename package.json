@@ -8,6 +8,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "a11y": "npx --yes @axe-core/cli http://localhost:3000 --exit --tags wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa --show-errors",
     "export": "next build",
     "predeploy": "npm run build && node -e \"const fs=require('fs'); fs.writeFileSync('out/.nojekyll',''); try{fs.unlinkSync('out/CNAME')}catch(e){}\"",
     "deploy": "gh-pages -d out --dotfiles"

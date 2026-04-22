@@ -260,11 +260,11 @@
   text-transform: lowercase;
 }
 
-.ip-risk--nenhum     { background: #e6efe7; color: #2f5a35; }
-.ip-risk--baixo      { background: #fff2cf; color: #7a5a00; }
-.ip-risk--moderado   { background: #ffe1b8; color: #7a4500; }
-.ip-risk--alto       { background: #fbcdc6; color: #7a2a1f; }
-.ip-risk--muito-alto { background: #f5b3aa; color: #5a1a10; }
+.ip-risk--nenhum     { background: var(--mdf-risk-none-bg);      color: var(--mdf-risk-none-ink); }
+.ip-risk--baixo      { background: var(--mdf-risk-low-bg);       color: var(--mdf-risk-low-ink); }
+.ip-risk--moderado   { background: var(--mdf-risk-mod-bg);       color: var(--mdf-risk-mod-ink); }
+.ip-risk--alto       { background: var(--mdf-risk-high-bg);      color: var(--mdf-risk-high-ink); }
+.ip-risk--muito-alto { background: var(--mdf-risk-very-high-bg); color: var(--mdf-risk-very-high-ink); }
 .ip-risk--extremo    { background: var(--mdf-ink); color: var(--mdf-surface-1); }
 
 /* ── Conclusion ────────────────────────────────────── */

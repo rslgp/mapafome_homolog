@@ -110,10 +110,12 @@ export default function GuidedTutorial({ open, onClose }) {
     update();
     const raf = requestAnimationFrame(update);
     window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
     window.addEventListener('scroll', update, true);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
       window.removeEventListener('scroll', update, true);
     };
   }, [open, isChooser, stop, index]);
@@ -302,10 +304,19 @@ function popoverPosition(rect, isChooser) {
     return { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
   }
   const margin = 12;
-  const cardW = 320;
-  const cardH = 220;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+  // Card width matches CSS: min(320px, calc(100vw - 24px)).
+  const cardW = Math.min(320, vw - 24);
+  // Estimate card height from available viewport; CSS caps at 100dvh - 24px.
+  const cardH = Math.min(260, vh - 24);
+
+  // On very narrow viewports a spotlight-relative popover collides with the
+  // highlighted element. Fall back to centered so the card never overflows.
+  if (vw < 360 || vh < 420) {
+    return { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
+  }
+
   const belowTop = rect.bottom + margin;
   const aboveTop = rect.top - cardH - margin;
   const preferBelow = belowTop + cardH < vh - margin;

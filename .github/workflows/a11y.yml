@@ -1,0 +1,41 @@
+name: a11y
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  axe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Build the Next.js app. The project uses next build --webpack.
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_GOOGLESHEETID: ${{ secrets.NEXT_PUBLIC_GOOGLESHEETID }}
+          NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          NEXT_PUBLIC_GOOGLE_PRIVATE_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY }}
+          NEXT_PUBLIC_CRYPTSEED: ${{ secrets.NEXT_PUBLIC_CRYPTSEED }}
+
+      # Serve the built app in the background, then point axe at it.
+      - name: Start app
+        run: |
+          npx --yes serve -l 3000 out &
+          npx --yes wait-on http://localhost:3000 --timeout 60000
+
+      # Fail on serious + critical violations. WCAG 2.2 AA tags per M0 exit criteria.
+      - name: Run axe-core
+        run: |
+          npx --yes @axe-core/cli http://localhost:3000 \
+            --exit \
+            --tags wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa \
+            --show-errors
