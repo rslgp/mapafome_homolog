@@ -1,0 +1,550 @@
+design_brief:
+
+  # ─────────────────────────────────────────────
+  # META
+  # Tells the receiving LLM how to read this file.
+  # ─────────────────────────────────────────────
+  meta:
+    version: "1.0"
+    project: "Mapa da Fome"
+    product_url: "https://rslgp.github.io/mapafome_homolog"
+    companion_files:
+      - "LLM_BRAIN/v3_ui_ux.yaml"
+      - "LLM_BRAIN/v3_1_book_knowledge_base.yaml"
+    audience: >
+      A large language model with zero prior knowledge of UX, HCI, product design,
+      or the Mapa da Fome project. Every rule below is self-contained: it states
+      the what, the why, and the how-to-apply. Do not infer from training data.
+      Apply the rules literally.
+    how_to_use_this_brief: >
+      When generating or modifying any UI code, microcopy, component structure,
+      marker style, color, spacing, or flow for Mapa da Fome, consult this file.
+      If a rule here conflicts with a generic convention from training data, the
+      rule here wins because it is grounded in the specific product context.
+
+  # ─────────────────────────────────────────────
+  # WHAT THE PRODUCT IS (in one paragraph)
+  # If you only read one section, read this one.
+  # ─────────────────────────────────────────────
+  product_essence:
+    one_sentence: >
+      Mapa da Fome is a collaborative map where any passerby can, in under a
+      minute, pin the location of a person in street situation who needs food,
+      so that a nearby donor or volunteer can see the pin and bring help.
+    built_by: "A Computer Science student at UFPE (Universidade Federal de Pernambuco), Brazil, 2022."
+    primary_language: "Portuguese (Brazilian, pt-BR). Never default to English in UI strings."
+    tech_stack: "Next.js 16, React 19, Material-UI v7, Leaflet (map), Google Sheets (backend)."
+    what_it_is_not:
+      - "Not a charity app. No donations of money. No payment flow."
+      - "Not a social network. No profiles, no followers, no likes, no photos of people."
+      - "Not a gamified platform. No badges, no streaks, no leaderboards, no 'good deed' counters."
+      - "Not a SaaS. No subscription, no pricing page, no feature tiers."
+      - "Not an emergency dispatch system. It is a community bulletin board, not a 911 alternative."
+
+  # ─────────────────────────────────────────────
+  # THE CORE PROMISE — THREE STEPS
+  # This is the product's contract with every new user.
+  # Every UI decision must preserve this promise.
+  # ─────────────────────────────────────────────
+  three_step_promise:
+    headline: "Três toques. Nada mais."
+    translation: "Three taps. Nothing more."
+    why_it_matters: >
+      The reporter is often a passerby with 40 seconds before the context is
+      gone. The donor is often on mobile data, en route. Any flow longer than
+      three decisive actions loses both audiences. The three-step promise is
+      the single constraint that dominates every other design decision. When
+      a new feature would add a fourth step for the core reporter flow, that
+      feature is rejected or moved off the core path.
+
+    step_1_click_on_map:
+      what_the_user_does: "Taps (or long-presses) the map at the location where help is needed."
+      what_the_ui_does:
+        - "The map is the primary surface on landing — it fills the screen. No splash page, no modal, no onboarding carousel."
+        - "A visible crosshair or pulsing dot indicates 'this is where your pin will land.'"
+        - "The map auto-centers on the user's GPS on first load, after permission. If permission is denied, it defaults to the last viewed region or to Recife, PE (project's origin city)."
+        - "A search bar (pill-shaped, top of map) lets the user type an address or neighborhood if GPS is not usable."
+      feedback_required:
+        - "Within 100ms of tap, a marker placeholder appears with a drop animation (scale 0 → 1.1 → 1.0 over 240ms)."
+        - "If the user pans the map, the pin follows until they confirm. Moving the pin must never require a separate 'edit' mode."
+      copy_on_screen:
+        primary: "Toque no mapa onde você viu a pessoa"
+        secondary: "Arraste para ajustar o ponto"
+
+    step_2_click_on_category:
+      what_the_user_does: "Selects one or more categories of need, and optionally adds contact info for themselves (the reporter) so a donor can coordinate."
+      what_the_ui_does:
+        - "A bottom sheet (mobile) or side panel (desktop) appears with large category chips."
+        - "Categories are shown as icon + label pairs, never icon alone (accessibility + clarity)."
+        - "Categories are multi-select. Selecting a chip toggles a visible checked state (checkmark + filled background), not color alone."
+        - "A single optional free-text field ('Adicionar detalhe') is collapsed by default with a visible expand affordance."
+        - "A single optional contact field ('Seu contato — opcional') lets the reporter leave a phone or social handle so a donor can coordinate. Explicitly optional. Never required. Explain why it helps: 'Ajuda um voluntário a confirmar com você antes de ir.'"
+      categories:
+        - id: "comida"
+          label: "Comida"
+          icon: "🍞"
+        - id: "agua"
+          label: "Água"
+          icon: "💧"
+        - id: "roupa"
+          label: "Roupa"
+          icon: "👕"
+        - id: "higiene"
+          label: "Higiene"
+          icon: "🧼"
+        - id: "abrigo"
+          label: "Abrigo"
+          icon: "🏠"
+      validation:
+        - "At least one category must be selected before the confirm button activates."
+        - "If the user taps confirm with zero categories, do not show a generic error. Show inline, above the chips: 'Escolha pelo menos uma necessidade.'"
+      contact_field_rules:
+        - "Never required. The label explicitly says '(opcional)'."
+        - "Accepted formats: phone number, WhatsApp link, Instagram handle, email. Do not validate format rigidly — accept anything. The donor will judge validity."
+        - "The placeholder is an example, not a repeated label: placeholder='Ex: (81) 99999-0000 ou @seuperfil'."
+        - "Explain the benefit inline in small helper text: 'Um voluntário pode querer confirmar antes de ir até o local.'"
+      copy_on_screen:
+        primary: "O que a pessoa precisa agora?"
+        secondary: "Você pode escolher mais de uma."
+
+    step_3_confirm:
+      what_the_user_does: "Taps a single confirm button to publish the pin."
+      what_the_ui_does:
+        - "The confirm button is the ONLY primary-weight button on this screen. Every other element (back, expand, cancel) is secondary weight or tertiary (text link)."
+        - "On tap, the button immediately enters a loading state: text changes to 'Publicando…' and a subtle spinner appears inside the button."
+        - "If the publish succeeds, the button briefly shows 'Publicado ✓' for 1.2 seconds, then the sheet closes and the map re-centers on the new pin with a single ping-ring animation (600ms, no loop)."
+        - "If the publish fails (network, Sheets timeout), the button returns to 'Publicar ponto' and an inline error above it says: 'Não foi possível publicar. Verifique sua conexão e tente de novo.'"
+        - "After success, the user remains on the map. Do not navigate away. Do not show a modal asking for a rating or share prompt."
+      copy_on_screen:
+        button_default: "Publicar ponto"
+        button_loading: "Publicando…"
+        button_success: "Publicado ✓"
+        button_retry: "Tentar de novo"
+      forbidden_after_confirm:
+        - "No 'Share on social media' prompt."
+        - "No 'You just helped someone!' celebration."
+        - "No confetti, badges, points, or streaks."
+        - "No mandatory follow-up screens. The user's job is done."
+
+    three_step_invariants:
+      - "Total taps from landing to published pin must be ≤ 5 (open app, tap map, open sheet, tap category, tap confirm)."
+      - "The word 'Publicar' (or equivalent confirm verb) must appear on the button of the final step. Never 'OK', 'Submit', 'Done'."
+      - "No step can introduce a required account creation, login, or email verification. The product works for anonymous reporters forever."
+      - "No step can be a full-page navigation on mobile. Steps 2 and 3 must happen in the same bottom sheet, with the map still visible behind it."
+
+  # ─────────────────────────────────────────────
+  # USER TYPES
+  # Three distinct people use this product. Do not design for one and
+  # assume the others will cope.
+  # ─────────────────────────────────────────────
+  users:
+
+    reporter:
+      who: "A passerby who just saw a person in street situation who needs help."
+      goal: "Pin the location in under 40 seconds and leave."
+      device: "Mobile, often one-handed, sometimes in motion, sometimes emotional."
+      design_priority: "Speed and dignity. The three-step promise exists primarily for this user."
+      what_not_to_ask_them: >
+        Do not ask for the reporter's full name, email, photo of the person,
+        the person's name, or the person's age. The reporter's identity stays
+        anonymous by default; their optional contact is for donor coordination,
+        not public display.
+
+    donor:
+      who: "A volunteer or neighbor who has food, water, or time to bring to a pinned location."
+      goal: "See nearby pins, choose one, go there, mark it as attended."
+      device: "Mixed — desktop for browsing, mobile for navigating to the location."
+      design_priority: "Clarity of what is needed, where, and when it was pinned. A list view sorted by distance and age must always be one tap from the map."
+
+    initiative:
+      who: >
+        An existing solidarity group (soup kitchen, distribution point,
+        neighborhood collective) that wants its ongoing operation visible on
+        the map.
+      goal: "Register their location, schedule, and contact so both donors and people in need can find them."
+      device: "Desktop for registration, mobile for updates."
+      design_priority: "Low volume, so lives on a separate route (/iniciativas). Never clutters the reporter's 3-step flow."
+
+  # ─────────────────────────────────────────────
+  # SCREENS
+  # The minimum set of screens the product needs. If a screen is not
+  # listed here, it is not part of the MVP.
+  # ─────────────────────────────────────────────
+  screens:
+
+    map_home:
+      route: "/"
+      purpose: "Default landing. Shows the map with existing pins."
+      must_have:
+        - "Header with wordmark (Mapa da Fome) on the left and two buttons on the right: [Ajudar] (default view) and [Relatar] (starts the 3-step flow)."
+        - "Full-bleed map below the header."
+        - "Context bar above or below the map showing live count: 'X pontos em 2 km · Y aguardando há mais de 6h'."
+        - "Search pill at the top of the map for address lookup."
+        - "Floating action button on mobile (bottom-right, thumb zone) labeled '+' with aria-label='Relatar ponto' as a shortcut to the 3-step flow."
+      empty_state: >
+        If there are zero pins in the current viewport, do not show a blank map.
+        Overlay a semi-transparent card that says: 'Ninguém foi mapeado nesta
+        área ainda. Se você viu alguém precisando, toque em Relatar.' with a
+        direct button [Relatar].
+
+    report_sheet:
+      invoked_from: "Tapping [Relatar] in header, or the + FAB on mobile, or long-pressing the map."
+      purpose: "Hosts steps 2 and 3 of the 3-step flow. Step 1 (click on map) already happened to open this sheet."
+      behavior:
+        - "On mobile: bottom sheet, 70% height initially, can be dragged to 95%. Map remains visible behind."
+        - "On desktop: right-side panel, 400px wide, map remains visible to the left."
+        - "Tapping outside the sheet prompts a confirm dialog if any category is selected; tapping outside is otherwise a free dismiss."
+      contents_top_to_bottom:
+        - "Sheet handle (mobile only) for drag."
+        - "Small preview of the selected pin location: 'Ponto em: Rua Setúbal, Boa Viagem'."
+        - "Category chips (see step_2 above)."
+        - "Collapsed 'Adicionar detalhe' expander."
+        - "Collapsed 'Seu contato — opcional' expander."
+        - "Primary action button: [Publicar ponto]."
+        - "Tertiary link: [Cancelar]."
+
+    pin_detail_sheet:
+      invoked_from: "Tapping an existing pin on the map or its row in the list view."
+      purpose: "Shows the donor everything they need to decide whether to respond."
+      contents:
+        - "Category icons as a row (what is needed)."
+        - "Time since pinned: 'Há 2h' (use javascript-time-ago, already in deps)."
+        - "Walking distance and ETA from the donor's current location."
+        - "Optional detail text if the reporter provided it."
+        - "Reporter contact (if provided): displayed as a tap-to-call or tap-to-message button, not as raw text. Labeled 'Contato de quem reportou (opcional)'."
+        - "Status chip: 'Aguardando' (gray-green), 'Alguém a caminho' (amber), 'Atendido hoje' (gray)."
+        - "Primary action: [Estou indo agora]. Places a soft claim for 30 minutes. Visible claim count to all donors."
+        - "Secondary action: [Como chegar]. Opens native maps with directions."
+        - "After claim: [Marcar como atendido] replaces the primary action."
+
+    list_view:
+      invoked_from: "Tapping the context bar above the map, or a tab labeled 'Lista'."
+      purpose: "An accessible, ranked list of pins for users who cannot or do not want to browse the map spatially."
+      ranking: "Sorted by (distance_weight × 0.6) + (age_weight × 0.4) so both close-and-recent and far-but-stale pins surface."
+      row_contents:
+        - "Category icons."
+        - "Distance ('350 m') and time ('há 2h')."
+        - "Status chip."
+        - "Detail preview if present, truncated to 80 chars."
+        - "Chevron indicating tap opens the pin sheet."
+
+    initiatives_register:
+      route: "/iniciativas/cadastrar"
+      purpose: "For existing solidarity groups to register their ongoing operation."
+      fields:
+        - "Nome da iniciativa"
+        - "O que distribuem (categorias, multi-select)"
+        - "Endereço ou localização no mapa"
+        - "Dias e horários de atuação"
+        - "Contato (WhatsApp, Instagram, ou email)"
+      placement: "Linked from the footer and from a dedicated section in the info page. Never in the primary header — would violate Hick's Law for the main map screen."
+
+  # ─────────────────────────────────────────────
+  # VISUAL SYSTEM (DESIGN TOKENS)
+  # Never hardcode pixel values or hex codes in components. Use these.
+  # ─────────────────────────────────────────────
+  visual_system:
+
+    spacing:
+      base_unit_px: 4
+      scale_px: [4, 8, 12, 16, 24, 32, 48, 64]
+      rules:
+        - "Related elements closer together than unrelated elements."
+        - "Section padding minimum 24px. Card padding minimum 16px. Inline element gap minimum 8px."
+
+    radius:
+      chip_px: 4
+      card_px: 8
+      sheet_px: 12
+      map_pill_px: 16
+      pill_px: 999
+
+    color:
+      surface_0: "#FAFAF7"
+      surface_1: "#FFFFFF"
+      surface_ink: "#1A1A1A"
+      ink_muted: "#5C5C5C"
+      brand: "#D64545"
+      brand_ink: "#FFFFFF"
+      urgency_fresh: "#4A7C59"
+      urgency_waiting: "#D4A017"
+      urgency_stale: "#B84A3D"
+      urgency_done: "#7C7C7C"
+      accent_water: "#2E6E9E"
+      accent_food: "#B85C1F"
+      accent_shelter: "#6B4C93"
+      rules:
+        - "Surface is warm off-white (#FAFAF7), not pure white, to read as 'community board' not 'emergency dashboard.'"
+        - "Brand red (#D64545) appears only in the wordmark and at most one CTA per screen."
+        - "Urgency colors are never the only signal. Always paired with ring thickness (for markers) or an icon and text label (for chips)."
+        - "All body text meets 4.5:1 contrast against its background. All large text meets 3:1."
+
+    typography:
+      font_stack: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+      sizes:
+        body_mobile_px: 16
+        body_desktop_px: 15
+        h1_mobile_px: 24
+        h1_desktop_px: 28
+        chip_px: 13
+        helper_px: 13
+      rules:
+        - "Never use font-size below 12px for any visible text."
+        - "Line height 1.5 for body, 1.2 for headings."
+        - "Maximum paragraph width 65ch."
+
+    markers:
+      two_axis_encoding:
+        urgency_age_axis: "Ring thickness around the marker. Thin = fresh (<2h). Medium = waiting (2–6h). Thick = stale (>6h). Plus urgency color fill."
+        type_axis: "Interior glyph. Circle = individual person pin. House silhouette = registered initiative."
+      motion:
+        new_pin_appear_ms: 240
+        new_pin_ease: "ease-out-back (gives the pin landing weight)"
+        claim_ping_ms: 600
+        claim_ping_loop: false
+        attended_fade_ms: 400
+        attended_final_opacity: 0.4
+        attended_persistence_hours: 24
+      rules:
+        - "Never use a looping animation on any marker. A looping animation on a humanitarian map reads as a siren and breaks the calm tone."
+        - "Every motion timing is intentional. Do not use framework defaults without a reason."
+
+  # ─────────────────────────────────────────────
+  # MICROCOPY — PORTUGUESE STRINGS (pt-BR)
+  # These are the exact strings to use. Do not translate or paraphrase.
+  # ─────────────────────────────────────────────
+  microcopy:
+
+    headline_pair:
+      headline: "Três toques para mapear quem precisa de ajuda."
+      subhead: "Um mapa colaborativo contra a fome."
+
+    header_buttons:
+      help: "Ajudar"
+      report: "Relatar"
+
+    step_prompts:
+      step_1: "Toque no mapa onde você viu a pessoa"
+      step_1_hint: "Arraste para ajustar o ponto"
+      step_2: "O que a pessoa precisa agora?"
+      step_2_hint: "Você pode escolher mais de uma."
+      step_3_button_default: "Publicar ponto"
+      step_3_button_loading: "Publicando…"
+      step_3_button_success: "Publicado ✓"
+      step_3_button_retry: "Tentar de novo"
+
+    optional_fields:
+      detail_label: "Adicionar detalhe (opcional)"
+      detail_placeholder: "Ex: idoso, perto da farmácia"
+      contact_label: "Seu contato — opcional"
+      contact_helper: "Um voluntário pode querer confirmar com você antes de ir até o local."
+      contact_placeholder: "Ex: (81) 99999-0000 ou @seuperfil"
+
+    empty_states:
+      no_pins_in_view: "Ninguém foi mapeado nesta área ainda. Se você viu alguém precisando, toque em Relatar."
+      no_pins_anywhere: "Ainda não há pontos mapeados. Seja a primeira pessoa a mapear alguém."
+      search_zero_results: "Não encontramos esse endereço. Verifique a grafia ou tente um bairro próximo."
+
+    pin_detail:
+      waiting: "Aguardando"
+      someone_going: "Alguém a caminho"
+      attended_today: "Atendido hoje"
+      going_button: "Estou indo agora"
+      directions_button: "Como chegar"
+      mark_attended_button: "Marcar como atendido"
+      after_mark_attended: "Obrigado. O ponto foi arquivado."
+
+    errors:
+      at_least_one_category: "Escolha pelo menos uma necessidade."
+      publish_failed: "Não foi possível publicar. Verifique sua conexão e tente de novo."
+      gps_denied: "Precisamos da sua localização para mostrar pontos próximos. Você pode ativar no ícone de cadeado do navegador, ou buscar um bairro pelo campo acima."
+      offline: "Você está sem internet. Tente de novo quando a conexão voltar."
+      server_slow: "O servidor demorou a responder. Seu ponto pode ter sido salvo — espere 30s e recarregue antes de tentar de novo."
+
+    destructive_confirmations:
+      remove_own_pin_title: "Remover este ponto?"
+      remove_own_pin_body: "Se a pessoa já foi atendida, use 'Marcar como atendido' — o histórico ajuda outros voluntários."
+      remove_own_pin_cancel: "Cancelar"
+      remove_own_pin_confirm: "Remover mesmo assim"
+
+    rules:
+      - "Every button label describes the resulting action, never the abstract ('OK', 'Submit')."
+      - "Every error names what happened and what to do next."
+      - "Every placeholder is an example, never a repeated label."
+      - "Every optional field is explicitly labeled '(opcional)' inline."
+      - "Never use technical terms in user-facing strings: no '404', 'null', '422', 'timeout exceeded'."
+
+  # ─────────────────────────────────────────────
+  # DIGNITY CONSTRAINTS — HARD RULES
+  # These are not preferences. Violating any of these breaks the product's
+  # moral contract with the population it serves.
+  # ─────────────────────────────────────────────
+  dignity_constraints:
+
+    never_collect:
+      - "No photo upload of people, ever. Not even blurred. Not even optional."
+      - "No name of the person in need. Pins describe location and category, not identity."
+      - "No age, gender, or health status of the person. Those are medical-grade PII in a system with no security guarantees."
+      - "No public reporter identity. Reporters are displayed as 'Voluntário' uniformly."
+
+    never_gamify:
+      - "No badges, streaks, levels, XP, points, or achievements."
+      - "No 'you helped N people this month' counters, public or private."
+      - "No leaderboards of donors or reporters."
+      - "No sharing prompts after a successful action."
+
+    never_rank_worth:
+      - "No user-selected 'urgency level' field. Urgency is derived from time elapsed, which is neutral."
+      - "No ratings or reviews of initiatives. A 3-star soup kitchen is a category error."
+      - "No 'featured' or 'promoted' pins. Every human need is equal in the feed."
+
+    never_assume_stable_identity:
+      - "No account creation required for reporters. The product works fully anonymously, forever."
+      - "No email verification, no phone OTP, no captcha walls on the core flow."
+      - "No tracking cookies beyond what is needed for the soft-claim mechanic."
+
+    rationale_for_all_the_above: >
+      The population being mapped is in a state of acute vulnerability. Every
+      data field the system collects is a potential surface for harm (legal,
+      social, physical). The reporter is also a volunteer with no obligation
+      to the system. Friction in the reporter flow translates directly to
+      people not being mapped. Dignity is not a feature — it is a constraint
+      that prunes the design space.
+
+  # ─────────────────────────────────────────────
+  # ANTI-PATTERNS SPECIFIC TO THIS PRODUCT
+  # If you catch yourself about to do any of these, stop.
+  # ─────────────────────────────────────────────
+  anti_patterns:
+
+    onboarding_carousel:
+      description: "A 3-to-5 slide intro explaining what Mapa da Fome is before the map loads."
+      why_it_fails: "The reporter is in a hurry. The map IS the explanation. Every slide is a dropout point."
+      fix: "Land on the map directly. Optional info lives in a secondary route (/sobre), linked from the footer."
+
+    required_account:
+      description: "Asking the reporter to sign up before publishing a pin."
+      why_it_fails: "Breaks the three-step promise. Reporter abandons. Person is not mapped."
+      fix: "Anonymous reporting is the default forever. Accounts, if ever added, are for initiatives only."
+
+    splash_page:
+      description: "A full-screen intro page with a large logo and 'Começar' button before reaching the map."
+      why_it_fails: "Adds a tap with zero information. Signals marketing polish over utility."
+      fix: "Load the map. The wordmark is in the header. That is sufficient branding."
+
+    popup_donation_prompt:
+      description: "A modal asking the user to 'support the project' with a donation or subscription."
+      why_it_fails: "Turns a humanitarian tool into a funnel. Breaks trust."
+      fix: "Project funding information lives on a dedicated /apoiar page, not as an interrupting modal."
+
+    social_share_after_pin:
+      description: "After publishing a pin, prompting 'Share on WhatsApp / Instagram' with a template message."
+      why_it_fails: "Turns the reporter's compassionate act into social content. Normalizes posting about someone's hunger."
+      fix: "No share prompt on the reporter flow. The /sobre page can have share buttons for the project itself."
+
+    heat_map_of_poverty:
+      description: "A density visualization showing concentrations of pins as a colored overlay."
+      why_it_fails: "Aestheticizes suffering. Risk of the map being screenshot for unrelated agendas."
+      fix: "Individual pins only. Aggregate statistics, if needed, live on a separate /estatisticas page with consent framing."
+
+    push_notifications_by_default:
+      description: "Auto-subscribing the donor to notifications of every new pin in their city."
+      why_it_fails: "Creates alert fatigue. Turns the product into another engagement loop."
+      fix: "Push notifications are opt-in only, with per-radius and per-frequency controls. Off by default."
+
+  # ─────────────────────────────────────────────
+  # ACCESSIBILITY — WCAG 2.2 FLOOR
+  # These are minimums, not goals. Non-negotiable for MVP.
+  # ─────────────────────────────────────────────
+  accessibility:
+
+    mandatory:
+      - "Every form input has a visible <label> element associated via for/id. Placeholder is supplementary only."
+      - "Every image has alt text. Purely decorative images use alt=''."
+      - "Every interactive element is reachable via keyboard using Tab, Shift+Tab, Enter, Space, Escape."
+      - "A visible focus indicator (minimum 3:1 contrast, 2px solid) is present on every interactive element. Never use outline:none without a replacement."
+      - "A 'Pular para o mapa' skip link is the first focusable element on every page."
+      - "The <html> element has lang='pt-BR'."
+      - "Body text contrast ratio ≥ 4.5:1. Large text ≥ 3:1. UI components ≥ 3:1."
+      - "Touch targets ≥ 44x44px. Map HUD controls ≥ 60x60px because the map is an active one-handed surface."
+      - "Color is never the sole signal. Urgency, status, and category all use secondary cues (icon, label, ring thickness)."
+      - "Bottom sheets and modals trap focus while open and return focus to the trigger on close."
+      - "Live updates (new pin published, pin attended) are announced via an aria-live='polite' region."
+      - "Error messages use role='alert' and appear inline adjacent to the field that caused them."
+
+    accepted_deferrals:
+      - "Full keyboard panning of the Leaflet map is not in MVP. The list view is the accessible equivalent."
+      - "Screen reader narration of the full map is not attempted. The list view serves this user."
+
+    testing_requirements:
+      - "axe-core or equivalent runs in CI and blocks deployment on violations."
+      - "Every new interactive pattern is manually tested with NVDA (Windows) or VoiceOver (iOS) before shipping."
+
+  # ─────────────────────────────────────────────
+  # METRICS — HOW WE KNOW THE UX IS WORKING
+  # Every feature ships with instrumentation. No exceptions.
+  # ─────────────────────────────────────────────
+  metrics:
+
+    primary_success_metric:
+      name: "three_step_completion_rate"
+      definition: "Percentage of users who open the report flow and publish a pin within 90 seconds."
+      target_mvp: "≥ 75%"
+      below_target_action: "Redesign the report flow before adding any new feature."
+
+    events_required:
+      - event: "pin_report_started"
+        properties: ["entry_point", "device", "has_gps_permission"]
+      - event: "pin_report_published"
+        properties: ["categories", "has_detail", "has_contact", "time_from_start_ms"]
+      - event: "pin_report_abandoned"
+        properties: ["step_abandoned", "time_on_step_ms"]
+      - event: "pin_viewed"
+        properties: ["pin_id", "age_bucket", "from_surface"]
+      - event: "pin_claim_started"
+        properties: ["pin_id", "distance_m"]
+      - event: "pin_marked_attended"
+        properties: ["pin_id", "minutes_since_claim"]
+      - event: "empty_state_shown"
+        properties: ["bbox", "zoom_level"]
+
+    heart_dimensions_tracked:
+      happiness: "Quarterly SUS survey to donors. Target score ≥ 68."
+      engagement: "Weekly active donors ÷ total registered donors."
+      adoption: "New reporters in the first 7 days after first visit."
+      retention: "Day-7 and Day-30 donor return rate."
+      task_success: "three_step_completion_rate (see primary metric above)."
+
+    rules:
+      - "Before writing code for a new feature, define exactly one success metric that can be measured within 2 weeks."
+      - "If a feature ships and the metric does not move within 2 weeks, the feature has failed. Redesign or remove."
+
+  # ─────────────────────────────────────────────
+  # IMPLEMENTATION GUIDANCE FOR THE LLM
+  # When generating code for this product, follow this protocol.
+  # ─────────────────────────────────────────────
+  implementation_protocol:
+
+    before_writing_any_component:
+      - "Identify which of the 3 user types this component serves. If it serves all 3, reconsider — probably two separate components."
+      - "Identify which of the 3 steps this component belongs to, if any. If it expands the reporter flow past 3 steps, stop."
+      - "Check every string in the component against the microcopy section. Use the exact Portuguese phrasing given."
+      - "Check every color, spacing, and radius against the visual_system tokens. No hardcoded values."
+
+    mandatory_component_states:
+      - "Loading state — shown within 100ms of any async action."
+      - "Success state — brief visible confirmation, auto-dismissing, never blocking next action."
+      - "Error state — inline, adjacent to the cause, with specific text from the microcopy.errors section."
+      - "Empty state — designed, never a blank container. Uses microcopy.empty_states."
+
+    forbidden_code_patterns:
+      - "Hardcoded hex colors or pixel values in component files."
+      - "onClick handlers that perform async work without immediately setting a loading state."
+      - "alt attributes copied from the filename ('alt=logo.png')."
+      - "Forms that clear all user input on submit error."
+      - "outline:none without a replacement focus style."
+      - "English strings in user-facing UI. All UI text is Portuguese (pt-BR)."
+
+    when_in_doubt:
+      default_action: "Subtract, not add. Remove the element. Ship the simpler version. Measure. Only add back if absence causes a measured problem."
+      escalation_question: "Does this preserve the three-step promise for the reporter flow? If no, rework until yes."

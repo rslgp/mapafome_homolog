@@ -1,0 +1,1643 @@
+llm_knowledge_base:
+
+  # ─────────────────────────────────────────────
+  # META
+  # ─────────────────────────────────────────────
+  meta:
+    version: "3.2-book-knowledge"
+    document_type: "knowledge_base"
+    companion_to: "v3.x UI/UX LLM Instruction Framework"
+    purpose: >
+      This document translates the key applicable principles from canonical
+      UI/UX, HCI, product, motion, and affective design books into structured
+      rules an LLM can apply directly. It is organized by tier based on two
+      criteria: impact on daily product decisions and insubstitutability
+      within the book's subdomain.
+    tier_definitions:
+      S_plus: "Foundational. Irreplaceable. Defines the vocabulary of the entire field. Every other book builds on these."
+      S: "Canonical. Industry-proven. Solves a specific problem no other resource solves with the same depth."
+      A_plus: "Subcategory-defining. Tier S within its domain. Context-dependent but essential when that context is present."
+      A: "High-quality. Complementary. Best second-layer read for its topic after the S resources."
+    scope: "Only books applicable to SaaS, MVP development, game engine UI, mobile/web, and high-trust platforms."
+    excluded_tiers: "B, C, and below. Resources below Tier A are not included."
+    assumption: >
+      The LLM receiving this document has no prior UX knowledge.
+      Every principle is self-contained with a rule, the user impact if violated,
+      and concrete application guidance.
+
+  # ─────────────────────────────────────────────
+  # TIER S+
+  # Foundational. Irreplaceable. Every other book builds on these.
+  # ─────────────────────────────────────────────
+  tier_s_plus:
+
+    - title: "The Design of Everyday Things"
+      authors: ["Don Norman"]
+      category: "hci_core"
+      domain_fit: ["web", "mobile", "saas", "game_ui", "high_trust"]
+      why_s_plus: >
+        Norman established the vocabulary every other UX resource uses.
+        Affordances, signifiers, feedback, conceptual models, and the gulfs of
+        execution and evaluation are the atomic units of all interface design.
+        If you understand nothing else about UX, understanding these six concepts
+        will prevent the most common and most expensive interface failures.
+      principles:
+
+        affordances:
+          rule: >
+            An affordance is a relationship between an object and a user that
+            determines how the object can be used. A flat glass surface affords
+            sliding. A protruding button affords pressing. In digital interfaces,
+            affordances must be designed because they are not physically self-evident.
+          user_impact_if_violated: >
+            Users do not interact with elements that do not look interactable.
+            CTAs that look like decorative text are not clicked.
+            Input fields that look like labels are not filled.
+          apply:
+            - "Buttons: must have background fill, border, or elevation. Never styled as flat text for primary actions."
+            - "Input fields: must have a visible border or background fill distinct from surrounding static text."
+            - "Links in body text: must be underlined or in a color clearly distinct from body text."
+
+        signifiers:
+          rule: >
+            A signifier is a perceivable signal that communicates where and how
+            an action should be performed. Signifiers make affordances visible.
+            A door handle signals 'pull here'. A search icon signals 'type here'.
+          user_impact_if_violated: >
+            Without signifiers, affordances are invisible. Users miss interactive
+            elements even when they are present and functional.
+          apply:
+            - "Placeholder text inside an input field is a signifier of fillability — but must be paired with a visible border or background, not used alone."
+            - "A chevron icon (>) signals expandable content. Use it consistently. If a row is expandable in one table, every expandable row in the product must use the same chevron."
+            - "Drag handles (⠿) are signifiers for draggable elements. Never make elements draggable without this signal."
+
+        feedback:
+          rule: >
+            Feedback is information sent back to the user about what action has
+            been done and what result was accomplished. Without feedback, users
+            cannot build a mental model of how the system responds.
+          user_impact_if_violated: >
+            Users who receive no feedback after an action repeat the action,
+            assume failure, or lose trust in the system's reliability.
+          apply:
+            - "Every button click must produce a visible state change within 100ms."
+            - "Every form submission must produce either a success confirmation or an inline error before the user moves focus."
+            - "Every background process (file upload, API sync, data save) must produce a visible progress or completion signal."
+
+        gulf_of_execution:
+          rule: >
+            The gulf of execution is the difficulty of figuring out what actions
+            are possible and how to perform them. The wider this gulf, the harder
+            the product is to use. The goal is to minimize the number of steps,
+            decisions, and translations between a user's goal and the actions
+            available in the interface.
+          user_impact_if_violated: >
+            Users abandon tasks when the path to their goal is unclear or too long.
+            Every additional required click or decision is a potential dropout point.
+          apply:
+            - "Core workflows: measure click count from entry to completion. Target 5 or fewer."
+            - "Never require users to navigate away to complete a subtask that belongs to the current flow."
+            - "Pre-fill every field that can be inferred from context (location, previous selection, account data)."
+
+        gulf_of_evaluation:
+          rule: >
+            The gulf of evaluation is the difficulty of interpreting the system's
+            state and determining whether the goal has been accomplished. After
+            taking an action, the user must be able to perceive the result and
+            confirm it matches their intention.
+          user_impact_if_violated: >
+            Users who cannot tell whether their action succeeded repeat it, undo it
+            unnecessarily, or contact support.
+          apply:
+            - "Success states must be visually distinct from the pre-action state. A button that looks the same after being clicked has failed."
+            - "After any navigation, the current page must be immediately identifiable from the heading, breadcrumb, and navigation highlight."
+            - "After a destructive action (delete, archive), show a visible confirmation of what was deleted and offer undo."
+
+        conceptual_models:
+          rule: >
+            A conceptual model is the user's internal understanding of how a system
+            works. When the interface's conceptual model matches the user's mental
+            model, the product is learnable and predictable. When they differ, users
+            make systematic errors.
+          user_impact_if_violated: >
+            Users who have a wrong conceptual model make the same errors repeatedly
+            and cannot generalize learning from one part of the product to another.
+          apply:
+            - "Route structures and terminology must match the user's task vocabulary, not the system's data model."
+            - "If the product represents a real-world concept (invoices, orders, projects), the UI must preserve every property of that concept the user expects."
+            - "Never rename or restructure a familiar workflow without providing a transition path that connects the old model to the new one."
+
+    - title: "Don't Make Me Think"
+      authors: ["Steve Krug"]
+      category: "usability"
+      domain_fit: ["web", "mobile", "saas"]
+      why_s_plus: >
+        Krug's central argument — that every moment a user has to think about how
+        to use an interface is a failure — is the clearest single-sentence summary
+        of what UX is for. The book translates cognitive science into practical
+        evaluation criteria any practitioner can apply.
+      principles:
+
+        self_evident_design:
+          rule: >
+            An interface is self-evident when a new user can understand what it is,
+            how to use it, and what it is for without reading instructions. The test
+            is simple: show the interface to someone who has never seen it and observe
+            whether they hesitate. Any hesitation is a design failure.
+          apply:
+            - "Primary navigation must communicate what the product does and what sections exist without requiring the user to click to discover."
+            - "The most important action on any page must be visually dominant and in an expected location."
+            - "Never assume the user will read explanatory text. Design as if all text will be ignored."
+
+        navigation_conventions:
+          rule: >
+            Users do not read websites. They scan. They look for familiar patterns:
+            the logo in the top-left, navigation across the top, search in the
+            top-right. Deviating from these conventions forces the user to think,
+            which is the failure state.
+          apply:
+            - "Logo: top-left, always links to home."
+            - "Primary navigation: top horizontal bar on desktop, bottom tab bar on mobile."
+            - "Search: top-right on desktop, accessible via icon on mobile."
+            - "Never place primary navigation in a location the user must discover."
+
+        trunk_test:
+          rule: >
+            At any point in the product, a user should be able to answer five
+            questions without looking: What site/product is this? What page am I on?
+            What are the major sections? What are my options at this level?
+            Where am I relative to where I was?
+          apply:
+            - "Every page must display: product name or logo, page title, active navigation state, breadcrumb (if more than 2 levels deep)."
+            - "Test any page in isolation. If the five questions cannot be answered in 5 seconds, the navigation has failed."
+
+        happy_path_design:
+          rule: >
+            Design the happy path — the most common, successful user journey —
+            to be effortless. Edge cases and error paths are secondary. Most users
+            on most visits follow the same core flow. Make that flow invisible.
+          apply:
+            - "The primary CTA for the most common action must be the most visually prominent element on the page."
+            - "Errors and edge case states should not degrade the visual clarity of the happy path."
+            - "Remove any element from the happy path that does not directly serve the completion of the core task."
+
+    - title: "Thinking, Fast and Slow"
+      authors: ["Daniel Kahneman"]
+      category: "behavioral_psychology"
+      domain_fit: ["web", "mobile", "saas", "high_trust"]
+      why_s_plus: >
+        Kahneman's System 1 and System 2 model is the theoretical foundation for
+        why every other UX principle works. Understanding that most user behavior is
+        fast, automatic, and non-deliberate explains why cognitive load matters,
+        why defaults are powerful, why loss aversion affects conversion, and why
+        users do not behave like rational actors.
+      principles:
+
+        system_1_design:
+          rule: >
+            System 1 is the brain's fast, automatic, intuitive mode. It recognizes
+            patterns, reads emotions from faces, and responds to visual stimuli without
+            deliberate effort. System 2 is slow, deliberate, and effortful. Interfaces
+            that require System 2 are cognitively expensive. Interfaces designed for
+            System 1 feel effortless because they match existing patterns and
+            expectations. The goal is to keep the user in System 1 for all routine tasks.
+          apply:
+            - "Use platform-native UI patterns for routine interactions (login, search, navigation). Pattern recognition is System 1. Novel patterns require System 2."
+            - "Reduce the number of decisions in any flow. Every decision forces System 2 engagement."
+            - "Visual hierarchy communicates importance without requiring deliberate reading. Make it unambiguous."
+
+        cognitive_ease:
+          rule: >
+            Cognitive ease is the subjective experience of things feeling easy to
+            process. High cognitive ease produces positive associations with a product.
+            Low cognitive ease (cognitive strain) produces negative associations —
+            the user perceives the product as harder, less trustworthy, or less
+            competent than it is.
+          apply:
+            - "Use high-contrast, readable typography. Difficult-to-read text creates cognitive strain independent of the content's complexity."
+            - "Use familiar visual patterns. Unfamiliar patterns require extra cognitive effort to decode."
+            - "Consistent spacing, color use, and visual hierarchy reduce cognitive load on every page."
+
+        loss_aversion:
+          rule: >
+            Humans are more motivated by avoiding losses than by acquiring equivalent
+            gains. The fear of losing something is psychologically approximately twice
+            as powerful as the pleasure of gaining something of equal value.
+          apply:
+            - "Framing matters: 'Don't lose your progress' is more motivating than 'Save your progress'."
+            - "For upgrade prompts: 'You're missing X features' activates loss aversion more effectively than 'You could have X features'."
+            - "For onboarding: incomplete progress indicators ('Your profile is 60% complete') leverage loss aversion to drive completion."
+
+        anchoring:
+          rule: >
+            The first number or option a user sees becomes an anchor that affects
+            all subsequent judgments. Even arbitrary anchors influence decisions.
+          apply:
+            - "In pricing tables: display the most expensive tier first (left to right). It anchors the user's perception of value, making lower tiers feel like a good deal."
+            - "In form defaults: the pre-selected option becomes the anchor. Set defaults deliberately toward the outcome you want."
+            - "In search results: the first result is disproportionately likely to be clicked. Position matters."
+
+        defaults_and_status_quo_bias:
+          rule: >
+            Users tend to stick with pre-selected defaults. Changing a default
+            requires deliberate System 2 effort. The default is always a design
+            decision — it is never neutral.
+          apply:
+            - "Set smart defaults for every form field and configuration option. The default should be the option most users would choose."
+            - "Opt-in by default for actions that benefit users. Opt-out by default for communications (only where legally appropriate)."
+            - "For complex settings, the default configuration should be the best-practice configuration, not the minimum or maximum."
+
+    - title: "About Face: The Essentials of Interaction Design"
+      authors: ["Alan Cooper", "Robert Reimann", "David Cronin", "Christopher Noessel"]
+      category: "interaction_design"
+      domain_fit: ["web", "mobile", "saas", "enterprise", "game_ui"]
+      why_s_plus: >
+        About Face is the foundational text of interaction design as a discipline.
+        Cooper's goal-directed design methodology — designing around user goals
+        rather than system tasks or features — changed how the entire industry
+        approaches product design. The persona method originated here.
+      principles:
+
+        goal_directed_design:
+          rule: >
+            Users have goals (be on time, stay within budget, impress my client).
+            They use products to accomplish those goals. The interface must be
+            structured around user goals, not around system capabilities,
+            feature sets, or database schemas. A UI that exposes system internals
+            forces the user to translate between their goal and the system's model.
+          apply:
+            - "Before designing any screen, write the user goal it serves in one sentence. If you cannot, the screen should not exist."
+            - "Navigation labels must be goal-oriented: 'Send Money' not 'Transfer Initiation'."
+            - "Component state names must reflect the user's reality: 'Order on its way' not 'shipment_status: in_transit'."
+
+        personas:
+          rule: >
+            A persona is a composite representation of a specific type of user,
+            grounded in research. Personas replace vague references to 'the user'
+            with a specific, named individual whose goals, behaviors, and frustrations
+            are defined. Designing for one specific persona produces better outcomes
+            than designing for an averaged or imagined generic user.
+          apply:
+            - "When making a design decision, ask: 'Would [specific persona] understand this immediately?' not 'Would users understand this?'"
+            - "Conflicting design requirements from different user types should be resolved by identifying the primary persona — the user the product is optimized for."
+            - "Edge case handling should be designed for secondary personas, but never at the expense of the primary persona's flow."
+
+        perpetual_intermediates:
+          rule: >
+            Most users are perpetual intermediates: they have passed the beginner
+            stage and will never become experts. Designing for beginners produces
+            patronizing, inefficient interfaces. Designing for experts produces
+            interfaces only experts can use. Designing for perpetual intermediates
+            means: efficient, learnable, with expert shortcuts available but not required.
+          apply:
+            - "Tooltips and helper text: provide on first use but do not show on every use after the user has demonstrated understanding."
+            - "Keyboard shortcuts: provide them, document them, but never require them for core functionality."
+            - "Advanced settings: available but behind progressive disclosure. Not on the primary path."
+
+        posture_and_modality:
+          rule: >
+            Software posture describes the relationship between the user and the
+            application. Sovereign posture (uses the full screen, long sessions,
+            high expertise: video editing, coding IDEs) requires high information
+            density and keyboard efficiency. Transient posture (brief interactions,
+            one task, then dismiss: notifications, quick search) requires extreme
+            simplicity and speed. Daemonic posture (runs in background: sync apps,
+            notifications) must never demand attention unprompted.
+          apply:
+            - "SaaS enterprise tools: sovereign posture. Dense data, keyboard shortcuts, multi-panel layout acceptable."
+            - "Mobile apps: transient posture. One task per session flow, minimal navigation, maximum immediacy."
+            - "Background services: daemonic posture. Notifications only for genuinely actionable events. Never notify for informational-only updates."
+
+    - title: "Laws of UX"
+      authors: ["Jon Yablonski"]
+      category: "psychology_applied"
+      domain_fit: ["web", "mobile", "saas", "game_ui", "high_trust"]
+      why_s_plus: >
+        Yablonski codified 10 psychological laws into a practical reference that
+        practitioners consult daily. The companion site lawsofux.com is actively
+        used as a communication tool in design teams globally. No other resource
+        compresses Fitts, Hick, Jakob, Miller, and six other principles into
+        immediately applicable form with this clarity.
+      principles:
+
+        fitts_law:
+          rule: >
+            The time to move a pointer to a target is a function of the distance to
+            the target and the size of the target. Smaller targets that are farther
+            away take disproportionately longer to reach and cause more mis-clicks.
+          apply:
+            - "Primary buttons: minimum 44x44px on mobile (Apple standard), minimum 32px height on desktop."
+            - "Destructive actions (Delete, Cancel subscription): never adjacent to primary actions. Separate by at least 16px."
+            - "Mobile: primary actions must be in the lower 60% of the screen within natural thumb reach."
+            - "Corner and edge placements are fast targets (infinite effective width in one direction). Use corners for global persistent actions."
+
+        hicks_law:
+          rule: >
+            The time required to make a decision increases logarithmically with the
+            number of available choices. More options do not empower users — beyond
+            a small number, they increase decision time and abandonment.
+          apply:
+            - "Top-level navigation: maximum 7 items. Group if more are needed."
+            - "Select dropdowns with more than 10 options: add search-within-dropdown."
+            - "Settings pages: expose 3-5 critical settings upfront. Put everything else behind an expandable Advanced section."
+            - "Onboarding: one primary decision per screen."
+
+        jakobs_law:
+          rule: >
+            Users spend most of their time on other products. They arrive with
+            pre-formed expectations based on those products. Deviating from
+            established conventions forces users to learn new mental models.
+          apply:
+            - "Standard interactions (login, search, navigation, table sorting, modal dismissal) must follow platform conventions exactly."
+            - "Modals: close button top-right, Escape to dismiss, click-outside to dismiss."
+            - "Tables: sortable columns use up/down arrow in header, sorted column visually highlighted."
+            - "Innovation reserved exclusively for the product's core differentiating feature."
+
+        millers_law:
+          rule: >
+            The average human can hold 7 (plus or minus 2) items in working memory
+            at once. Beyond 9 items, information must be grouped into meaningful
+            chunks to be reliably processed.
+          apply:
+            - "Navigation: group items into categories of 5-7 before adding a second level."
+            - "Long lists: paginate at 10-25 items or add load-more checkpoints."
+            - "Wizards: maximum 7 steps. Split into stages if more are needed."
+            - "Dashboard KPI cards: maximum 6 at the same visual level."
+
+        aesthetic_usability_effect:
+          rule: >
+            Aesthetically pleasing interfaces are perceived as more usable, even
+            when the underlying usability is identical. Users are more tolerant of
+            minor usability problems in visually polished products.
+          apply:
+            - "Visual polish is not optional decoration. It directly affects user tolerance for friction."
+            - "Consistent spacing, aligned elements, and coherent color use produce the aesthetic usability effect even in simple products."
+            - "However: aesthetic polish does not fix fundamental usability failures. It amplifies them — a beautiful interface that is confusing is more frustrating than an ugly one."
+
+        peak_end_rule:
+          rule: >
+            Humans judge an experience based on how it felt at its most intense
+            moment (the peak) and at the end — not on the average of the
+            entire experience. A product with a delightful onboarding peak and a
+            smooth completion state will be remembered positively even if the
+            middle is unremarkable.
+          apply:
+            - "Identify the emotional peak of the product's core flow (first successful action, first purchase, first donation sent). Design this moment deliberately with elevated feedback."
+            - "The end state (success screen, confirmation page, completion message) must be designed with explicit care. It is disproportionately important to memory."
+            - "Long or tedious processes (file upload, data migration) should have a strong positive end state that reframes the experience."
+
+        doherty_threshold:
+          rule: >
+            Productivity soars and user engagement peaks when a computer and its
+            users interact at under 400ms. Delays longer than 400ms cause users
+            to disengage, check their phone, or switch tasks.
+          apply:
+            - "Responses to user actions must be acknowledged within 100ms (visual state change)."
+            - "Data fetching for the primary content of a page must complete within 400ms, or a skeleton loader must appear within 100ms."
+            - "Any operation taking longer than 400ms must show continuous progress feedback."
+
+  # ─────────────────────────────────────────────
+  # TIER S
+  # Canonical. Industry-proven. Insubstitutable in their subdomain.
+  # ─────────────────────────────────────────────
+  tier_s:
+
+    - title: "Designing with the Mind in Mind"
+      authors: ["Jeff Johnson"]
+      category: "cognitive_science_applied"
+      domain_fit: ["web", "mobile", "saas", "game_ui"]
+      why_s: >
+        Johnson translates neuroscience and perceptual psychology into direct
+        interface decisions. No other resource connects how the visual cortex
+        actually processes layouts, contrast, and color to concrete coding rules
+        with the same scientific rigor.
+      principles:
+
+        gestalt_grouping:
+          rule: >
+            The visual brain automatically groups elements that are near each other
+            (proximity), look similar (similarity), form a closed boundary (closure),
+            or appear connected (continuity). This grouping happens before conscious
+            reading. Elements that are functionally related must be visually grouped.
+            Elements that are unrelated must be visually separated.
+          apply:
+            - "Place elements that belong to the same task within 8px of each other. Separate them from unrelated elements by at least 24px."
+            - "Logical form groups (billing address, shipping address) must be enclosed in a container: card, section background, or labeled border."
+            - "Elements that are styled identically (same color, shape, size) will be perceived as equivalent. Never apply identical styling to functionally unrelated elements."
+            - "In game UI: action buttons grouped by type (attack, defend, item) reduce visual search time significantly."
+
+        figure_ground:
+          rule: >
+            The visual brain constantly separates what it is looking at (the figure)
+            from the background. When this separation is ambiguous, the brain works
+            harder and fatigue increases. Sufficient contrast between interactive
+            elements and their backgrounds is not an accessibility rule only —
+            it is a fundamental of visual processing.
+          apply:
+            - "Interactive elements must have sufficient contrast with their container (minimum 3:1 for UI components)."
+            - "Overlays and modals must create clear figure-ground separation from the underlying content. Use backdrop blur, darkened overlay, or strong elevation shadow."
+            - "Text must never be placed directly on complex images without a scrim or overlay ensuring 4.5:1 minimum contrast."
+
+        color_and_meaning:
+          rule: >
+            Color is processed by the visual system before conscious attention
+            engages. Color therefore communicates before the user has chosen to
+            read. However: 8% of men and 0.5% of women have color vision deficiency.
+            Red-green is the most common. Color must never be the only carrier of
+            critical information.
+          apply:
+            - "Semantic colors must be consistent across the product: red = error/destructive, green = success, yellow/orange = warning, blue = information/action."
+            - "Always pair color with a secondary signal (icon, text label, pattern) for any state communication."
+            - "Never use red and green as the only differentiators in the same UI area."
+
+        attention_and_the_visual_hierarchy:
+          rule: >
+            Human attention is drawn to: high contrast, motion, faces, bright colors,
+            and large sizes — in roughly that order. Hierarchy built on contrast and
+            size controls where attention goes without requiring the user to choose.
+          apply:
+            - "Primary action: largest interactive element, highest contrast, most prominent placement."
+            - "Secondary actions: visually smaller, lower contrast, peripheral placement."
+            - "Error states: use red, an icon, and proximity to the field that caused the error. These three signals together are enough to direct attention immediately."
+            - "In game UI: player-facing critical alerts (low health, time running out) must use motion + high contrast to break into the player's attention even during intense focus."
+
+    - title: "Interaction Design: Beyond Human-Computer Interaction"
+      authors: ["Helen Sharp", "Yvonne Rogers", "Jenny Preece"]
+      category: "hci_academic"
+      domain_fit: ["web", "mobile", "saas", "game_ui"]
+      why_s: >
+        The academic foundation text for interaction design programs globally.
+        Covers the formal models (Norman's action cycle, distributed cognition,
+        user-centered design process) that underpin every practitioner framework.
+      principles:
+
+        user_centered_design_process:
+          rule: >
+            Good design is a cycle: understand users and their context, define
+            requirements from user needs (not feature requests), design alternatives,
+            evaluate against requirements with users, repeat. Skipping any phase
+            produces solutions optimized for the designer's assumptions rather than
+            the user's reality.
+          apply:
+            - "Before designing a new feature, document: who uses it, what they are trying to accomplish, and what currently prevents them from accomplishing it."
+            - "Design alternatives: generate at least two different approaches before committing to one. The first idea is rarely the best."
+            - "Evaluate with users before shipping, not only after."
+
+        distributed_cognition:
+          rule: >
+            Cognition is not only in the user's head — it is distributed across
+            the user, the interface, and the environment. Users use the interface
+            itself as external memory and as a cognitive aid. Removing information
+            from the screen increases the cognitive work the user must do internally.
+          apply:
+            - "In multi-step flows: persist previously entered data on screen. The user uses the displayed data as working memory."
+            - "Calculators, configuration tools, and comparison interfaces: show running totals, selections, and implications in real time as the user makes choices."
+            - "In game UI: persistent status indicators (health, resources, objectives) reduce cognitive load during play by externalizing state the player would otherwise have to track internally."
+
+        interaction_paradigms:
+          rule: >
+            Direct manipulation (WIMP: windows, icons, menus, pointers), voice,
+            touch, and gesture are different interaction paradigms. Each has
+            optimal use cases. Mixing paradigms without clear user affordance
+            creates confusion.
+          apply:
+            - "On touch screens: swipe, tap, long-press, and pinch are native paradigms. Design for them explicitly, not as afterthoughts added to a desktop interaction model."
+            - "Voice interfaces: system responses must be conversational and brief. Never output a wall of text that would only make sense visually."
+            - "Game UI: controller-based navigation has a specific mental model (analog stick = spatial navigation, face buttons = primary actions). Violate this at significant cost."
+
+    - title: "Microinteractions: Designing with Details"
+      authors: ["Dan Saffer"]
+      category: "interaction_design_detail"
+      domain_fit: ["web", "mobile", "saas", "game_ui"]
+      why_s: >
+        Saffer's four-part framework (trigger, rules, feedback, loops/modes) became
+        the industry vocabulary for analyzing and designing the atomic unit of
+        interactive design. It is insubstitutable for designing components that
+        feel polished, reliable, and trustworthy.
+      principles:
+
+        trigger:
+          rule: >
+            Every microinteraction starts with a trigger: a user action (manual trigger)
+            or a system event (system trigger). Triggers must be perceivable, accessible,
+            and located where the user will naturally look for them given their goal.
+          apply:
+            - "Manual triggers (buttons, toggles, links): must be visually distinguishable as interactive before the user interacts."
+            - "System triggers (new notification, sync complete, error detected): must surface in the UI without requiring the user to poll or refresh."
+            - "Never make a trigger discoverable only by hover on mobile — hover does not exist on touch."
+
+        rules:
+          rule: >
+            Rules define what happens when a trigger fires. Well-designed rules
+            are preventative: they constrain inputs to valid ranges, disable actions
+            until prerequisites are met, and format user input in real time to
+            prevent downstream errors.
+          apply:
+            - "Disable the submit button until all required fields are valid. Never let the user submit and then discover errors."
+            - "Apply real-time input formatting for structured inputs: phone numbers, credit cards, dates."
+            - "Constrain number inputs to valid ranges with min/max attributes. Do not wait for form submission to enforce range limits."
+            - "Prevent duplicate submission: disable the submit button immediately on first click, before the API response returns."
+
+        feedback:
+          rule: >
+            Feedback is the communication back to the user about what the rules did.
+            It must be immediate, legible, and proportional to the significance of
+            the action. Micro-feedback (a toggle changing color) and macro-feedback
+            (a success modal) serve different purposes.
+          apply:
+            - "Toggle states: must reflect current state through both color and label/icon, not position alone."
+            - "Input validation feedback: inline, immediately below the field, on blur. Not on submit."
+            - "Upload progress: show percentage or progress bar. Do not show only a spinner for uploads exceeding 2 seconds."
+            - "Copy-to-clipboard: change button label to 'Copied!' for 2 seconds. The user needs confirmation that the system registered the action."
+
+        loops_and_modes:
+          rule: >
+            Loops govern what happens when a microinteraction repeats. Modes define
+            when a microinteraction changes the behavior of the system. Poorly
+            designed loops produce frustration (an endless spinner) or confusion
+            (a notification badge that never clears).
+          apply:
+            - "Loading loops: maximum 10 seconds before showing an error with a retry option. Never spin indefinitely."
+            - "Notification badges: must clear when the user has seen the notification. Never persist after acknowledgment."
+            - "Success toasts: auto-dismiss after 4-5 seconds. Error toasts: require manual dismissal or provide a retry action."
+            - "Undo: for any destructive or hard-to-reverse action, provide a timed undo toast (5-10 seconds). This is a loop that prevents a permanent end state."
+
+    - title: "Refactoring UI"
+      authors: ["Adam Wathan", "Steve Schoger"]
+      category: "visual_ui_design"
+      domain_fit: ["web", "mobile", "saas"]
+      why_s: >
+        The most immediately applicable visual design resource available. Every
+        principle has a concrete before/after. Written by practitioners who built
+        Tailwind CSS. Covers the gap between understanding good design and
+        executing it in production code.
+      principles:
+
+        spacing_scale:
+          rule: >
+            Visual hierarchy comes from spacing decisions before color or typography.
+            Consistent spacing creates rhythm and relationship signals the user
+            processes without reading. Inconsistent spacing creates visual noise.
+          apply:
+            - "Use a 4px base unit. All spacing values must be multiples: 4, 8, 12, 16, 24, 32, 48, 64."
+            - "Related elements: 8px gap or less. Section separation: 24-32px. Page-level padding: 32-64px."
+            - "Never space by feel. Always use tokens from the spacing scale."
+            - "The most common spacing mistake is using the same gap between elements that are related and elements that are not — proximity is meaning."
+
+        typography_hierarchy:
+          rule: >
+            Font size and weight communicate importance before the user reads.
+            Use size and weight to build hierarchy before reaching for color.
+          apply:
+            - "Establish a type scale: 12, 14, 16, 18, 20, 24, 30, 36, 48, 60, 72."
+            - "Primary content: 16px minimum on mobile, 14px on desktop."
+            - "Use font-weight 400 for body, 500-600 for emphasis, 700+ for headings. Never all-bold."
+            - "De-emphasize secondary information with lower opacity (60-70%) before changing the font size."
+
+        color_system:
+          rule: >
+            A color system is not a brand palette. It is a functional system that
+            communicates meaning through color consistently. Every color in the
+            product should have a defined semantic role.
+          apply:
+            - "Define: primary (action), neutral (backgrounds/text), and semantic (error/warning/success/info) scales."
+            - "Never hard-code hex values in components. Use tokens: --color-error-500, --color-action-primary."
+            - "Borders and separators should use neutral-200 level (very light gray). Visible but not competing with content."
+            - "Background hierarchy: page background (neutral-50), card (white), elevated element (white + shadow). Never use strong colors for large areas."
+
+        shadows_and_elevation:
+          rule: >
+            Elevation is communicated through shadows. The shadow size and blur
+            communicate the distance of the element from the surface. Consistent
+            elevation creates a coherent spatial hierarchy that users navigate
+            intuitively.
+          apply:
+            - "Flat: no shadow. Use for in-page content blocks."
+            - "Elevation-1 (sm): 0 1px 3px rgba(0,0,0,0.1). Use for cards, input fields."
+            - "Elevation-2 (md): 0 4px 12px rgba(0,0,0,0.12). Use for dropdowns, popovers."
+            - "Elevation-3 (lg): 0 8px 24px rgba(0,0,0,0.15). Use for modals, dialogs."
+            - "Never add shadow to flat, non-interactive elements. Shadow implies interactivity or separability."
+
+    - title: "The Lean Startup"
+      authors: ["Eric Ries"]
+      category: "mvp_foundation"
+      domain_fit: ["saas", "mobile", "web"]
+      why_s: >
+        Consolidated Build-Measure-Learn as universal product vocabulary. Every
+        designer and engineer working on a product that has not yet validated
+        product-market fit needs this mental model to avoid building the wrong
+        thing with the right execution.
+      principles:
+
+        validated_learning:
+          rule: >
+            The goal of an MVP is not to deliver a minimal product — it is to
+            generate validated learning about what users actually want. Every
+            feature shipped before validation is a bet. The MVP is the smallest
+            experiment that resolves the most critical uncertainty.
+          apply:
+            - "Before designing a feature, write the hypothesis it tests: 'We believe [user segment] will [action] because [reason]. We will know this is true when [metric] changes by [amount]."
+            - "If the hypothesis cannot be written, the feature is not ready to be designed."
+            - "Build only what is necessary to test the hypothesis. Everything else is waste."
+
+        build_measure_learn:
+          rule: >
+            The product development cycle is Build (create an experiment), Measure
+            (collect data on behavior), Learn (decide whether to persevere or pivot).
+            The cycle must be as short as possible. Long cycles delay learning.
+          apply:
+            - "Use feature flags to ship to a subset of users before full release."
+            - "Define the success metric for each feature before writing code."
+            - "If the metric does not respond within 2 weeks of launch, the experiment has failed. Stop, learn, redesign."
+
+        pivot_or_persevere:
+          rule: >
+            A pivot is a change in strategy without a change in vision. When a
+            Build-Measure-Learn cycle produces negative results, the decision
+            is to pivot (change the approach) or persevere (continue the current
+            approach with more refinement). Do not continue building without
+            acknowledging the result of the measurement.
+          apply:
+            - "Schedule a metrics review after every feature launch. Make the pivot/persevere decision explicitly, not by default."
+            - "A feature that users ignore is not a success even if technically complete. Completion is not the definition of done."
+
+    - title: "Inspired: How to Create Tech Products Customers Love"
+      authors: ["Marty Cagan"]
+      category: "product_management"
+      domain_fit: ["saas", "mobile", "web"]
+      why_s: >
+        The definitive text on how world-class product teams (Google, Netflix, Amazon)
+        operate. Cagan's distinction between output-driven teams (executing a roadmap)
+        and outcome-driven teams (solving user problems) is the most important
+        organizational concept in modern product development.
+      principles:
+
+        outcome_vs_output:
+          rule: >
+            Feature teams ship features. Product teams solve problems. The difference
+            is in what success means: a feature team succeeds when the feature ships.
+            A product team succeeds when the user's behavior changes in a measurable way.
+          apply:
+            - "Never accept a ticket phrased only as an output: 'Add a date filter to the table'. Rewrite it as an outcome: 'Reduce time to find records older than 30 days by 40%'."
+            - "The definition of done for any feature includes: the metric moved, not just the code shipped."
+
+        continuous_discovery:
+          rule: >
+            Discovery and delivery must happen in parallel, not sequentially.
+            While the engineering team builds validated features, the product team
+            must be continuously discovering the next set of problems to solve.
+            Discovery includes user interviews, prototype testing, and metric analysis.
+          apply:
+            - "At least one user interview per week per product team is the minimum for continuous discovery."
+            - "No feature enters development without having been tested in prototype form with at least 5 users."
+
+        product_sense:
+          rule: >
+            Product sense is the ability to predict what users will value before
+            building it. It is developed through deep familiarity with users' lives,
+            not through analysis of feature requests. Feature requests tell you
+            what users think they want. Observation tells you what they actually need.
+          apply:
+            - "Feature requests are data points, not requirements. Ask 'why does the user want this?' three times before accepting the stated request at face value."
+            - "The best features solve problems users experience but have not articulated as feature requests."
+
+    - title: "Lean UX"
+      authors: ["Jeff Gothelf", "Josh Seiden"]
+      category: "product_design_process"
+      domain_fit: ["saas", "mobile", "web"]
+      why_s: >
+        Lean UX is the standard reference for how design integrates with agile
+        engineering teams. It resolves the most common organizational failure in
+        product development: designers working ahead of engineers in isolation,
+        producing specs that are never implemented as designed.
+      principles:
+
+        hypothesis_driven_design:
+          rule: >
+            Every design decision is a hypothesis, not a truth. The format is:
+            'We believe [building this feature / making this change] [for these users]
+            will achieve [this outcome]. We will know we are right when we see
+            [this measurable signal].'
+          apply:
+            - "Write a hypothesis before designing any screen. If you cannot write one, the design brief is not clear enough."
+            - "Hypotheses are invalidated by user behavior, not by stakeholder opinions."
+
+        lean_ux_canvas:
+          rule: >
+            The Lean UX Canvas structures a problem statement across: Business Problem,
+            Users, User Outcomes, Business Outcomes, Solutions, Hypotheses, Assumptions,
+            and Experiments. It ensures that design work is connected to business
+            goals and user needs before a pixel is pushed.
+          apply:
+            - "Before starting a new feature design, fill out the Business Problem and User Outcomes sections. If these cannot be articulated, the work is not ready to design."
+            - "Solutions on the canvas are plural — generate at least two before committing to one."
+
+        mvp_experiments:
+          rule: >
+            An MVP in the Lean UX context is the smallest version of a design
+            that can be tested to learn whether the hypothesis is true. It is not
+            the smallest shippable version of a feature — it is the smallest
+            experiment that generates signal.
+          apply:
+            - "Prototype experiments before building. Static prototypes, wizard-of-oz implementations, and concierge services are all valid MVP forms."
+            - "The fidelity of the prototype should match the specificity of the question being asked. Testing a value proposition: low fidelity. Testing a specific interaction: high fidelity."
+
+    - title: "Sprint: How to Solve Big Problems and Test New Ideas in Just Five Days"
+      authors: ["Jake Knapp", "John Zeratsky", "Braden Kowitz"]
+      category: "validation_methodology"
+      domain_fit: ["saas", "mobile", "web", "high_trust"]
+      why_s: >
+        The Sprint protocol gives product teams a structured, time-boxed method
+        for validating big product decisions before committing engineering resources.
+        It is the most widely adopted design validation framework in the industry,
+        used at Slack, Uber, and hundreds of startups.
+      principles:
+
+        five_day_protocol:
+          rule: >
+            Monday: Map the problem and pick a target. Tuesday: Sketch competing
+            solutions. Wednesday: Decide on one solution. Thursday: Build a realistic
+            prototype (no real backend). Friday: Test with 5 real users. The prototype
+            is discarded regardless of outcome. Only validated concepts become
+            production code.
+          apply:
+            - "Never write production backend code for an unvalidated user flow."
+            - "The Thursday prototype must look and feel real enough that users forget it is a prototype. Figma, static HTML, or a clickable PDF all work."
+            - "5 user tests reveal approximately 85% of major usability problems. Do not wait for statistical significance."
+
+        five_user_rule:
+          rule: >
+            After testing with 5 users, the team can see clear patterns: what works,
+            what confuses, what fails. Testing with more than 5 users in a single
+            round produces diminishing returns. It is better to run two rounds of 5
+            than one round of 10.
+          apply:
+            - "If 3 of 5 users fail the same task, that task's design has failed. Rebuild before shipping."
+            - "If 3 of 5 users make the same wrong assumption about what a label means, the label is wrong."
+            - "Do not rationalize failure results. 'They just didn't understand it' is a design failure, not a user failure."
+
+    - title: "User Story Mapping"
+      authors: ["Jeff Patton"]
+      category: "product_structure"
+      domain_fit: ["saas", "mobile", "web"]
+      why_s: >
+        Patton's story mapping technique fills the most critical gap in product
+        planning: connecting user journeys to development backlog in a way that
+        preserves end-to-end user value at every release. It is the difference
+        between shipping a complete slice and shipping unconnected fragments.
+      principles:
+
+        story_map_structure:
+          rule: >
+            A story map has two axes. Horizontal: the user's activities in sequence
+            from left to right, representing the complete user journey. Vertical:
+            priority, with the most important tasks at the top. The horizontal
+            backbone represents the user's narrative. The vertical slices represent
+            releases.
+          apply:
+            - "Before designing any new product or feature set, create the horizontal backbone: list every major activity the user performs in sequence."
+            - "Under each activity, list the tasks (smaller actions within that activity) in rough priority order."
+            - "Draw a horizontal line across the map to define the MVP: everything above the line ships in the first release."
+
+        walking_skeleton:
+          rule: >
+            The walking skeleton is the thinnest possible slice of functionality
+            that supports the complete user journey from start to finish. It is not
+            one feature done completely — it is every feature done minimally. The
+            walking skeleton proves the end-to-end system works before any feature
+            is polished.
+          apply:
+            - "The MVP is a horizontal slice, not a vertical one. Ship one minimal version of every activity before shipping a complete version of any single activity."
+            - "If a user cannot complete the full journey in the MVP, the MVP is wrong — not incomplete."
+
+    - title: "Escaping the Build Trap"
+      authors: ["Melissa Perri"]
+      category: "product_strategy"
+      domain_fit: ["saas", "mobile", "web"]
+      why_s: >
+        Perri's diagnosis of the build trap — the organizational failure mode where
+        teams measure success by shipping features rather than changing user behavior
+        — is the most direct and actionable treatment of why most product teams
+        ship constantly and achieve little.
+      principles:
+
+        the_build_trap:
+          rule: >
+            The build trap occurs when an organization measures success by the
+            quantity of features shipped rather than the outcomes those features
+            produce. Teams in the build trap become feature factories: high velocity,
+            low impact. The symptom is a roadmap full of features and a product
+            that grows without growing usage.
+          apply:
+            - "Replace feature roadmaps with outcome roadmaps: instead of 'Ship filter feature', write 'Reduce time to find a record by 40% for power users'."
+            - "Every sprint must have both delivery metrics (what shipped) and outcome metrics (what changed in user behavior)."
+
+        product_kata:
+          rule: >
+            The Product Kata is a continuous improvement cycle: understand the
+            direction (business goal), assess the current state (where are we now),
+            define the next target condition (what user outcome are we trying to change),
+            identify obstacles, experiment to remove obstacles, and measure.
+          apply:
+            - "For every major product initiative, define: current baseline metric, target metric, timeframe, and the key obstacle preventing the target."
+            - "If the obstacle cannot be named, the problem is not understood well enough to design for."
+
+    - title: "Continuous Discovery Habits"
+      authors: ["Teresa Torres"]
+      category: "product_discovery"
+      domain_fit: ["saas", "mobile", "web"]
+      why_s: >
+        Torres operationalizes continuous product discovery as a set of concrete
+        weekly habits rather than occasional research projects. The Opportunity
+        Solution Tree is the most practical framework for connecting user problems
+        to product solutions available.
+      principles:
+
+        opportunity_solution_tree:
+          rule: >
+            The Opportunity Solution Tree has four layers: the desired outcome (the
+            metric to improve) at the root; opportunities (unmet user needs, pain
+            points, desires) as branches; solutions (features, designs, experiments)
+            as leaves under each opportunity; and experiments as the actions that
+            test each solution.
+          apply:
+            - "Before proposing a solution, locate it on the OST: which opportunity does it address? Which outcome does that opportunity serve?"
+            - "If a solution cannot be connected to a user opportunity, it is a solution in search of a problem."
+
+        continuous_interviewing:
+          rule: >
+            Continuous discovery requires interviewing at least one customer per week.
+            The goal is not to validate features — it is to continuously expand
+            understanding of user needs, jobs to be done, and unmet opportunities.
+          apply:
+            - "Interview questions must explore experience, not opinion. 'Tell me about the last time you...' produces better signal than 'Would you use a feature that...'."
+            - "Never ask users if they would use a hypothetical feature. Hypothetical answers are unreliable. Observe real behavior or test a prototype."
+
+    - title: "Hooked: How to Build Habit-Forming Products"
+      authors: ["Nir Eyal"]
+      category: "behavioral_design"
+      domain_fit: ["saas", "mobile", "web"]
+      why_s: >
+        The Hook Model is the most widely used framework for designing products
+        that form user habits and drive voluntary return engagement. Essential
+        for any consumer or freemium product where retention depends on behavior
+        change rather than obligation.
+      principles:
+
+        hook_model:
+          rule: >
+            The Hook is a four-phase cycle: Trigger (the prompt to action) leads to
+            Action (the behavior in anticipation of reward) leads to Variable Reward
+            (the unpredictable positive outcome) leads to Investment (the user puts
+            something of value in, making the product more valuable on return).
+            Repeated cycles build habits.
+          apply:
+            - "External triggers (notifications, emails) must lead to a single, low-friction action. One tap, one purpose."
+            - "Internal triggers form when users associate the product with an emotion or context. Design for the emotion: loneliness triggers messaging, uncertainty triggers search."
+            - "Variable reward: not all interactions should produce the same outcome. Variability (what will I see when I refresh?) is what produces compulsive checking."
+            - "Investment: every time a user adds data (follows, preferences, content), return something immediately more valuable. This is the mechanism of lock-in through genuine value."
+
+    - title: "Articulating Design Decisions"
+      authors: ["Tom Greever"]
+      category: "design_communication"
+      domain_fit: ["saas", "mobile", "web", "enterprise"]
+      why_s: >
+        Design decisions that cannot be articulated are decisions that cannot
+        be defended, implemented correctly, or built upon. Greever provides the
+        only dedicated resource for the skill that most junior and mid-level
+        designers lack: communicating design intent to stakeholders who do not
+        think visually.
+      principles:
+
+        decision_format:
+          rule: >
+            Every non-obvious design decision should be expressible in one structured
+            statement: [The user needs X] [In the current design, we do Y because Z constraint]
+            [This produces outcome W] [The tradeoff is that V is sacrificed].
+          apply:
+            - "When presenting a design, never say 'it looks better'. Say: 'Users need to complete this action quickly (need), so we reduced the form to 3 fields (decision), which should reduce abandonment (outcome), accepting that advanced users see fewer options upfront (tradeoff)'."
+            - "In code comments: // WHY: [user need], CONSTRAINT: [constraint], DECISION: [what and why], TRADEOFF: [what is sacrificed]."
+
+        stakeholder_language:
+          rule: >
+            Stakeholders who do not think visually will not be persuaded by aesthetic
+            arguments. They are persuaded by user behavior arguments (users fail this
+            task 30% of the time) and business outcome arguments (this reduces support
+            tickets by 15%).
+          apply:
+            - "Translate design arguments into metric language when presenting to non-designers."
+            - "Pre-empt objections: identify the most likely stakeholder concern and address it before it is raised."
+
+    - title: "Information Architecture: For the Web and Beyond"
+      authors: ["Louis Rosenfeld", "Peter Morville", "Jorge Arango"]
+      category: "information_architecture"
+      domain_fit: ["web", "saas", "enterprise"]
+      why_s: >
+        The canonical text that defined the four systems of IA that are still
+        the standard framework in 2026. Insubstitutable for any product with
+        complex navigation, content structures, or large data models.
+      principles:
+
+        four_systems:
+          organization:
+            rule: "Structure content around user tasks and mental models, not organizational hierarchies."
+            apply:
+              - "Navigation categories must reflect how users think about their tasks, verified by card sorting or tree testing."
+              - "Never organize by department or internal team ownership."
+          labeling:
+            rule: "Use the words users use. Not the words the system uses, the company uses, or the designer prefers."
+            apply:
+              - "Test navigation labels: if 2 of 5 users cannot predict what is behind a label, the label is wrong."
+              - "Avoid jargon, acronyms, and internal terminology in user-facing labels."
+          navigation:
+            rule: "Every page must answer three questions without effort: Where am I? Where have I been? Where can I go?"
+            apply:
+              - "Global navigation: visible on every page, highlights current section."
+              - "Local navigation: secondary options relevant to the current section."
+              - "Contextual navigation: links within content to related content."
+              - "Breadcrumbs: required for any page more than 2 levels deep."
+          search:
+            rule: "Search is required for any product with more than 20 distinct pages or records."
+            apply:
+              - "Search must tolerate typos, synonyms, and partial matches."
+              - "Zero results must suggest alternatives, not just show an empty state."
+              - "Search results must be ranked by relevance to the user's task, not by date or alphabetical order."
+
+    - title: "Mismatch: How Inclusion Shapes Design"
+      authors: ["Kat Holmes"]
+      category: "inclusive_design"
+      domain_fit: ["web", "mobile", "saas", "enterprise", "high_trust"]
+      why_s: >
+        Holmes introduced the mismatch framework — disability as a design failure,
+        not a user limitation — that fundamentally changed how FAANG companies
+        approach inclusive design. Essential for any product that aims to serve
+        diverse user populations.
+      principles:
+
+        mismatch_framework:
+          rule: >
+            A disability is a mismatch between a person's abilities and the design
+            of the environment. Permanent mismatches (missing a limb) create design
+            problems. Temporary mismatches (broken arm) and situational mismatches
+            (holding a baby while using a phone) create the same problems, for a
+            much larger population. Solving for permanent disabilities solves for
+            everyone in temporary and situational contexts too.
+          apply:
+            - "Design for one-handed operation: someone holding a baby uses only one hand. This is also the solution for a permanent motor disability."
+            - "High contrast mode: designed for visual impairment, but also essential for outdoor use in direct sunlight."
+            - "Captions on video: designed for hearing impairment, also used in open offices, public transport, and by non-native language speakers."
+
+        inclusive_design_process:
+          rule: >
+            Include people with disabilities in the design process as participants,
+            not only as test subjects. People who experience mismatches daily are
+            the most effective at identifying them in new designs.
+          apply:
+            - "Accessibility testing must include real users of assistive technology, not only automated tools."
+            - "Automated accessibility tools catch approximately 30-40% of real accessibility failures. Manual testing and screen reader testing catch the rest."
+
+    - title: "Content Design"
+      authors: ["Sarah Richards"]
+      category: "content_design"
+      domain_fit: ["web", "mobile", "saas", "high_trust"]
+      why_s: >
+        Richards defined the discipline of content design while transforming 400+
+        UK government websites into GOV.UK. Content-first design is the practice
+        that separates interfaces that work from interfaces that look like they
+        work.
+      principles:
+
+        content_first:
+          rule: >
+            Design the content before the container. The words, the hierarchy, and
+            the structure of information must be defined before the visual design
+            begins. A layout built before its content is defined will always be the
+            wrong size, in the wrong place, with the wrong emphasis.
+          apply:
+            - "Write the full text of every screen element before designing the visual layout."
+            - "Button labels: must describe the outcome ('Send invoice'), not the action ('Submit') and not the system state ('OK')."
+            - "Page titles: must answer 'what is this page for?' in 5 words or fewer."
+
+        plain_language:
+          rule: >
+            Users read at the level their task demands. Technical jargon, passive
+            voice, and bureaucratic language all add cognitive load.
+          apply:
+            - "Replace system language with user language: 'Authentication failed' → 'Incorrect email or password'."
+            - "Use active voice: 'We sent you an email' not 'An email was sent'."
+            - "Use second person: 'Your account' not 'The account'. 'We' not 'The system'."
+            - "Sentence length: aim for under 20 words per sentence in instructions and error messages."
+
+        front_loading:
+          rule: >
+            Put the most important information first. Users scan from top-left.
+            They may not reach the second sentence. The first sentence of any
+            label, heading, or message must contain the most critical information.
+          apply:
+            - "Error messages: start with what happened, not with an apology or a system description."
+            - "Instructions: start with the action, not the context. 'Click Save to preserve changes' not 'Changes are preserved when you click Save'."
+
+    - title: "Microcopy: The Complete Guide"
+      authors: ["Kinneret Yifrah"]
+      category: "ux_writing"
+      domain_fit: ["web", "mobile", "saas", "high_trust"]
+      why_s: >
+        Microcopy is the small, functional text that constitutes the majority of
+        the words a user reads in a product. Yifrah's treatment is the only
+        comprehensive guide to every category of microcopy with systematic
+        principles for each.
+      principles:
+
+        button_labels:
+          rule: >
+            Button labels must answer the question: 'What will happen when I
+            click this?' Not: 'What state am I in now?'
+          apply:
+            - "'Send Invoice' not 'Submit'. 'Save Changes' not 'OK'. 'Delete Account' not 'Confirm'."
+            - "For multi-step flows: 'Continue to Shipping' not 'Next'. 'Place Order' not 'Confirm'."
+            - "For destructive actions: the label must name what is being destroyed. 'Delete Invoice #1042' not 'Delete'."
+
+        error_message_structure:
+          rule: >
+            Error messages have a three-part structure: [What happened] + [Why if helpful
+            and non-technical] + [What to do now]. All three parts are required for the
+            error to be actionable.
+          apply:
+            - "'Your card was declined. This usually happens for temporary reasons. Wait a moment and try again, or use a different card.'"
+            - "'This email is already registered. Sign in instead, or use a different email to create a new account.'"
+            - "Never: 'Error 422'. Never: 'Invalid input'. Never: 'Something went wrong' without a recovery action."
+
+        empty_state_copy:
+          rule: >
+            Empty states have three components: context (what this space is for),
+            reason (why it is empty right now), and action (what to do to fill it).
+          apply:
+            - "Empty inbox: 'No messages yet. When someone contacts you, their message will appear here. [Browse providers]'"
+            - "Empty search: 'No results for [search term]. Check your spelling or try a broader search. [View all items]'"
+
+        placeholder_text:
+          rule: >
+            Placeholder text is an example of valid input, not a label. Its purpose
+            is to demonstrate format, not to name the field. It disappears on focus
+            and must never be the only label for a field.
+          apply:
+            - "Label: 'Email address'. Placeholder: 'you@company.com'."
+            - "Label: 'Phone number'. Placeholder: '+55 11 99999-9999'."
+            - "Never: label hidden, placeholder 'Enter your email here'. This fails on focus and fails screen readers."
+
+    - title: "Measuring the User Experience"
+      authors: ["Bill Albert", "Tom Tullis"]
+      category: "ux_metrics"
+      domain_fit: ["web", "mobile", "saas", "enterprise"]
+      why_s: >
+        The definitive reference for quantifying UX. Textbook Excellence Award 2024.
+        Covers the methods, statistical validity, and reporting frameworks for every
+        category of UX measurement. Insubstitutable for data-driven product teams.
+      principles:
+
+        performance_metrics:
+          rule: >
+            UX performance metrics are behavioral: task completion rate, time on task,
+            and error rate. These are the most objective measures of whether an
+            interface works.
+          apply:
+            - "Task completion rate target: 78%+ for critical flows. Below 70% triggers redesign investigation."
+            - "Time on task: establish a baseline. Increasing time on a simple task after a redesign indicates degradation."
+            - "Error rate: target below 5% on any core workflow. Above 10% indicates a systemic problem."
+
+        self_report_metrics:
+          rule: >
+            Self-report metrics measure user perception: satisfaction, confidence,
+            and ease. They complement behavioral metrics. Users can be satisfied with
+            a slow product or frustrated with a fast one depending on expectations.
+          apply:
+            - "Administer SUS (System Usability Scale) after any usability test."
+            - "SUS score interpretation: above 85 = excellent, 68-85 = good, 51-68 = below average, below 51 = poor."
+            - "NPS and CSAT measure satisfaction but not usability. Use both alongside behavioral metrics."
+
+    - title: "Interviewing Users"
+      authors: ["Steve Portigal"]
+      category: "ux_research"
+      domain_fit: ["web", "mobile", "saas"]
+      why_s: >
+        The only dedicated, comprehensive guide to the practice of user interviewing
+        with the depth and specificity practitioners need. Referenced by virtually
+        every UX research consultancy.
+      principles:
+
+        experience_not_opinion:
+          rule: >
+            User interviews produce reliable signal when they explore past experience
+            and observed behavior. They produce unreliable signal when they ask for
+            opinions, preferences, or hypothetical behavior.
+          apply:
+            - "Ask: 'Tell me about the last time you [task].' Not: 'Would you use a feature that [hypothetical]?'"
+            - "Ask: 'Walk me through what happened.' Not: 'What do you think about [feature]?'"
+            - "Follow behavior: 'You paused there — what were you thinking?' Not: 'Did you like that?'"
+
+        silence_as_a_tool:
+          rule: >
+            Silence in an interview is productive. When the interviewer fills silence,
+            they prevent the interviewee from reaching deeper reflection. Wait at
+            least 3-4 seconds after an answer before asking the next question.
+          apply:
+            - "After the user stops speaking, wait. Count to four internally. If they are truly done, then follow up."
+            - "The most valuable insights often come in the second or third sentence after a pause."
+
+    - title: "Just Enough Research"
+      authors: ["Erika Hall"]
+      category: "ux_research"
+      domain_fit: ["web", "mobile", "saas"]
+      why_s: >
+        Hall makes research accessible to designers and teams without dedicated
+        researchers. The title is the central argument: do the minimum research
+        that resolves the critical uncertainty. Not no research. Not a PhD thesis.
+        Just enough.
+      principles:
+
+        research_questions:
+          rule: >
+            A research question is not the same as an interview question. The
+            research question is what you need to know. The interview questions
+            are how you find it out. Never start research without a written
+            research question.
+          apply:
+            - "Research question: 'Why do users abandon checkout at the shipping step?'"
+            - "Interview questions from this: 'Tell me about the last time you ordered something online. Walk me through the checkout.'"
+
+        generative_vs_evaluative:
+          rule: >
+            Generative research discovers new problems to solve. Evaluative research
+            tests a proposed solution. Most teams do too little generative research
+            and evaluate solutions to problems that were never validated.
+          apply:
+            - "Generative: run before design begins. Goal: find the right problem."
+            - "Evaluative: run after a prototype exists. Goal: test whether the solution solves the problem."
+
+    - title: "Lean Analytics"
+      authors: ["Alistair Croll", "Benjamin Yoskovitz"]
+      category: "product_metrics"
+      domain_fit: ["saas", "mobile", "web"]
+      why_s: >
+        UX without metrics is aesthetics. Lean Analytics is the most practical
+        treatment of which metrics matter at each stage of product development,
+        and why measuring the wrong metric at the wrong stage leads teams astray.
+      principles:
+
+        one_metric_that_matters:
+          rule: >
+            At any given stage of a product, there is one metric that matters more
+            than all others. Focusing on multiple metrics simultaneously disperses
+            attention and makes it impossible to run clear experiments.
+          apply:
+            - "Before sprint planning, identify the single most important metric for the current stage."
+            - "Pre-PMF: focus on activation and retention. Post-PMF: focus on growth and revenue."
+            - "When a metric is not moving, investigate the step in the funnel immediately before it."
+
+        stage_appropriate_metrics:
+          rule: >
+            Different product stages require different metrics. Measuring DAU for
+            a product that has not validated its core value proposition is premature.
+            Measuring activation rate for a product in growth mode is insufficient.
+          apply:
+            - "Empathy stage: how many people have the problem? How painful is it?"
+            - "Stickiness stage: do users who try the product come back?"
+            - "Virality stage: do users refer others?"
+            - "Revenue stage: can the business model sustain growth?"
+
+    - title: "The Animator's Survival Kit"
+      authors: ["Richard Williams"]
+      category: "motion_design"
+      domain_fit: ["web", "mobile", "game_ui", "saas"]
+      why_s: >
+        Williams' principles are the foundation of all motion design, including
+        UI animation. They explain why interfaces that follow physical laws feel
+        trustworthy and alive, and why interfaces that use linear or arbitrary
+        motion feel mechanical and cheap. Essential for game UI and any product
+        where motion is a core communication channel.
+      principles:
+
+        timing_and_spacing:
+          rule: >
+            Timing is how many frames (or milliseconds) an action takes.
+            Spacing is how the movement is distributed across those frames.
+            Linear spacing (moving the same distance each frame) feels mechanical
+            because nothing in the physical world moves this way. Real objects
+            accelerate from rest and decelerate before stopping.
+          apply:
+            - "Never use CSS linear easing for spatial movement. Use ease-in-out as minimum."
+            - "Utility transitions (tooltips, hovers, toggles): 100-150ms."
+            - "Standard component transitions (cards, panels, dropdowns): 200-300ms."
+            - "Major state changes (modals, full-screen overlays, page transitions): 280-350ms."
+            - "Emotional or narrative transitions (success celebrations, onboarding completion, game scene changes): 400-600ms."
+            - "Never exceed 600ms. Above this threshold, transitions feel like loading delays."
+
+        anticipation:
+          rule: >
+            Before a character throws a ball, they wind up. Before a door opens,
+            the handle turns. Anticipation is the brief preparatory motion that
+            signals to the observer what is about to happen. In UI, anticipation
+            reduces the surprise of major state changes.
+          apply:
+            - "Modal opening: scale from 0.97 to 1.0 (50ms) before the full open animation. This is the anticipation beat."
+            - "Destructive action: the button briefly pulses to a darker shade on mousedown before the confirmation dialog appears."
+            - "Game UI overlay (inventory, map): brief directional slide from its edge of origin before fully appearing."
+            - "Anticipation duration: 50-100ms maximum. It is a cue, not a performance."
+
+        follow_through_and_overlapping_action:
+          rule: >
+            When a moving element stops, parts of it continue slightly before
+            coming to rest. A bouncing ball compresses on impact. Hair swings after
+            the head stops. In UI, follow-through communicates that an element
+            has weight and has arrived — the interaction is complete.
+          apply:
+            - "Spring easing approximates follow-through: the element overshoots its target slightly, then settles. CSS: cubic-bezier(0.34, 1.56, 0.64, 1)."
+            - "Success state icons (checkmarks, completion marks): scale from 1.0 to 1.06 to 1.0 over 300ms. The overshoot is the follow-through."
+            - "Cards snapping to position in a list: spring easing, not ease-out. The spring communicates arrival."
+            - "Do not apply follow-through to error states. Errors must feel firm and abrupt. Spring bounce on an error feels wrong and undermines trust."
+
+        weight_and_secondary_action:
+          rule: >
+            Heavier objects in the physical world accelerate and decelerate more
+            slowly. Lighter objects move faster. In UI, element size determines
+            its visual weight, and its animation timing should reflect that weight.
+          apply:
+            - "Large elements (modals, full-screen panels): 280-350ms. They carry visual weight."
+            - "Small elements (tooltips, badges, dropdowns): 100-200ms. They are light."
+            - "Secondary elements that move as a consequence of a primary action (list items shifting after one is deleted) must move at a slower rate than the primary action, and with a slight delay: 50-100ms stagger."
+
+  # ─────────────────────────────────────────────
+  # TIER A+
+  # Subcategory-defining. Tier S within their specific domain.
+  # Context-dependent but essential when that context is present.
+  # ─────────────────────────────────────────────
+  tier_a_plus:
+
+    - title: "Quantifying the User Experience"
+      authors: ["Jeff Sauro", "James R. Lewis"]
+      category: "ux_statistics"
+      domain_fit: ["enterprise", "saas"]
+      why_a_plus: >
+        Tier S for UX research teams that need statistical rigor. A+ in general
+        spectrum because the audience is narrower. Fills the specific gap of
+        sample size calculation, confidence intervals, and A/B test analysis in
+        UX contexts.
+      key_rules:
+        - "Minimum 5 users for qualitative usability testing (to find 85% of problems). Minimum 20 for quantitative reliability."
+        - "SUS can be reliably scored with 8-10 users. Below 5, the score is unreliable."
+        - "For A/B testing UX changes: need minimum 100 users per variant to detect a 5% difference in task completion rate."
+
+    - title: "Mapping Experiences"
+      authors: ["Jim Kalbach"]
+      category: "experience_mapping"
+      domain_fit: ["saas", "enterprise", "high_trust"]
+      why_a_plus: >
+        The most comprehensive guide to journey maps, service blueprints, and
+        mental model diagrams. Tier S for service design and cross-channel product
+        contexts. A+ in the general spectrum because it is a specialized tool.
+      key_rules:
+        - "Journey maps have four layers: phases (stages of the journey), actions (what the user does), thoughts (what they are thinking), and emotions (how they feel). All four are required for a complete map."
+        - "A journey map that only shows the happy path is a marketing document, not a design tool. Map the failure paths."
+        - "Service blueprints add a fifth layer: backstage processes. Use blueprints when the UX depends on operations the user cannot see (support teams, fulfillment systems)."
+
+    - title: "UX Strategy"
+      authors: ["Jaime Levy"]
+      category: "ux_business_strategy"
+      domain_fit: ["saas", "web"]
+      why_a_plus: >
+        The only resource that systematically connects UX design to business strategy
+        and competitive positioning. Tier S for designers who need to influence
+        roadmaps and investment decisions.
+      key_rules:
+        - "UX strategy has four pillars: business strategy (competitive advantage), value innovation (product differentiation), validated user research (evidence of demand), and killer UX design (execution quality)."
+        - "Value innovation is the intersection of what users need, what competitors do not offer, and what the business can profitably deliver. This is the design target."
+
+    - title: "Strategic Writing for UX"
+      authors: ["Torrey Podmajersky"]
+      category: "ux_writing_strategy"
+      domain_fit: ["saas", "mobile", "web", "high_trust"]
+      why_a_plus: >
+        Extends content design beyond individual copy decisions into a systematic
+        content strategy aligned with product goals. Tier S within UX writing.
+      key_rules:
+        - "Voice chart: define the product's personality on four scales (funny-serious, formal-casual, irreverent-respectful, enthusiastic-matter-of-fact). Every copy decision must be consistent with the voice chart."
+        - "Content patterns: recurring copy structures (onboarding emails, empty states, error messages) should be templated with placeholders, ensuring consistency across all instances."
+        - "Measure copy effectiveness: A/B test key copy decisions (button labels, onboarding messages) with completion rate as the metric."
+
+    - title: "Emotion in the Human Face"
+      authors: ["Paul Ekman"]
+      category: "affective_psychology"
+      domain_fit: ["high_trust", "game_ui", "mobile"]
+      why_a_plus: >
+        Ekman's research on universal emotional expressions provides the scientific
+        foundation for affective design decisions. Tier S for game UI and high-trust
+        platforms where the emotional tone of the interface directly affects user
+        trust and behavior. A+ in general spectrum because the application requires
+        translation from psychology to design.
+      key_rules:
+
+        universal_emotional_valences:
+          rule: >
+            Six basic emotions are universally recognized across cultures: happiness,
+            sadness, fear, disgust, anger, and surprise. Visual design can encode
+            or trigger these emotions through color, shape, motion speed, and
+            information architecture. Every UI state has an emotional valence —
+            the question is whether it is designed deliberately or by accident.
+          apply:
+            - "Success states: use open, expanding visual cues (outward animation, green/blue, soft rounded shapes). These encode happiness and safety."
+            - "Error states: use contained, high-attention cues (red, triangular warning icons, firm abrupt animation). These encode attention-grabbing without inducing fear or panic."
+            - "Warning states: use yellow/orange with a contained icon. These encode mild concern without urgency."
+            - "Loading/waiting states: use calm, slow motion (circular progress). Fast, erratic motion encodes anxiety."
+
+        affective_feedback_and_context:
+          rule: >
+            The emotional tone of UI feedback must match the emotional context of
+            the user's task. A user managing their savings, completing a donation,
+            or reviewing a medical result is in a heightened emotional state.
+            High-energy, kinetic, or playful UI feedback in these contexts is
+            dissonant and undermines trust.
+          apply:
+            - "High-trust contexts (billing, health, security, donations): remove spring animations. Use subtle crossfades (150ms opacity transition) or instant state changes."
+            - "High-trust contexts: avoid celebratory animations on task completion. A quiet, firm success confirmation ('Payment complete. Reference: #12345') is more trustworthy than a confetti animation."
+            - "Game UI: high energy and strong motion are appropriate because the context is stimulating. Apply full spring physics, sound design, and saturated color."
+            - "Consumer social apps: moderate energy. Celebratory moments (milestone reached, first post) warrant elevated feedback. Routine actions (like, share) warrant micro-feedback only."
+
+        trust_through_visual_stability:
+          rule: >
+            Trust is associated with predictability and stability. Interfaces that
+            are visually stable (consistent layout, predictable motion, no unexpected
+            state changes) are perceived as more trustworthy than those that shift,
+            jump, or surprise.
+          apply:
+            - "Layout shifts after page load destroy trust. Reserve space for dynamic content (images, ads, async data) before it loads."
+            - "Never change the position of a primary action between states. If the confirm button is in the bottom-right of a modal, keep it there in every modal."
+            - "Color changes must be gradual in sensitive contexts. Sudden color shifts (form turning red on error) are appropriate. Pulsing or oscillating colors are not."
+
+  # ─────────────────────────────────────────────
+  # TIER A
+  # High-quality, complementary. Best second-layer reads.
+  # ─────────────────────────────────────────────
+  tier_a:
+
+    - title: "Writing is Designing"
+      authors: ["Michael J. Metts", "Andy Welfle"]
+      category: "content_design"
+      domain_fit: ["web", "mobile", "saas"]
+      why_a: >
+        Essential for cross-functional teams where designers write copy.
+        Third-layer read after Content Design and Strategic Writing for UX.
+        Best for establishing shared language between designers, writers, and engineers.
+      key_rules:
+        - "Treat every string in the interface as a design decision, not a placeholder to be filled by someone else later."
+        - "Language has inclusive and exclusive properties. Words that assume gender, ability, or technical knowledge exclude users who do not fit the assumption."
+        - "Review copy in context (in the actual UI at the actual size), never only in a document."
+
+    - title: "Accessibility for Everyone"
+      authors: ["Laura Kalbag"]
+      category: "accessibility"
+      domain_fit: ["web", "mobile", "saas"]
+      why_a: >
+        The most accessible (deliberately) entry point to accessibility as a
+        discipline. Excellent second read after Mismatch for teams that need
+        practical implementation guidance alongside strategic framing.
+      key_rules:
+        - "Accessibility must be built in from the start. Retrofitting accessibility is 5-10x more expensive than building it correctly the first time."
+        - "The four POUR principles (Perceivable, Operable, Understandable, Robust) are the organizing structure of all accessibility requirements. Every accessibility failure belongs to one of these four categories."
+        - "Test with assistive technology before shipping. Automated tools catch 30-40% of issues. Only real screen reader and keyboard testing catches the rest."
+
+    - title: "How to Make Sense of Any Mess"
+      authors: ["Abby Covert"]
+      category: "information_architecture"
+      domain_fit: ["web", "saas"]
+      why_a: >
+        Makes IA concepts accessible to non-specialists. Excellent for PMs,
+        developers, and stakeholders who need to participate in IA decisions
+        without a formal IA background.
+      key_rules:
+        - "Every IA problem is a language problem first. Before restructuring navigation, fix the labels."
+        - "The gap between what you intend to communicate and what people understand is the IA problem. Measure it by observation, not assumption."
+
+    - title: "Good Services"
+      authors: ["Lou Downe"]
+      category: "service_design"
+      domain_fit: ["high_trust", "saas", "enterprise"]
+      why_a: >
+        Defines 15 criteria for what makes a service 'good'. Tier S for
+        government digital services and high-trust platforms. A in general
+        spectrum due to narrower adoption outside public sector contexts.
+      key_rules:
+        - "A good service enables a user to accomplish their goal with the least possible involvement of the service itself. The best service is one the user barely notices."
+        - "Services must be consistent: the same information, same language, same visual treatment — regardless of which channel (web, mobile, in-person, phone) the user contacts."
+        - "15 principles of good service include: findable, clearly explains its purpose, sets expectations, requires only what is necessary, is consistent, does not require prior knowledge of the service to use it."
+
+  # ─────────────────────────────────────────────
+  # TIER S+ GAME DESIGN
+  # Foundational game design texts. Apply for any game UI, game feel, or
+  # engagement loop decisions. These are the domain equivalent of Norman and
+  # Krug — every other game design resource builds on these.
+  # ─────────────────────────────────────────────
+  tier_s_plus_game_design:
+
+    - title: "A Theory of Fun for Game Design"
+      authors: ["Raph Koster"]
+      category: "game_design_theory"
+      domain_fit: ["game_ui", "mobile", "saas"]
+      why_s_plus: >
+        Koster's central argument — that fun is the brain's reward for learning
+        new patterns — is the theoretical foundation for all game design. It explains
+        why a game stops being fun (when there is nothing left to learn), why feedback
+        matters (the brain needs to know when its pattern succeeded), and why difficulty
+        curves must be continuous. Required reading before designing any engagement loop,
+        game mechanic, or retention system.
+      principles:
+
+        fun_as_learning:
+          rule: >
+            Fun is the emotional reward for successful pattern recognition. The brain
+            releases dopamine when it successfully predicts or solves a challenge. Games
+            are fun when they continuously introduce new patterns just ahead of the
+            player's current mastery. Games become boring when the player has mastered
+            all patterns and no new ones appear.
+          apply:
+            - "Every game loop needs a learning arc: introduce mechanic → player struggles → player masters → introduce harder variation. Never let mastery plateau."
+            - "A mechanic that produces the same outcome every time has been 'solved' and stops being fun. Introduce variance after the player has learned the base pattern."
+            - "The difficulty curve must stay just above the player's current skill level. Too far below = boredom. Too far above = frustration. The gap must be crossable."
+
+        feedback_as_pattern_confirmation:
+          rule: >
+            For the brain to learn, it needs clear feedback that its action produced
+            the expected result. Without feedback, the brain cannot confirm whether its
+            pattern was correct. Kill feedback in games is not cosmetic — it is the
+            signal that tells the brain 'your pattern was correct; the enemy died.'
+          apply:
+            - "Every kill must produce an unmistakable visual confirmation. The brain cannot learn kill mechanics without reliable feedback that a kill occurred."
+            - "Near-miss feedback (enemy almost killed, player barely survived) must also be distinct. Near-misses produce the highest learning signal per Koster."
+            - "Failure feedback must be immediate, clear, and show the cause. Ambiguous deaths cannot be learned from."
+
+        mastery_and_boredom:
+          rule: >
+            Players who have mastered a mechanic will stop engaging with it unless
+            new patterns are introduced. Retention requires a continuous supply of
+            new patterns at appropriate difficulty.
+          apply:
+            - "Enemy variety is a learning progression system, not just visual variety. Each new enemy type must introduce a new pattern the player has not yet encountered."
+            - "Power-up combinations should create emergent patterns beyond the sum of their parts. These are the highest-tier learning events in the game."
+
+    - title: "The Art of Game Design: A Book of Lenses"
+      authors: ["Jesse Schell"]
+      category: "game_design_practice"
+      domain_fit: ["game_ui", "mobile"]
+      why_s_plus: >
+        Schell's 100 lenses are the most comprehensive practical toolkit for
+        analyzing and improving any game. The Experience lens, the Feedback lens,
+        and the Flow lens are directly applicable to UI/UX decisions. No other
+        game design text combines breadth, practical application, and design
+        decision frameworks with this depth.
+      principles:
+
+        the_experience_lens:
+          rule: >
+            A game is not its mechanics, levels, or visuals. A game is the experience
+            it creates in the player's mind. Every design decision must be evaluated
+            by asking: 'What does this feel like to the player?' — not 'What does
+            this do in the system?'
+          apply:
+            - "Before implementing any mechanic, write what the player will FEEL when it activates. If the feeling cannot be described, the mechanic is not ready."
+            - "Evaluate every UI element through the experience lens: does this UI element make the game feel better or just add information?"
+            - "Sound, animation timing, color, and scale all contribute to the experience of a mechanic. Changing any one of them changes the experience even if the mechanic is identical."
+
+        the_feedback_lens:
+          rule: >
+            Games must provide clear, continuous feedback for every player action.
+            Feedback has five components: the player must be able to perceive it
+            (visible), understand it (interpretable), act on it (actionable), trust
+            it (reliable), and know when it is complete (resolved). Missing any one
+            component breaks the feedback loop.
+          apply:
+            - "Visible: feedback must be within the player's current focus area, not in a peripheral HUD element they are not watching."
+            - "Interpretable: red flash = damaged, green flash = healed, white flash = immune hit absorbed. Define these conventions once and apply them consistently."
+            - "Actionable: feedback that tells the player what happened but not what to do next is incomplete. Death screens must show the cause and the player's path to improvement."
+            - "Reliable: if a kill flash happens 90% of the time and is absent 10% of the time, players cannot trust their pattern recognition. 100% reliability is required."
+            - "Resolved: the feedback must have a clear end state. A tint that lingers indefinitely signals ongoing state; a tint that fades signals a transient event. Never mix the two roles."
+
+        the_flow_lens:
+          rule: >
+            Flow (Csikszentmihalyi) is the state of complete engagement where the
+            challenge matches the player's skill exactly. In flow, time disappears
+            and the player is fully absorbed. Flow is the ideal game state. Any UI
+            that pulls the player out of the game breaks flow.
+          apply:
+            - "UI that requires reading during active gameplay breaks flow. All in-game UI must be interpretable at a glance."
+            - "Instructions, tutorials, or explanations during active gameplay break flow. Teach through play."
+            - "Feedback that is delayed, ambiguous, or requires interpretation breaks flow. Immediate, obvious feedback preserves it."
+
+        the_transformation_lens:
+          rule: >
+            Great games transform their players: they learn new skills, develop new
+            strategies, or see the world differently. A game that leaves the player
+            exactly as they entered it has missed its highest purpose.
+          apply:
+            - "After every run, the player should leave knowing something they did not know before: which enemy was hardest, which power-up was most effective, how long they survived."
+            - "The death screen is the transformation moment. It must show the player what they learned and what to try differently. A death screen that only shows 'try again' is a wasted transformation opportunity."
+
+    - title: "Game Feel: A Game Designer's Guide to Virtual Sensation"
+      authors: ["Steve Swink"]
+      category: "game_feel_and_input"
+      domain_fit: ["game_ui", "mobile"]
+      why_s_plus: >
+        Swink is the definitive technical analysis of why some games feel satisfying
+        to control and others feel cheap or unresponsive. Game feel is the sum of
+        input latency, visual response, physics, audio, and camera behavior. It is the
+        difference between a game that feels like you are controlling something real
+        and one that feels like watching a simulation. Insubstitutable for any project
+        where player feel and control quality matter.
+      principles:
+
+        real_time_control:
+          rule: >
+            Real-time control is the continuous, immediate relationship between player
+            input and game response. The game must respond to input within 1-2 frames
+            (16-33ms at 60fps). Any delay beyond this is perceived as input lag and
+            destroys the sensation of direct control.
+          apply:
+            - "Player movement must respond to touch input within the current frame, never deferred to the next. Use go.set_position, not go.animate for immediate movement."
+            - "Weapon fire must produce a muzzle visual in the same frame as the input that triggered it."
+            - "Power-up activation must produce the first frame of its visual in the same frame as the collection event."
+
+        juiciness:
+          rule: >
+            Juiciness is the quality of producing more output than strictly necessary
+            from a mechanical standpoint. A juicy jump produces a squash-and-stretch
+            animation, a sound, a dust particle, and a shadow blur. The mechanical
+            output is 'player moved up.' The juicy output is all the above. Juiciness
+            creates the sensation that every action is meaningful and the world is
+            responsive.
+          apply:
+            - "Every discrete game event (kill, hit, pickup, spawn) should produce at minimum 2 simultaneous feedback channels: visual + scale, or tint + motion."
+            - "Scale squash-and-stretch: a player hit should compress the player sprite briefly (scale 0.85 on the hit axis for 80ms) before returning to normal. This communicates impact physically."
+            - "Enemy death: flash white (1 frame) then scale-out from 1.0 to 1.5 over 150ms while fading alpha to 0. The scale-out conveys explosion energy; the white flash confirms the kill moment."
+            - "Pickup: player briefly scales to 1.2 (100ms ease-out) then returns to 1.0 (80ms ease-in). This is the most compact, universal pickup confirmation."
+
+        the_feel_of_weight:
+          rule: >
+            Heavier, stronger characters or actions must feel different from lighter,
+            faster ones through timing alone. A heavy melee strike has more anticipation
+            (windup time), more impact (screen shake, hold frame), and more follow-through
+            (recovery time). A fast ranged shot has minimal windup and maximum immediacy.
+          apply:
+            - "Heavy powerups (berserker, bomb) must have entrance animations with more duration and more physical displacement than light powerups (bullet time, sniper)."
+            - "The berserker scale-up animation is correct to use OUTBACK easing — it physically overshoots like something growing too fast to control."
+            - "Bomb explosion feedback must be larger and longer than any regular kill feedback. Its consequence (clearing the screen) must be proportional to its visual event."
+
+        input_feel_and_friction:
+          rule: >
+            Friction in input (dead zones, acceleration curves, clamp behavior) must
+            match the player character's conceptual weight. A fast, agile character
+            should have no input dead zone and maximum sensitivity. A heavy character
+            should have slight acceleration on start and deceleration on stop.
+          apply:
+            - "Touch drag for direct-control movement: use raw delta without dead zone. Dead zones are for analog sticks, not touch. Every pixel of drag should produce a pixel of player movement."
+            - "Clamp to screen edges must be hard (no sliding off screen), but the clamping should not produce a jarring stop. Reduce sensitivity as player approaches the edge within the last 20px."
+
+    - title: "Rules of Play: Game Design Fundamentals"
+      authors: ["Katie Salen", "Eric Zimmerman"]
+      category: "game_design_theory"
+      domain_fit: ["game_ui", "mobile", "saas"]
+      why_s_plus: >
+        Salen and Zimmerman provide the academic foundation for understanding games as
+        systems. Their analysis of feedback loops (positive and negative), emergence,
+        and meaningful choice is the theoretical underpinning for designing any game
+        system that creates interesting decisions. Applicable to gamification in SaaS
+        and product engagement mechanics, not only games.
+      principles:
+
+        meaningful_choice:
+          rule: >
+            A meaningful choice is one where: the player understands the options,
+            the outcomes are different, and the choice reflects something about the
+            player's strategy. A choice where all options are equivalent is not
+            meaningful. A choice the player cannot evaluate is not meaningful.
+          apply:
+            - "Power-up choices (when player can select between multiple spawned powerups) must be immediately distinguishable in value and effect."
+            - "Enemy strategy selection in config must present strategies whose differences the player can understand and evaluate. Pure random names without visual cues are not meaningful choices."
+            - "Difficulty selection (normal / hard) must communicate the actual difference to the player, not just a label."
+
+        feedback_loops:
+          rule: >
+            Positive feedback loops amplify success (winning → more resources → easier
+            to win more). Negative feedback loops dampen extremes (behind → catch-up
+            mechanic → gap closes). Both are necessary in a balanced game. Positive
+            loops drive exciting momentum; negative loops prevent runaway dominance
+            or insurmountable disadvantage.
+          apply:
+            - "Power-ups are a positive feedback loop: a player doing well has more time to collect powerups, making them do even better. This is intentional — ensure the base game has enough negative feedback (more enemies over time) to keep it from being trivial."
+            - "Leaderboard rank creates a negative feedback loop: seeing you are far behind motivates catching up. Showing the gap ('4 kills from rank 10') activates this loop stronger than showing rank alone."
+
+        emergence:
+          rule: >
+            Emergence is when complex, interesting behavior arises from simple rules.
+            Games with emergence are discovered rather than taught — players find
+            combinations and strategies the designer did not explicitly create.
+          apply:
+            - "Power-up combinations that produce emergent effects (e.g. ghost + berserker = fast invisible attack) are the highest-value content because they are discovered, not taught."
+            - "Document emergent combinations and ensure their visual feedback is proportional to their emergent power — they should feel special."
