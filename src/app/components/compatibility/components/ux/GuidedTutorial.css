@@ -27,9 +27,16 @@
 }
 
 .mdf-tour__card {
+  /* Always centered in the viewport. The spotlight still highlights the
+   * target element underneath — the card just never tries to dock next to
+   * it. This avoids the "card off-screen" failure on tall targets (e.g.
+   * the full map on step 1) and on short viewports. */
   position: fixed;
-  width: min(320px, calc(100vw - 24px));
-  max-width: 320px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(360px, calc(100vw - 24px));
+  max-width: 360px;
   max-height: calc(100dvh - 24px);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -245,11 +252,11 @@
 @keyframes mdf-tour-pop {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.98);
+    transform: translate(-50%, calc(-50% + 8px)) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 

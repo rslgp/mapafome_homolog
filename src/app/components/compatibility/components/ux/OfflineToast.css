@@ -1,0 +1,48 @@
+.mdf-toast {
+  position: fixed;
+  bottom: var(--mdf-space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2200;
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-3);
+  max-width: calc(100vw - var(--mdf-space-6));
+  padding: var(--mdf-space-3) var(--mdf-space-4);
+  background: var(--mdf-ink);
+  color: var(--mdf-surface-1);
+  border-radius: var(--mdf-radius-pill);
+  box-shadow: var(--mdf-elev-3);
+  font-size: var(--mdf-fs-small);
+  animation: mdf-toast-rise var(--mdf-dur-base) var(--mdf-ease-out-back) both;
+}
+
+.mdf-toast__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mdf-toast__dismiss {
+  flex-shrink: 0;
+  width: var(--mdf-touch-target);
+  height: var(--mdf-touch-target);
+  background: transparent;
+  color: var(--mdf-surface-1);
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: var(--mdf-radius-pill);
+}
+
+.mdf-toast__dismiss:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes mdf-toast-rise {
+  from { transform: translate(-50%, 24px); opacity: 0; }
+  to   { transform: translate(-50%, 0);    opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mdf-toast { animation: none; }
+}

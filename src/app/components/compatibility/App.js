@@ -13,6 +13,12 @@ import InfoPanel from './components/InfoPanel';
 import StepsHint from './components/ux/StepsHint';
 import GuidedTutorial, { hasSeenTour } from './components/ux/GuidedTutorial';
 import { trackReportStarted } from './components/ux/analytics';
+import ReportSheet from './components/ux/ReportSheet';
+import ContextBar from './components/ux/ContextBar';
+import PinDetailSheet from './components/ux/PinDetailSheet';
+import OfflineToast from './components/ux/OfflineToast';
+import { registerOnce as registerServiceWorker } from './components/ux/swRegister';
+import { enqueue as enqueuePublish, bindOnlineFlush, queueSize } from './components/ux/publishQueue';
 // import CoffeeTable from './components/table';
 // import ReactGA from 'react-ga';
 
@@ -88,15 +94,28 @@ class App extends Component {
       lastMarkedCoords: [],
       numero: '',
       telefoneFilterLocal: false,
-      ultimoAnoLocal: false,
+      ultimoAnoFilterLocal: false,
       site: '',
       redesocial: '',
       tourOpen: false,
       activeStep: 1,
+      reportSheetOpen: false,
+      reportSheetCoords: null,
+      pingCoords: null,
+      selectedPin: null,
+      pinSheetOpen: false,
+      nowTick: Date.now(),
+      offlineToast: null,
     }
 
     this.handleStartTour = this.handleStartTour.bind(this);
     this.handleCloseTour = this.handleCloseTour.bind(this);
+    this.handleOpenReportSheet = this.handleOpenReportSheet.bind(this);
+    this.handleCloseReportSheet = this.handleCloseReportSheet.bind(this);
+    this.handlePublishFromSheet = this.handlePublishFromSheet.bind(this);
+    this.handlePinDroppedOnMap = this.handlePinDroppedOnMap.bind(this);
+    this.handleReporterPinClick = this.handleReporterPinClick.bind(this);
+    this.handleClosePinSheet = this.handleClosePinSheet.bind(this);
 
     this.dropDownMenuSemanaEntregaAlimentoPronto = React.createRef();
     this.dropDownMenuHorarioEntregaAlimentoPronto = React.createRef();
@@ -492,8 +511,32 @@ class App extends Component {
   }
 
   handleClickMap() {
-    // this.setState({lastMarkedCoords: coords});
-    if (envVariables.lastMarked === undefined) return;
+    // Resolve a coordinate pair before any async work:
+    //   1. Preferred: the pin the user dropped on the map (envVariables.lastMarked — a Leaflet marker).
+    //   2. Fallback: the user's GPS (envVariables.currentLocation), behind an explicit confirm prompt
+    //      so we never silently publish using a location the user did not choose.
+    //   3. Otherwise: friendly instruction, no publish.
+    let latlng;
+    if (envVariables.lastMarked !== undefined) {
+      const { lat, lng } = envVariables.lastMarked.getLatLng();
+      latlng = [lat, lng];
+      envVariables.lastMarked.latlng = latlng;
+    } else if (envVariables.currentLocation) {
+      const ok = window.confirm(
+        'Você ainda não marcou um ponto no mapa.\n\nUsar sua localização atual para publicar este ponto?'
+      );
+      if (!ok) return;
+      latlng = envVariables.currentLocation;
+    } else {
+      alert('Toque no mapa para escolher o local, ou permita o uso da sua localização no navegador.');
+      return;
+    }
+
+    if (!envVariables.dentroLimites(latlng)) {
+      alert('Região não suportada');
+      return;
+    }
+
     this.setState({ isLoading: true });
     (async function main(self) {
       await doc.useServiceAccountAuth({
@@ -502,16 +545,7 @@ class App extends Component {
       });
 
       await doc.loadInfo(); // Loads document properties and worksheets
-      let { lat, lng } = envVariables.lastMarked.getLatLng();
-      envVariables.lastMarked.latlng = [lat, lng];
-      let regiao;
-      if (envVariables.dentroLimites(envVariables.lastMarked.latlng)) {
-        regiao = 0;
-      }
-      else {
-        alert("Região não suportada");
-        return;
-      }
+      const regiao = 0;
       const sheet = doc.sheetsByIndex[regiao];
       // const rows = await sheet.getRows();
       // Total row count
@@ -536,7 +570,7 @@ class App extends Component {
       dadosRow.alimento = self.state.alimento;
       dadosRow.numero = "";
       dadosRow.endereco = "";
-      dadosRow.coords = envVariables.lastMarked.latlng;
+      dadosRow.coords = latlng;
       dadosRow.telefone = self.state.telefoneEncryptado;
       dadosRow.diaSemana = self.state.diaSemana;
       dadosRow.horario = self.state.horario;
@@ -578,7 +612,154 @@ class App extends Component {
     this.setState({ tourOpen: false });
   }
 
+  handleOpenReportSheet() {
+    // Prefer a pin dropped on the map; fall back to GPS; else current center.
+    let coords = null;
+    if (envVariables.lastMarked && typeof envVariables.lastMarked.getLatLng === 'function') {
+      const ll = envVariables.lastMarked.getLatLng();
+      coords = [ll.lat, ll.lng];
+    } else if (envVariables.currentLocation && envVariables.currentLocation.length === 2) {
+      coords = envVariables.currentLocation;
+    } else {
+      coords = this.state.center;
+    }
+    trackReportStarted({ entryPoint: 'fab' });
+    this.setState({ reportSheetOpen: true, reportSheetCoords: coords });
+  }
+
+  handleCloseReportSheet() {
+    this.setState({ reportSheetOpen: false });
+  }
+
+  handlePinDroppedOnMap(coords) {
+    trackReportStarted({ entryPoint: 'map_long_press' });
+    this.setState({ reportSheetOpen: true, reportSheetCoords: coords });
+  }
+
+  handleReporterPinClick(pin) {
+    this.setState({ selectedPin: pin, pinSheetOpen: true });
+  }
+
+  handleClosePinSheet() {
+    this.setState({ pinSheetOpen: false });
+  }
+
+  // Low-level write: no UI assumptions, throws on any failure. Used both by
+  // the interactive publish path and the offline queue flush (M7).
+  async writePinToSheets({ coords, categories, detail, contact }) {
+    if (!coords || !envVariables.dentroLimites(coords)) {
+      throw new Error('out_of_bounds');
+    }
+    await doc.useServiceAccountAuth({
+      client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
+    });
+    await doc.loadInfo();
+    const sheet = doc.sheetsByIndex[0];
+
+    // Primary category string used by existing filters; full M1 array goes
+    // into the JSON blob under "Categorias" so future milestones can read it
+    // without breaking the current filter UI.
+    const dadosRow = {
+      alimento: 'MoradorRua',
+      numero: '',
+      endereco: '',
+      coords,
+      telefone: '',
+      diaSemana: '',
+      horario: '',
+      mes: '',
+      redesocial: contact || '',
+    };
+    const row = envVariables.criarRow(dadosRow);
+    const dadosJSON = JSON.parse(row.Dados);
+    dadosJSON.Categorias = categories;
+    if (detail) dadosJSON.Detalhe = detail;
+    row.Dados = JSON.stringify(dadosJSON);
+
+    await sheet.addRow(row);
+
+    // Stamp the document's last-modified timestamp onto the first row (cell B1).
+    // Lets clients cheaply check freshness without scanning all rows.
+    try {
+      await sheet.loadCells('A1:B1');
+      const stampCell = sheet.getCell(0, 1);
+      stampCell.value = new Date().toISOString();
+      await sheet.saveUpdatedCells();
+    } catch (e) {
+      // Do not fail the user's publish on a metadata write error.
+      console.warn('[lastModified] write failed:', e && e.message);
+    }
+  }
+
+  // M1 publish path — writes through writePinToSheets and handles the UX-side
+  // effects (ping-ring). Falls back to IndexedDB queue when offline (M7).
+  async handlePublishFromSheet(payload) {
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    if (offline) {
+      await enqueuePublish(payload);
+      this.setState({
+        offlineToast: 'Você está sem internet. O ponto foi salvo e será enviado quando a conexão voltar.',
+      });
+      return;
+    }
+
+    try {
+      await this.writePinToSheets(payload);
+    } catch (err) {
+      // Any network-shaped failure goes to the queue so the user does not
+      // lose their input. Non-network failures re-throw for the sheet UI.
+      const msg = (err && err.message) || '';
+      const looksLikeNetwork = /network|failed to fetch|offline|timeout/i.test(msg);
+      if (looksLikeNetwork) {
+        await enqueuePublish(payload);
+        this.setState({
+          offlineToast: 'Conexão instável. Ponto salvo localmente — enviaremos em breve.',
+        });
+        return;
+      }
+      throw err;
+    }
+
+    // Trigger M1 post-publish ping-ring on the map at the new pin.
+    this.setState({ pingCoords: null }, () => {
+      this.setState({ pingCoords: [payload.coords[0], payload.coords[1]] });
+      setTimeout(() => this.setState({ pingCoords: null }), 700);
+    });
+  }
+
+  componentWillUnmount() {
+    if (this._urgencyTicker) clearInterval(this._urgencyTicker);
+    if (this._unbindOnlineFlush) this._unbindOnlineFlush();
+  }
+
   componentDidMount() {
+
+    // M2 — tick once a minute so the context bar and marker urgency re-derive
+    // without any backend push. Client clock is the source of truth here; a
+    // server-time correction is deferred until real drift is observed.
+    this._urgencyTicker = setInterval(() => {
+      this.setState({ nowTick: Date.now() });
+    }, 60 * 1000);
+
+    // M7 — register SW for offline shell + tile caching, then attach an
+    // online-flush handler so queued publishes drain opportunistically.
+    registerServiceWorker();
+    this._unbindOnlineFlush = bindOnlineFlush(
+      (payload) => this.writePinToSheets(payload),
+      {
+        onResult: ({ succeeded, failed }) => {
+          if (succeeded > 0) {
+            this.setState({ offlineToast: `${succeeded} ponto${succeeded > 1 ? 's' : ''} publicado${succeeded > 1 ? 's' : ''} agora.` });
+          } else if (failed > 0) {
+            this.setState({ offlineToast: 'Ainda não foi possível enviar os pontos salvos. Tentaremos de novo quando voltar a conexão.' });
+          }
+        },
+      },
+    );
+    queueSize().then((n) => {
+      if (n > 0) this.setState({ offlineToast: `${n} ponto${n > 1 ? 's' : ''} aguardando conexão.` });
+    });
 
     // First-visit guided tutorial — cookie-gated, contextual, never blocks the map.
     // Defer one tick so the DOM nodes referenced by tour stops exist.
@@ -1039,12 +1220,18 @@ class App extends Component {
         <Header
           rowCountProp={this.state.rowCount}
           onStartTour={this.handleStartTour}
+          onStartReport={this.handleOpenReportSheet}
         />
         <StepsHint
           activeStep={this.state.activeStep}
           onStartTour={this.handleStartTour}
         />
         <main id="mdf-main" className="mdf-main">
+        <ContextBar
+          key={`ctx-${this.state.nowTick}`}
+          dataMaps={this.state.dataMaps}
+          userCoords={this.state.center}
+        />
         <Grid container spacing={2}>
           {/* Top row: MainMap (left) and MainControls (right) */}
           <MainMap
@@ -1052,12 +1239,18 @@ class App extends Component {
             center={this.state.center}
             tileMapOption={this.state.tileMapOption}
             filtro={this.state.filtro}
+            telefoneFilterActive={this.state.telefoneFilterLocal}
+            ultimoAnoFilterActive={this.state.ultimoAnoFilterLocal}
             onRemoverPonto={this.removerPonto}
             onVerificarPonto={this.verificarPonto}
             onEntregarAlimento={this.entregarAlimento}
             onAvaliar={this.avaliar}
             onContabilizarClicado={this.contabilizarClicado}
             onClicouTelefone={this.clicouTelefone}
+            onPinDropped={this.handlePinDroppedOnMap}
+            pingCoords={this.state.pingCoords}
+            onReporterPinClick={this.handleReporterPinClick}
+            nowTick={this.state.nowTick}
           />
 
           <MainControls
@@ -1071,7 +1264,7 @@ class App extends Component {
             numero={this.state.numero}
             redesocial={this.state.redesocial}
             telefoneFilterLocal={this.state.telefoneFilterLocal}
-            ultimoAnoFilterLocal={this.state.ultimoAnoLocal}
+            ultimoAnoFilterLocal={this.state.ultimoAnoFilterLocal}
             onFiltroChange={this.setFiltro}
             onTipoAlimentoChange={this.setTipoAlimento}
             onDiaSemanaChange={this.setDiaSemana}
@@ -1103,6 +1296,33 @@ class App extends Component {
         <GuidedTutorial
           open={this.state.tourOpen}
           onClose={this.handleCloseTour}
+        />
+
+        <button
+          type="button"
+          className="mdf-fab"
+          aria-label="Relatar ponto"
+          onClick={this.handleOpenReportSheet}
+        >
+          +
+        </button>
+
+        <ReportSheet
+          open={this.state.reportSheetOpen}
+          coords={this.state.reportSheetCoords}
+          onClose={this.handleCloseReportSheet}
+          onPublish={this.handlePublishFromSheet}
+        />
+
+        <PinDetailSheet
+          open={this.state.pinSheetOpen}
+          pin={this.state.selectedPin}
+          onClose={this.handleClosePinSheet}
+        />
+
+        <OfflineToast
+          message={this.state.offlineToast}
+          onDismiss={() => this.setState({ offlineToast: null })}
         />
 
       </div >

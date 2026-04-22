@@ -119,14 +119,27 @@ export const TileLayersControl = () => (
 // Extracted here so useMap() is used correctly inside the component tree,
 // and onMapClick is bound by the caller (CoffeeMap) to its own ref.
 
-export const MapClickHandler = ({ onMapClick }) => {
+export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
     const map = useMap();
 
     useEffect(() => {
         const handleClick = (e) => onMapClick(map, e.latlng.lat, e.latlng.lng);
+        const handleLongPress = (e) => {
+            // contextmenu fires on desktop right-click and on mobile long-press.
+            // Suppress the native menu so the app UI can take over.
+            if (e.originalEvent && e.originalEvent.preventDefault) {
+                e.originalEvent.preventDefault();
+            }
+            onMapClick(map, e.latlng.lat, e.latlng.lng);
+            onMapLongPress?.(map, e.latlng.lat, e.latlng.lng);
+        };
         map.on('click', handleClick);
-        return () => map.off('click', handleClick);
-    }, [map, onMapClick]);
+        map.on('contextmenu', handleLongPress);
+        return () => {
+            map.off('click', handleClick);
+            map.off('contextmenu', handleLongPress);
+        };
+    }, [map, onMapClick, onMapLongPress]);
 
     return null;
 };

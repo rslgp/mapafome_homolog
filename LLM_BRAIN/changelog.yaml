@@ -1,0 +1,192 @@
+changelog:
+  meta:
+    project: "MAPA FOME"
+    source: "LLM_BRAIN/milestones.yaml"
+    notation: >
+      Each entry records the milestone being worked on, the files added or
+      modified, and the scope/exit-criteria line from the brief that it
+      serves. 'deferred' tracks explicit gaps that need follow-up.
+
+  # ─────────────────────────────────────────────
+  # M0 — FOUNDATION
+  # ─────────────────────────────────────────────
+  m0_foundation:
+    status: "code-complete; pending verification (Lighthouse + first CI run)"
+    added:
+      - path: "src/app/components/compatibility/components/ux/analytics.js"
+        purpose: "multi-transport analytics (gtag → dataLayer → sessionStorage)"
+        serves: "metrics.events_required scaffolding"
+      - path: ".github/workflows/a11y.yml"
+        purpose: "axe-core CI gate on WCAG 2.2 AA tags (via npx, no dev-dep)"
+        serves: "exit_criteria: axe-core reports 0 serious/critical on home"
+      - path: "src/app/components/compatibility/components/home/TabelaFome.css"
+        purpose: "classes replacing inline hex backgrounds"
+    modified:
+      - path: "src/app/components/compatibility/components/ux/tokens.css"
+        change: "added risk swatch, table zebra, and tour swatch tokens"
+      - path: "src/app/components/compatibility/components/MainMap.js"
+        change: "replaced #4d4d4d with var(--mdf-ink-muted)"
+      - path: "src/app/components/compatibility/components/InfoPanel.css"
+        change: "ip-risk-* rules switched from hex to tokens"
+      - path: "src/app/components/compatibility/components/home/TabelaFome.js"
+        change: "inline background-color hex → class-based zebra rows"
+      - path: "src/app/components/compatibility/components/ux/GuidedTutorial.css"
+        change: "tour swatch hex → tokens"
+      - path: "src/app/components/compatibility/App.js"
+        change: "pin_report_started wired at setTipoAlimento entry"
+      - path: "src/app/components/compatibility/components/ux/GuidedTutorial.js"
+        change: "pin_report_started fired on tour reporter branch"
+      - path: "package.json"
+        change: "added npm run a11y script for local axe-core check"
+    exit_status:
+      - "tokens + lang=pt-BR + skip link + focus ring: done earlier"
+      - "pin_report_started end-to-end: done"
+      - "axe-core CI: workflow present; first run is verification"
+      - "zero hex/px in /components (grep clean, tokens.css excepted): done"
+      - "Lighthouse a11y ≥ 95: pending user-run verification"
+
+  # ─────────────────────────────────────────────
+  # M1 — THREE-STEP REPORTER FLOW
+  # ─────────────────────────────────────────────
+  m1_three_step_reporter_flow:
+    status: "code-complete; pending 14-day completion-rate measurement"
+    added:
+      - path: "src/app/components/compatibility/components/ux/ReportSheet.js"
+        purpose: "bottom-sheet / side-panel dialog for categories + publish"
+        serves: "three_step_promise steps 2 and 3"
+      - path: "src/app/components/compatibility/components/ux/ReportSheet.css"
+        purpose: "sheet layout, FAB, drop-in marker animation, ping-ring"
+        serves: "visual_system.markers motion + screens.report_sheet"
+    modified:
+      - path: "src/app/components/compatibility/App.js"
+        changes:
+          - "handleOpenReportSheet: FAB/header entry points, selects coords from last-marked/GPS/center"
+          - "handlePublishFromSheet: writes Categorias[] + Detalhe into existing Dados JSON"
+          - "writePinToSheets: split low-level writer for reuse with queue"
+          - "last-modified stamp → Google Sheet cell B1 after every successful addRow"
+          - "post-publish pingCoords trigger (null → coords → null after 700ms)"
+          - "handlePinDroppedOnMap wires long-press entry point"
+      - path: "src/app/components/compatibility/components/header.js"
+        change: "[Relatar] primary CTA alongside 'Como funciona'"
+      - path: "src/app/components/compatibility/components/ux/Header.css"
+        change: "brand-red .mdf-header__report, narrow-screen compaction"
+      - path: "src/app/components/compatibility/components/map.js"
+        changes:
+          - "handleMapClick adds .mdf-dropped-pin class for 240ms ease-out-back scale"
+          - "onPinDropped prop fires from long-press/contextmenu"
+          - "pingCoords prop drops one-shot L.divIcon ring + setView"
+      - path: "src/app/components/compatibility/components/mapComponents.js"
+        change: "MapClickHandler listens to contextmenu, suppresses native menu, fires long-press callback"
+      - path: "src/app/components/compatibility/components/MainMap.js"
+        change: "threads onPinDropped + pingCoords props down to CoffeeMap"
+    exit_status:
+      - "entry points (FAB, header [Relatar], map long-press): all wired"
+      - "drop-in animation scale 0→1.1→1.0 240ms ease-out-back: done"
+      - "bottom sheet 70%↔95% draggable + desktop 400px side panel: done"
+      - "5 categories, multi-select, checkmark + filled bg: done"
+      - "optional detail + contact expanders with microcopy: done"
+      - "loading/success/error publish states + inline validation: done"
+      - "pin_report_published event with documented properties: done"
+      - "three_step_completion_rate ≥ 75%: pending 14-day measurement"
+      - "Lighthouse mobile perf ≥ 80: pending user-run verification"
+    notes:
+      - "New reporter pins store Roaster='MoradorRua' + Categorias[] in Dados JSON; preserves legacy filter paths."
+
+  # ─────────────────────────────────────────────
+  # M2 — MAP CLARITY
+  # ─────────────────────────────────────────────
+  m2_map_clarity:
+    status: "code-complete"
+    added:
+      - path: "src/app/components/compatibility/components/ux/mdfMarkers.js"
+        purpose: "urgency classifier + SVG L.divIcon builder (ring thickness + color, person/house glyph)"
+        serves: "visual_system.markers two-axis encoding"
+      - path: "src/app/components/compatibility/components/ux/ContextBar.js"
+        purpose: "live 'X pontos em 2 km · Y aguardando há mais de 6h' surface"
+        serves: "context bar requirement"
+      - path: "src/app/components/compatibility/components/ux/ContextBar.css"
+      - path: "src/app/components/compatibility/components/ux/PinDetailSheet.js"
+        purpose: "M2 placeholder pin sheet (status chip + categories + time-since)"
+        serves: "tapping a pin opens a placeholder; full content is M3"
+      - path: "src/app/components/compatibility/components/ux/PinDetailSheet.css"
+      - path: "src/app/components/compatibility/components/ReporterMarkers.js"
+        purpose: "renders only Categorias-bearing rows with the new urgency markers; archives hidden after 24h attended"
+    modified:
+      - path: "src/app/components/compatibility/components/map.js"
+        change: "adds ReporterMarkers layer, onReporterPinClick + nowTick props"
+      - path: "src/app/components/compatibility/components/MainMap.js"
+        change: "threads nowTick + onReporterPinClick"
+      - path: "src/app/components/compatibility/App.js"
+        changes:
+          - "nowTick state + 60s setInterval for live urgency/context refresh"
+          - "selectedPin + pinSheetOpen state for PinDetailSheet"
+          - "ContextBar mounted above the Grid layout"
+          - "componentWillUnmount clears the urgency ticker"
+    exit_status:
+      - "stale vs fresh identifiable without color (ring thickness 2/3/5 px): done"
+      - "no looping animations on markers (SVG static, ring one-shot): done"
+      - "context bar count updates live without reload: done"
+    risks_logged:
+      - "urgency derives from client clock; server-time correction deferred until real drift observed."
+
+  # ─────────────────────────────────────────────
+  # M7 — OFFLINE / PWA  (taken out of dependency order at user request)
+  # ─────────────────────────────────────────────
+  m7_offline_pwa:
+    status: "first slice shipped; dependency order deviation noted"
+    dependency_deviation: "brief orders M3→M4→M5→M6→M7; M3–M6 not yet built when M7 started"
+    added:
+      - path: "public/sw.js"
+        purpose: "service worker: shell cache-first, OSM HOT tiles SWR (bounded 250), Sheets network-first; Waze/Esri untouched"
+        serves: "service worker caches app shell + map tiles + pin data"
+      - path: "src/app/components/compatibility/components/ux/publishQueue.js"
+        purpose: "IndexedDB queue for failed publishes; flush on online event"
+        serves: "publish queue persists in IndexedDB"
+      - path: "src/app/components/compatibility/components/ux/swRegister.js"
+        purpose: "idempotent SW registration, skips dev localhost"
+      - path: "src/app/components/compatibility/components/ux/OfflineToast.js"
+        purpose: "bottom-center status pill (aria-live polite, auto-hide 6s)"
+        serves: "success/failure surfaces a toast on next foreground"
+      - path: "src/app/components/compatibility/components/ux/OfflineToast.css"
+    modified:
+      - path: "public/manifest.json"
+        change: "name, lang=pt-BR, start_url /, scope /, display standalone, brand theme_color, maskable icon entry"
+      - path: "src/app/layout.js"
+        change: "metadata.manifest + themeColor=brand"
+      - path: "src/app/components/compatibility/App.js"
+        changes:
+          - "registerServiceWorker() on mount"
+          - "bindOnlineFlush: drain queue and toast result"
+          - "handlePublishFromSheet: offline → enqueuePublish; network-shaped errors → enqueue with retry messaging"
+          - "queueSize check at startup surfaces backlog notice"
+    exit_status:
+      - "open offline → tap → publish on reconnect within 60s: done via IndexedDB + online handler"
+      - "Lighthouse PWA ≥ 90: pending user-run verification"
+      - "map tile licensing: only tile.openstreetmap.fr cached, bounded to 250"
+    deferred:
+      - "proactive 'last viewport' tile warming (currently passive SWR)."
+      - "PNG icons at 192 and 512 sizes (manifest references favicon.png only)."
+      - "M8 background sync push integration."
+
+  # ─────────────────────────────────────────────
+  # ANCILLARY WORK (out-of-milestone fixes requested during the session)
+  # ─────────────────────────────────────────────
+  ancillary:
+    header_branding:
+      - "header.js: ◉ glyph replaced with imported MapaFome_Icons_Blue.svg as decorative img"
+      - "Header.css: .mdf-header__mark re-sized to 24×24 block"
+    tutorial:
+      - "GuidedTutorial.js: backdrop click → handleSkip (same as 'Pular tutorial')"
+      - "GuidedTutorial.css: max-height 100dvh-24px, overflow-y auto; narrow (<380px) + short-landscape (<520px) media queries"
+      - "GuidedTutorial.js popoverPosition: viewport-derived cardW/cardH; centered fallback under 360w or 420h; orientationchange listener"
+
+  # ─────────────────────────────────────────────
+  # NOT STARTED (in brief order)
+  # ─────────────────────────────────────────────
+  pending:
+    m3_donor_response: "pin detail content, soft claim, mark-as-attended, pin desaturate + archive"
+    m4_accessible_alternative: "list view ranking, aria-live announcements, focus trapping verification"
+    m5_empty_and_error_states: "designed empty states + resilient error handling + idempotency keys"
+    m6_solidarity_initiatives: "/iniciativas/cadastrar route + house-glyph initiative pins"
+    m8_opt_in_notifications: "donor opt-in radius/frequency controls"
+    m9_i18n_scaffolding: "string dictionary + runtime locale switch"

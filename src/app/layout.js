@@ -4,7 +4,8 @@ import './globals.css';
 export const metadata = {
   title: 'MAPA FOME',
   description: 'Vamos acabar com a fome juntos. Construído usando React, Material-UI e LeafletJS conectado ao Google Sheets para facilitar a edição da comunidade!',
-  themeColor: '#000000',
+  themeColor: '#D64545',
+  manifest: '/manifest.json',
   openGraph: {
     title: 'MAPA FOME',
     description: 'Vamos acabar com a fome juntos. Construído usando React, Material-UI e LeafletJS conectado ao Google Sheets para facilitar a edição da comunidade!',
@@ -19,7 +20,7 @@ export const metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#000000',
+  themeColor: '#D64545',
 };
 
 // app/layout.js

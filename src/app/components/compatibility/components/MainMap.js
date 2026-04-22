@@ -7,12 +7,18 @@ const MainMap = ({
   dataMaps,
   center,
   filtro,
+  telefoneFilterActive,
+  ultimoAnoFilterActive,
   onRemoverPonto,
   onVerificarPonto,
   onEntregarAlimento,
   onAvaliar,
   onContabilizarClicado,
-  onClicouTelefone
+  onClicouTelefone,
+  onPinDropped,
+  pingCoords,
+  onReporterPinClick,
+  nowTick,
 }) => {
   return (
     <Grid size={{ xs: 12, sm: 8 }} >
@@ -34,8 +40,14 @@ const MainMap = ({
           entregarAlimento={onEntregarAlimento}
           avaliar={onAvaliar}
           filtro={filtro}
+          telefoneFilterActive={telefoneFilterActive}
+          ultimoAnoFilterActive={ultimoAnoFilterActive}
           contabilizarClicado={onContabilizarClicado}
           clicouTelefone={onClicouTelefone}
+          onPinDropped={onPinDropped}
+          pingCoords={pingCoords}
+          onReporterPinClick={onReporterPinClick}
+          nowTick={nowTick}
         />
       </Paper>
     </Grid>

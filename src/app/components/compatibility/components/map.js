@@ -22,6 +22,7 @@ import PropTypes from 'prop-types';
 
 import SearchField from './SearchField';
 import MarkerGroup from './MarkerGroup';
+import ReporterMarkers from './ReporterMarkers';
 import {
     ICONS,
     ROASTER_TYPES,
@@ -64,6 +65,8 @@ const MSG = {
 const CoffeeMap = ({
     location,
     filtro,
+    telefoneFilterActive,
+    ultimoAnoFilterActive,
     dataMapsProp,
     clicouTelefone,
     contabilizarClicado,
@@ -71,10 +74,15 @@ const CoffeeMap = ({
     verificarPonto,
     removerPonto,
     entregarAlimento,
+    onPinDropped,
+    pingCoords,
+    onReporterPinClick,
+    nowTick,
 }) => {
     const [center, setCenter]   = useState(location);
     const [filter, setFilter]   = useState(filtro);
     const lastMarkedRef          = useRef(null);
+    const mapRef                 = useRef(null);
 
     useEffect(() => { if (filtro !== filter) setFilter(filtro); }, [filtro]);
     useEffect(() => { setCenter(location); }, [location]);
@@ -84,14 +92,52 @@ const CoffeeMap = ({
     // delegated to MapClickHandler so useMap() hook works correctly.
     const handleMapClick = useCallback((map, lat, lng) => {
         if (lastMarkedRef.current) lastMarkedRef.current.remove();
-        lastMarkedRef.current = L.marker([lat, lng], {
+        const marker = L.marker([lat, lng], {
             icon: ICONS.CURRENT_LOCATION_SMALL,
             draggable: false,
         }).addTo(map);
 
+        // M1 drop-in animation — scale 0→1.1→1.0 over 240ms ease-out-back.
+        // Apply the class after Leaflet has attached _icon to the DOM.
+        if (marker._icon) marker._icon.classList.add('mdf-dropped-pin');
+
+        lastMarkedRef.current = marker;
+        mapRef.current = map;
+
         // Backward compatibility: envVariables.lastMarked used by parent components
-        envVariables.lastMarked = lastMarkedRef.current;
+        envVariables.lastMarked = marker;
     }, []);
+
+    // M1 long-press / right-click → drop the pin AND surface the report sheet.
+    const handleMapLongPress = useCallback((_map, lat, lng) => {
+        onPinDropped?.([lat, lng]);
+    }, [onPinDropped]);
+
+    // M1 post-publish ping-ring. Parent bumps `pingCoords`; we drop a one-shot
+    // marker with a CSS ring animation and recenter the map onto it.
+    useEffect(() => {
+        if (!pingCoords || pingCoords.length !== 2) return;
+        const map = mapRef.current;
+        if (!map) return;
+        map.setView(pingCoords, Math.max(map.getZoom(), MAP_CONFIG.DEFAULT_ZOOM_MOBILE));
+
+        const ring = L.marker(pingCoords, {
+            interactive: false,
+            keyboard: false,
+            icon: L.divIcon({
+                className: 'mdf-ping-ring',
+                html: '<span></span>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+            }),
+        }).addTo(map);
+
+        const timer = setTimeout(() => ring.remove(), 700);
+        return () => {
+            clearTimeout(timer);
+            ring.remove();
+        };
+    }, [pingCoords]);
 
     // Shared props for every MarkerGroup to avoid repetition
     const groupHandlers = {
@@ -107,14 +153,22 @@ const CoffeeMap = ({
     // addGroup returns a <MarkerGroup /> or null if the filtered set is empty.
     // Keeps the render block declarative without repeating MarkerGroup boilerplate.
 
+    // Filter state must participate in the cluster key: MarkerClusterGroup
+    // caches its internal layer tree and does not re-evaluate children when
+    // only a module-scoped flag (envVariables.telefoneFilter / ultimoAnoFilter)
+    // changes. Rekeying on the active filter flags forces a clean remount so
+    // the filter predicate in MarkerGroup actually takes effect.
+    const filterSig = `t${telefoneFilterActive ? 1 : 0}a${ultimoAnoFilterActive ? 1 : 0}`;
+
     const addGroup = (key, filterFn, icon, clusterFn, msgFormatter, removeOutside = false) => {
         const filtered = dataMapsProp.filter(filterFn);
         if (filtered.length === 0) return null;
 
+        const fullKey = `${key}-${filterSig}`;
         return (
             <MarkerGroup
-                key={key}
-                componentKey={key}
+                key={fullKey}
+                componentKey={fullKey}
                 dataItems={filtered}
                 icon={icon}
                 clusterIconFunction={clusterFn}
@@ -178,10 +232,11 @@ const CoffeeMap = ({
             x => x.Roaster === ROASTER_TYPES.TESTE && isWithinTimeThreshold(x.DateISO, MAP_CONFIG.TEST_MARKER_MAX_HOURS)
         );
         if (testMarkers.length > 0) {
+            const testesKey = `testes-${filterSig}`;
             groups.push(
                 <MarkerGroup
-                    key="testes"
-                    componentKey="testes"
+                    key={testesKey}
+                    componentKey={testesKey}
                     dataItems={testMarkers}
                     icon={ICONS.TEST}
                     clusterIconFunction={markerClusterOptionsPrecisando}
@@ -217,7 +272,7 @@ const CoffeeMap = ({
                 <MapViewUpdater center={center} />
 
                 {/* Encapsulated click handler: was inline whenReady arrow in V1 and V2 */}
-                <MapClickHandler onMapClick={handleMapClick} />
+                <MapClickHandler onMapClick={handleMapClick} onMapLongPress={handleMapLongPress} />
 
                 <AttributionControl position="bottomleft" prefix={false} />
 
@@ -229,6 +284,13 @@ const CoffeeMap = ({
                 />
 
                 {renderMarkerGroups()}
+
+                {/* M2 — reporter pins with urgency-age encoding */}
+                <ReporterMarkers
+                    dataMaps={dataMapsProp}
+                    onPinClick={onReporterPinClick}
+                    nowTick={nowTick}
+                />
             </MapContainer>
         </div>
     );
@@ -244,6 +306,10 @@ CoffeeMap.propTypes = {
     verificarPonto:        PropTypes.func.isRequired,
     removerPonto:          PropTypes.func.isRequired,
     entregarAlimento:      PropTypes.func.isRequired,
+    onPinDropped:          PropTypes.func,
+    pingCoords:            PropTypes.arrayOf(PropTypes.number),
+    onReporterPinClick:    PropTypes.func,
+    nowTick:               PropTypes.number,
 };
 
 export default CoffeeMap;

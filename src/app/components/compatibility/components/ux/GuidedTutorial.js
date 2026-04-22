@@ -223,7 +223,6 @@ export default function GuidedTutorial({ open, onClose }) {
         ref={dialogRef}
         tabIndex={-1}
         className={`mdf-tour__card${isChooser ? ' mdf-tour__card--chooser' : ''}`}
-        style={popoverPosition(rect, isChooser)}
       >
         {!isChooser && (
           <div className="mdf-tour__meta">
@@ -297,35 +296,6 @@ export default function GuidedTutorial({ open, onClose }) {
       </div>
     </div>
   );
-}
-
-function popoverPosition(rect, isChooser) {
-  if (isChooser || !rect || typeof window === 'undefined') {
-    return { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
-  }
-  const margin = 12;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  // Card width matches CSS: min(320px, calc(100vw - 24px)).
-  const cardW = Math.min(320, vw - 24);
-  // Estimate card height from available viewport; CSS caps at 100dvh - 24px.
-  const cardH = Math.min(260, vh - 24);
-
-  // On very narrow viewports a spotlight-relative popover collides with the
-  // highlighted element. Fall back to centered so the card never overflows.
-  if (vw < 360 || vh < 420) {
-    return { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
-  }
-
-  const belowTop = rect.bottom + margin;
-  const aboveTop = rect.top - cardH - margin;
-  const preferBelow = belowTop + cardH < vh - margin;
-  const top = preferBelow
-    ? Math.min(belowTop, vh - cardH - margin)
-    : Math.max(aboveTop, margin);
-  let left = rect.left + rect.width / 2 - cardW / 2;
-  left = Math.max(margin, Math.min(left, vw - cardW - margin));
-  return { top: `${top}px`, left: `${left}px` };
 }
 
 export function hasSeenTour() {

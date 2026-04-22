@@ -1,0 +1,27 @@
+.mdf-context-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  border-bottom: 1px solid var(--mdf-border);
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.mdf-context-bar__count strong,
+.mdf-context-bar__stale strong {
+  color: var(--mdf-ink);
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+.mdf-context-bar__sep {
+  color: var(--mdf-ink-subtle);
+}
+
+.mdf-context-bar__stale--on strong {
+  color: var(--mdf-urgency-stale);
+}
