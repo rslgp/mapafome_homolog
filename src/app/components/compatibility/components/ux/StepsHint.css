@@ -1,0 +1,112 @@
+.mdf-steps {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-3);
+  min-height: var(--mdf-steps-hint-h);
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  border-bottom: 1px solid var(--mdf-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mdf-steps::-webkit-scrollbar {
+  display: none;
+}
+
+.mdf-steps__list {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mdf-steps__item {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  flex-shrink: 0;
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-caption);
+  font-weight: 500;
+}
+
+.mdf-steps__item + .mdf-steps__item::before {
+  content: "";
+  width: var(--mdf-space-4);
+  height: 1px;
+  background: var(--mdf-border);
+  margin-right: var(--mdf-space-2);
+}
+
+.mdf-steps__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--mdf-radius-pill);
+  background: var(--mdf-surface-2);
+  color: var(--mdf-ink-muted);
+  font-weight: 600;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  transition: background var(--mdf-dur-base) var(--mdf-ease-out),
+              color var(--mdf-dur-base) var(--mdf-ease-out);
+}
+
+.mdf-steps__item--active {
+  color: var(--mdf-ink);
+}
+
+.mdf-steps__item--active .mdf-steps__dot {
+  background: var(--mdf-brand);
+  color: var(--mdf-brand-ink);
+}
+
+.mdf-steps__item--done {
+  color: var(--mdf-urgency-fresh);
+}
+
+.mdf-steps__item--done .mdf-steps__dot {
+  background: var(--mdf-urgency-fresh);
+  color: var(--mdf-brand-ink);
+}
+
+.mdf-steps__label {
+  white-space: nowrap;
+}
+
+.mdf-steps__tour {
+  flex-shrink: 0;
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-3);
+  background: transparent;
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  color: var(--mdf-ink);
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-steps__tour:hover {
+  background: var(--mdf-surface-2);
+}
+
+/* Hide secondary labels on narrow screens — dots and active-step label stay */
+@media (max-width: 480px) {
+  .mdf-steps__item:not(.mdf-steps__item--active) .mdf-steps__label {
+    display: none;
+  }
+  .mdf-steps__item + .mdf-steps__item::before {
+    width: var(--mdf-space-2);
+    margin-right: var(--mdf-space-1);
+  }
+}

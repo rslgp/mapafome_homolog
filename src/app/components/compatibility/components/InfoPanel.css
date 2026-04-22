@@ -1,0 +1,397 @@
+/*
+ * InfoPanel — semantic, br-free layout.
+ * Pattern reference: design_brief.yaml § visual_system + Foundation 2 visual_execution.
+ *
+ *   Legend grid:
+ *     ──── A ────   yellow  (wide)
+ *     ──── A ────   blue    (wide)
+ *     ── B ── B ──  red | green (half)
+ *
+ * Toggle buttons sit in a flex row directly under the legend (Foundation 1
+ * recognition_over_recall: actions next to the content they reveal).
+ */
+
+.ip-panel {
+  height: auto !important;
+  background: var(--mdf-surface-1) !important;
+  border: 1px solid var(--mdf-border) !important;
+  border-radius: var(--mdf-radius-card) !important;
+  box-shadow: var(--mdf-elev-1) !important;
+  padding: var(--mdf-space-6) var(--mdf-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-6);
+  color: var(--mdf-ink);
+}
+
+@media (min-width: 768px) {
+  .ip-panel {
+    padding: var(--mdf-space-8);
+    gap: var(--mdf-space-8);
+  }
+}
+
+/* ── Share row ─────────────────────────────────────── */
+
+.ip-share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mdf-space-3);
+}
+
+.ip-share .wpbtn span {
+  font-weight: 600;
+}
+
+/* ── Stats line ────────────────────────────────────── */
+
+.ip-stats {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--mdf-space-2);
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-2);
+  border-radius: var(--mdf-radius-pill);
+  width: fit-content;
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-small);
+}
+
+.ip-stats strong {
+  font-size: var(--mdf-fs-h2);
+  color: var(--mdf-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── App badges ────────────────────────────────────── */
+
+.ip-apps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mdf-space-3);
+}
+
+.ip-apps__badge {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.ip-apps__badge img {
+  height: 55px;
+  width: auto;
+  display: block;
+}
+
+/* ── Intro paragraph ───────────────────────────────── */
+
+.ip-intro {
+  max-width: 65ch;
+  color: var(--mdf-ink);
+  line-height: var(--mdf-lh-body);
+  margin: 0;
+}
+
+.ip-intro a {
+  color: var(--mdf-ink);
+  text-decoration: underline;
+}
+
+/* ── Legend grid: A / A / B B ──────────────────────── */
+
+.ip-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--mdf-space-3);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .ip-legend {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ip-legend__item--wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.ip-legend__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-2);
+  padding: var(--mdf-space-4);
+  background: var(--mdf-surface-0);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+}
+
+.ip-legend__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  font-weight: 600;
+  width: fit-content;
+}
+
+.ip-legend__chip img {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.ip-legend__text {
+  margin: 0;
+  color: var(--mdf-ink-muted);
+  line-height: var(--mdf-lh-body);
+  font-size: var(--mdf-fs-small);
+}
+
+/* ── Action buttons row (under the legend) ────────── */
+
+.ip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-3);
+  justify-content: center;
+}
+
+.ip-actions > button {
+  margin: 0;
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+/* ── Collapsible sections ──────────────────────────── */
+
+.ip-collapse {
+  padding: var(--mdf-space-4);
+  background: var(--mdf-surface-0);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+}
+
+.ip-bullets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-3);
+}
+
+.ip-bullets li {
+  position: relative;
+  padding-left: var(--mdf-space-6);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink);
+}
+
+.ip-bullets li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--mdf-radius-pill);
+  background: var(--mdf-brand);
+}
+
+.ip-bullets a {
+  color: var(--mdf-ink);
+  text-decoration: underline;
+}
+
+/* ── Hunger consequences table ─────────────────────── */
+
+.ip-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.ip-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--mdf-fs-small);
+  text-align: left;
+}
+
+.ip-table thead {
+  background: var(--mdf-surface-2);
+}
+
+.ip-table th,
+.ip-table td {
+  padding: var(--mdf-space-3);
+  border-bottom: 1px solid var(--mdf-border);
+  vertical-align: top;
+}
+
+.ip-table thead th {
+  font-weight: 700;
+  color: var(--mdf-ink);
+  font-size: var(--mdf-fs-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ip-table tbody th {
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--mdf-ink);
+}
+
+.ip-table tbody tr:hover {
+  background: var(--mdf-surface-2);
+}
+
+/* Risk pill — color paired with text label (Foundation 4: never color alone) */
+.ip-risk {
+  display: inline-block;
+  padding: 2px var(--mdf-space-2);
+  border-radius: var(--mdf-radius-chip);
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.ip-risk--nenhum     { background: #e6efe7; color: #2f5a35; }
+.ip-risk--baixo      { background: #fff2cf; color: #7a5a00; }
+.ip-risk--moderado   { background: #ffe1b8; color: #7a4500; }
+.ip-risk--alto       { background: #fbcdc6; color: #7a2a1f; }
+.ip-risk--muito-alto { background: #f5b3aa; color: #5a1a10; }
+.ip-risk--extremo    { background: var(--mdf-ink); color: var(--mdf-surface-1); }
+
+/* ── Conclusion ────────────────────────────────────── */
+
+.ip-conclusion {
+  max-width: 65ch;
+  color: var(--mdf-ink);
+  line-height: var(--mdf-lh-body);
+  margin: 0;
+}
+
+/* ── ODS figure ────────────────────────────────────── */
+
+.ip-ods {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--mdf-space-4);
+  padding: var(--mdf-space-6);
+  margin: 0;
+  background: var(--mdf-surface-0);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .ip-ods {
+    flex-direction: row;
+    text-align: left;
+  }
+}
+
+.ip-ods .ods {
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+}
+
+.ip-ods figcaption {
+  max-width: 60ch;
+  color: var(--mdf-ink-muted);
+  line-height: var(--mdf-lh-body);
+  font-size: var(--mdf-fs-small);
+}
+
+/* ── Uses list ─────────────────────────────────────── */
+
+.ip-uses h3 {
+  font-size: var(--mdf-fs-h2);
+  font-weight: 600;
+  margin: 0 0 var(--mdf-space-3) 0;
+  color: var(--mdf-ink);
+  line-height: var(--mdf-lh-heading);
+}
+
+.ip-uses ul {
+  list-style: none;
+  margin: 0 0 var(--mdf-space-3) 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-2);
+}
+
+.ip-uses li {
+  position: relative;
+  padding-left: var(--mdf-space-4);
+  color: var(--mdf-ink-muted);
+  line-height: var(--mdf-lh-body);
+}
+
+.ip-uses li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  color: var(--mdf-brand);
+  font-weight: 700;
+}
+
+.ip-uses__note {
+  margin: 0;
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-small);
+}
+
+/* ── Footer ────────────────────────────────────────── */
+
+.ip-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-3);
+  padding-top: var(--mdf-space-4);
+  border-top: 1px solid var(--mdf-border);
+  font-size: var(--mdf-fs-small);
+  color: var(--mdf-ink-muted);
+}
+
+.ip-contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mdf-space-2) var(--mdf-space-3);
+}
+
+.ip-contact__label {
+  font-weight: 600;
+  color: var(--mdf-ink);
+}
+
+.ip-contact a {
+  color: var(--mdf-ink);
+  text-decoration: underline;
+}
+
+.ip-legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mdf-space-2);
+}
+
+.ip-legal a {
+  color: var(--mdf-ink-muted);
+  text-decoration: underline;
+}
+
+.ip-legal a:hover {
+  color: var(--mdf-ink);
+}

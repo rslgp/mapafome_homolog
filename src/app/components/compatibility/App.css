@@ -603,8 +603,8 @@ a.tgme_widget_share_btn {
     overflow: hidden !important;
   }
 
-  .mdf-main [style*="height: 84vh"],
-  .mdf-main [style*="height:84vh"] {
+  .mdf-main [style*="height: 70vh"],
+  .mdf-main [style*="height:70vh"] {
     height: 60vh !important;
   }
 

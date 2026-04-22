@@ -21,7 +21,7 @@ const MainMap = ({
         style={{
           textAlign: 'center',
           color: 'var(--mdf-ink-muted)',
-          height: '84vh',
+          height: '70vh',
           overflow: 'hidden'
         }}
       >
