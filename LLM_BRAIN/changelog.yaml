@@ -579,6 +579,171 @@ changelog:
       - "The legacy star-rating UI (PopupContent.js) still exists on pre-M1 markers. The design brief (§ dignity_constraints.never_rank_worth) forbids ratings of initiatives and people in need. This fix restores correct behavior but does not resolve the policy conflict — consider removing ratings from legacy popups in a separate pass."
 
   # ─────────────────────────────────────────────
+  # PUBLIC-INTEREST REPORTING — /relatorios surface for MP / SAN / DH
+  # ─────────────────────────────────────────────
+  public_reports:
+    status: "shipped"
+    summary: >
+      Aggregate-report surface intended for Ministério Público, secretarias de
+      saúde, SAN, and direitos humanos. Client-side fetch of the sheet, builds
+      structured aggregates with dignity-preserving k-anonymity, offers JSON
+      and CSV downloads. No PII, no raw coordinates, k=5 threshold.
+    added:
+      - path: "src/app/components/compatibility/components/ux/reports.js"
+        purpose: "pure builders: buildReport(rows) → {meta, pontos_por_categoria_mes, pontos_por_regiao_mes, atendimento_por_regiao, tempo_atendimento_horas} + CSV serializers"
+        dignity:
+          - "donor/initiative rows excluded — reports describe the reporter surface only"
+          - "coordinates are resolved to region slug via bbox (no lat/lng leaves the module)"
+          - "k-anonymity: month buckets < 5 are collapsed into 'outros'"
+          - "response-time metric clipped at 30 days to suppress malformed outliers"
+      - path: "src/app/relatorios/page.js"
+        purpose: "client-side page that loads the sheet with the existing service-account creds, renders a summary + attendance table, and offers download buttons for JSON and CSV"
+      - path: "src/app/relatorios/relatorios.css"
+    modified:
+      - path: "src/app/components/compatibility/components/InfoPanel.js"
+        change: "added 'Relatórios (órgãos públicos)' link in the ip-legal footer row"
+    endpoint_contract:
+      - "URL: /relatorios (static Next.js route, discoverable from InfoPanel footer)"
+      - "Download formats: JSON (full report), CSV (categoria×mês, região×mês, atendimento por região)"
+      - "No auth — relies on the same NEXT_PUBLIC_* env vars the app already uses to read the sheet"
+      - "Intended consumers: Ministério Público, secretarias municipais/estaduais, pesquisadores e parceiros em SAN/DH"
+      - "Suggested citation shown on the page itself for legal use in laudos"
+
+  # ─────────────────────────────────────────────
+  # PUBLIC-INTEREST REPORTING v2 — extras for decisão de política pública
+  # ─────────────────────────────────────────────
+  public_reports_v2:
+    status: "shipped"
+    summary: >
+      Extended the /relatorios surface with six new aggregation dimensions that
+      directly support public-policy decisions (orçamento, escala, plantões,
+      alertas de saturação da rede). All dignity-preserving (k-anon k=5, no PII).
+    modified:
+      - path: "src/app/components/compatibility/components/ux/reports.js"
+        changes:
+          - "buildReport() now emits resumo_executivo with headline KPIs"
+          - "sazonalidade_dia_semana — reports by weekday (planejamento de plantões)"
+          - "sazonalidade_hora_dia — reports by hour (dimensionamento noturno)"
+          - "crescimento_mensal — month-over-month series with delta + delta_pct"
+          - "demanda_regiao_categoria — region × category cross-tab"
+          - "distribuicao_categorias — share por categoria (priorização orçamentária)"
+          - "alerta_pontos_sem_atendimento — pontos sem atendimento > 24h / 72h"
+          - "new CSV serializers: toCsvWeekday, toCsvHour, toCsvGrowth, toCsvDemandRegionCategory, toCsvCategoryShare"
+      - path: "src/app/relatorios/page.js"
+        change: "added 6 new sections + 5 new CSV download buttons; resumo executivo rewritten with headline KPIs"
+      - path: "src/app/relatorios/relatorios.css"
+        change: "added .mdf-reports__caption and .mdf-reports__section--alert styles"
+    intended_use:
+      - "Ministério Público — peças de ação civil pública em SAN/direitos humanos"
+      - "Secretarias municipais/estaduais — planejamento de plantões, dimensionamento"
+      - "Universidades — dados para pesquisa em fome e políticas públicas"
+      - "Imprensa — jornalismo de dados com citação pública"
+
+  # ─────────────────────────────────────────────
+  # PUBLIC-INTEREST REPORTING v3 — food-vulnerability subtype by region
+  # ─────────────────────────────────────────────
+  public_reports_v3:
+    status: "shipped"
+    summary: >
+      Preserved the legacy distinction between 'alimento pronto' (refeição
+      imediata) and 'cesta básica' (suprimento semanal). Added a priority
+      report 'vulnerabilidade_alimentar_por_regiao' that breaks each region
+      into those two subtypes so MP / SEDH can target the right public policy:
+      alimento pronto → Consultório na Rua / Centro POP / sopões;
+      cesta básica → Bolsa Família / Cartão Alimentação / Auxílio Brasil.
+    modified:
+      - path: "src/app/components/compatibility/components/ux/reports.js"
+        changes:
+          - "CATEGORY_LABELS expanded with 'alimento_pronto' and 'cesta_basica'"
+          - "categoriesOf() now maps Roaster='Alimento pronto' → 'alimento_pronto' and Roaster='CestaBasica' → 'cesta_basica' instead of collapsing both into 'comida'"
+          - "foodSubtype() helper returns 'alimento_pronto' | 'cesta_basica' | 'generico' | null"
+          - "buildReport() emits vulnerabilidade_alimentar_por_regiao (sorted by total desc) with columns {alimento_pronto, cesta_basica, comida_generico, total, atendidos, taxa_atendimento}"
+          - "toCsvVulnerability() CSV serializer added"
+      - path: "src/app/relatorios/page.js"
+        changes:
+          - "imported toCsvVulnerability and registered 'vulnerabilidade-alimentar' in the exporter switch"
+          - "new priority section right after the executive summary, with a public-policy reading key explaining how the two subtypes map to different federal/state programs"
+          - "CSV download button added"
+      - path: "src/app/relatorios/relatorios.css"
+        change: "added .mdf-reports__section--pri variant (green accent) to highlight the vulnerability section"
+
+  # ─────────────────────────────────────────────
+  # PUBLIC-INTEREST REPORTING v4 — project growth section
+  # ─────────────────────────────────────────────
+  public_reports_v4:
+    status: "shipped"
+    summary: >
+      Added 'crescimento_mapafome' to the main report: monthly series of
+      novos pontos, pontos acumulados, atendidos no mês, taxa de atendimento
+      do mês e regiões ativas. Útil para narrativa de impacto em editais,
+      captação e prestação de contas à comunidade.
+    modified:
+      - path: "src/app/components/compatibility/components/ux/reports.js"
+        changes:
+          - "buildReport emite crescimento_mapafome com resumo + serie_mensal"
+          - "toCsvGrowthMapaFome serializer"
+      - path: "src/app/relatorios/page.js"
+        changes:
+          - "seção 'Crescimento do MAPA FOME' com resumo executivo + série mensal"
+          - "botão 'CSV — crescimento MAPA FOME (série mensal)'"
+
+  # ─────────────────────────────────────────────
+  # MARKETING REPORT — /relatorio-marketing para patrocinadores
+  # ─────────────────────────────────────────────
+  marketing_report:
+    status: "shipped"
+    summary: >
+      Nova superfície voltada para empresas que patrocinam o espaço do
+      MAPA FOME. Mostra, por campanha contratada (sponsor entry), a
+      audiência potencial (pontos de necessidade reportados dentro do raio
+      e janela de tempo) e a audiência engajada (desses, quantos foram
+      atendidos). Separada de /relatorios porque a audiência é diferente.
+    added:
+      - path: "src/app/components/compatibility/components/ux/marketingReports.js"
+        purpose: "buildMarketingReport(rows) → {resumo, campanhas[]}; toCsvCampanhas serializer; sem tracking individual, 100% agregado"
+      - path: "src/app/relatorio-marketing/page.js"
+        purpose: "página dedicada com tabela de campanhas (status, janela, raio, alcance), banner 'zero rastreamento', metodologia para a marca, download JSON + CSV"
+      - path: "src/app/relatorio-marketing/relatorio-marketing.css"
+    modified:
+      - path: "src/app/components/compatibility/components/InfoPanel.js"
+        change: "link 'Relatório de marketing (parceiros)' adicionado ao ip-legal"
+    anti_surveillance_stance:
+      - "zero identificadores individuais — nenhum device id, cookie de terceiro ou pixel de retargeting"
+      - "alcance é contagem de pontos reportados no retângulo tempo × espaço contratado, não impressões por usuário"
+      - "engajamento = pontos atendidos dentro do retângulo, não clicks nem views"
+      - "página declara abertamente: 'O MAPA FOME é uma ferramenta humanitária; o patrocínio existe para sustentar a operação, não para vigiar vulneráveis'"
+
+  # ─────────────────────────────────────────────
+  # PRIVACY — consent text in ReportSheet
+  # ─────────────────────────────────────────────
+  privacy_consent_ux:
+    status: "shipped"
+    modified:
+      - path: "src/app/components/compatibility/components/ux/ReportSheet.js"
+        changes:
+          - "inline consent note inside the contact expander: 'Ao informar um contato, você concorda com os Termos de Privacidade'"
+          - "footer consent note above the publish button: 'Ao publicar, você concorda com os Termos de Privacidade e os Termos de Uso. Nenhum dado pessoal da pessoa mapeada é coletado.'"
+      - path: "src/app/components/compatibility/components/ux/ReportSheet.css"
+        change: "added .mdf-sheet__consent and .mdf-sheet__consent--footer styles"
+
+  # ─────────────────────────────────────────────
+  # EDITAL — Paraíba SEDH nº 003/2025 project proposal
+  # ─────────────────────────────────────────────
+  edital_PB_003_2025_proposal:
+    status: "draft shipped; needs legal review + edital-specific number verification"
+    added:
+      - path: "LLM_BRAIN/edital_PB_003_2025/README.md"
+        purpose: "Como converter .md/.html para .docx, avisos de revisão jurídica e quais campos verificar"
+      - path: "LLM_BRAIN/edital_PB_003_2025/proposta.md"
+        purpose: "Plano de Trabalho em Markdown conforme Lei 13.019/2014 (MROSC); 14 seções com placeholders [VERIFICAR NO EDITAL] onde a extração automática do PDF falhou"
+      - path: "LLM_BRAIN/edital_PB_003_2025/proposta.html"
+        purpose: "Versão Word-openable (meta ProgId + MSO conditional) — usuário abre no Word e salva como .docx"
+    gaps:
+      - "PDF do edital retornou binário comprimido — campos edital-specific (valor máximo, prazo, eixos, contrapartida, docs de habilitação) marcados [VERIFICAR NO EDITAL]"
+      - "Dados institucionais da OSC (CNPJ, endereço, representante legal) pendentes como [TODO]"
+      - "Orçamento detalhado por rubrica pendente até conhecer teto e limites do edital"
+
+  # ─────────────────────────────────────────────
   # NOT STARTED — (none: all milestones have at least a shipped slice)
   # ─────────────────────────────────────────────
   pending: {}

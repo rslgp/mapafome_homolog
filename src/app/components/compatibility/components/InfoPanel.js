@@ -273,6 +273,10 @@ const InfoPanel = ({ rowCount }) => {
             <a target="_blank" rel="noreferrer" href="./terms.html">Termos de Uso</a>
             <span aria-hidden="true">·</span>
             <a href="/apoiar">Apoie o projeto</a>
+            <span aria-hidden="true">·</span>
+            <a href="/relatorios">Relatórios (órgãos públicos)</a>
+            <span aria-hidden="true">·</span>
+            <a href="/relatorio-marketing">Relatório de marketing (parceiros)</a>
           </nav>
         </footer>
       </Paper>

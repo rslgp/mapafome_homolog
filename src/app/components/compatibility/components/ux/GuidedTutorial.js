@@ -148,9 +148,10 @@ export default function GuidedTutorial({ open, onClose }) {
   }, [open]);
 
   // Scroll-affordance hint: when the card has overflow, briefly scroll it
-  // down and back up so the user discovers it's scrollable without hunting
-  // for a scrollbar. Fires after the card's pop-in animation settles, and
-  // only once per step (dep on flow+index). Honors prefers-reduced-motion.
+  // down and back up so the user discovers it's scrollable. Uses a manual
+  // requestAnimationFrame tween on scrollTop — scrollTo({behavior:'smooth'})
+  // is flaky on iOS Safari for nested overflow containers and can silently
+  // no-op. Fires once per step (dep on flow+index). Honors reduced-motion.
   useEffect(() => {
     if (!open) return;
     if (typeof window === 'undefined') return;
@@ -158,27 +159,49 @@ export default function GuidedTutorial({ open, onClose }) {
       && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) return;
 
-    const settleMs = 320; // > --mdf-dur-base (240ms) so the pop-in finishes first
-    const peekMs = 750;   // dwell long enough for the eye to register
+    let cancelled = false;
+    let rafId = null;
+    let dwellId = null;
 
-    const t1 = setTimeout(() => {
+    const tween = (el, from, to, duration) => new Promise((resolve) => {
+      if (!el) { resolve(); return; }
+      const start = performance.now();
+      const tick = (now) => {
+        if (cancelled || !dialogRef.current) { resolve(); return; }
+        const t = Math.min(1, (now - start) / duration);
+        // easeInOutSine — feels intentional, not spring-y
+        const eased = 0.5 - 0.5 * Math.cos(Math.PI * t);
+        el.scrollTop = from + (to - from) * eased;
+        if (t < 1) rafId = requestAnimationFrame(tick);
+        else resolve();
+      };
+      rafId = requestAnimationFrame(tick);
+    });
+
+    const settleMs = 500; // let the pop-in animation + iOS layout settle
+    const peekMs = 700;
+
+    const startTimer = setTimeout(async () => {
       const el = dialogRef.current;
-      if (!el) return;
+      if (!el || cancelled) return;
       const overflow = el.scrollHeight - el.clientHeight;
-      if (overflow < 16) return; // not meaningfully scrollable — skip
+      if (overflow < 16) return; // no meaningful overflow — skip
+
       const nudge = Math.min(56, overflow);
-      try { el.scrollTo({ top: nudge, behavior: 'smooth' }); } catch (_e) { el.scrollTop = nudge; }
+      await tween(el, 0, nudge, 380);
+      if (cancelled || !dialogRef.current) return;
+
+      await new Promise((r) => { dwellId = setTimeout(r, peekMs); });
+      if (cancelled || !dialogRef.current) return;
+
+      await tween(dialogRef.current, dialogRef.current.scrollTop, 0, 380);
     }, settleMs);
 
-    const t2 = setTimeout(() => {
-      const el = dialogRef.current;
-      if (!el) return;
-      try { el.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_e) { el.scrollTop = 0; }
-    }, settleMs + peekMs);
-
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      cancelled = true;
+      clearTimeout(startTimer);
+      if (dwellId) clearTimeout(dwellId);
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, [open, flow, index]);
 

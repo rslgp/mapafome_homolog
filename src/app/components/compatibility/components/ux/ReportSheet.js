@@ -266,6 +266,11 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
             onChange={(e) => setContact(e.target.value)}
             disabled={status === 'publishing' || status === 'success'}
           />
+          <p className="mdf-sheet__consent">
+            Ao informar um contato, você concorda com os{' '}
+            <a href="/privacy.html" target="_blank" rel="noreferrer">Termos de Privacidade</a>
+            . Seu contato só é mostrado a voluntários que abrirem o ponto e só para coordenação do atendimento.
+          </p>
         </details>
 
         {errorMsg === ERRORS.publish_failed && (
@@ -293,6 +298,13 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
             <span>{buttonLabel}</span>
           </button>
         </div>
+
+        <p className="mdf-sheet__consent mdf-sheet__consent--below-cta">
+          Ao confirmar a inserção do ponto, você está de acordo com os{' '}
+          <a href="/privacy.html" target="_blank" rel="noreferrer">Termos de Privacidade</a>
+          {' '}e os{' '}
+          <a href="/terms.html" target="_blank" rel="noreferrer">Termos de Uso</a>.
+        </p>
       </div>
     </div>
   );
