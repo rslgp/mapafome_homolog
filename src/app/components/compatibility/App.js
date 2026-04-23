@@ -20,6 +20,7 @@ import OfflineToast from './components/ux/OfflineToast';
 import ListView from './components/ux/ListView';
 import LiveAnnouncer from './components/ux/LiveAnnouncer';
 import EmptyViewportOverlay from './components/ux/EmptyViewportOverlay';
+import ViewMoreCue from './components/ux/ViewMoreCue';
 import NotificationPrefs, { hasActedOnPin, markActedOnPin } from './components/ux/NotificationPrefs';
 import { registerOnce as registerServiceWorker } from './components/ux/swRegister';
 import { enqueue as enqueuePublish, bindOnlineFlush, queueSize } from './components/ux/publishQueue';
@@ -146,6 +147,7 @@ class App extends Component {
     this.setMes = this.setMes.bind(this);
     this.setFiltro = this.setFiltro.bind(this);
     this.removerPonto = this.removerPonto.bind(this);
+    this.avaliar = this.avaliar.bind(this);
     this.handleClickMap = this.handleClickMap.bind(this);
     this.telefoneFilterChange = this.telefoneFilterChange.bind(this);
     this.ultimoAnoFilterChange = this.ultimoAnoFilterChange.bind(this);
@@ -339,66 +341,62 @@ class App extends Component {
   }
 
   avaliar(coords, avaliacao) {
+    const self = this;
+    (async () => {
+      const coordsStr = JSON.stringify(coords);
+      const coordsKey = Array.isArray(coords) ? coords.join(',') : String(coords);
+      const cookieName = 'pontosAvaliados';
+      const pontos = cookies.get(cookieName) || '';
 
-    (async function main(coords, avaliacao) {
+      // Cookie gate runs FIRST so a repeat click on an already-rated point
+      // gives the user an honest "já avaliou" message instead of a silent
+      // no-op that looks like the stars are broken.
+      if (pontos.includes(coordsKey)) {
+        self.setState({ offlineToast: 'Você já avaliou este ponto. Obrigado!' });
+        return;
+      }
+
       try {
         await doc.useServiceAccountAuth({
           client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
           private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
         });
-
-        await doc.loadInfo(); // Loads document properties and worksheets
-
+        await doc.loadInfo();
         const sheet = doc.sheetsByIndex[0];
-        //row = { Name: "new name", Value: "new value" };
-
         if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
-        const rows = envVariables.rows;
-        coords = JSON.stringify(coords);
-        let rowEncontrada = rows.filter((x) => {
-          //x.Coordinates
-          console.log(JSON.parse(x.Dados).Coordinates);
-          return JSON.parse(x.Dados).Coordinates === (coords);
+
+        const target = envVariables.rows.find((x) => {
+          try { return JSON.parse(x.Dados).Coordinates === coordsStr; }
+          catch (_e) { return false; }
         });
-
-        //console.log(rowEncontrada[0].City);
-        let dadosNovos = JSON.parse(rowEncontrada[0].Dados);
-        if (dadosNovos.Avaliacao == undefined) {
-          dadosNovos.Avaliacao = {
-            "1": 0,
-            "2": 0,
-            "3": 0,
-            "4": 0,
-            "5": 0
-          }
+        if (!target) {
+          self.setState({ offlineToast: 'Ponto não encontrado. Recarregue a página e tente novamente.' });
+          return;
         }
-        if (avaliacao === null) avaliacao = 5;
-        dadosNovos.Avaliacao[avaliacao]++;
-        rowEncontrada[0].Dados = JSON.stringify(dadosNovos);
 
-        let cookieName = 'pontosAvaliados';
-        let pontos = cookies.get(cookieName) || "";
-        coords = JSON.parse(coords);
-        let coordsString = coords[0] + "" + coords[1];
-        //let pontosEntregues = JSON.parse(pontosEntreguesData);
-        if (pontos.includes(coordsString)) return;
+        const dadosNovos = JSON.parse(target.Dados);
+        if (!dadosNovos.Avaliacao) {
+          dadosNovos.Avaliacao = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
+        }
+        const rating = avaliacao == null ? 5 : avaliacao;
+        dadosNovos.Avaliacao[rating] = (dadosNovos.Avaliacao[rating] || 0) + 1;
+        target.Dados = JSON.stringify(dadosNovos);
 
-        await rowEncontrada[0].save();
-
-        pontos += coordsString;
+        await target.save();
 
         const cookieExpireDate = new Date();
         cookieExpireDate.setDate(cookieExpireDate.getDate() + EXPIRE_DAY);
+        cookies.set(cookieName, pontos + coordsKey, { path: '/', expires: cookieExpireDate });
 
-        cookies.set(cookieName, pontos, { path: '/', expires: cookieExpireDate });
-
-        window.location.reload();
+        // No full page reload — reload() wiped in-progress tour state and made
+        // the interaction feel violent. Toast is enough; next natural fetch
+        // will pick up the refreshed count.
+        self.setState({ offlineToast: 'Avaliação registrada. Obrigado!' });
       } catch (e) {
-        console.log(e);
-
+        console.error('[avaliar] failed:', e);
+        self.setState({ offlineToast: 'Não foi possível enviar sua avaliação. Tente de novo em alguns segundos.' });
       }
-
-    })(coords, avaliacao);
+    })();
   }
 
   setFiltro(event) {
@@ -1407,6 +1405,11 @@ class App extends Component {
             dropDownMenuMesPrecisandoBuscar={this.dropDownMenuMesPrecisandoBuscar}
             dropDownMenuMesEntregaAlimentoPronto={this.dropDownMenuMesEntregaAlimentoPronto}
           />
+
+          {/* Scroll-affordance between the map row and the legend/info below.
+            * Without this, users assume the map is the whole page and never
+            * scroll to find the legend, sponsors, and info surface. */}
+          <ViewMoreCue />
 
           {/* Bottom row: InfoPanel (full width below) */}
           <InfoPanel rowCount={this.state.rowCount} />

@@ -1,0 +1,53 @@
+.mdf-viewmore {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  margin: var(--mdf-space-3) 0;
+  padding: var(--mdf-space-2);
+  background: transparent;
+  border: none;
+  color: var(--mdf-ink-muted);
+  font-family: inherit;
+  font-size: var(--mdf-fs-caption);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.mdf-viewmore:hover {
+  color: var(--mdf-ink);
+}
+
+.mdf-viewmore:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-radius: var(--mdf-radius-card);
+}
+
+.mdf-viewmore__text {
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.mdf-viewmore__chev {
+  display: block;
+  font-size: 22px;
+  line-height: 1;
+  /* Bounded loop — 6 cycles ≈ 11s — enough to catch the eye, stops short of
+   * becoming a siren. Matches the calm-tone rule for a humanitarian surface. */
+  animation: mdf-viewmore-bounce 1.8s var(--mdf-ease-out) 6;
+}
+
+@keyframes mdf-viewmore-bounce {
+  0%   { transform: translateY(0); opacity: 0.5; }
+  50%  { transform: translateY(6px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mdf-viewmore__chev {
+    animation: none;
+    opacity: 0.8;
+  }
+}

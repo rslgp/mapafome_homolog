@@ -58,20 +58,54 @@ export const DESCRIPTION_MAX = 150;
 
 export const SPONSORS = [
   {
+    // Required ────────────────────────────────────────────
     id: 'apoie',
     img: '/sponsors/mapafome_sponsor.png',
     href: 'https://nubank.com.br/pagar/2i6kb/zRE5wsvEe2',
     alt: 'Apoie o MAPA FOME',
     label: 'Apoie o projeto',
     description: 'Sua marca aqui. Parte da receita vira marketing que traz mais voluntários para quem está esperando ajuda. Conheça a parceria.',
-    regions: ['*'],
     placements: [
       PLACEMENTS.INFO_PANEL_FOOTER,
       PLACEMENTS.APOIAR_GRID,
       PLACEMENTS.INITIATIVES_FOOTER,
     ],
+
+    // Targeting ───────────────────────────────────────────
+    // Broad match via bbox slugs. '*' = show everywhere as a fallback.
+    regions: ['*'],
+    // Precise paid reach. Leave null for evergreen/global sponsors.
+    // When set, the user's GPS must be within radiusKm of [lat, lng] and
+    // this sponsor sorts above region-only matches.
+    center: null,     // e.g. [-8.0671, -34.8767] — Recife center
+    radiusKm: null,   // e.g. 3 — 3 km around `center`
+
+    // Time exposure ───────────────────────────────────────
+    // YYYY-MM-DD preferred. Also accepts MM-DD-YYYY and DD/MM/YYYY.
+    // End-of-day local — paid day is fully honored.
+    startsAt: null,   // e.g. '2026-01-15' — evergreen when null
+    expiresAt: null,  // e.g. '2026-02-17' — never expires when null
+
+    // Ranking ─────────────────────────────────────────────
     weight: 1,
   },
+
+  // ── Example: paid geo + time-bounded slot (uncomment to ship) ──
+  // {
+  //   id: 'pizza-gentle',
+  //   img: '/sponsors/pizza-gentle.png',
+  //   href: 'https://pizzagentle.com.br',
+  //   alt: 'Pizza Gentle — parceira do MAPA FOME',
+  //   label: 'Pizza Gentle',
+  //   description: 'A cada pedido em Boa Viagem, uma refeição vai para alguém mapeado aqui. Peça e ajude sem sair de casa.',
+  //   placements: [PLACEMENTS.INFO_PANEL_FOOTER],
+  //   regions: ['pe-recife'],
+  //   center: [-8.1196, -34.9061], // Boa Viagem
+  //   radiusKm: 3,
+  //   startsAt: '2026-02-01',
+  //   expiresAt: '2026-02-28',
+  //   weight: 2,
+  // },
 ];
 
 // Lenient date parser for contract-style strings. Accepts:

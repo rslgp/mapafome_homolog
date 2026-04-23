@@ -47,6 +47,18 @@
   padding: var(--mdf-space-6);
   pointer-events: auto;
   animation: mdf-tour-pop var(--mdf-dur-base) var(--mdf-ease-out-back) both;
+  /* Persistent scroll affordance: fade the bottom edge so users see that
+   * content continues below. Pairs with the JS scroll-nudge on mount. */
+  mask-image: linear-gradient(
+    to bottom,
+    black calc(100% - 28px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black calc(100% - 28px),
+    transparent 100%
+  );
 }
 
 @media (max-width: 380px) {

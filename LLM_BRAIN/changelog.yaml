@@ -555,6 +555,30 @@ changelog:
         change: "documented direct href + onAuxClick; /go/{id}/ interstitial becomes an opt-in escape hatch"
 
   # ─────────────────────────────────────────────
+  # POLISH — legacy ratings silent-fail fix + scroll affordance below the map
+  # ─────────────────────────────────────────────
+  polish_ratings_and_viewmore:
+    status: "shipped"
+    summary: >
+      Two UX papercuts reported by the user: legacy star ratings appeared
+      broken (silent cookie-gate + swallowed errors + full-page reload on
+      success), and new users didn't discover the InfoPanel surface below
+      the map fold.
+    modified:
+      - path: "src/app/components/compatibility/App.js"
+        changes:
+          - "avaliar(): moved cookie-gate BEFORE mutating state, surfaced user-visible toasts for already-rated/not-found/error cases, removed window.location.reload() that was wiping tour state"
+          - "avaliar is now bound in the constructor so setState works when React invokes it as a handler"
+          - "mounted <ViewMoreCue /> between the map/controls row and <InfoPanel />"
+    added:
+      - path: "src/app/components/compatibility/components/ux/ViewMoreCue.js"
+        purpose: "'Veja mais abaixo' button with bouncing chevron that scrolls to InfoPanel; dismisses on user scroll; hidden once window.scrollY > 32"
+      - path: "src/app/components/compatibility/components/ux/ViewMoreCue.css"
+        purpose: "bounded 6-iteration bounce (≈11s) to respect the calm-tone rule on a humanitarian surface; honors prefers-reduced-motion"
+    dignity_flag:
+      - "The legacy star-rating UI (PopupContent.js) still exists on pre-M1 markers. The design brief (§ dignity_constraints.never_rank_worth) forbids ratings of initiatives and people in need. This fix restores correct behavior but does not resolve the policy conflict — consider removing ratings from legacy popups in a separate pass."
+
+  # ─────────────────────────────────────────────
   # NOT STARTED — (none: all milestones have at least a shipped slice)
   # ─────────────────────────────────────────────
   pending: {}

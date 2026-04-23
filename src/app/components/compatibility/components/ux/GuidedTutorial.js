@@ -147,6 +147,41 @@ export default function GuidedTutorial({ open, onClose }) {
     }
   }, [open]);
 
+  // Scroll-affordance hint: when the card has overflow, briefly scroll it
+  // down and back up so the user discovers it's scrollable without hunting
+  // for a scrollbar. Fires after the card's pop-in animation settles, and
+  // only once per step (dep on flow+index). Honors prefers-reduced-motion.
+  useEffect(() => {
+    if (!open) return;
+    if (typeof window === 'undefined') return;
+    const reduceMotion = window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) return;
+
+    const settleMs = 320; // > --mdf-dur-base (240ms) so the pop-in finishes first
+    const peekMs = 750;   // dwell long enough for the eye to register
+
+    const t1 = setTimeout(() => {
+      const el = dialogRef.current;
+      if (!el) return;
+      const overflow = el.scrollHeight - el.clientHeight;
+      if (overflow < 16) return; // not meaningfully scrollable — skip
+      const nudge = Math.min(56, overflow);
+      try { el.scrollTo({ top: nudge, behavior: 'smooth' }); } catch (_e) { el.scrollTop = nudge; }
+    }, settleMs);
+
+    const t2 = setTimeout(() => {
+      const el = dialogRef.current;
+      if (!el) return;
+      try { el.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_e) { el.scrollTop = 0; }
+    }, settleMs + peekMs);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [open, flow, index]);
+
   function persistDone() {
     const cookies = new Cookies();
     const expires = new Date();
