@@ -69,6 +69,14 @@ function hasGpsPermission() {
   return 'checking'; // Permissions API is async; callers may enrich later.
 }
 
+export function trackSponsorImpression({ id, region, placement }) {
+  track('sponsor_impression', { sponsor_id: id, region, placement });
+}
+
+export function trackSponsorClick({ id, region, placement }) {
+  track('sponsor_click', { sponsor_id: id, region, placement });
+}
+
 export function peekBufferedEvents() {
   if (typeof window === 'undefined') return [];
   try {

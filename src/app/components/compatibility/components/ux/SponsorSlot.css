@@ -1,0 +1,98 @@
+.mdf-sponsor {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--mdf-space-2);
+  margin: var(--mdf-space-6) auto;
+  padding: var(--mdf-space-3) var(--mdf-space-4);
+  max-width: 680px;
+  border: 1px dashed var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+  background: var(--mdf-surface-1);
+}
+
+.mdf-sponsor__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--mdf-space-3);
+}
+
+.mdf-sponsor__label {
+  font-size: var(--mdf-fs-caption);
+  color: var(--mdf-ink-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.mdf-sponsor__counter {
+  font-size: var(--mdf-fs-caption);
+  color: var(--mdf-ink-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.mdf-sponsor__link {
+  display: block;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  text-decoration: none;
+  color: var(--mdf-ink);
+  border-radius: var(--mdf-radius-chip);
+  overflow: hidden;
+}
+
+.mdf-sponsor__link:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.mdf-sponsor__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: contain;
+  background: var(--mdf-surface-2);
+}
+
+.mdf-sponsor__desc {
+  margin: var(--mdf-space-2) 0 0 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+}
+
+.mdf-sponsor__dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  margin-top: var(--mdf-space-2);
+}
+
+.mdf-sponsor__dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  background: var(--mdf-border);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              transform var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-sponsor__dot:hover {
+  background: var(--mdf-ink-subtle);
+}
+
+.mdf-sponsor__dot--on {
+  background: var(--mdf-ink);
+  transform: scale(1.25);
+}
+
+.mdf-sponsor__dot:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}

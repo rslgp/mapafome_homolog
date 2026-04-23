@@ -4,6 +4,8 @@ import Paper from '@mui/material/Paper';
 import Sugestao from './googlesheets/sugestao';
 import { bean as coffeeBean, hub, green, red } from './image/svgHandler';
 import ImagemInstagram from './home/ImagemInstagram';
+import SponsorSlot from './ux/SponsorSlot';
+import { PLACEMENTS } from './ux/sponsors';
 import './InfoPanel.css';
 
 /* Legend layout (per design_brief.yaml § visual_system.markers + Foundation 4):
@@ -264,10 +266,13 @@ const InfoPanel = ({ rowCount }) => {
             </a>
           </div>
           <Sugestao />
+          <SponsorSlot placement={PLACEMENTS.INFO_PANEL_FOOTER} />
           <nav className="ip-legal" aria-label="Documentos legais">
             <a target="_blank" rel="noreferrer" href="./privacy.html">Política de Privacidade</a>
             <span aria-hidden="true">·</span>
             <a target="_blank" rel="noreferrer" href="./terms.html">Termos de Uso</a>
+            <span aria-hidden="true">·</span>
+            <a href="/apoiar">Apoie o projeto</a>
           </nav>
         </footer>
       </Paper>

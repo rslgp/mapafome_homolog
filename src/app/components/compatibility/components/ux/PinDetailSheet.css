@@ -80,7 +80,87 @@
 .mdf-pin-sheet__status--fresh   { color: var(--mdf-urgency-fresh);   background: var(--mdf-risk-none-bg); }
 .mdf-pin-sheet__status--waiting { color: var(--mdf-urgency-waiting); background: var(--mdf-risk-low-bg); }
 .mdf-pin-sheet__status--stale   { color: var(--mdf-urgency-stale);   background: var(--mdf-risk-high-bg); }
+.mdf-pin-sheet__status--going   { color: var(--mdf-urgency-waiting); background: var(--mdf-risk-mod-bg); }
 .mdf-pin-sheet__status--done    { color: var(--mdf-urgency-done);    background: var(--mdf-surface-2); }
+
+/* Post-mark-attended desaturate + fade per brief. 400ms transition then
+ * the sheet itself closes; pin layer handles the 24h archive elsewhere. */
+.mdf-pin-sheet--attended .mdf-pin-sheet__panel {
+  filter: grayscale(100%);
+  opacity: 0.6;
+  transition: opacity var(--mdf-dur-slow) var(--mdf-ease-out),
+              filter var(--mdf-dur-slow) var(--mdf-ease-out);
+}
+
+.mdf-pin-sheet__meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--mdf-space-2) var(--mdf-space-3);
+  margin: 0 0 var(--mdf-space-3) 0;
+  font-size: var(--mdf-fs-small);
+}
+
+.mdf-pin-sheet__meta dt {
+  color: var(--mdf-ink-muted);
+}
+
+.mdf-pin-sheet__meta dd {
+  color: var(--mdf-ink);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.mdf-pin-sheet__contact,
+.mdf-pin-sheet__directions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-4);
+  background: var(--mdf-surface-2);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mdf-pin-sheet__contact {
+  margin-bottom: var(--mdf-space-3);
+}
+
+.mdf-pin-sheet__contact:hover,
+.mdf-pin-sheet__directions:hover {
+  background: var(--mdf-border);
+}
+
+.mdf-pin-sheet__primary {
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-6);
+  background: var(--mdf-brand);
+  color: var(--mdf-brand-ink);
+  border: none;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mdf-pin-sheet__primary:hover:not(:disabled) {
+  background: var(--mdf-brand-hover);
+}
+
+.mdf-pin-sheet__primary:disabled {
+  opacity: 0.8;
+  cursor: default;
+}
+
+.mdf-pin-sheet__actions {
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+}
 
 .mdf-pin-sheet__title {
   font-size: var(--mdf-fs-h2);

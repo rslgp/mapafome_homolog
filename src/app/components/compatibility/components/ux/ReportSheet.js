@@ -123,12 +123,20 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
     const categories = Array.from(selected);
     const timeFromStartMs = Date.now() - (startedAtRef.current || Date.now());
 
+    // M5 — idempotency key survives retries so a double-tap after a 10s
+    // timeout does not double-write the pin.
+    const idempotencyKey =
+      (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
     try {
       await onPublish?.({
         coords,
         categories,
         detail: detail.trim(),
         contact: contact.trim(),
+        idempotency_key: idempotencyKey,
       });
 
       track('pin_report_published', {

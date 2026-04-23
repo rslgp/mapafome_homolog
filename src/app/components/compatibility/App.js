@@ -17,6 +17,10 @@ import ReportSheet from './components/ux/ReportSheet';
 import ContextBar from './components/ux/ContextBar';
 import PinDetailSheet from './components/ux/PinDetailSheet';
 import OfflineToast from './components/ux/OfflineToast';
+import ListView from './components/ux/ListView';
+import LiveAnnouncer from './components/ux/LiveAnnouncer';
+import EmptyViewportOverlay from './components/ux/EmptyViewportOverlay';
+import NotificationPrefs, { hasActedOnPin, markActedOnPin } from './components/ux/NotificationPrefs';
 import { registerOnce as registerServiceWorker } from './components/ux/swRegister';
 import { enqueue as enqueuePublish, bindOnlineFlush, queueSize } from './components/ux/publishQueue';
 // import CoffeeTable from './components/table';
@@ -106,6 +110,9 @@ class App extends Component {
       pinSheetOpen: false,
       nowTick: Date.now(),
       offlineToast: null,
+      listOpen: false,
+      notifOpen: false,
+      canOpenNotif: false,
     }
 
     this.handleStartTour = this.handleStartTour.bind(this);
@@ -116,6 +123,8 @@ class App extends Component {
     this.handlePinDroppedOnMap = this.handlePinDroppedOnMap.bind(this);
     this.handleReporterPinClick = this.handleReporterPinClick.bind(this);
     this.handleClosePinSheet = this.handleClosePinSheet.bind(this);
+    this.handleClaimPin = this.handleClaimPin.bind(this);
+    this.handleMarkAttended = this.handleMarkAttended.bind(this);
 
     this.dropDownMenuSemanaEntregaAlimentoPronto = React.createRef();
     this.dropDownMenuHorarioEntregaAlimentoPronto = React.createRef();
@@ -644,17 +653,120 @@ class App extends Component {
     this.setState({ pinSheetOpen: false });
   }
 
-  // Low-level write: no UI assumptions, throws on any failure. Used both by
-  // the interactive publish path and the offline queue flush (M7).
-  async writePinToSheets({ coords, categories, detail, contact }) {
-    if (!coords || !envVariables.dentroLimites(coords)) {
-      throw new Error('out_of_bounds');
+  // M3 — soft claim. Writes a { claimedAt } entry into the pin's Dados.Claims
+  // array so other donors loading the sheet see an active claim. Stored in
+  // localStorage too so THIS session's donor sees the "Marcar como atendido"
+  // swap without another fetch. Soft by design — no hard lock.
+  async handleClaimPin(pin) {
+    const coords = (() => {
+      if (Array.isArray(pin.mapCoords) && pin.mapCoords.length === 2) return pin.mapCoords;
+      try { if (pin.Coordinates) return JSON.parse(pin.Coordinates); } catch (_e) {}
+      return null;
+    })();
+    if (!coords) return;
+
+    const claim = { claimedAt: new Date().toISOString() };
+    try {
+      const key = `mdf_claim_${pin.DateISO || ''}|${coords.join(',')}`;
+      window.localStorage.setItem(key, '1');
+    } catch (_e) {}
+    // M8 — unlock the notifications entry point after first act.
+    markActedOnPin();
+    this.setState({ canOpenNotif: true });
+
+    // Mutate the in-memory row so the sheet re-renders with "Alguém a caminho".
+    pin.Claims = Array.isArray(pin.Claims) ? [...pin.Claims, claim] : [claim];
+    this.setState({ selectedPin: { ...pin } });
+
+    // Best-effort persist to Google Sheets — failure is non-blocking so the
+    // donor's intent is never lost to a network hiccup.
+    try {
+      await this.persistPinPatch(pin, (dados) => {
+        dados.Claims = Array.isArray(dados.Claims) ? [...dados.Claims, claim] : [claim];
+      });
+    } catch (e) {
+      console.warn('[claim] persist failed:', e && e.message);
     }
+  }
+
+  async handleMarkAttended(pin) {
+    pin.AlimentoEntregue = 1;
+    pin.AttendedAt = new Date().toISOString();
+    this.setState({ selectedPin: { ...pin } });
+    // Give the sheet's attended-transition 400ms to play, then close.
+    setTimeout(() => {
+      this.setState({
+        pinSheetOpen: false,
+        offlineToast: 'Obrigado. O ponto foi arquivado.',
+      });
+    }, 500);
+    try {
+      await this.persistPinPatch(pin, (dados) => {
+        dados.AlimentoEntregue = 1;
+        dados.AttendedAt = pin.AttendedAt;
+      });
+    } catch (e) {
+      console.warn('[attended] persist failed:', e && e.message);
+    }
+  }
+
+  // Shared low-level helper: locate the row by DateISO + Coordinates and
+  // apply a mutator function to the parsed Dados JSON, then save.
+  async persistPinPatch(pin, mutate) {
+    const coords = (() => {
+      if (Array.isArray(pin.mapCoords) && pin.mapCoords.length === 2) return pin.mapCoords;
+      try { if (pin.Coordinates) return JSON.parse(pin.Coordinates); } catch (_e) {}
+      return null;
+    })();
+    if (!coords) return;
+
     await doc.useServiceAccountAuth({
       client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
       private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
     });
     await doc.loadInfo();
+    const sheet = doc.sheetsByIndex[0];
+    if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
+
+    const coordStr = JSON.stringify(coords);
+    const target = envVariables.rows.find((r) => {
+      try {
+        const d = JSON.parse(r.Dados);
+        return d.Coordinates === coordStr && d.DateISO === pin.DateISO;
+      } catch (_e) { return false; }
+    });
+    if (!target) return;
+
+    const dados = JSON.parse(target.Dados);
+    mutate(dados);
+    target.Dados = JSON.stringify(dados);
+    await target.save();
+  }
+
+  // Low-level write: no UI assumptions, throws on any failure. Used both by
+  // the interactive publish path and the offline queue flush (M7).
+  //
+  // M5 additions:
+  //   • 10s timeout on any single network step, surfaced as 'network_slow'
+  //     so the caller can distinguish from generic failures.
+  //   • idempotency guard: if the payload carries an idempotency_key and the
+  //     client-side idempotency cache already has it, skip the write.
+  async writePinToSheets({ coords, categories, detail, contact, idempotency_key }) {
+    if (!coords || !envVariables.dentroLimites(coords)) {
+      throw new Error('out_of_bounds');
+    }
+    if (idempotency_key && this._idempotencyCache && this._idempotencyCache.has(idempotency_key)) {
+      return;
+    }
+    const withTimeout = (p, ms) => new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('network_slow')), ms);
+      p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
+    });
+    await withTimeout(doc.useServiceAccountAuth({
+      client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
+    }), 10000);
+    await withTimeout(doc.loadInfo(), 10000);
     const sheet = doc.sheetsByIndex[0];
 
     // Primary category string used by existing filters; full M1 array goes
@@ -677,7 +789,11 @@ class App extends Component {
     if (detail) dadosJSON.Detalhe = detail;
     row.Dados = JSON.stringify(dadosJSON);
 
-    await sheet.addRow(row);
+    await withTimeout(sheet.addRow(row), 10000);
+    if (idempotency_key) {
+      if (!this._idempotencyCache) this._idempotencyCache = new Set();
+      this._idempotencyCache.add(idempotency_key);
+    }
 
     // Stamp the document's last-modified timestamp onto the first row (cell B1).
     // Lets clients cheaply check freshness without scanning all rows.
@@ -741,6 +857,9 @@ class App extends Component {
     this._urgencyTicker = setInterval(() => {
       this.setState({ nowTick: Date.now() });
     }, 60 * 1000);
+
+    // M8 — prior acted-on-pin unlocks the notifications entry.
+    if (hasActedOnPin()) this.setState({ canOpenNotif: true });
 
     // M7 — register SW for offline shell + tile caching, then attach an
     // online-flush handler so queued publishes drain opportunistically.
@@ -1231,7 +1350,9 @@ class App extends Component {
           key={`ctx-${this.state.nowTick}`}
           dataMaps={this.state.dataMaps}
           userCoords={this.state.center}
+          onOpenList={() => this.setState({ listOpen: true })}
         />
+        <LiveAnnouncer dataMaps={this.state.dataMaps} />
         <Grid container spacing={2}>
           {/* Top row: MainMap (left) and MainControls (right) */}
           <MainMap
@@ -1317,12 +1438,33 @@ class App extends Component {
         <PinDetailSheet
           open={this.state.pinSheetOpen}
           pin={this.state.selectedPin}
+          userCoords={this.state.center}
           onClose={this.handleClosePinSheet}
+          onClaim={this.handleClaimPin}
+          onMarkAttended={this.handleMarkAttended}
         />
 
         <OfflineToast
           message={this.state.offlineToast}
           onDismiss={() => this.setState({ offlineToast: null })}
+        />
+
+        <ListView
+          open={this.state.listOpen}
+          dataMaps={this.state.dataMaps}
+          userCoords={this.state.center}
+          onSelectPin={(pin) => this.setState({ listOpen: false, selectedPin: pin, pinSheetOpen: true })}
+          onClose={() => this.setState({ listOpen: false })}
+        />
+
+        <EmptyViewportOverlay
+          visible={!this.state.isLoading && Array.isArray(this.state.dataMaps) && this.state.dataMaps.length === 0}
+          onStartReport={this.handleOpenReportSheet}
+        />
+
+        <NotificationPrefs
+          open={this.state.notifOpen}
+          onClose={() => this.setState({ notifOpen: false })}
         />
 
       </div >

@@ -34,7 +34,7 @@ function isReporterPin(row) {
   return LEGACY_NEED_ROASTERS.has(row.Roaster);
 }
 
-export default function ContextBar({ dataMaps, userCoords, radiusKm = RADIUS_KM }) {
+export default function ContextBar({ dataMaps, userCoords, radiusKm = RADIUS_KM, onOpenList }) {
   const { nearby, waitingOver6h } = useMemo(() => {
     if (!Array.isArray(dataMaps) || dataMaps.length === 0) {
       return { nearby: 0, waitingOver6h: 0 };
@@ -72,6 +72,15 @@ export default function ContextBar({ dataMaps, userCoords, radiusKm = RADIUS_KM 
       <span className={`mdf-context-bar__stale${waitingOver6h > 0 ? ' mdf-context-bar__stale--on' : ''}`}>
         <strong>{waitingOver6h}</strong> aguardando há mais de 6h
       </span>
+      {onOpenList && (
+        <button
+          type="button"
+          className="mdf-context-bar__list"
+          onClick={onOpenList}
+        >
+          Lista
+        </button>
+      )}
     </div>
   );
 }

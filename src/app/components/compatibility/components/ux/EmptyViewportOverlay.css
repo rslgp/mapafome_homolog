@@ -1,0 +1,46 @@
+.mdf-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--mdf-space-4);
+  pointer-events: none;
+}
+
+.mdf-empty__card {
+  max-width: 360px;
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-sheet);
+  padding: var(--mdf-space-4) var(--mdf-space-6);
+  box-shadow: var(--mdf-elev-2);
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+
+.mdf-empty__text {
+  margin: 0 0 var(--mdf-space-3) 0;
+  font-size: var(--mdf-fs-small);
+  color: var(--mdf-ink);
+  line-height: var(--mdf-lh-body);
+}
+
+.mdf-empty__cta {
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-6);
+  background: var(--mdf-brand);
+  color: var(--mdf-brand-ink);
+  border: none;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mdf-empty__cta:hover {
+  background: var(--mdf-brand-hover);
+}

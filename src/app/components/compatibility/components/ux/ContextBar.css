@@ -25,3 +25,21 @@
 .mdf-context-bar__stale--on strong {
   color: var(--mdf-urgency-stale);
 }
+
+.mdf-context-bar__list {
+  margin-left: auto;
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mdf-context-bar__list:hover {
+  background: var(--mdf-border);
+}
