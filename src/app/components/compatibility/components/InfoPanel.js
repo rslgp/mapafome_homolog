@@ -277,6 +277,8 @@ const InfoPanel = ({ rowCount }) => {
             <a href="/relatorios">Relatórios (órgãos públicos)</a>
             <span aria-hidden="true">·</span>
             <a href="/relatorio-marketing">Relatório de marketing (parceiros)</a>
+            <span aria-hidden="true">·</span>
+            <a href="/parceiros">Seja parceiro</a>
           </nav>
         </footer>
       </Paper>

@@ -714,6 +714,32 @@ changelog:
       - "página declara abertamente: 'O MAPA FOME é uma ferramenta humanitária; o patrocínio existe para sustentar a operação, não para vigiar vulneráveis'"
 
   # ─────────────────────────────────────────────
+  # PARTNER OUTREACH — /parceiros surface + prospecção doc
+  # ─────────────────────────────────────────────
+  partner_outreach:
+    status: "shipped"
+    summary: >
+      Surface inbound (/parceiros) para empresas que querem patrocinar, mais
+      o documento interno LLM_BRAIN/parcerias/prospeccao.md com tabela de
+      empresas-alvo, tiers, email de abertura e checklist anti-fabricação
+      de contatos.
+    added:
+      - path: "LLM_BRAIN/parcerias/prospeccao.md"
+        purpose: "tabela qualificada de ~30 empresas (iFood, Rappi, Ambev VOA, Grupo Mateus, Magalu, Natura, Nubank, Itaú Social, Fundação BB, Vivo, Energisa, Pague Menos, Instituto MRV, universidades PB, SESC, etc.) com setor, racional, canal sugerido, e-mail (a verificar), WhatsApp [preencher]; 5 tiers (Bairro / Cidade / Estadual / Nacional / Contrapartida não-financeira) com valores-referência; email pt-BR de abertura; checklist de verificação e 4 anti-patterns que o projeto recusa"
+      - path: "src/app/parceiros/page.js"
+        purpose: "página inbound pública com explicação do modelo, 5 cards de tiers clicáveis, checklist de dignidade, formulário stateless que compõe um mailto: pré-preenchido para contato@mapafome.com.br, FAQ com 5 perguntas"
+      - path: "src/app/parceiros/parceiros.css"
+    modified:
+      - path: "src/app/components/compatibility/components/InfoPanel.js"
+        change: "link 'Seja parceiro' adicionado ao ip-legal footer"
+    ethical_guardrails:
+      - "sem fabricação de contato — tabela marca e-mails incertos com '[verificar em <site>/<path>]' e WhatsApp como '[preencher]' sempre"
+      - "formulário é stateless (mailto:), sem backend, sem armazenamento de dados do remetente além do próprio e-mail que o cliente do usuário envia"
+      - "consentimento explícito antes do CTA de envio"
+      - "recusa explícita de patrocinadores de apostas, empréstimo predatório, e marcas com histórico de violação trabalhista"
+      - "nenhum banner aparece sobre pessoa mapeada — slots só em superfícies institucionais (InfoPanel / /apoiar / /iniciativas / /parceiros)"
+
+  # ─────────────────────────────────────────────
   # PRIVACY — consent text in ReportSheet
   # ─────────────────────────────────────────────
   privacy_consent_ux:
