@@ -22,11 +22,14 @@
   width: min(440px, calc(100vw - var(--mdf-space-6)));
   max-height: calc(100dvh - var(--mdf-space-8));
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   pointer-events: auto;
   background: var(--mdf-surface-1);
   border-radius: var(--mdf-radius-sheet);
   box-shadow: var(--mdf-elev-3);
   padding: var(--mdf-space-6);
+  padding-bottom: calc(var(--mdf-space-6) + env(safe-area-inset-bottom, 0px) + var(--mdf-keyboard-inset, 0px));
 }
 
 .mdf-notif__header {

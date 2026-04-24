@@ -20,6 +20,10 @@ export const metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
+  // iPhone X+: lets env(safe-area-inset-*) return real values so the FAB
+  // and bottom sheet content clear the home indicator. Without this flag
+  // Safari shrinks the viewport and every inset returns 0.
+  viewportFit: 'cover',
   themeColor: '#D64545',
 };
 

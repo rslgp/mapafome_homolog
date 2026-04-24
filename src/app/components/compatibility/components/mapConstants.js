@@ -3,8 +3,8 @@ import { bean, hub, green, red, currentLocation, currentLocationSmall } from './
 
 // Map configuration constants
 export const MAP_CONFIG = {
-  DEFAULT_ZOOM_MOBILE: 7.25,
-  DEFAULT_ZOOM_DESKTOP: 8.5 * 1.2,
+  DEFAULT_ZOOM_MOBILE: 7,
+  DEFAULT_ZOOM_DESKTOP: 10,
   MOBILE_BREAKPOINT: 480,
   MAX_ZOOM: 18,
   MAP_HEIGHT: "70vh",

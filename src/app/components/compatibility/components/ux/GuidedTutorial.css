@@ -37,9 +37,12 @@
   transform: translate(-50%, -50%);
   width: min(360px, calc(100vw - 24px));
   max-width: 360px;
-  max-height: calc(100dvh - 24px);
+  /* dvh keeps the card fully on-screen as iOS chrome toggles; env insets
+   * avoid the notch and home indicator on iPhone X+. */
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background: var(--mdf-surface-1);
   color: var(--mdf-ink);
   border-radius: var(--mdf-radius-sheet);

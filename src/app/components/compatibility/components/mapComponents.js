@@ -144,6 +144,42 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
     return null;
 };
 
+// ─── MapSizeInvalidator ───────────────────────────────────────────────────────
+// iOS browser chrome (address bar) shows/hides as the user scrolls, changing
+// the actual rendered height of the map container even though the vh value
+// in the inline style stays constant. Leaflet caches the container size at
+// init time; if the cache is stale, every containerPoint→latlng conversion
+// (i.e. every tap) is off by a fixed Y offset.
+//
+// Fix: call map.invalidateSize() once on mount and again whenever the viewport
+// resizes. iOS exposes window.visualViewport which fires 'resize' more
+// reliably than window.resize when the chrome appears/disappears.
+
+export const MapSizeInvalidator = () => {
+    const map = useMap();
+
+    useEffect(() => {
+        map.invalidateSize({ animate: false });
+
+        const onResize = () => map.invalidateSize({ animate: false });
+
+        // visualViewport fires on iOS when the browser chrome shows/hides;
+        // window resize fires on desktop and Android.
+        const vv = typeof window !== 'undefined' && window.visualViewport;
+        if (vv) {
+            vv.addEventListener('resize', onResize);
+        }
+        window.addEventListener('resize', onResize);
+
+        return () => {
+            if (vv) vv.removeEventListener('resize', onResize);
+            window.removeEventListener('resize', onResize);
+        };
+    }, [map]);
+
+    return null;
+};
+
 // ─── MapViewUpdater ───────────────────────────────────────────────────────────
 // MapContainer.center is only used on first render and is NOT reactive.
 // This child component uses useMap() to imperatively pan the map whenever

@@ -39,6 +39,7 @@ import {
 import {
     TileLayersControl,
     MapClickHandler,
+    MapSizeInvalidator,
     MapViewUpdater,
 } from './mapComponents';
 import envVariables from './variaveisAmbiente';
@@ -272,6 +273,11 @@ const CoffeeMap = ({
 
                 {/* Pans map when GPS location arrives — MapContainer.center is not reactive */}
                 <MapViewUpdater center={center} />
+
+                {/* Keeps Leaflet's container-size cache in sync with iOS viewport shifts
+                    (address bar appearing/disappearing changes actual map height) so that
+                    containerPoint→latlng conversion stays accurate on every tap. */}
+                <MapSizeInvalidator />
 
                 {/* Encapsulated click handler: was inline whenReady arrow in V1 and V2 */}
                 <MapClickHandler onMapClick={handleMapClick} onMapLongPress={handleMapLongPress} />

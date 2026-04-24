@@ -788,6 +788,103 @@ changelog:
       - "Tapping empty map tiles drops the blue CURRENT_LOCATION_SMALL pin on iOS Safari at the exact tapped location"
       - "Panning still works; only taps within tapTolerance (15px) register as drop-pin events"
 
+  ios_tap_precision_fix:
+    status: "done"
+    summary: "All iOS devices: tap registered but pin landed at wrong latlng — stale Leaflet size cache + fractional initial zoom"
+    root_causes:
+      - >
+        Leaflet caches the map container's pixel dimensions at init. On iOS,
+        the browser chrome (address bar) shows/hides as the user scrolls,
+        changing the actual rendered height of the 70vh/60vh container. The
+        stale cache made every containerPoint→latlng conversion proportionally
+        wrong in Y. Not Safari-specific — all iOS browsers (Chrome, Firefox,
+        Edge) use WebKit and have the same chrome-resize behaviour.
+      - >
+        DEFAULT_ZOOM_MOBILE was 7.25 (fractional). Leaflet computes pixel
+        origins from 2^zoom; a non-integer zoom leaves sub-pixel remainders
+        that accumulate into visible imprecision when converting points to
+        latlng.
+    changed:
+      - path: "src/app/components/compatibility/components/mapComponents.js"
+        change: "Added MapSizeInvalidator component: calls map.invalidateSize({animate:false}) on mount and subscribes to both window.visualViewport.resize (iOS-specific, fires when chrome appears/disappears) and window.resize (desktop/Android)"
+      - path: "src/app/components/compatibility/components/map.js"
+        change: "Imported MapSizeInvalidator and placed it inside MapContainer, alongside MapViewUpdater and MapClickHandler"
+      - path: "src/app/components/compatibility/components/mapConstants.js"
+        change: "DEFAULT_ZOOM_MOBILE 7.25→7, DEFAULT_ZOOM_DESKTOP 10.2→10 (integer zooms avoid sub-pixel origin remainders)"
+
+  ios_general_hardening:
+    status: "done"
+    summary: "Sweep of remaining iOS-specific pitfalls (tap flash, long-press callout, page bounce, input auto-zoom, safe-area insets)"
+    issues_addressed:
+      - issue: "Grey flash on every tap (iOS default -webkit-tap-highlight-color)"
+        fix: "Added `-webkit-tap-highlight-color: transparent` globally in globals.css; accessibility preserved via :focus-visible"
+      - issue: "Long-press on map tile or marker raised the iOS native callout menu, competing with our contextmenu/long-press handler"
+        fix: "`-webkit-touch-callout: none; -webkit-user-select: none` on .leaflet-container and descendants in globals.css"
+      - issue: "Page rubber-band/bounce: dragging near the map edge scrolled the document, shifting the next tap's latlng reference"
+        fix: "`overscroll-behavior: contain` on html/body in globals.css"
+      - issue: "iOS auto-zooms the page when the user focuses any <input> with font-size < 16px"
+        fix: "Floor in globals.css: `input, select, textarea { font-size: max(16px, 1rem) }` — safety net even if a component overrides the design token"
+      - issue: "iPhone X+ home indicator/notch overlapped the red '+' FAB and obscured the bottom of the ReportSheet / PinDetailSheet CTAs"
+        fix: >
+          1) layout.js viewport now includes viewportFit: 'cover' so env(safe-area-inset-*) returns real values (was 0 without the flag).
+          2) .mdf-fab right/bottom use calc(... + env(safe-area-inset-...)).
+          3) .mdf-sheet__panel and .mdf-pin-sheet__panel get padding-bottom: calc(var(--mdf-space-6) + env(safe-area-inset-bottom)).
+      - issue: "Inner scrollable sheet panels stuttered on older iOS without momentum scrolling"
+        fix: "-webkit-overflow-scrolling: touch on .mdf-sheet__panel and .mdf-pin-sheet__panel"
+    changed:
+      - path: "src/app/globals.css"
+      - path: "src/app/layout.js"
+      - path: "src/app/components/compatibility/components/ux/ReportSheet.css"
+      - path: "src/app/components/compatibility/components/ux/PinDetailSheet.css"
+    out_of_scope_for_this_pass:
+      - "iOS keyboard-pushing-content inside ReportSheet when a text input is focused — would require a visualViewport-based height listener on the sheet; parked until real user complaint lands"
+      - "ListView/NotificationPrefs/OfflineToast safe-area insets — same pattern, can be applied if needed"
+
+  ios_full_resolution:
+    status: "done"
+    summary: "Finish the iOS sweep — soft-keyboard inset, notched-screen top padding, dynamic viewport height, and safe-area/momentum-scroll on every remaining fixed surface"
+    issues_addressed:
+      - issue: "iOS soft keyboard covered the Publicar button inside ReportSheet (and any other bottom sheet hosting a focused input)"
+        fix: >
+          New src/app/components/compatibility/components/ux/IosKeyboardInset.js
+          mounts once in App.js, subscribes to window.visualViewport.resize/scroll,
+          and writes --mdf-keyboard-inset on :root equal to the height hidden
+          by the keyboard. ReportSheet/PinDetailSheet/NotificationPrefs panels
+          now add that value to their padding-bottom, so focused inputs and
+          the trailing CTA remain reachable above the keyboard.
+      - issue: "With viewportFit=cover enabled, iPhone X+ notch overlapped the sticky Header brand/count/buttons"
+        fix: "Header.css: padding-top: env(safe-area-inset-top) so the notch strip is reserved"
+      - issue: "100vh on .mdf-main froze to the initial viewport on iOS; header+steps-hint math broke when chrome collapsed"
+        fix: "Swapped to 100dvh and added padding-bottom: env(safe-area-inset-bottom) so page content clears the home indicator"
+      - issue: "ListView / NotificationPrefs / OfflineToast still lacked safe-area/momentum-scroll handling"
+        fix: >
+          ListView.css — padding-bottom: env(safe-area-inset-bottom), -webkit-overflow-scrolling: touch.
+          NotificationPrefs.css — padding-bottom now includes safe-area-inset-bottom + keyboard inset, plus overscroll-behavior: contain and momentum scrolling.
+          OfflineToast.css — bottom offset now includes env(safe-area-inset-bottom).
+    files_added:
+      - path: "src/app/components/compatibility/components/ux/IosKeyboardInset.js"
+        purpose: "Single visualViewport listener — exposes --mdf-keyboard-inset CSS custom property for layouts that need to dodge the iOS soft keyboard"
+    files_changed:
+      - "src/app/components/compatibility/App.js (mounts IosKeyboardInset)"
+      - "src/app/components/compatibility/App.css (100vh→100dvh + safe-area-inset-bottom on .mdf-main)"
+      - "src/app/components/compatibility/components/ux/Header.css (env safe-area-inset-top)"
+      - "src/app/components/compatibility/components/ux/ReportSheet.css (adds var(--mdf-keyboard-inset) to panel padding-bottom)"
+      - "src/app/components/compatibility/components/ux/PinDetailSheet.css (same keyboard-inset wiring)"
+      - "src/app/components/compatibility/components/ux/NotificationPrefs.css (safe-area + keyboard-inset + overscroll-contain + momentum)"
+      - "src/app/components/compatibility/components/ux/ListView.css (safe-area + momentum)"
+      - "src/app/components/compatibility/components/ux/OfflineToast.css (safe-area-inset-bottom)"
+      - "src/app/components/compatibility/components/ux/GuidedTutorial.css (max-height subtracts top/bottom safe-area + momentum)"
+    coverage:
+      - "Map tap precision (invalidateSize + integer zoom + tap=true + pointer-events on halo)"
+      - "Global tap-highlight flash suppressed"
+      - "Long-press callout menu suppressed on map"
+      - "Page overscroll-bounce contained"
+      - "Input auto-zoom-on-focus suppressed (16px floor)"
+      - "Safe-area: notch (top), home indicator (bottom), gutters (right)"
+      - "iOS soft keyboard no longer covers sheet CTAs"
+      - "Dynamic viewport height (dvh) everywhere chrome-collapse would otherwise shift layout"
+      - "Momentum scrolling on every internal scroll region"
+
   safari_map_click_fix:
     status: "done"
     summary: "Map tap on Safari (desktop + iOS) wasn't dropping the blue pin — regression in hit-testing"

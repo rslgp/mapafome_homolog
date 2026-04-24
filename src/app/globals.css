@@ -6,16 +6,42 @@
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+  /* iOS: kill the grey flash that appears on every tap. Accessibility is
+   * preserved via :focus-visible (see below). */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  /* iOS: keep page rubber-band from leaking map pans up to the document —
+   * otherwise dragging near the map edge scrolls the whole page and the
+   * next tap lands on a different latlng than the user expected. */
+  overscroll-behavior: contain;
 }
 
 html {
   -webkit-text-size-adjust: 100%;
+}
+
+/* iOS Safari auto-zooms any input with font-size < 16px on focus. Our design
+ * token is 16px, but explicit inputs override; this floor is a safety net so
+ * the page never zooms when a user focuses an input on an iPhone. */
+input,
+select,
+textarea {
+  font-size: max(16px, 1rem);
+}
+
+/* iOS: long-press on a map tile or marker raises the native callout menu
+ * (copy/share/open). We use long-press for our own contextmenu handler on
+ * the map, and callouts interfere with drag-to-pan on older iOS. */
+.leaflet-container,
+.leaflet-container * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 body {

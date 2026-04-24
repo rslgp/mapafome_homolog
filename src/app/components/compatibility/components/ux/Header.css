@@ -19,6 +19,10 @@
   background: var(--mdf-surface-1);
   border-bottom: 1px solid var(--mdf-border);
   box-shadow: var(--mdf-elev-1);
+  /* iPhone X+ with viewport-fit=cover: the status bar / notch now overlays
+   * the top of the page. Reserve that strip so the header brand isn't
+   * clipped behind it. */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* Mobile: 2-row grid.

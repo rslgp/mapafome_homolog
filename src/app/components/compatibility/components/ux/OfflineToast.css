@@ -1,6 +1,6 @@
 .mdf-toast {
   position: fixed;
-  bottom: var(--mdf-space-6);
+  bottom: calc(var(--mdf-space-6) + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 2200;

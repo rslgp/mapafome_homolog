@@ -24,10 +24,12 @@
   max-height: 70dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background: var(--mdf-surface-1);
   border-radius: var(--mdf-radius-sheet) var(--mdf-radius-sheet) 0 0;
   box-shadow: var(--mdf-elev-3);
   padding: var(--mdf-space-6);
+  padding-bottom: calc(var(--mdf-space-6) + env(safe-area-inset-bottom, 0px) + var(--mdf-keyboard-inset, 0px));
   pointer-events: auto;
   animation: mdf-sheet-rise var(--mdf-dur-base) var(--mdf-ease-out-back) both;
 }

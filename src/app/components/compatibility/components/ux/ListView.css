@@ -24,6 +24,8 @@
   height: 85dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--mdf-surface-1);
   border-radius: var(--mdf-radius-sheet) var(--mdf-radius-sheet) 0 0;
   box-shadow: var(--mdf-elev-3);

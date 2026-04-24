@@ -28,10 +28,15 @@
   max-height: 85dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background: var(--mdf-surface-1);
   border-radius: var(--mdf-radius-sheet) var(--mdf-radius-sheet) 0 0;
   box-shadow: var(--mdf-elev-3);
   padding: var(--mdf-space-6);
+  /* Reserve room for: (1) home-indicator safe-area, (2) iOS soft keyboard
+   * when focused inputs open it — --mdf-keyboard-inset is written by
+   * IosKeyboardInset from visualViewport and is 0 when no keyboard is up. */
+  padding-bottom: calc(var(--mdf-space-6) + env(safe-area-inset-bottom, 0px) + var(--mdf-keyboard-inset, 0px));
   pointer-events: auto;
   animation: mdf-sheet-rise var(--mdf-dur-base) var(--mdf-ease-out-back) both;
 }
@@ -312,8 +317,8 @@
 
 .mdf-fab {
   position: fixed;
-  right: var(--mdf-space-4);
-  bottom: var(--mdf-space-6);
+  right: calc(var(--mdf-space-4) + env(safe-area-inset-right, 0px));
+  bottom: calc(var(--mdf-space-6) + env(safe-area-inset-bottom, 0px));
   z-index: 1200;
   width: var(--mdf-fab-size);
   height: var(--mdf-fab-size);

@@ -22,6 +22,7 @@ import LiveAnnouncer from './components/ux/LiveAnnouncer';
 import EmptyViewportOverlay from './components/ux/EmptyViewportOverlay';
 import ViewMoreCue from './components/ux/ViewMoreCue';
 import NotificationPrefs, { hasActedOnPin, markActedOnPin } from './components/ux/NotificationPrefs';
+import IosKeyboardInset from './components/ux/IosKeyboardInset';
 import { registerOnce as registerServiceWorker } from './components/ux/swRegister';
 import { enqueue as enqueuePublish, bindOnlineFlush, queueSize } from './components/ux/publishQueue';
 // import CoffeeTable from './components/table';
@@ -1334,6 +1335,7 @@ class App extends Component {
   render() {
     return (
       <div className="App">
+        <IosKeyboardInset />
         <Header
           rowCountProp={this.state.rowCount}
           onStartTour={this.handleStartTour}

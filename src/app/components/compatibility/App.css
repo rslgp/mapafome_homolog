@@ -13,8 +13,13 @@
 }
 .mdf-main {
   padding: var(--mdf-space-3) var(--mdf-space-2);
+  /* iOS: avoid the FAB/bottom content hiding under the home indicator. */
+  padding-bottom: calc(var(--mdf-space-3) + env(safe-area-inset-bottom, 0px));
   background: var(--mdf-surface-0);
-  min-height: calc(100vh - var(--mdf-header-h) - var(--mdf-steps-hint-h));
+  /* 100dvh tracks the dynamic viewport (address bar shown/hidden) while
+   * 100vh on iOS is frozen to the initial height — using dvh prevents the
+   * layout jump when chrome collapses. */
+  min-height: calc(100dvh - var(--mdf-header-h) - var(--mdf-steps-hint-h));
 }
 
 @media (min-width: 768px) {
