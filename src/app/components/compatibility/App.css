@@ -555,6 +555,15 @@ a.tgme_widget_share_btn {
   opacity: 0.9 !important;
 }
 
+/* Safari fix: non-interactive markers (e.g. the 150x150 current-location
+ * halo) otherwise absorb taps because Leaflet only sets pointer-events on
+ * .leaflet-interactive. Without this the map's click → drop-pin handler
+ * never fires on Safari when the tap lands on top of the halo. */
+.leaflet-marker-icon:not(.leaflet-interactive),
+.leaflet-marker-shadow:not(.leaflet-interactive) {
+  pointer-events: none !important;
+}
+
 /* ── Marker cluster colors ─────────────────────────── */
 
 .leaflet-marker-icon.marker-cluster.marker-cluster-small.leaflet-zoom-animated.leaflet-interactive {

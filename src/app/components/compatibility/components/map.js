@@ -262,6 +262,8 @@ const CoffeeMap = ({
                 center={center}
                 attributionControl={false}
                 preferCanvas={true}
+                tap={true}
+                tapTolerance={15}
             >
                 {/* V1 LayersControl with 3 tile options (Waze/OSM/Satellite) */}
                 <TileLayersControl />
@@ -280,7 +282,6 @@ const CoffeeMap = ({
                     icon={ICONS.CURRENT_LOCATION}
                     position={center}
                     interactive={false}
-                    eventHandlers={{ click: (e) => e.preventDefault() }}
                 />
 
                 {renderMarkerGroups()}

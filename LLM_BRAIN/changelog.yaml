@@ -769,6 +769,51 @@ changelog:
       - "Dados institucionais da OSC (CNPJ, endereço, representante legal) pendentes como [TODO]"
       - "Orçamento detalhado por rubrica pendente até conhecer teto e limites do edital"
 
+  safari_map_touch_fix:
+    status: "done"
+    summary: "iOS Safari touch-on-map still didn't drop the pin after the hit-testing fix — synthetic click bridge was unreliable"
+    root_cause: >
+      Two compounding issues on iOS Safari:
+      (1) Leaflet 1.7+ changed the `tap` MapOption default from true to
+      false, disabling Leaflet's internal tap→synthetic-click bridge. On
+      iOS Safari the native touch→click conversion is unreliable (300ms
+      delay, cancelled by any touchmove inside tolerance, not fired on
+      plain divs without cursor:pointer).
+      (2) Even with tap re-enabled, a stray touchmove within tolerance can
+      still suppress the synthetic click, leaving the user with no drop
+      pin after a valid tap.
+    changed:
+      - path: "src/app/components/compatibility/components/map.js"
+        change: "Added tap={true} and tapTolerance={15} to MapContainer so Leaflet's own tap→click bridge runs on touch browsers"
+      - path: "src/app/components/compatibility/components/mapComponents.js"
+        change: "MapClickHandler now also listens for pointerup (falls back to touchend on older Safari) on the map container; converts clientX/Y → latlng via containerPointToLatLng and dispatches the same handleMapClick path. Drag-pans are filtered by a 15px movement threshold; taps on .leaflet-interactive / .leaflet-control / .leaflet-marker-icon / .leaflet-popup are ignored so marker handlers still own their events. A 500ms same-coord dedupe prevents double-drop when both the Leaflet click and the pointer fallback fire for the same tap."
+    verified:
+      - "Tapping empty map tiles drops the blue CURRENT_LOCATION_SMALL pin on iOS Safari even when the synthetic click is suppressed"
+      - "Pan-dragging (>15px movement) no longer drops a pin at the release point"
+      - "Marker taps still open their own popup/handlers — fallback skips .leaflet-interactive targets"
+
+  safari_map_click_fix:
+    status: "done"
+    summary: "Map tap on Safari (desktop + iOS) wasn't dropping the blue pin — regression in hit-testing"
+    root_cause: >
+      ICONS.CURRENT_LOCATION is a 150x150 halo Marker rendered at the map
+      center with interactive={false}. Leaflet only assigns
+      pointer-events:auto to elements carrying the .leaflet-interactive
+      class; it does NOT set pointer-events:none on non-interactive marker
+      icons. Browsers' default for <img> is pointer-events:auto, so the
+      halo still absorbed taps before they bubbled to the Leaflet map's
+      click listener. Chrome/Firefox hit-test the transparent PNG as a
+      pass-through; Safari does not, which is why the bug was
+      Safari-specific.
+    changed:
+      - path: "src/app/components/compatibility/App.css"
+        change: "Added .leaflet-marker-icon:not(.leaflet-interactive) { pointer-events: none !important } so the halo (and any other non-interactive marker) stops eating taps"
+      - path: "src/app/components/compatibility/components/map.js"
+        change: "Removed dead eventHandlers={{click:e=>e.preventDefault()}} from the non-interactive CURRENT_LOCATION Marker (interactive=false ⇒ Leaflet never wires the click event anyway)"
+    verified:
+      - "handleMapClick in map.js now receives the click event on Safari and drops the CURRENT_LOCATION_SMALL pin + stores envVariables.lastMarked"
+      - "Interactive markers (reporter pins, clusters, bean markers) still carry .leaflet-interactive and remain clickable"
+
   # ─────────────────────────────────────────────
   # NOT STARTED — (none: all milestones have at least a shipped slice)
   # ─────────────────────────────────────────────
