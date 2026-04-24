@@ -771,26 +771,22 @@ changelog:
 
   safari_map_touch_fix:
     status: "done"
-    summary: "iOS Safari touch-on-map still didn't drop the pin after the hit-testing fix — synthetic click bridge was unreliable"
+    summary: "iOS Safari touch-on-map: first the pin didn't drop, then it dropped at the wrong spot — resolved by re-enabling Leaflet's tap bridge only"
     root_cause: >
-      Two compounding issues on iOS Safari:
-      (1) Leaflet 1.7+ changed the `tap` MapOption default from true to
-      false, disabling Leaflet's internal tap→synthetic-click bridge. On
-      iOS Safari the native touch→click conversion is unreliable (300ms
-      delay, cancelled by any touchmove inside tolerance, not fired on
-      plain divs without cursor:pointer).
-      (2) Even with tap re-enabled, a stray touchmove within tolerance can
-      still suppress the synthetic click, leaving the user with no drop
-      pin after a valid tap.
+      Leaflet 1.7+ changed the `tap` MapOption default from true to false,
+      disabling Leaflet's internal tap→synthetic-click bridge. On iOS
+      Safari the native touch→click conversion is unreliable (300ms delay,
+      cancelled by stray touchmove, not fired on plain divs without
+      cursor:pointer), so map.on('click', …) never fired.
     changed:
       - path: "src/app/components/compatibility/components/map.js"
         change: "Added tap={true} and tapTolerance={15} to MapContainer so Leaflet's own tap→click bridge runs on touch browsers"
-      - path: "src/app/components/compatibility/components/mapComponents.js"
-        change: "MapClickHandler now also listens for pointerup (falls back to touchend on older Safari) on the map container; converts clientX/Y → latlng via containerPointToLatLng and dispatches the same handleMapClick path. Drag-pans are filtered by a 15px movement threshold; taps on .leaflet-interactive / .leaflet-control / .leaflet-marker-icon / .leaflet-popup are ignored so marker handlers still own their events. A 500ms same-coord dedupe prevents double-drop when both the Leaflet click and the pointer fallback fire for the same tap."
+    attempted_and_reverted:
+      - what: "Manual pointerup/touchend fallback in MapClickHandler that converted clientX/Y → latlng via containerPointToLatLng"
+        why_reverted: "With tap={true} already doing the job, the fallback raced the Leaflet click and both fired within the 1e-6°/500ms dedupe window at slightly-different latlngs, so the pin landed at the wrong position. Removed — tap={true} alone is sufficient."
     verified:
-      - "Tapping empty map tiles drops the blue CURRENT_LOCATION_SMALL pin on iOS Safari even when the synthetic click is suppressed"
-      - "Pan-dragging (>15px movement) no longer drops a pin at the release point"
-      - "Marker taps still open their own popup/handlers — fallback skips .leaflet-interactive targets"
+      - "Tapping empty map tiles drops the blue CURRENT_LOCATION_SMALL pin on iOS Safari at the exact tapped location"
+      - "Panning still works; only taps within tapTolerance (15px) register as drop-pin events"
 
   safari_map_click_fix:
     status: "done"

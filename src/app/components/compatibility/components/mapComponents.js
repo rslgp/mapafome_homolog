@@ -17,7 +17,6 @@
 //   MapClickHandler  → encapsulated map click via useMap() (was anonymous arrow in both V1/V2)
 
 import React, { useEffect } from 'react';
-import L from 'leaflet';
 import { TileLayer, LayersControl, useMap } from 'react-leaflet';
 import {
     ICONS,
@@ -124,93 +123,21 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
     const map = useMap();
 
     useEffect(() => {
-        // De-dupe: Safari-fallback pointerup and the real click event can both
-        // fire for the same tap. Track the last handled location + timestamp
-        // and skip the second one if it lands at the same spot within 500ms.
-        let lastHandledAt = 0;
-        let lastHandledLat = null;
-        let lastHandledLng = null;
-        const dispatch = (lat, lng) => {
-            const now = Date.now();
-            if (
-                now - lastHandledAt < 500 &&
-                lastHandledLat !== null &&
-                Math.abs(lat - lastHandledLat) < 1e-6 &&
-                Math.abs(lng - lastHandledLng) < 1e-6
-            ) return;
-            lastHandledAt = now;
-            lastHandledLat = lat;
-            lastHandledLng = lng;
-            onMapClick(map, lat, lng);
-        };
-
-        const handleClick = (e) => dispatch(e.latlng.lat, e.latlng.lng);
+        const handleClick = (e) => onMapClick(map, e.latlng.lat, e.latlng.lng);
         const handleLongPress = (e) => {
             // contextmenu fires on desktop right-click and on mobile long-press.
             // Suppress the native menu so the app UI can take over.
             if (e.originalEvent && e.originalEvent.preventDefault) {
                 e.originalEvent.preventDefault();
             }
-            dispatch(e.latlng.lat, e.latlng.lng);
+            onMapClick(map, e.latlng.lat, e.latlng.lng);
             onMapLongPress?.(map, e.latlng.lat, e.latlng.lng);
         };
         map.on('click', handleClick);
         map.on('contextmenu', handleLongPress);
-
-        // Safari fallback: on iOS Safari the synthetic click bridge is flaky
-        // — tap → click sometimes never arrives even with L.Map.Tap enabled,
-        // or gets suppressed when a stray touchmove lands inside tapTolerance.
-        // We listen for pointerup/touchend directly on the map container and
-        // convert screen coords to a latlng so the drop-pin still happens.
-        // Drag-pans are filtered out by checking movement distance.
-        const container = map.getContainer();
-        let downX = null;
-        let downY = null;
-        const onPointerDown = (ev) => {
-            const t = ev.touches ? ev.touches[0] : ev;
-            if (!t) return;
-            downX = t.clientX;
-            downY = t.clientY;
-        };
-        const onPointerUp = (ev) => {
-            const t = ev.changedTouches ? ev.changedTouches[0] : ev;
-            if (!t || downX === null) { downX = downY = null; return; }
-            const dx = Math.abs(t.clientX - downX);
-            const dy = Math.abs(t.clientY - downY);
-            downX = downY = null;
-            // Anything beyond the tap tolerance was a pan, not a tap.
-            if (dx > 15 || dy > 15) return;
-            // Ignore taps that landed on an interactive Leaflet child
-            // (markers, controls, popups) — those have their own handlers.
-            const target = ev.target;
-            if (target && target.closest) {
-                if (target.closest('.leaflet-interactive, .leaflet-control, .leaflet-popup, .leaflet-marker-icon')) return;
-            }
-            const rect = container.getBoundingClientRect();
-            const point = L.point(t.clientX - rect.left, t.clientY - rect.top);
-            const latlng = map.containerPointToLatLng(point);
-            dispatch(latlng.lat, latlng.lng);
-        };
-        // Prefer Pointer Events where available (Safari 13+ supports them).
-        const hasPointerEvents = typeof window !== 'undefined' && 'PointerEvent' in window;
-        if (hasPointerEvents) {
-            container.addEventListener('pointerdown', onPointerDown, { passive: true });
-            container.addEventListener('pointerup', onPointerUp, { passive: true });
-        } else {
-            container.addEventListener('touchstart', onPointerDown, { passive: true });
-            container.addEventListener('touchend', onPointerUp, { passive: true });
-        }
-
         return () => {
             map.off('click', handleClick);
             map.off('contextmenu', handleLongPress);
-            if (hasPointerEvents) {
-                container.removeEventListener('pointerdown', onPointerDown);
-                container.removeEventListener('pointerup', onPointerUp);
-            } else {
-                container.removeEventListener('touchstart', onPointerDown);
-                container.removeEventListener('touchend', onPointerUp);
-            }
         };
     }, [map, onMapClick, onMapLongPress]);
 
