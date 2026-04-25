@@ -1,0 +1,47 @@
+name: CI
+
+# VM9 — CI gates per v5 § cicd.accelerate_capabilities.
+# 'Continuous integration (build + test on every commit)' is one of 24
+# capabilities predicting elite delivery (§ dora_metrics).
+on:
+  pull_request:
+    branches: [main, homolog]
+  push:
+    branches: [main, homolog]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Fitness functions (file-LOC, function-LOC, TODO ceiling)
+        run: npm run fitness
+
+      - name: Dependency audit (block on HIGH+)
+        run: npm audit --audit-level=high
+        # `continue-on-error: false` keeps this gating; relax temporarily by
+        # bumping --audit-level if a known transitive CVE has no fix yet, and
+        # file an entry in bugfixes.yaml documenting why.
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_GOOGLESHEETID: stub
+          NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL: stub@example.com
+          NEXT_PUBLIC_GOOGLE_PRIVATE_KEY: stub
+          NEXT_PUBLIC_CRYPTSEED: stub

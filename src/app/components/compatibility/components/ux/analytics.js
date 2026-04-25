@@ -77,6 +77,25 @@ export function trackSponsorClick({ id, region, placement }) {
   track('sponsor_click', { sponsor_id: id, region, placement });
 }
 
+// VM7 — structured failure events. Replaces silent catch blocks across
+// App.js sheet I/O and any other publish path. Per v5 § observability +
+// § best_practices.error_handling — never swallow exceptions silently.
+export function trackError(category, error, props = {}) {
+  const message = (error && (error.message || String(error))) || 'unknown';
+  // Strip anything that looks like a token before persisting/dispatching.
+  const safeMessage = message.replace(/(token|secret|key)\s*[=:]\s*[^\s]+/gi, '$1=[redacted]');
+  track('error', {
+    category,           // e.g. 'pin_publish', 'pin_update', 'sheet_read'
+    error_message: safeMessage.slice(0, 240),
+    ...props,
+  });
+  // Mirror to console.error so debug builds still see it; dashboards aggregate.
+  if (typeof console !== 'undefined' && console.error) {
+    // eslint-disable-next-line no-console
+    console.error(`[${category}]`, error, props);
+  }
+}
+
 export function peekBufferedEvents() {
   if (typeof window === 'undefined') return [];
   try {

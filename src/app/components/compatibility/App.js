@@ -12,7 +12,7 @@ import MainControls from './components/MainControls';
 import InfoPanel from './components/InfoPanel';
 import StepsHint from './components/ux/StepsHint';
 import GuidedTutorial, { hasSeenTour } from './components/ux/GuidedTutorial';
-import { trackReportStarted } from './components/ux/analytics';
+import { trackReportStarted, trackError } from './components/ux/analytics';
 import ReportSheet from './components/ux/ReportSheet';
 import ContextBar from './components/ux/ContextBar';
 import PinDetailSheet from './components/ux/PinDetailSheet';
@@ -192,14 +192,14 @@ class App extends Component {
     const coordsStr = JSON.stringify(coords);
     updatePinDadosByCoords(envVariables, coordsStr, (dados) => {
       dados.clicado = (dados.clicado || 0) + 1;
-    }).catch(() => { /* preserve legacy silent-failure behavior */ });
+    }).catch((e) => trackError('pin_update', e, { op: 'click_count' }));
   }
 
   clicouTelefone(coords) {
     const coordsStr = JSON.stringify(coords);
     updatePinDadosByCoords(envVariables, coordsStr, (dados) => {
       dados.clickTel = (dados.clickTel || 0) + 1;
-    }).catch(() => { /* preserve legacy silent-failure behavior */ });
+    }).catch((e) => trackError('pin_update', e, { op: 'tel_click_count' }));
   }
 
   entregarAlimento(coords) {
@@ -208,7 +208,7 @@ class App extends Component {
       dados.AlimentoEntregue = (dados.AlimentoEntregue || 0) + 1;
     })
       .then((row) => { if (row) window.location.reload(); })
-      .catch(() => { /* preserve legacy silent-failure behavior */ });
+      .catch((e) => trackError('pin_update', e, { op: 'mark_delivered' }));
   }
 
   avaliar(coords, avaliacao) {

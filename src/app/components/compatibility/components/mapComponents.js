@@ -17,7 +17,6 @@
 //   MapClickHandler  → encapsulated map click via useMap() (was anonymous arrow in both V1/V2)
 
 import React, { useEffect } from 'react';
-import L from 'leaflet';
 import { TileLayer, LayersControl, useMap } from 'react-leaflet';
 import {
     ICONS,
@@ -124,25 +123,68 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
     const map = useMap();
 
     useEffect(() => {
-        // iOS chrome-collapse can resize the container between renders. Leaflet
-        // caches container size + pixel origin, and `e.latlng` on a click is
-        // derived from that cached origin. If the cache is stale at click time,
-        // the tap is mapped to the wrong latlng — visually the blue pin lands
-        // off-target on iPhone. We invalidateSize at the start of the handler
-        // so the latlng is computed against the live container, then re-derive
-        // the latlng from the original DOM event's clientX/Y.
+        // iOS tap precision: works on Android, fails on iOS.
+        //
+        // Why iOS is different:
+        // Android Chrome dispatches `click` with clientX/Y pointing to the
+        // actual finger position. iOS Safari sometimes dispatches the
+        // synthetic click with coordinates that have drifted — the page may
+        // have scrolled between touchend and the deferred click, or the
+        // synthetic click is anchored to the element center rather than the
+        // touch point. Either way, e.originalEvent.clientX/Y on iOS is not
+        // a reliable source of "where the user tapped".
+        //
+        // Fix: capture pointerdown/touchstart coords on the map container.
+        // Those fire BEFORE any drift happens. When Leaflet's click event
+        // arrives, prefer the captured coords if they're recent. Falls back
+        // to e.originalEvent for non-touch (mouse) clicks where pointerdown
+        // matches the click position anyway.
+        const container = map.getContainer();
+        let captured = null;
+        const captureDown = (ev) => {
+            const t = (ev.changedTouches && ev.changedTouches[0])
+                || (ev.touches && ev.touches[0])
+                || ev;
+            if (t && Number.isFinite(t.clientX) && Number.isFinite(t.clientY)) {
+                captured = { clientX: t.clientX, clientY: t.clientY, ts: Date.now() };
+            }
+        };
+        container.addEventListener('pointerdown', captureDown, { passive: true });
+        // Some older iOS Safari builds do not fire pointerdown reliably on
+        // bare divs; touchstart is the universal fallback.
+        container.addEventListener('touchstart', captureDown, { passive: true });
+
         const recomputeLatLng = (e) => {
+            // Refresh Leaflet's container-size cache before any latlng math —
+            // iOS chrome-collapse can leave it stale (changelog § ios_blue_pin_misplaced_fix).
             map.invalidateSize({ animate: false, pan: false });
-            const ev = e.originalEvent;
-            if (!ev) return e.latlng;
-            const rect = map.getContainer().getBoundingClientRect();
-            // Touch synthetic clicks may not have clientX/Y on the wrapping event;
-            // fall back to changedTouches when needed.
-            const t = (ev.changedTouches && ev.changedTouches[0]) || ev;
-            const x = t.clientX - rect.left;
-            const y = t.clientY - rect.top;
-            if (!Number.isFinite(x) || !Number.isFinite(y)) return e.latlng;
-            return map.containerPointToLatLng(L.point(x, y));
+
+            // Choose the most-trustworthy coords for THIS tap:
+            // 1. Recently-captured pointerdown/touchstart (≤700ms ago) — the
+            //    user's actual finger position, immune to iOS click drift.
+            // 2. Otherwise the click's own originalEvent.
+            // 3. Last resort, e.latlng as Leaflet computed it.
+            const now = Date.now();
+            let mouseLike = null;
+            if (captured && now - captured.ts < 700) {
+                mouseLike = { clientX: captured.clientX, clientY: captured.clientY };
+            } else if (e.originalEvent) {
+                const o = e.originalEvent;
+                if (Number.isFinite(o.clientX) && Number.isFinite(o.clientY)) {
+                    mouseLike = { clientX: o.clientX, clientY: o.clientY };
+                } else if (o.changedTouches && o.changedTouches[0]) {
+                    const t = o.changedTouches[0];
+                    mouseLike = { clientX: t.clientX, clientY: t.clientY };
+                }
+            }
+            captured = null;
+            if (!mouseLike) return e.latlng;
+            try {
+                const point = map.mouseEventToContainerPoint(mouseLike);
+                return map.containerPointToLatLng(point);
+            } catch (_err) {
+                return e.latlng;
+            }
         };
 
         const handleClick = (e) => {
@@ -164,6 +206,8 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
         return () => {
             map.off('click', handleClick);
             map.off('contextmenu', handleLongPress);
+            container.removeEventListener('pointerdown', captureDown);
+            container.removeEventListener('touchstart', captureDown);
         };
     }, [map, onMapClick, onMapLongPress]);
 

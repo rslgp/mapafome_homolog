@@ -62,6 +62,76 @@ export async function getSheet(idx) {
     return sheet;
 }
 
+// ─── VM6 — input validation barricade ─────────────────────────────────────
+// v5 § defensive_programming.barricade_pattern. Data outside the sheetsClient
+// is dirty; data passed to sheet.addRow / row.save is clean. Each writer path
+// runs through one of these validators. Validators THROW (typed errors) so
+// callers must explicitly catch — no silent garbage in the spreadsheet.
+//
+// Throws subclasses are exposed so callers can branch on specific failure
+// types (telefone vs coordinates vs payload-shape) for better UX messages.
+
+export class SheetsValidationError extends Error {
+    constructor(field, reason, value) {
+        super(`sheets validation: ${field} ${reason}`);
+        this.field = field;
+        this.reason = reason;
+        this.value = value;
+    }
+}
+
+const BR_BBOX = { N: 5.27, S: -33.75, W: -73.99, E: -34.79 };
+
+export function validateCoordinatePair(coords, field = 'Coordinates') {
+    if (!Array.isArray(coords) || coords.length !== 2) {
+        throw new SheetsValidationError(field, 'must be a [lat,lng] tuple', coords);
+    }
+    const [lat, lng] = coords;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        throw new SheetsValidationError(field, 'lat/lng must be finite numbers', coords);
+    }
+    if (lat < BR_BBOX.S || lat > BR_BBOX.N || lng < BR_BBOX.W || lng > BR_BBOX.E) {
+        throw new SheetsValidationError(field, 'outside Brazil bbox', coords);
+    }
+    return coords;
+}
+
+export function validateRating(rating) {
+    const n = Number(rating);
+    if (!Number.isInteger(n) || n < 1 || n > 5) {
+        throw new SheetsValidationError('Avaliacao', 'must be integer 1..5', rating);
+    }
+    return n;
+}
+
+const BR_PHONE_LEN = new Set([10, 11]);
+export function validateTelefoneBR(telefone) {
+    if (typeof telefone !== 'string') {
+        throw new SheetsValidationError('Telefone', 'must be string of digits', telefone);
+    }
+    const digits = telefone.replace(/\D/g, '');
+    const stripped = digits.startsWith('55') && digits.length > 11 ? digits.slice(2) : digits;
+    if (!BR_PHONE_LEN.has(stripped.length)) {
+        throw new SheetsValidationError('Telefone', 'must be 10 or 11 BR digits (DDD + number)', telefone);
+    }
+    return stripped;
+}
+
+export function validatePinPayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+        throw new SheetsValidationError('payload', 'must be an object', payload);
+    }
+    // Coordinates may be JSON string or array — tolerate both, normalize.
+    if (payload.Coordinates !== undefined) {
+        const coords = typeof payload.Coordinates === 'string'
+            ? JSON.parse(payload.Coordinates)
+            : payload.Coordinates;
+        validateCoordinatePair(coords);
+    }
+    if (payload.Telefone) validateTelefoneBR(payload.Telefone);
+    return payload;
+}
+
 // Convenience for the very common "append a row" pattern.
 export async function appendRow(idx, row) {
     const sheet = await getSheet(idx);

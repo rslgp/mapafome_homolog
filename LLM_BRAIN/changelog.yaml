@@ -892,6 +892,156 @@ changelog:
       - path: "LLM_BRAIN/bugfixes.yaml"
         purpose: "Forward-looking bug backlog, distinct from milestones.yaml (features) and changelog.yaml (history). Captures B1–B3 closed (iOS map tap, hardening, keyboard/dvh) and B4–B8 open (double-pin watch, PWA install, VoiceOver, iPad split-view, default-zoom review) plus a _template intake block"
 
+  edital_direitos_digitais_2026_proposal:
+    status: "draft"
+    summary: "Proposta de submissão ao Edital Fundo Brasil — Direitos Digitais 2026, Eixo 1 (Fortalecimento Institucional, até R$ 80 mil, 12 meses)"
+    fit_assessment: >
+      O edital é especificamente sobre direitos digitais (regulação de
+      plataformas, violações em ambientes digitais, fortalecimento
+      democrático). MAPA FOME é primariamente uma ferramenta de direito
+      à alimentação. A proposta só se encaixa via reposicionamento como
+      'direitos digitais aplicados à dignidade de pessoas em
+      insegurança alimentar' — defendendo privacidade por padrão,
+      anti-vigilância (zero pixel/cookie/device-id), soberania digital
+      (open-source federável) e LGPD aplicada à humanidade. Risco real
+      de a banca classificar como fora do escopo. Vale tentar.
+    eixo: "1 — Fortalecimento Institucional (não Eixo 2 / litigância)"
+    deadline: "19 mai 2026 18h Brasília"
+    portal: "https://fundobrasil.powerappsportals.com"
+    added:
+      - path: "LLM_BRAIN/edital_direitos_digitais_2026/README.md"
+        purpose: "Pasta de submissão — links oficiais, prazos, fit assessment, checklist de docs obrigatórios, instruções de uso"
+      - path: "LLM_BRAIN/edital_direitos_digitais_2026/proposta.md"
+        purpose: "Plano de Trabalho em pt-BR — 14 seções: identificação, justificativa (direitos digitais), objetivos, metas/atividades/resultados, cronograma, orçamento R$80k, recortes raça/gênero/território, articulação em rede, M&A, equipe, riscos, anexos"
+    pending:
+      - "Preencher campos [VERIFICAR]: nome do coletivo, ano de fundação, pessoa de contato, composição da equipe"
+      - "Decidir sobre OSC executora financeira (coletivo sem CNPJ não pode receber o recurso direto — edital permite a figura)"
+      - "Preencher template oficial de orçamento (baixar do portal)"
+      - "Demonstrativo financeiro 2025 ou declaração de sem movimentação"
+      - "Submeter pelo portal — submissão única, sem salvamento parcial"
+    risks:
+      - "Banca pode classificar como fora do escopo (direito à alimentação, não direitos digitais)"
+      - "Coletivo informal — exige OSC parceira para executar financeiramente"
+    references:
+      - "Edital: https://www.fundobrasil.org.br/edital/direitos-digitais-2026/"
+      - "Pasta: LLM_BRAIN/edital_direitos_digitais_2026/"
+
+  ios_tap_precision_fix_v3:
+    status: "done"
+    summary: "Android tap → blue pin lands precisely; iOS still off after v2. Root cause: iOS click coords drift between touchend and synthetic click. Fix: capture pointerdown/touchstart coords as ground truth."
+    user_report: "one tap should land blue dot mark of touched-location — works on android, not on ios"
+    why_v2_was_insufficient: >
+      v2 used map.mouseEventToContainerPoint(e.originalEvent) which is
+      scale-aware. That fixes pinch-zoom and CSS transform cases. But it
+      still trusts e.originalEvent.clientX/Y, which on iOS Safari can
+      drift between the touchend and the dispatched synthetic click — the
+      page may have scrolled, or iOS may anchor the synthetic click to the
+      element center for tap-to-zoom heuristics. Android Chrome dispatches
+      the click with the correct finger position, which is why the bug is
+      iOS-specific.
+    fix:
+      - "MapClickHandler now installs pointerdown + touchstart capture listeners on the map container. They store {clientX, clientY, ts} the moment the user starts a tap — before any iOS drift can happen."
+      - "When Leaflet's click event arrives, recomputeLatLng prefers the captured coords if they are <700ms old, falling back to e.originalEvent.clientX/Y otherwise."
+      - "The captured slot is cleared after each click so a stale capture cannot leak into a later mouse interaction."
+      - "Touchstart listener is registered alongside pointerdown because some older iOS Safari builds do not fire pointerdown reliably on plain divs."
+    behaviour_preserved:
+      - "Mouse interactions still work — pointerdown coords for a mouse click match the click coords, so the captured-coord path produces identical latlng to the originalEvent path."
+      - "Drag-pan unaffected — Leaflet still controls drag detection; we only override the click position, not whether a click fires."
+    files_changed:
+      - "src/app/components/compatibility/components/mapComponents.js"
+
+  ios_tap_precision_fix_v2:
+    status: "done"
+    summary: "iOS tap registers but lands at wrong x,y — my hand-rolled coord math ignored CSS scale; replaced with Leaflet's scale-aware mouseEventToContainerPoint"
+    root_cause: >
+      The previous fix (changelog § ios_blue_pin_misplaced_fix) called
+      invalidateSize() correctly but then re-derived latlng with naive
+      `clientX - rect.left` math. That formula is wrong whenever any
+      ancestor of .leaflet-container has a CSS transform (scale, translateZ
+      for GPU compositing) OR the user has pinch-zoomed the page on iOS.
+      In both cases getBoundingClientRect returns the visual width but
+      clientX is in the un-scaled coordinate space. The result is a
+      systematic offset from the tap position.
+    fix:
+      - "MapClickHandler.recomputeLatLng now calls map.mouseEventToContainerPoint(originalEvent) — the same helper Leaflet uses internally for click → latlng. It divides by getBoundingClientRect.width / element.offsetWidth, accounting for any scale transform on the container or its ancestors."
+      - "Touch events without clientX/Y on the wrapping click event are synthesized from changedTouches[0] before being passed to mouseEventToContainerPoint."
+      - "Wrapped in try/catch — if mouseEventToContainerPoint ever throws (would only happen if container is missing) we fall back to e.latlng instead of crashing the click handler."
+      - "Removed now-unused `L` import."
+    files_changed:
+      - "src/app/components/compatibility/components/mapComponents.js"
+
+  v5_milestones_execution_pass_1:
+    status: "done"
+    summary: "Shipped the additive milestones from v5_milestones.yaml; deferred the high-risk extractions to a follow-up pass once VM0 tests are proven green"
+    shipped:
+      vm0_test_scaffolding: "Vitest + RTL + jsdom + 4 test files (sheetsClient, sponsors, sheetsValidators, domain), test/setup.js stubs visualViewport+matchMedia+IntersectionObserver, package.json scripts"
+      vm6_input_barricade: "SheetsValidationError + validateCoordinatePair (BR bbox) + validateRating + validateTelefoneBR + validatePinPayload exported from sheetsClient.js"
+      vm7_observability_baseline: "trackError(category, error, props) in analytics.js with token redaction; wired into 3 silent .catch blocks (contabilizarClicado, clicouTelefone, entregarAlimento)"
+      vm8_secrets_adr: "LLM_BRAIN/adr/ADR-001-public-sheets-credentials.md (STRIDE pass + Option A accept-with-controls + 6-month re-eval triggers); LLM_BRAIN/adr/ADR-002-app-paradigm.md (recommended functional + hooks)"
+      vm9_cicd_fitness_functions: ".github/workflows/ci.yml (install→lint→test→fitness→audit→build); scripts/fitness-functions.mjs (FF1 file LOC, FF2 function LOC, FF4 TODO ceiling)"
+      vm10_value_objects: "src/app/components/compatibility/domain/Coordinates.js (frozen VO, distanceKmTo, isInsideBR); domain/Telefone.js (BR-format VO, +55 stripping, waMeUrl, formattedBR); 13 tests"
+    deferred:
+      vm1_finish_sheets_extraction: "Tests written but not yet executed; the 4 remaining auth blocks are M1 hot path"
+      vm2_bootstrap_decomposition: "componentDidMount = 480 LOC; needs full test suite running between steps"
+      vm3_publish_flow_extraction: "handleClickMap = M1 promise; recent iOS regression cycle shows brittleness"
+      vm4_app_paradigm_change: "Type-1, ADR-002 Proposed not Accepted"
+      vm5_app_css_decomposition: "Needs visual regression coverage before CSS surgery"
+    files_added:
+      - "vitest.config.mjs"
+      - "test/setup.js"
+      - "test/sheetsClient.test.js"
+      - "test/sponsors.test.js"
+      - "test/sheetsValidators.test.js"
+      - "test/domain.test.js"
+      - "scripts/fitness-functions.mjs"
+      - ".github/workflows/ci.yml"
+      - "LLM_BRAIN/adr/ADR-001-public-sheets-credentials.md"
+      - "LLM_BRAIN/adr/ADR-002-app-paradigm.md"
+      - "src/app/components/compatibility/domain/Coordinates.js"
+      - "src/app/components/compatibility/domain/Telefone.js"
+    files_changed:
+      - "package.json (devDeps + scripts)"
+      - "src/app/components/compatibility/components/googlesheets/sheetsClient.js (validators added)"
+      - "src/app/components/compatibility/components/ux/analytics.js (trackError added)"
+      - "src/app/components/compatibility/App.js (3 silent catches now structured)"
+      - "LLM_BRAIN/v5_milestones.yaml (status fields per VM)"
+    next_steps:
+      - "Run `npm install && npm test && npm run fitness` on a clean clone to confirm green"
+      - "If green: execute VM1 (finish sheets extraction)"
+      - "After VM1 green: VM2 (bootstrap), VM3 (publish flow)"
+      - "Accept ADR-001 + ADR-002, then VM4 paradigm port"
+
+  v5_milestones_doc:
+    status: "done"
+    summary: "Created LLM_BRAIN/v5_milestones.yaml — sequenced engineering-quality milestones (VM0–VM10) anchored to v5 sections"
+    loc_snapshot:
+      over_500: ["App.js (1206)", "App.css (655)"]
+      warning_300_500: ["reports.js (470)", "ReportSheet.css (416)", "InfoPanel.css (397)", "relatorios/page.js (394)", "GuidedTutorial.js (368)", "map.js (321)", "ReportSheet.js (311)"]
+      total_tracked_loc: 13257
+    structure:
+      - "VM0 — Vitest + RTL + characterization tests (prerequisite for everything)"
+      - "VM1 — Finish sheet I/O extraction (4 remaining auth blocks)"
+      - "VM2 — componentDidMount → appBootstrap.js services"
+      - "VM3 — handleClickMap → publishPinFromMap.js (Humble Object)"
+      - "VM4 — App class → functional / state machine (Type-1, needs ADR-002)"
+      - "VM5 — App.css decomposition by feature"
+      - "VM6 — Defensive barricade for sheet inputs"
+      - "VM7 — Observability baseline (3 SLIs, structured events)"
+      - "VM8 — ADR-001: public Sheets credentials threat model (Type-1)"
+      - "VM9 — CI/CD + fitness functions (LOC, function size, bundle, secrets)"
+      - "VM10 — DDD value objects (optional, after VM4+VM6)"
+    each_milestone_includes:
+      - "v5_anchors — explicit references to v5 sections"
+      - "scope + out_of_scope"
+      - "measurable exit_criteria tied to v5 thresholds"
+      - "dependencies + estimated_effort + risk_level + type1_or_type2"
+    distinct_from:
+      - "milestones.yaml (M0–M9 product features)"
+      - "bugfixes.yaml (B1–B19 defects)"
+      - "v5_audit.yaml (the violation log this sequences from)"
+    files_added:
+      - "LLM_BRAIN/v5_milestones.yaml"
+
   v5_audit_pass_2:
     status: "done"
     summary: "Continued v5 refactor — App.js dropped from 1452 → 1206 LOC (246 more removed). Auth boilerplate from 7 → 4 occurrences."

@@ -8,6 +8,10 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "fitness": "node scripts/fitness-functions.mjs",
     "a11y": "npx --yes @axe-core/cli http://localhost:3000 --exit --tags wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa --show-errors",
     "export": "next build",
     "predeploy": "npm run build && node -e \"const fs=require('fs');['CNAME','.nojekyll'].forEach(f=>{if(!fs.existsSync('out/'+f)){console.error('[deploy] out/'+f+' missing — check public/'+f);process.exit(1)}});console.log('[deploy] out/CNAME + out/.nojekyll OK')\"",
@@ -33,11 +37,16 @@
     "universal-cookie": "^8.0.1"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.1.0",
+    "@vitest/coverage-v8": "^2.1.8",
     "babel-plugin-react-compiler": "1.0.0",
     "baseline-browser-mapping": "^2.10.9",
     "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
-    "gh-pages": "^6.3.0"
+    "gh-pages": "^6.3.0",
+    "jsdom": "^25.0.1",
+    "vitest": "^2.1.8"
   }
 }
