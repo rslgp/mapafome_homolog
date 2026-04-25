@@ -892,6 +892,60 @@ changelog:
       - path: "LLM_BRAIN/bugfixes.yaml"
         purpose: "Forward-looking bug backlog, distinct from milestones.yaml (features) and changelog.yaml (history). Captures B1–B3 closed (iOS map tap, hardening, keyboard/dvh) and B4–B8 open (double-pin watch, PWA install, VoiceOver, iPad split-view, default-zoom review) plus a _template intake block"
 
+  v5_audit_pass_2:
+    status: "done"
+    summary: "Continued v5 refactor — App.js dropped from 1452 → 1206 LOC (246 more removed). Auth boilerplate from 7 → 4 occurrences."
+    actions:
+      - "Added updatePinDadosByCoords(envVariables, coordsStr, mutator) helper to sheetsClient.js — captures the 'find row by coords, mutate Dados JSON, save' pattern."
+      - "Migrated contabilizarClicado (clicado counter) to use the helper — ~35 LOC → ~6 LOC."
+      - "Migrated clicouTelefone (clickTel counter) — ~35 LOC → ~6 LOC."
+      - "Migrated entregarAlimento (AlimentoEntregue counter, preserves the legacy reload) — ~35 LOC → ~7 LOC."
+      - "Migrated avaliar (rating histogram) — preserved cookie gate, error toasts, no-reload behavior; replaced inline auth+find with helper call."
+      - "Migrated window.fixarPonto debug helper to sheetsGetSheet(0) — ~30 LOC → ~12 LOC."
+      - "Migrated window.stats debug helper opener — saved 8 LOC of auth boilerplate."
+      - "DELETED 110-line commented-out window.planilhacsv block (lines 1057-1166 of pre-pass-2 file). Per v5 § refactoring_patterns.code_smells_catalog.comments — 'Comment explains WHAT not WHY' — and § engineering_leverage.levers — 'deletion is positive delta'."
+    metrics:
+      app_js_loc:
+        pass_1_after: 1452
+        pass_2_after: 1206
+        cumulative_reduction: 290
+      auth_blocks_remaining: 4
+    remaining_auth_blocks_locations:
+      - "handleClickMap publish flow (~line 415) — M1 reporter hot path; needs tests before extraction"
+      - "writePinToSheets x2 (~lines 587, 629) — has 10s timeout wrapper + idempotency_key; do not touch without tests"
+      - "componentDidMount initial fetch (~line 762) — inside the 484-LOC bootstrap method"
+    files_changed:
+      - "src/app/components/compatibility/App.js (1452 → 1206 LOC)"
+      - "src/app/components/compatibility/components/googlesheets/sheetsClient.js (added updatePinDadosByCoords)"
+      - "LLM_BRAIN/v5_audit.yaml (pass_2_done log + renumbered pass plan)"
+
+  v5_audit_pass_1:
+    status: "done"
+    summary: "First pass applying v5_0 compact software engineering principles to the LOC-ordered file list"
+    loc_inventory_top_5:
+      - "App.js: 1496 LOC (FAR PAST v5 hard limit of 1000)"
+      - "map.backup.js: 1246 LOC (DEAD code)"
+      - "App.css: 655 LOC (over ideal, within acceptable)"
+      - "reports.js: 470 LOC (within ideal)"
+      - "ReportSheet.css: 416 LOC (within ideal)"
+    actions_pass_1:
+      - "DELETED map.backup.js (per v5 § engineering_leverage.levers — deletion is positive delta)"
+      - "Created src/app/components/compatibility/components/googlesheets/sheetsClient.js — central auth + getSheet + appendRow helper. Resolves 39 duplicated boilerplate occurrences across App.js (v5 § DRY, § rule_of_three)."
+      - "Migrated removerPonto and verificarPonto in App.js to sheetsAppendRow — App.js dropped 1496 → 1452 LOC, eliminated 4 boilerplate copies, simplified each method from ~30 LOC to ~6 LOC."
+    documented:
+      - path: "LLM_BRAIN/v5_audit.yaml"
+        purpose: "Living audit doc — full v5 violation list (V1–V8), prerequisite test-suite for pass 2, multi-pass refactor plan, two ADRs required (public service-account creds; App.js class-vs-functional)."
+    not_done_and_why:
+      - rule: "v5 § refactoring_patterns.principle — 'Always have a passing test suite before starting'"
+        consequence: "Stopped after the safest 2 callsites (removerPonto, verificarPonto). The remaining 11 sheet-I/O methods need characterization tests first."
+      - rule: "v5 § context_adjustments.legacy — 'Characterization tests first'"
+        consequence: "Cannot decompose componentDidMount (484 LOC) or handleClickMap (94 LOC) without test scaffolding."
+    files_touched:
+      - "src/app/components/compatibility/App.js (1496 → 1452 LOC)"
+      - "src/app/components/compatibility/components/googlesheets/sheetsClient.js (new, 64 LOC)"
+      - "src/app/components/compatibility/components/map.backup.js (deleted, -1246 LOC repo-wide)"
+      - "LLM_BRAIN/v5_audit.yaml (new)"
+
   ios_blue_pin_misplaced_fix:
     status: "done"
     summary: "iPhone tap → blue pin landed at the wrong latlng (and that wrong latlng was what 'Confirmar ponto' published). Race between iOS chrome-collapse and Leaflet's cached pixel origin."

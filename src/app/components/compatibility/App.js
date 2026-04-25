@@ -40,6 +40,7 @@ import Paper from '@mui/material/Paper';
 import Grid from '@mui/material/Grid';
 
 import CleanOld from './components/googlesheets/cleanold';
+import { appendRow as sheetsAppendRow, updatePinDadosByCoords, getSheet as sheetsGetSheet } from './components/googlesheets/sheetsClient';
 
 import insta from './images/insta.svg';
 
@@ -170,234 +171,82 @@ class App extends Component {
   }
 
   removerPonto(coords, categoriaPonto) {
-    console.log("remover " + coords);
-    let motivo = prompt("por qual motivo (em resumo) gostaria de deletar esse ponto?");
-    if (motivo !== null) {
-      (async function main(self) {
-        try {
-          await doc.useServiceAccountAuth({
-            client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-          });
-
-          await doc.loadInfo(); // Loads document properties and worksheets
-
-          const sheet = doc.sheetsByIndex[4];
-          //row = { Name: "new name", Value: "new value" };
-
-          const row = { Motivo: motivo, Ponto: JSON.stringify(coords), DateISO: new Date().toISOString(), CategoriaPonto: categoriaPonto };
-
-          let r = await sheet.addRow(row);
-          console.log(r);
-
-          alert("pedido de deletar enviado com sucesso");
-        } catch (e) {
-          alert("ERRO, tente novamente");
-          //console.log(e);
-
-        }
-
-      })(motivo, coords);
-    }
+    const motivo = prompt("por qual motivo (em resumo) gostaria de deletar esse ponto?");
+    if (motivo === null) return;
+    const row = { Motivo: motivo, Ponto: JSON.stringify(coords), DateISO: new Date().toISOString(), CategoriaPonto: categoriaPonto };
+    sheetsAppendRow(4, row)
+      .then(() => alert("pedido de deletar enviado com sucesso"))
+      .catch(() => alert("ERRO, tente novamente"));
   }
 
   verificarPonto(coords, categoriaPonto) {
-    let motivo = prompt("Insira o CNPJ da entidade, nome da entidade, nome do responsável, email, telefone e se é credenciada para receber recurso do governo");
-    if (motivo !== null) {
-      (async function main(self) {
-        try {
-          await doc.useServiceAccountAuth({
-            client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-          });
-
-          await doc.loadInfo(); // Loads document properties and worksheets
-
-          const sheet = doc.sheetsByIndex[3];
-          //row = { Name: "new name", Value: "new value" };
-
-          const row = { Motivo: motivo, Ponto: JSON.stringify(coords), DateISO: new Date().toISOString(), CategoriaPonto: categoriaPonto };
-
-          let r = await sheet.addRow(row);
-          console.log(r);
-
-          alert("pedido de cnpj enviado com sucesso");
-        } catch (e) {
-          alert("ERRO, tente novamente");
-          console.log(e);
-
-        }
-
-      })(motivo, coords);
-    }
+    const motivo = prompt("Insira o CNPJ da entidade, nome da entidade, nome do responsável, email, telefone e se é credenciada para receber recurso do governo");
+    if (motivo === null) return;
+    const row = { Motivo: motivo, Ponto: JSON.stringify(coords), DateISO: new Date().toISOString(), CategoriaPonto: categoriaPonto };
+    sheetsAppendRow(3, row)
+      .then(() => alert("pedido de cnpj enviado com sucesso"))
+      .catch(() => alert("ERRO, tente novamente"));
   }
 
   contabilizarClicado(coords) {
-    (async function main(self) {
-      try {
-        await doc.useServiceAccountAuth({
-          client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-          private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-        });
-
-        await doc.loadInfo(); // Loads document properties and worksheets
-
-        const sheet = doc.sheetsByIndex[0];
-        //row = { Name: "new name", Value: "new value" };
-        if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
-        const rows = envVariables.rows;
-        coords = JSON.stringify(coords);
-        let rowEncontrada = rows.filter((x) => {
-          //x.Coordinates
-          //console.log(JSON.parse(x.Dados).Coordinates);
-          return JSON.parse(x.Dados).Coordinates === coords;
-        });
-
-        //console.log(rowEncontrada[0].City);
-        let dadosNovos = JSON.parse(rowEncontrada[0].Dados);
-        if (dadosNovos.clicado) dadosNovos.clicado++;
-        else dadosNovos.clicado = 1;
-        rowEncontrada[0].Dados = JSON.stringify(dadosNovos);
-        await rowEncontrada[0].save();
-
-        //window.location.reload();
-      } catch (e) {
-        //console.log(e);
-
-      }
-
-    })(coords);
+    const coordsStr = JSON.stringify(coords);
+    updatePinDadosByCoords(envVariables, coordsStr, (dados) => {
+      dados.clicado = (dados.clicado || 0) + 1;
+    }).catch(() => { /* preserve legacy silent-failure behavior */ });
   }
 
   clicouTelefone(coords) {
-    (async function main(self) {
-      try {
-        await doc.useServiceAccountAuth({
-          client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-          private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-        });
-
-        await doc.loadInfo(); // Loads document properties and worksheets
-
-        const sheet = doc.sheetsByIndex[0];
-        //row = { Name: "new name", Value: "new value" };
-        if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
-        const rows = envVariables.rows;
-        coords = JSON.stringify(coords);
-        let rowEncontrada = rows.filter((x) => {
-          //x.Coordinates
-          //console.log(JSON.parse(x.Dados).Coordinates);
-          return JSON.parse(x.Dados).Coordinates === coords;
-        });
-
-        //console.log(rowEncontrada[0].City);
-        let dadosNovos = JSON.parse(rowEncontrada[0].Dados);
-        if (dadosNovos.clickTel) dadosNovos.clickTel++;
-        else dadosNovos.clickTel = 1;
-        rowEncontrada[0].Dados = JSON.stringify(dadosNovos);
-        await rowEncontrada[0].save();
-
-        //window.location.reload();
-      } catch (e) {
-        //console.log(e);
-
-      }
-
-    })(coords);
+    const coordsStr = JSON.stringify(coords);
+    updatePinDadosByCoords(envVariables, coordsStr, (dados) => {
+      dados.clickTel = (dados.clickTel || 0) + 1;
+    }).catch(() => { /* preserve legacy silent-failure behavior */ });
   }
+
   entregarAlimento(coords) {
-    (async function main(self) {
-      try {
-        await doc.useServiceAccountAuth({
-          client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-          private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-        });
-
-        await doc.loadInfo(); // Loads document properties and worksheets
-
-        const sheet = doc.sheetsByIndex[0];
-        //row = { Name: "new name", Value: "new value" };
-        if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
-        const rows = envVariables.rows;
-        coords = JSON.stringify(coords);
-        let rowEncontrada = rows.filter((x) => {
-          //x.Coordinates
-          //console.log(JSON.parse(x.Dados).Coordinates);
-          return JSON.parse(x.Dados).Coordinates === coords;
-        });
-
-        //console.log(rowEncontrada[0].City);
-        let dadosNovos = JSON.parse(rowEncontrada[0].Dados);
-        dadosNovos.AlimentoEntregue++;
-        rowEncontrada[0].Dados = JSON.stringify(dadosNovos);
-        await rowEncontrada[0].save();
-
-        window.location.reload();
-      } catch (e) {
-        //console.log(e);
-
-      }
-
-    })(coords);
+    const coordsStr = JSON.stringify(coords);
+    updatePinDadosByCoords(envVariables, coordsStr, (dados) => {
+      dados.AlimentoEntregue = (dados.AlimentoEntregue || 0) + 1;
+    })
+      .then((row) => { if (row) window.location.reload(); })
+      .catch(() => { /* preserve legacy silent-failure behavior */ });
   }
 
   avaliar(coords, avaliacao) {
-    const self = this;
-    (async () => {
-      const coordsStr = JSON.stringify(coords);
-      const coordsKey = Array.isArray(coords) ? coords.join(',') : String(coords);
-      const cookieName = 'pontosAvaliados';
-      const pontos = cookies.get(cookieName) || '';
+    const coordsStr = JSON.stringify(coords);
+    const coordsKey = Array.isArray(coords) ? coords.join(',') : String(coords);
+    const cookieName = 'pontosAvaliados';
+    const pontos = cookies.get(cookieName) || '';
 
-      // Cookie gate runs FIRST so a repeat click on an already-rated point
-      // gives the user an honest "já avaliou" message instead of a silent
-      // no-op that looks like the stars are broken.
-      if (pontos.includes(coordsKey)) {
-        self.setState({ offlineToast: 'Você já avaliou este ponto. Obrigado!' });
-        return;
-      }
+    // Cookie gate runs FIRST so a repeat click on an already-rated point
+    // gives the user an honest "já avaliou" message instead of a silent
+    // no-op that looks like the stars are broken.
+    if (pontos.includes(coordsKey)) {
+      this.setState({ offlineToast: 'Você já avaliou este ponto. Obrigado!' });
+      return;
+    }
 
-      try {
-        await doc.useServiceAccountAuth({
-          client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-          private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-        });
-        await doc.loadInfo();
-        const sheet = doc.sheetsByIndex[0];
-        if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
-
-        const target = envVariables.rows.find((x) => {
-          try { return JSON.parse(x.Dados).Coordinates === coordsStr; }
-          catch (_e) { return false; }
-        });
-        if (!target) {
-          self.setState({ offlineToast: 'Ponto não encontrado. Recarregue a página e tente novamente.' });
+    const rating = avaliacao == null ? 5 : avaliacao;
+    updatePinDadosByCoords(envVariables, coordsStr, (dados) => {
+      if (!dados.Avaliacao) dados.Avaliacao = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
+      dados.Avaliacao[rating] = (dados.Avaliacao[rating] || 0) + 1;
+    })
+      .then((row) => {
+        if (!row) {
+          this.setState({ offlineToast: 'Ponto não encontrado. Recarregue a página e tente novamente.' });
           return;
         }
-
-        const dadosNovos = JSON.parse(target.Dados);
-        if (!dadosNovos.Avaliacao) {
-          dadosNovos.Avaliacao = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
-        }
-        const rating = avaliacao == null ? 5 : avaliacao;
-        dadosNovos.Avaliacao[rating] = (dadosNovos.Avaliacao[rating] || 0) + 1;
-        target.Dados = JSON.stringify(dadosNovos);
-
-        await target.save();
-
         const cookieExpireDate = new Date();
         cookieExpireDate.setDate(cookieExpireDate.getDate() + EXPIRE_DAY);
         cookies.set(cookieName, pontos + coordsKey, { path: '/', expires: cookieExpireDate });
-
         // No full page reload — reload() wiped in-progress tour state and made
         // the interaction feel violent. Toast is enough; next natural fetch
         // will pick up the refreshed count.
-        self.setState({ offlineToast: 'Avaliação registrada. Obrigado!' });
-      } catch (e) {
+        this.setState({ offlineToast: 'Avaliação registrada. Obrigado!' });
+      })
+      .catch((e) => {
         console.error('[avaliar] failed:', e);
-        self.setState({ offlineToast: 'Não foi possível enviar sua avaliação. Tente de novo em alguns segundos.' });
-      }
-    })();
+        this.setState({ offlineToast: 'Não foi possível enviar sua avaliação. Tente de novo em alguns segundos.' });
+      });
   }
 
   setFiltro(event) {
@@ -1054,39 +903,18 @@ class App extends Component {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 
-    window.fixarPonto = function (endereco, coords) {
-      (async function main(endereco, coords) {
-        try {
-          await doc.useServiceAccountAuth({
-            client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-          });
-
-          await doc.loadInfo(); // Loads document properties and worksheets
-
-          const sheet = doc.sheetsByIndex[0];
-
-          if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
-          const rows = envVariables.rows;
-
-          let rowEncontrada = rows.filter((x) => {
-            return JSON.parse(x.Dados).City.includes(endereco);
-          }
-          );
-
-          rowEncontrada.forEach((x) => {
-            let dadosNovos = JSON.parse(x.Dados);
-            dadosNovos.Coordinates = JSON.stringify(coords);
-            x.Dados = JSON.stringify(dadosNovos);
-          });
-
-          for (let x of rowEncontrada) await x.save();
-
-        } catch (e) {
-
+    window.fixarPonto = async function (endereco, coords) {
+      try {
+        const sheet = await sheetsGetSheet(0);
+        if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
+        const matches = envVariables.rows.filter((x) => JSON.parse(x.Dados).City.includes(endereco));
+        for (const x of matches) {
+          const dados = JSON.parse(x.Dados);
+          dados.Coordinates = JSON.stringify(coords);
+          x.Dados = JSON.stringify(dados);
+          await x.save();
         }
-
-      })(endereco, coords);
+      } catch (_e) { /* debug helper — silent on error */ }
     }
 
     //retornar os pontos proximos a 5km
@@ -1116,15 +944,7 @@ class App extends Component {
     window.stats = function () {
       (async function main() {
         try {
-          await doc.useServiceAccountAuth({
-            client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-          });
-
-          await doc.loadInfo(); // Loads document properties and worksheets
-
-          const sheet = doc.sheetsByIndex[0];
-
+          const sheet = await sheetsGetSheet(0);
           if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
           const rows = envVariables.rows;
 
@@ -1234,116 +1054,6 @@ class App extends Component {
       })();
     }
 
-    //     window.planilhacsv = function (){
-    //       (async function main() {
-    //         try{
-    //           await doc.useServiceAccountAuth({
-    //             client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    //             private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-    //           });
-
-    //           await doc.loadInfo(); // Loads document properties and worksheets
-
-    //           const sheet = doc.sheetsByIndex[0];
-
-    //           if(envVariables.rows===undefined) envVariables.rows = await sheet.getRows();
-    //           const rows = envVariables.rows;
-
-    //           let rowEncontrada = rows.filter( (x) => 
-    //           {
-    //             return JSON.parse(x.Dados).Telefone;
-    //           }
-    //           );
-    //           var planilhacsv="Situação,Telefone,coords,RedeSocial\n";
-    //           var tmp;
-    //           var result = {};
-    //           rowEncontrada.forEach( (x) => 
-    //           {
-    //             let y = JSON.parse(x.Dados);
-    //             planilhacsv+=[y.Roaster,aes.decrypt(y.Telefone),y.Coordinates,y.RedeSocial].toString()+"\n";
-    //           });
-    //           console.log(planilhacsv);
-
-    //           /**
-    //            * 
-    //            * {
-    //     "11": "São Paulo",
-    //     "12": "São Paulo",
-    //     "13": "São Paulo",
-    //     "14": "São Paulo",
-    //     "15": "São Paulo",
-    //     "16": "São Paulo",
-    //     "17": "São Paulo",
-    //     "18": "São Paulo",
-    //     "19": "São Paulo",
-    //     "21": "Rio de Janeiro",
-    //     "22": "Rio de Janeiro",
-    //     "24": "Rio de Janeiro",
-    //     "27": "Espírito Santo",
-    //     "28": "Espírito Santo",
-    //     "31": "Minas Gerais",
-    //     "32": "Minas Gerais",
-    //     "33": "Minas Gerais",
-    //     "34": "Minas Gerais",
-    //     "35": "Minas Gerais",
-    //     "37": "Minas Gerais",
-    //     "38": "Minas Gerais",
-    //     "41": "Paraná",
-    //     "42": "Paraná",
-    //     "43": "Paraná",
-    //     "44": "Paraná",
-    //     "45": "Paraná",
-    //     "46": "Paraná",
-    //     "47": "Santa Catarina",
-    //     "48": "Santa Catarina",
-    //     "49": "Santa Catarina",
-    //     "51": "Rio Grande do Sul",
-    //     "53": "Rio Grande do Sul",
-    //     "54": "Rio Grande do Sul",
-    //     "55": "Rio Grande do Sul",
-    //     "61": "Distrito Federal",
-    //     "62": "Goiás",
-    //     "63": "Tocantins",
-    //     "64": "Goiás",
-    //     "65": "Mato Grosso",
-    //     "66": "Mato Grosso",
-    //     "67": "Mato Grosso do Sul",
-    //     "68": "Acre",
-    //     "69": "Rondônia",
-    //     "71": "Bahia",
-    //     "73": "Bahia",
-    //     "74": "Bahia",
-    //     "75": "Bahia",
-    //     "77": "Bahia",
-    //     "79": "Sergipe",
-    //     "81": "Pernambuco",
-    //     "82": "Alagoas",
-    //     "83": "Paraíba",
-    //     "84": "Rio Grande do Norte",
-    //     "85": "Ceará",
-    //     "86": "Piauí",
-    //     "87": "Pernambuco",
-    //     "88": "Ceará",
-    //     "89": "Piauí",
-    //     "91": "Pará",
-    //     "92": "Amazonas",
-    //     "93": "Pará",
-    //     "94": "Pará",
-    //     "95": "Roraima",
-    //     "96": "Amapá",
-    //     "97": "Amazonas",
-    //     "98": "Maranhão",
-    //     "99": "Maranhão"
-    // }
-    //            */
-
-
-    //         }catch(e){
-
-    //         }
-
-    //       })();
-    //     }
   }
 
 
