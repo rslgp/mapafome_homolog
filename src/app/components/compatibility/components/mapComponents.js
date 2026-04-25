@@ -17,6 +17,7 @@
 //   MapClickHandler  → encapsulated map click via useMap() (was anonymous arrow in both V1/V2)
 
 import React, { useEffect } from 'react';
+import L from 'leaflet';
 import { TileLayer, LayersControl, useMap } from 'react-leaflet';
 import {
     ICONS,
@@ -123,15 +124,40 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
     const map = useMap();
 
     useEffect(() => {
-        const handleClick = (e) => onMapClick(map, e.latlng.lat, e.latlng.lng);
+        // iOS chrome-collapse can resize the container between renders. Leaflet
+        // caches container size + pixel origin, and `e.latlng` on a click is
+        // derived from that cached origin. If the cache is stale at click time,
+        // the tap is mapped to the wrong latlng — visually the blue pin lands
+        // off-target on iPhone. We invalidateSize at the start of the handler
+        // so the latlng is computed against the live container, then re-derive
+        // the latlng from the original DOM event's clientX/Y.
+        const recomputeLatLng = (e) => {
+            map.invalidateSize({ animate: false, pan: false });
+            const ev = e.originalEvent;
+            if (!ev) return e.latlng;
+            const rect = map.getContainer().getBoundingClientRect();
+            // Touch synthetic clicks may not have clientX/Y on the wrapping event;
+            // fall back to changedTouches when needed.
+            const t = (ev.changedTouches && ev.changedTouches[0]) || ev;
+            const x = t.clientX - rect.left;
+            const y = t.clientY - rect.top;
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return e.latlng;
+            return map.containerPointToLatLng(L.point(x, y));
+        };
+
+        const handleClick = (e) => {
+            const ll = recomputeLatLng(e);
+            onMapClick(map, ll.lat, ll.lng);
+        };
         const handleLongPress = (e) => {
             // contextmenu fires on desktop right-click and on mobile long-press.
             // Suppress the native menu so the app UI can take over.
             if (e.originalEvent && e.originalEvent.preventDefault) {
                 e.originalEvent.preventDefault();
             }
-            onMapClick(map, e.latlng.lat, e.latlng.lng);
-            onMapLongPress?.(map, e.latlng.lat, e.latlng.lng);
+            const ll = recomputeLatLng(e);
+            onMapClick(map, ll.lat, ll.lng);
+            onMapLongPress?.(map, ll.lat, ll.lng);
         };
         map.on('click', handleClick);
         map.on('contextmenu', handleLongPress);

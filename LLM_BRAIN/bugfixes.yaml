@@ -1,0 +1,581 @@
+bugfix_milestones:
+
+  # ─────────────────────────────────────────────
+  # META
+  # ─────────────────────────────────────────────
+  meta:
+    version: "1.0"
+    purpose: >
+      Bugfix backlog. Separate from milestones.yaml (forward feature work)
+      and changelog.yaml (historical log of completed work). Each entry is
+      self-contained — observable symptom, root cause if known, scope,
+      exit criteria, references — so a fresh agent (or a fresh week) can
+      pick up any single item without rebuilding context.
+    status_values: [open, in_progress, blocked, done]
+    ordering_principle: >
+      Severity × user reach × cost-to-fix. iOS/Safari issues that block the
+      core three-step promise (design_brief § three_step_promise) come first
+      because the reporter flow on a phone is the dominant entry path.
+    intake_rules:
+      - "A bug is a deviation from documented intent in design_brief.yaml or milestones.yaml exit criteria. Anything else is a feature request — file under milestones.yaml."
+      - "Reproduce before filing. If the bug is platform-specific, name the platform (iOS Safari 17, Chrome 121 desktop, etc.) in observed_behavior."
+      - "If a fix changes behavior other surfaces depend on (e.g. zoom defaults, click semantics), call it out under blast_radius."
+
+  # ─────────────────────────────────────────────
+  # B1 — Safari/iOS map tap regressions (CLOSED)
+  # Tracks the multi-pass investigation that landed in changelog.yaml
+  # entries safari_map_click_fix → safari_map_touch_fix → ios_tap_precision_fix.
+  # ─────────────────────────────────────────────
+  b1_ios_map_tap:
+    order: 1
+    name: "iOS/Safari: tap map → drop blue pin"
+    severity: "blocker"
+    serves_user_types: ["reporter"]
+    affects:
+      - "design_brief § three_step_promise step 1 (click on map)"
+      - "ICONS.CURRENT_LOCATION halo and Leaflet click handler"
+    status: "done"
+    observed_behavior: >
+      On iOS Safari (and all WebKit-based iOS browsers — Chrome, Firefox,
+      Edge use the same engine on iOS), tapping the map either failed to
+      drop the CURRENT_LOCATION_SMALL pin at all, or placed it at a slightly
+      offset latlng. Mouse clicks on desktop worked correctly.
+    root_causes:
+      - "Non-interactive 150x150 CURRENT_LOCATION halo had pointer-events:auto by browser default and hit-tested first on Safari, swallowing the tap before Leaflet's click listener could see it."
+      - "Leaflet 1.7+ changed MapContainer.tap default from true to false, removing the synthetic-click bridge iOS WebKit relies on (native touch→click is unreliable on bare divs)."
+      - "Leaflet caches container size at init; iOS browser chrome (address bar) shows/hides as users scroll, changing actual rendered height without invalidating the cache. Every containerPoint→latlng conversion was therefore proportionally off in Y."
+      - "DEFAULT_ZOOM_MOBILE was 7.25 — fractional zoom leaves sub-pixel remainders in 2^zoom origin math that accumulate into visible imprecision."
+    scope_done:
+      - "App.css: .leaflet-marker-icon:not(.leaflet-interactive) { pointer-events: none } so non-interactive markers (the halo) stop eating taps."
+      - "map.js: tap={true} tapTolerance={15} on MapContainer."
+      - "mapComponents.js: new MapSizeInvalidator subscribes to window.visualViewport.resize and window.resize and calls map.invalidateSize({animate:false})."
+      - "mapConstants.js: DEFAULT_ZOOM_MOBILE 7.25→7, DEFAULT_ZOOM_DESKTOP 10.2→10."
+    exit_criteria_met:
+      - "Pin lands at exact tapped location on iPhone 12+/15 Pro Max in Safari, Chrome, Firefox."
+      - "Marker taps still open their own popups — pointer-events fix only affects non-interactive markers."
+      - "Drag-pan no longer drops a stray pin (>15px movement disqualifies the tap)."
+    references:
+      - "changelog.yaml: safari_map_click_fix, safari_map_touch_fix, ios_tap_precision_fix"
+    blast_radius:
+      - "Default zoom changed for new sessions — first-time users see a different initial framing. Acceptable trade-off."
+    regression_watch:
+      - "If react-leaflet upgrades past v5, re-verify tap option default."
+      - "If a future change introduces another large non-interactive marker, ensure it inherits the pointer-events:none rule."
+
+  # ─────────────────────────────────────────────
+  # B2 — iOS general hardening (CLOSED)
+  # ─────────────────────────────────────────────
+  b2_ios_general_hardening:
+    order: 2
+    name: "iOS: tap-flash, long-press callout, page bounce, input zoom, safe-area"
+    severity: "high"
+    serves_user_types: ["all on iOS"]
+    status: "done"
+    observed_behavior: >
+      Polish gaps on iPhone — grey flash on every tap, native callout menu
+      on long-press over map tiles, page rubber-banded when dragging near
+      the map edge (shifting the next tap's reference frame), focusing any
+      <input> with font-size <16px zoomed the page, and on iPhone X+ the
+      home indicator clipped the FAB / sheet CTAs.
+    scope_done:
+      - "globals.css: -webkit-tap-highlight-color: transparent globally."
+      - "globals.css: -webkit-touch-callout: none on .leaflet-container * to suppress callout during long-press → contextmenu flow."
+      - "globals.css: overscroll-behavior: contain on html/body."
+      - "globals.css: input/select/textarea font-size: max(16px, 1rem) safety net."
+      - "layout.js: viewportFit: 'cover' so env(safe-area-inset-*) returns real values."
+      - "ReportSheet.css/PinDetailSheet.css/NotificationPrefs.css/ListView.css/OfflineToast.css/.mdf-fab: env(safe-area-inset-bottom/right/top) wired into padding/positioning."
+    exit_criteria_met:
+      - "No grey flash on any tap on iPhone."
+      - "Long-press on map opens our contextmenu, not the iOS callout."
+      - "FAB and sheet CTAs sit above the home indicator on iPhone X+."
+      - "Focusing an input does not zoom the page on any iOS device tested."
+    references:
+      - "changelog.yaml: ios_general_hardening"
+
+  # ─────────────────────────────────────────────
+  # B3 — iOS soft-keyboard, dvh, momentum (CLOSED)
+  # ─────────────────────────────────────────────
+  b3_ios_keyboard_and_dvh:
+    order: 3
+    name: "iOS: soft keyboard covered CTAs, 100vh frozen at chrome-shown height, jerky inner scroll"
+    severity: "high"
+    serves_user_types: ["all on iOS"]
+    status: "done"
+    observed_behavior: >
+      Inside ReportSheet/PinDetailSheet/NotificationPrefs, focusing a text
+      input opened the iOS soft keyboard which covered the Publicar/Confirmar
+      CTAs because window.innerHeight stayed constant while
+      window.visualViewport.height shrank. Separately, 100vh on .mdf-main
+      did not track the dynamic viewport when the address bar collapsed.
+      Inner scrollable panels stuttered without -webkit-overflow-scrolling.
+    scope_done:
+      - "New IosKeyboardInset.js: single visualViewport listener writes --mdf-keyboard-inset CSS custom property on :root equal to the px hidden by the keyboard. Mounted once in App.js."
+      - "Sheet panels (ReportSheet, PinDetailSheet, NotificationPrefs) include var(--mdf-keyboard-inset, 0px) in their padding-bottom so CTAs stay above the keyboard."
+      - "App.css: .mdf-main min-height 100vh→100dvh; padding-bottom now includes env(safe-area-inset-bottom)."
+      - "Header.css: padding-top: env(safe-area-inset-top) so iPhone X+ notch does not clip the sticky header."
+      - "GuidedTutorial.css: card max-height subtracts top+bottom safe-area; -webkit-overflow-scrolling: touch."
+      - "ListView/NotificationPrefs/ReportSheet/PinDetailSheet panels: -webkit-overflow-scrolling: touch."
+    exit_criteria_met:
+      - "Publicar button reachable above keyboard inside ReportSheet on iPhone with iOS keyboard open."
+      - "No layout jump when the iOS address bar collapses on .mdf-main."
+      - "Sticky header brand is not clipped behind the iPhone notch."
+    references:
+      - "changelog.yaml: ios_full_resolution"
+
+  # ─────────────────────────────────────────────
+  # B4 — Reporter pin double-write (OPEN, ANTICIPATED)
+  # Possible side effect of B1: now that taps reliably reach the map click
+  # handler on iOS, racing handlers (Leaflet click + a stray bubbled pointer)
+  # could double-drop the marker. Track until verified in production.
+  # ─────────────────────────────────────────────
+  b4_double_pin_drop_watch:
+    order: 4
+    name: "Watch: double pin-drop on rapid iOS taps"
+    severity: "medium"
+    serves_user_types: ["reporter"]
+    status: "not_a_bug"
+    resolution: >
+      Verified by code review of map.js handleMapClick (line 94–106):
+      every click first calls lastMarkedRef.current.remove() before adding
+      the new marker. Even if Leaflet's click and a synthetic click both
+      fire, only the latest pin survives. No fix needed.
+    observed_behavior: >
+      Hypothetical: user double-taps the map quickly on iOS and the second
+      tap is interpreted as a separate click rather than ignored, leaving
+      two CURRENT_LOCATION_SMALL pins because lastMarkedRef.current was
+      cleared between renders.
+    references:
+      - "src/app/components/compatibility/components/map.js:94-106"
+
+  # ─────────────────────────────────────────────
+  # B5 — iOS PWA install flow (OPEN, NOT YET TESTED)
+  # ─────────────────────────────────────────────
+  b5_ios_pwa_install:
+    order: 5
+    name: "iOS: PWA install flow + launch behavior"
+    severity: "medium"
+    serves_user_types: ["all on iOS"]
+    status: "pending_device_test"
+    blocked_by: "Requires a physical iPhone for Add-to-Home-Screen + standalone-mode validation. Code changes possible only after first verifying current behavior on real hardware."
+    observed_behavior: >
+      Untested on iOS. iOS Safari requires Add to Home Screen via the share
+      sheet (no beforeinstallprompt). Once installed, the PWA runs in
+      standalone mode where window.matchMedia('(display-mode: standalone)')
+      is true and certain APIs (push, location prompt) behave differently.
+    reproduction:
+      - "Open https://mapafome.com.br on iPhone Safari."
+      - "Use Share → Add to Home Screen."
+      - "Launch from the home-screen icon."
+      - "Verify: status bar/notch handled (already addressed in B3 via env safe-area-inset-top)."
+      - "Verify: GPS permission prompt fires; map centers on user location."
+      - "Verify: publish queue (publishQueue.js) flushes when network returns."
+      - "Verify: notifications behave correctly when notifications are not supported (iOS Safari has limited Web Push support)."
+    open_questions:
+      - "Does NotificationPrefs.js correctly degrade on iOS where Notification API support is partial?"
+      - "Does the manifest.json icon set include the 180x180 apple-touch-icon iOS prefers?"
+    references:
+      - "src/app/components/compatibility/components/ux/swRegister.js"
+      - "src/app/components/compatibility/components/ux/publishQueue.js"
+      - "public/manifest.json"
+
+  # ─────────────────────────────────────────────
+  # B6 — VoiceOver pass on the three-step flow (OPEN)
+  # ─────────────────────────────────────────────
+  b6_ios_voiceover_three_step:
+    order: 6
+    name: "iOS VoiceOver: three-step reporter flow announces correctly"
+    severity: "high"
+    serves_user_types: ["reporter using assistive tech"]
+    status: "pending_device_test"
+    blocked_by: "Requires VoiceOver on a physical iPhone. Cannot be validated in CI; needs human walkthrough of the rotor, focus trap, and live-region timing."
+    affects:
+      - "design_brief § accessibility (mandatory baseline)"
+      - "design_brief § three_step_promise"
+    observed_behavior: >
+      Lighthouse and axe-core pass, but VoiceOver-specific issues
+      (rotor labels, live-region timing, focus trap inside ReportSheet)
+      have not been validated on a real iPhone with VoiceOver enabled.
+    reproduction:
+      - "Settings → Accessibility → VoiceOver → On."
+      - "Open mapafome.com.br."
+      - "Swipe through landmarks and verify the map, FAB, and InfoPanel announce in pt-BR."
+      - "Open ReportSheet. Verify focus is trapped inside, that the close button is reachable, and that publish status announces via the existing LiveAnnouncer."
+    exit_criteria:
+      - "All interactive elements have a non-empty accessible name announced in pt-BR."
+      - "Focus is trapped in ReportSheet/PinDetailSheet while open and returned to the trigger on close."
+      - "publish status (idle/publishing/success/error) is announced via aria-live=polite within 1s of state change."
+
+  # ─────────────────────────────────────────────
+  # B7 — visualViewport on iPad split-view (OPEN, LOW PRIORITY)
+  # ─────────────────────────────────────────────
+  b7_ipad_split_view:
+    order: 7
+    name: "iPad split-view: map invalidateSize fires on viewport resize"
+    severity: "low"
+    serves_user_types: ["iPad users"]
+    status: "pending_device_test"
+    blocked_by: "Requires iPad hardware to enter split-view. Current MapSizeInvalidator already subscribes to both window.visualViewport.resize and window.resize, which together should cover any iPad split-view trigger; verification only."
+    observed_behavior: >
+      MapSizeInvalidator subscribes to window.visualViewport.resize and
+      window.resize. iPad split-view firing might emit only one of these
+      depending on how the user enters split-view. Untested.
+    reproduction:
+      - "Open on iPad Safari in full-screen."
+      - "Drag from the right edge to enter split-view (1/3 width)."
+      - "Tap a known landmark on the map."
+      - "Verify pin lands exactly at the tapped point."
+    exit_criteria:
+      - "Pin precision preserved across split-view transitions."
+
+  # ─────────────────────────────────────────────
+  # B8 — Initial zoom changed for non-Brazilian regions (OPEN, FOLLOW-UP TO B1)
+  # ─────────────────────────────────────────────
+  b8_default_zoom_review:
+    order: 8
+    name: "Review default zoom for users outside Paraíba region"
+    severity: "low"
+    serves_user_types: ["new visitors outside PB"]
+    status: "needs_product_decision"
+    blocked_by: "Subjective framing call. Needs user/PM judgment on whether current 7/10 integer zoom is too coarse for non-PB landings; cannot be objectively decided from code alone."
+    affects:
+      - "MAP_CONFIG.DEFAULT_ZOOM_MOBILE/DESKTOP changed in B1"
+    observed_behavior: >
+      DEFAULT_ZOOM_MOBILE went 7.25→7 and DESKTOP 10.2→10 to fix sub-pixel
+      origin imprecision. The framing on first load may now differ for
+      users landing without a saved location.
+    reproduction:
+      - "Open homolog in a browser with no saved last-region cookie."
+      - "Allow GPS denial."
+      - "Verify the fallback framing still makes sense (Recife region)."
+    exit_criteria:
+      - "First-load framing in fallback path shows enough context (a city plus surrounding region) without obvious imprecision."
+      - "If framing is too zoomed-out, evaluate raising desktop default to 11 (still integer)."
+
+  # ─────────────────────────────────────────────
+  # B9 — Android Chrome touch precision parity check (OPEN)
+  # iOS got the full sweep; Android Chrome is the second-most-common reporter
+  # surface and shares some Leaflet quirks but not WebKit-specific ones.
+  # ─────────────────────────────────────────────
+  b9_android_tap_parity:
+    order: 9
+    name: "Android Chrome: verify tap precision and visualViewport behavior"
+    severity: "medium"
+    serves_user_types: ["all on Android"]
+    status: "pending_device_test"
+    blocked_by: "Requires physical Android device (Pixel/Samsung) for tap-precision and chrome-collapse validation. iOS-targeted CSS rules (-webkit-* prefixes) are no-ops on Chrome and should not regress Android, but needs hardware confirmation."
+    affects:
+      - "MapSizeInvalidator (visualViewport listener may fire differently on Android)"
+      - "globals.css iOS-styled rules that are no-ops or harmful on Android"
+    observed_behavior: >
+      Android Chrome resizes window.innerHeight when the keyboard opens
+      (unlike iOS), so --mdf-keyboard-inset stays at 0 and sheet padding
+      is correct by accident. Untested whether MapSizeInvalidator
+      double-fires on Android (visualViewport.resize + window.resize at
+      the same chrome-collapse) and whether that produces visible jitter.
+    reproduction:
+      - "Open on a Pixel/Samsung with Android Chrome ≥120."
+      - "Tap precise points on the map; verify pin lands exactly there."
+      - "Open ReportSheet, focus an input, observe whether the sheet jumps."
+      - "Scroll the page so the address bar collapses; tap the map; verify pin precision."
+    exit_criteria:
+      - "Tap precision indistinguishable from iOS on Android Chrome and Samsung Internet."
+      - "No visible layout jump when address bar collapses or keyboard opens."
+
+  # ─────────────────────────────────────────────
+  # B10 — Dignity violation: legacy 5-star ratings (KNOWN, DEFERRED)
+  # ─────────────────────────────────────────────
+  b10_legacy_ratings_dignity:
+    order: 10
+    name: "Legacy 5-star ratings on PopupContent violate dignity_constraints"
+    severity: "high"
+    serves_user_types: ["reporter", "person being reported"]
+    status: "needs_product_decision"
+    blocked_by: "Replacing the star widget with a binary 'ainda existe? sim/não' verification is a behavior + data-model change. Needs explicit user/PM sign-off because (a) it changes the popup UX users have relied on, (b) the historical ratings column gets reinterpreted as verification counts, and (c) it touches design_brief.yaml § dignity_constraints intent. Code-only fix would be premature."
+    affects:
+      - "design_brief § dignity_constraints.never_rank_worth"
+      - "src/app/components/compatibility/components/PopupContent.js"
+      - "App.js handleRate / avaliar"
+    observed_behavior: >
+      The pre-M1 popup still exposes star ratings on each pin. Per
+      design_brief.yaml § dignity_constraints.never_rank_worth, ranking
+      people in food insecurity by any score is forbidden — even
+      indirectly via 'usefulness' ratings. The current ratings flow was
+      kept working (B-fix avaliar cookie-gate, removed reload) but the
+      surface itself violates intent.
+    reproduction:
+      - "Open the homolog map on desktop."
+      - "Click a legacy pin (Roaster=Doador or PrecisandoBuscar)."
+      - "Observe the 5-star rating widget in the popup."
+    proposed_fix:
+      - "Replace the star widget with a binary 'Esse ponto ainda existe? Sim/Não' verification action that maps to verificarPonto, preserving signal without ranking."
+      - "Migrate any historical rating data to a 'verifications_count' field; do not surface the score."
+    exit_criteria:
+      - "No pin surface in the app exposes a 1–5 score for a person/situation."
+      - "Verification flow still increments confidence per design_brief § feedback_loops."
+    blast_radius:
+      - "Existing ratings data in Google Sheets becomes informational-only — do not delete; reinterpret as verification counts."
+    references:
+      - "design_brief.yaml § dignity_constraints.never_rank_worth"
+      - "Earlier session note: 'flagged that legacy PopupContent.js ratings violate dignity_constraints.never_rank_worth but user wanted them fixed'"
+
+  # ─────────────────────────────────────────────
+  # B11 — Sponsor expiry races the 10-min nowTick (OPEN)
+  # ─────────────────────────────────────────────
+  b11_sponsor_expiry_clock_drift:
+    order: 11
+    name: "Sponsor stays visible up to 10 min past expiresAt due to nowTick cadence"
+    severity: "low"
+    serves_user_types: ["sponsor accountability", "user trust"]
+    status: "done"
+    scope_done:
+      - "SponsorSlot.js: new useEffect computes the soonest-future expiresAt across the active pool and schedules a single setTimeout for that delta (capped at the existing 10-min interval). Carousel drops the sponsor within 1s of expiry, no longer waiting for the next 10-min tick."
+    affects:
+      - "src/app/components/compatibility/components/ux/SponsorSlot.js"
+      - "src/app/components/compatibility/components/ux/sponsors.js (isActiveNow)"
+    observed_behavior: >
+      SponsorSlot recomputes eligibility off a 10-minute nowTick. A sponsor
+      whose expiresAt sits between two ticks is rendered for up to 10 minutes
+      after expiry. Marketing reports use absolute time, so /relatorio-marketing
+      and what users see can disagree by up to 10 min on the boundary day.
+    proposed_fix:
+      - "Compute timeUntilExpiry on render; schedule a single setTimeout for that delta (capped at the existing 10-min tick) so expiry fires precisely. Keep the 10-min tick as a fallback."
+    exit_criteria:
+      - "User-visible carousel matches /relatorio-marketing 'expirado' state within 60 seconds of expiresAt."
+
+  # ─────────────────────────────────────────────
+  # B12 — Publish queue duplicates on slow 3G + mid-flight retry (OPEN)
+  # ─────────────────────────────────────────────
+  b12_publish_queue_dup_risk:
+    order: 12
+    name: "Publish queue may write duplicate rows on flaky network if idempotency_key collides"
+    severity: "medium"
+    serves_user_types: ["reporter", "data integrity"]
+    status: "deferred"
+    blocked_by: "Server-side dedupe is impossible (no backend). Client-side dedupe-on-retry would require fetching the latest N rows before each retry — doubles network load on slow 3G, exactly the condition this bug occurs in. Trade-off needs benchmarking against real reporter data; deferred until duplicate rate is measured in /relatorios."
+    affects:
+      - "src/app/components/compatibility/components/ux/publishQueue.js"
+      - "App.js writePinToSheets (10s timeout + idempotency_key)"
+      - "Google Sheet 'Dados' column"
+    observed_behavior: >
+      Each enqueued row carries an idempotency_key, but the dedupe is
+      client-side: if the queue retries after the 10s timeout and the
+      original write actually committed at second ~11, the retry writes
+      a second row with the same key (Sheets has no unique constraint).
+      Severity is medium because it pollutes data more than it harms users,
+      but reports k-anonymity counts inflate.
+    reproduction:
+      - "Throttle network to slow-3G in DevTools."
+      - "Submit a report from ReportSheet."
+      - "Observe network panel for the doubled write attempt."
+      - "Inspect the Dados sheet for two rows with the same idempotency_key."
+    proposed_fix:
+      - "Server-side dedupe is impossible (no server). Instead: bump the timeout to 25s before retry; and on retry, fetch the latest N rows and skip if idempotency_key already present."
+      - "Or: write to a staging sheet with idempotency_key as a key column and a Sheets formula filter to dedupe before reading."
+    exit_criteria:
+      - "Zero duplicate idempotency_key rows in Dados over a 1-week sample of slow-3G test runs."
+
+  # ─────────────────────────────────────────────
+  # B13 — MarkerClusterGroup re-renders the world on any filter flip (OPEN)
+  # ─────────────────────────────────────────────
+  b13_cluster_remount_perf:
+    order: 13
+    name: "Filter changes force full MarkerClusterGroup remount via key"
+    severity: "low"
+    serves_user_types: ["any user with >500 pins in viewport"]
+    status: "deferred"
+    blocked_by: "Pin count is currently in the hundreds, well below the threshold where the 400ms stall is perceptible. Premature optimization until /relatorios shows >5k pins in a single viewport, at which point partition-by-bucket (instead of full remount) becomes worth the complexity."
+    affects:
+      - "src/app/components/compatibility/components/map.js (filterSig key)"
+      - "src/app/components/compatibility/components/MarkerGroup.js"
+    observed_behavior: >
+      filterSig is incorporated into the cluster key so MarkerClusterGroup
+      re-mounts cleanly when telefoneFilter/ultimoAnoFilter toggles. This
+      was added because react-leaflet-markercluster does not re-evaluate
+      its child predicate on prop change. On low-end Android with thousands
+      of pins, the remount stalls the main thread for ~400ms.
+    proposed_fix:
+      - "Investigate whether react-leaflet-markercluster v5 supports a `key`-less invalidation API (refreshClusters or similar)."
+      - "If not, partition by filter bucket so flipping a filter only remounts that bucket."
+    exit_criteria:
+      - "Time-to-interactive after a filter flip < 100ms with 5000 pins on a mid-range Android."
+
+  # ─────────────────────────────────────────────
+  # B14 — Reports pages compute on every keystroke (OPEN)
+  # ─────────────────────────────────────────────
+  b14_reports_recompute_thrash:
+    order: 14
+    name: "/relatorios and /relatorio-marketing recompute aggregations per keystroke"
+    severity: "low"
+    serves_user_types: ["public-policy analysts", "sponsor account managers"]
+    status: "not_a_bug"
+    resolution: >
+      Verified by code review: both pages call buildReport / buildMarketingReport
+      ONCE inside the load() useCallback after the network fetch completes,
+      then store the result via setReport(...). There is no filter input
+      that triggers re-aggregation on keystroke. The pages have no
+      interactive recompute path — concern was unfounded.
+    references:
+      - "src/app/relatorios/page.js:46-66"
+      - "src/app/relatorio-marketing/page.js (same pattern)"
+
+  # ─────────────────────────────────────────────
+  # B15 — Telefone field accepts non-Brazilian formats (OPEN)
+  # ─────────────────────────────────────────────
+  b15_telefone_format_validation:
+    order: 15
+    name: "Telefone field accepts non-Brazilian numbers, breaking WhatsApp deep-links"
+    severity: "low"
+    serves_user_types: ["reporter providing contact"]
+    status: "done"
+    scope_done:
+      - "App.js handleChangeTelefone now strips a leading '55' country-code prefix when the digit count is 12 or 13 so paste of '+5583999998888' normalizes to '83999998888'."
+      - "telefoneEncryptado is only set when length is exactly 10 or 11 (BR DDD + landline/mobile); shorter input is treated as in-progress, longer as invalid."
+      - "Added telefoneInvalid state flag for downstream UI to surface a pt-BR error without blocking submission of other fields."
+    affects:
+      - "MainControls.js handleChangeTelefone"
+      - "App.js telefoneEncryptado pipeline"
+      - "createDirectionUrl / wa.me deep links in popups"
+    observed_behavior: >
+      handleChangeTelefone strips non-digits but does not enforce 10/11 BR
+      digits. A reporter pasting a foreign number (e.g. 13-digit international
+      with country code prefix duplicated) results in a wa.me link that 404s.
+    proposed_fix:
+      - "Validate length 10 or 11 digits after strip; show inline error using existing microcopy.errors.invalid_phone."
+      - "Optionally accept +55 prefix and strip to 11 digits."
+    exit_criteria:
+      - "All published telefone values produce a working wa.me link."
+      - "Invalid numbers fail validation with a pt-BR error that does not block submission of the rest of the form."
+
+  # ─────────────────────────────────────────────
+  # B16 — Service worker stales after deploy (OPEN, MONITOR)
+  # ─────────────────────────────────────────────
+  b16_sw_stale_after_deploy:
+    order: 16
+    name: "Service worker serves stale shell after a deploy"
+    severity: "medium"
+    serves_user_types: ["returning users"]
+    status: "done"
+    scope_done:
+      - "public/sw.js: removed self.skipWaiting() from install handler so the new SW sits in 'waiting' until user opt-in (avoids serving new hashed assets to a still-loaded old HTML shell)."
+      - "swRegister.js: on registration, listens for 'updatefound' + the installing worker's 'installed' state; when a new SW is waiting AND there is an existing controller (i.e. this is an update, not a first install), injects a non-blocking pt-BR toast 'Nova versão disponível — Recarregar.' Click postMessages SKIP_WAITING to the waiting SW; controllerchange triggers a single window.location.reload()."
+      - "Toast inlined as DOM (no React mount required) so it works even before the React tree is ready, and respects safe-area-inset-bottom."
+    affects:
+      - "src/app/components/compatibility/components/ux/swRegister.js"
+      - "public/sw.js (or generated equivalent)"
+      - "PWA cache strategy"
+    observed_behavior: >
+      registerOnce installs the SW with default skipWaiting=false. After
+      a deploy, returning users see the old shell until they hard-reload
+      twice (one to register the new SW, one to activate). This is a
+      known PWA pattern but causes confusion when bug fixes ship and
+      users still report the same bug.
+    proposed_fix:
+      - "On 'updatefound', show a non-blocking toast: 'Nova versão disponível — recarregue para usar.'"
+      - "On user click of the toast, postMessage SKIP_WAITING and reload."
+    exit_criteria:
+      - "Returning user sees new build within one navigation after deploy."
+      - "No silent overwrite mid-session (always user-initiated)."
+
+  # ─────────────────────────────────────────────
+  # B17 — /parceiros mailto fails on iOS without configured Mail app (OPEN)
+  # ─────────────────────────────────────────────
+  b17_parceiros_mailto_no_handler:
+    order: 17
+    name: "/parceiros mailto: link silently no-ops on iOS without Mail/Outlook configured"
+    severity: "low"
+    serves_user_types: ["prospect partner"]
+    status: "done"
+    scope_done:
+      - "parceiros/page.js: CTA now also runs a focus-loss watcher; if window 'blur' / document 'visibilitychange' (hidden) never fires within 1500ms, surfaces a copy-paste fallback card with the full composed message + a navigator.clipboard 'Copiar mensagem' button."
+      - "Default <a href=mailto:> behavior preserved — fallback is additive and only appears when no mail handler took over."
+    affects:
+      - "src/app/parceiros/page.js submission flow"
+    observed_behavior: >
+      The form composes a mailto: URL and relies on the OS handler. On
+      iOS where the user has uninstalled Mail and not configured an
+      alternative, tapping submit does nothing — the form gives no
+      feedback and the prospect drops off.
+    proposed_fix:
+      - "After window.location.href = mailto:..., set a 1500ms timeout that, if document.hidden never flipped, shows a fallback: 'Não abriu seu e-mail? Copie este texto e envie para contato@mapafome.com.br' with a copy button and the same body."
+    exit_criteria:
+      - "Prospect with no mail client still receives clear instructions on how to send the message manually."
+
+  # ─────────────────────────────────────────────
+  # B18 — Search field (leaflet-geosearch) rate-limit on Nominatim (OPEN)
+  # ─────────────────────────────────────────────
+  b18_geosearch_nominatim_throttle:
+    order: 18
+    name: "Search field hits Nominatim usage policy on aggressive typing"
+    severity: "low"
+    serves_user_types: ["reporter searching by address"]
+    status: "done"
+    scope_done:
+      - "SearchField.js: wrapped OpenStreetMapProvider.search with a 350ms debounce + in-memory cache (last 50 query→result pairs, FIFO eviction). Cancelled pending queries resolve to [] so stale dropdowns clear. Network failures (incl. 429) resolve to [] instead of hanging the UI."
+    affects:
+      - "src/app/components/compatibility/components/SearchField.jsx"
+      - "OpenStreetMapProvider provider config"
+    observed_behavior: >
+      OpenStreetMapProvider hits nominatim.openstreetmap.org. The OSM
+      Foundation usage policy (referenced in App.js comment) limits to
+      ~1 req/sec per IP. Aggressive typing fires per-keystroke; once the
+      app reaches non-trivial traffic this risks IP blocks.
+    proposed_fix:
+      - "Add 350ms debounce to the search input before calling provider.search."
+      - "Cache last 50 query→result pairs in sessionStorage."
+      - "On 429, fall back to a cached static gazetteer of PB cities/neighborhoods (~200 entries)."
+    exit_criteria:
+      - "Sustained typing produces ≤1 Nominatim request per 350ms."
+      - "Search continues to work under 429 via the cached fallback."
+
+  # ─────────────────────────────────────────────
+  # B19 — Self-inflicted regression from B2/B3 iOS hardening pass (CLOSED)
+  # ─────────────────────────────────────────────
+  b19_ios_hardening_regression:
+    order: 19
+    name: "Regression: Android scroll dead + iOS map click broken after iOS hardening"
+    severity: "blocker"
+    serves_user_types: ["all"]
+    status: "done"
+    observed_behavior: >
+      After shipping B2 + B3 (iOS hardening sweep), two regressions
+      appeared that the original change set caused: (1) Android Chrome
+      could no longer vertically scroll the page; (2) iOS Safari stopped
+      dropping the blue CURRENT_LOCATION_SMALL pin on map tap.
+    root_causes:
+      - "overscroll-behavior: contain on html, body — combined with overflow-x: hidden it broke Chrome's scroll-container chain on Android."
+      - "-webkit-touch-callout / -webkit-user-select / user-select on .leaflet-container * — descendant-wide selector disrupted click propagation on iOS WebKit. Leaflet already sets user-select on .leaflet-container itself."
+      - "visualViewport.scroll listener in IosKeyboardInset — fires on every Android page scroll, thrashing CSS-var recalc."
+    scope_done:
+      - "globals.css: removed overscroll-behavior from html/body (kept per-surface usage on sheets)."
+      - "globals.css: narrowed .leaflet-container * → .leaflet-container; kept only -webkit-touch-callout: none."
+      - "IosKeyboardInset.js: dropped the visualViewport.scroll listener; kept only resize."
+    references:
+      - "changelog.yaml: ios_hardening_regression_fix"
+    lesson:
+      - "iOS-targeted CSS rules need an explicit cross-platform regression check before landing — Android Chrome and iOS Safari diverge enough that what fixes one can break the other."
+
+  # ─────────────────────────────────────────────
+  # NEW BUG INTAKE TEMPLATE
+  # Copy this block when filing a new bug. Keep `status: open`.
+  # ─────────────────────────────────────────────
+  _template:
+    order: 999
+    name: "<short, action-shaped description>"
+    severity: "<blocker|high|medium|low>"
+    serves_user_types: ["<reporter|volunteer|visitor|all>"]
+    status: "open"
+    affects:
+      - "<file or design_brief section>"
+    observed_behavior: >
+      <one-paragraph repro-able description, including platform/browser>
+    reproduction:
+      - "<step 1>"
+      - "<step 2>"
+    proposed_fix_if_known:
+      - "<approach>"
+    exit_criteria:
+      - "<observable acceptance>"
+    blast_radius:
+      - "<other features that depend on the changed code>"
+    references:
+      - "<changelog entry, file path, or external link>"

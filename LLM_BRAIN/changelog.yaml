@@ -892,6 +892,27 @@ changelog:
       - path: "LLM_BRAIN/bugfixes.yaml"
         purpose: "Forward-looking bug backlog, distinct from milestones.yaml (features) and changelog.yaml (history). Captures B1–B3 closed (iOS map tap, hardening, keyboard/dvh) and B4–B8 open (double-pin watch, PWA install, VoiceOver, iPad split-view, default-zoom review) plus a _template intake block"
 
+  ios_blue_pin_misplaced_fix:
+    status: "done"
+    summary: "iPhone tap → blue pin landed at the wrong latlng (and that wrong latlng was what 'Confirmar ponto' published). Race between iOS chrome-collapse and Leaflet's cached pixel origin."
+    root_cause: >
+      MapSizeInvalidator listens to visualViewport.resize, but that event
+      fires AFTER the address bar has already collapsed and the user has
+      tapped. By the time invalidateSize() runs, Leaflet has already
+      handed us a stale `e.latlng` for the click. The blue pin is then
+      placed at that stale latlng — visually off-target — and writePinToSheets
+      reads from envVariables.lastMarked.getLatLng() so the published
+      coords are wrong too.
+    fix:
+      - "MapClickHandler now calls map.invalidateSize({animate:false,pan:false}) at the START of every click/contextmenu handler, then re-derives the latlng from the original DOM event's clientX/Y against the live getBoundingClientRect — not from Leaflet's cached `e.latlng`."
+      - "Falls back to changedTouches[0] when the synthetic click event lacks clientX/Y (rare on iOS Safari)."
+      - "Re-imported `L` for L.point(); MapSizeInvalidator stays as the secondary safety net for when no click happens but the size genuinely changed."
+    files_changed:
+      - "src/app/components/compatibility/components/mapComponents.js"
+    why_safe:
+      - "invalidateSize with pan:false animate:false is a no-op when size is unchanged, so the desktop path pays nothing."
+      - "Re-deriving latlng from clientX/Y on the live rect is exactly what Leaflet does internally, just without the cache."
+
   sponsor_slot_tdz_crash_fix:
     status: "done"
     summary: "Client-side exception on every page load — SponsorSlot.js B11 useEffect referenced `pool` before its const declaration (temporal dead zone)"
