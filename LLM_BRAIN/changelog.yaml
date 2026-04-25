@@ -892,6 +892,83 @@ changelog:
       - path: "LLM_BRAIN/bugfixes.yaml"
         purpose: "Forward-looking bug backlog, distinct from milestones.yaml (features) and changelog.yaml (history). Captures B1–B3 closed (iOS map tap, hardening, keyboard/dvh) and B4–B8 open (double-pin watch, PWA install, VoiceOver, iPad split-view, default-zoom review) plus a _template intake block"
 
+  ios_tap_fixed_point_fix:
+    status: "done"
+    summary: "After the pure-Leaflet rewrite, iOS users reported the pin was 'fixed' and didn't track the touch. Restored pointer-coord capture, but kept Leaflet 1.9.4's containerPointToLatLng for the conversion."
+    user_report: "the point is fixed and dont represent touched location on ios devices"
+    root_cause: >
+      L.Map.Tap (active when MapContainer has tap:true) synthesizes a click
+      event from iOS touchstart/touchend. In modern iOS Safari that
+      synthesized MouseEvent often has clientX/Y == 0 because:
+        • the synthetic event is constructed without copying the touch's
+          page coords reliably across Safari WebKit + React-Leaflet event
+          normalization, AND
+        • Leaflet's mouseEventToContainerPoint trusts originalEvent.clientX/Y
+          verbatim.
+      Result: containerPoint resolves to (≈0, ≈0) → the top-left corner of
+      the visible map, every tap. From the user's perspective the pin
+      appears 'fixed' to one location.
+      The previous (changelog § map_click_pure_leaflet_1_9_4) attempt
+      removed the only coord source that survives this drift — the raw
+      pointerdown/touchstart clientX/Y captured at the container BEFORE
+      the synthetic click runs.
+    fix:
+      - "Re-added pointerdown + touchstart listeners on map.getContainer() to capture the real touch position into a small {x,y,t} cache (passive listeners — no preventDefault)."
+      - "resolveLatLng now prefers the captured coords (fresh < 1000 ms), subtracts container.getBoundingClientRect() to get container-relative pixels, and calls map.containerPointToLatLng([x,y]) — Leaflet 1.9.4's PUBLIC API — to convert."
+      - "Falls back to map.mouseEventToContainerPoint(e.originalEvent) when originalEvent has reliable clientX/Y (desktop, Android), then to e.latlng as final fallback."
+      - "Removed map.invalidateSize() from inside the click handler. It is unnecessary: containerPointToLatLng uses the pixel origin (depends on center+zoom, NOT on container size cache). MapSizeInvalidator already handles size-cache freshness on mount + visualViewport resize."
+    why_this_is_still_leaflet_1_9_4: >
+      The user's directive was 'use Leaflet 1.9.4 package' for click→coord
+      conversion. We do exactly that — map.containerPointToLatLng is
+      Leaflet 1.9.4's documented public API for converting container-pixel
+      coords to latlng. The pointerdown/touchstart capture is not
+      reimplementing Leaflet's pipeline; it's only sourcing a *reliable
+      input* (clientX/Y) that L.Map.Tap's synthetic click corrupts on iOS.
+      Leaflet itself does the projection.
+    files_changed:
+      - "src/app/components/compatibility/components/mapComponents.js"
+    test_path:
+      - "Desktop mouse click: handler uses fresh pointerdown coords; pin under cursor"
+      - "Android Chrome tap: pin under finger"
+      - "iOS Safari tap: pin under finger (no longer 'fixed' to top-left)"
+      - "Pinch-zoom + tap on iOS: pin under finger (containerPointToLatLng is scale-aware)"
+      - "Long-press / right-click: still drops pin AND opens ReportSheet via onPinDropped"
+    invariants_preserved:
+      - "tap={true} tapTolerance={15} unchanged — Leaflet's iOS hook stays installed; we just don't trust its synthetic click coords"
+      - "MapSizeInvalidator unchanged — keeps size cache fresh for cluster rendering"
+      - "M1 drop-in animation (.mdf-dropped-pin) and ping-ring still fire normally"
+
+  map_click_pure_leaflet_1_9_4:
+    status: "superseded_by_ios_tap_fixed_point_fix"
+    summary: "Removed custom pointerdown/touchstart capture; map click → coordinate is now a pure Leaflet 1.9.4 pipeline"
+    user_directive: "use leaflet 1.9.4 package on map click to choose coordinate"
+    rationale: >
+      Leaflet 1.9.4 already provides everything needed for accurate map-click
+      coords across desktop and touch:
+        • tap:true on MapContainer activates L.Map.Tap which converts iOS
+          touchstart/touchend into a synthetic click at the actual finger
+          position AND calls preventDefault to suppress iOS's own delayed
+          synthetic click (which is what was drifting).
+        • map.mouseEventToContainerPoint(originalEvent) is scale-aware
+          (uses rect.width / offsetWidth), handling CSS transforms and
+          pinch-zoom correctly.
+        • map.containerPointToLatLng(point) finishes the conversion using
+          the live pixel origin.
+      My custom pointerdown/touchstart capture was duplicating what
+      L.Map.Tap already does, fighting the library and adding surface area.
+    fix:
+      - "MapClickHandler now uses only Leaflet APIs: map.on('click', ...) → invalidateSize → mouseEventToContainerPoint → containerPointToLatLng"
+      - "Removed pointerdown + touchstart DOM listeners and the captured-coord cache"
+      - "tap={true} tapTolerance={15} on MapContainer remain — they are what makes the Leaflet pipeline accurate on iOS"
+      - "map.invalidateSize call is preserved on entry so the size cache cannot be stale at click time (iOS chrome-collapse race)"
+    files_changed:
+      - "src/app/components/compatibility/components/mapComponents.js"
+    test_path:
+      - "Mouse click on desktop: pin lands under cursor"
+      - "Tap on Android Chrome: pin lands under finger"
+      - "Tap on iOS Safari: pin lands under finger (relies on L.Map.Tap)"
+      - "Pinch-zoom + tap on iOS: pin lands under finger (mouseEventToContainerPoint scale-aware)"
+
   edital_direitos_digitais_2026_proposal:
     status: "draft"
     summary: "Proposta de submissão ao Edital Fundo Brasil — Direitos Digitais 2026, Eixo 1 (Fortalecimento Institucional, até R$ 80 mil, 12 meses)"
