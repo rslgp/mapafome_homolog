@@ -20,9 +20,12 @@ const DATA_CACHE  = `${SW_VERSION}-data`;
 
 const MAX_TILES = 250;
 
-self.addEventListener('install', (event) => {
-  // Take over as fast as possible on first install.
-  event.waitUntil(self.skipWaiting());
+self.addEventListener('install', (_event) => {
+  // B16: do NOT skipWaiting here. We let the new SW sit in `waiting` so the
+  // currently-loaded page (running the old code) keeps using the old SW
+  // until the user opts in via the update toast — which postMessages
+  // SKIP_WAITING and reloads. This avoids hydration mismatches caused by
+  // serving new hashed assets to an old HTML shell.
 });
 
 self.addEventListener('activate', (event) => {

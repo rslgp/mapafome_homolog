@@ -15,10 +15,9 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  /* iOS: keep page rubber-band from leaking map pans up to the document —
-   * otherwise dragging near the map edge scrolls the whole page and the
-   * next tap lands on a different latlng than the user expected. */
-  overscroll-behavior: contain;
+  /* overscroll-behavior is applied per-surface (sheets, list panels) instead
+   * of on the body. Setting it globally broke vertical page scroll on
+   * Android Chrome when combined with overflow-x: hidden + sticky header. */
 }
 
 html {
@@ -36,12 +35,13 @@ textarea {
 
 /* iOS: long-press on a map tile or marker raises the native callout menu
  * (copy/share/open). We use long-press for our own contextmenu handler on
- * the map, and callouts interfere with drag-to-pan on older iOS. */
-.leaflet-container,
-.leaflet-container * {
+ * the map, and callouts interfere with drag-to-pan on older iOS.
+ *
+ * Scoped to .leaflet-container only — applying these to .leaflet-container *
+ * was disrupting click event propagation on iOS Safari (Leaflet already
+ * sets user-select:none on .leaflet-container itself in leaflet.css). */
+.leaflet-container {
   -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
 }
 
 body {

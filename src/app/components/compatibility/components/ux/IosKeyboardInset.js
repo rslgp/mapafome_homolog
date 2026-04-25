@@ -24,11 +24,12 @@ export default function IosKeyboardInset() {
         };
 
         update();
+        // Only resize matters here — fires when the soft keyboard opens or
+        // closes. visualViewport.scroll fires on every page scroll, causing
+        // CSS-var thrashing on Android during normal scrolling.
         vv.addEventListener('resize', update);
-        vv.addEventListener('scroll', update);
         return () => {
             vv.removeEventListener('resize', update);
-            vv.removeEventListener('scroll', update);
             root.style.removeProperty('--mdf-keyboard-inset');
         };
     }, []);

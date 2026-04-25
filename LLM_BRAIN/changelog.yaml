@@ -885,6 +885,108 @@ changelog:
       - "Dynamic viewport height (dvh) everywhere chrome-collapse would otherwise shift layout"
       - "Momentum scrolling on every internal scroll region"
 
+  bugfixes_backlog:
+    status: "done"
+    summary: "Created LLM_BRAIN/bugfixes.yaml — separate bug tracker; cross-references the iOS work shipped under safari_*/ios_* changelog entries"
+    added:
+      - path: "LLM_BRAIN/bugfixes.yaml"
+        purpose: "Forward-looking bug backlog, distinct from milestones.yaml (features) and changelog.yaml (history). Captures B1–B3 closed (iOS map tap, hardening, keyboard/dvh) and B4–B8 open (double-pin watch, PWA install, VoiceOver, iPad split-view, default-zoom review) plus a _template intake block"
+
+  sponsor_slot_tdz_crash_fix:
+    status: "done"
+    summary: "Client-side exception on every page load — SponsorSlot.js B11 useEffect referenced `pool` before its const declaration (temporal dead zone)"
+    root_cause: >
+      The B11 fix added a useEffect that iterates `pool` to schedule a
+      precise expiry timer. I placed it BEFORE the `const { region, pool }
+      = useMemo(...)` declaration. JavaScript const bindings are in the
+      temporal dead zone until their declaration line executes, so reading
+      `pool` from the new effect's dependency array threw
+      ReferenceError: Cannot access 'pool' before initialization.
+      Crash happened on initial render of every surface that mounts
+      SponsorSlot (InfoPanel footer, /apoiar, /iniciativas).
+    fix:
+      - "Moved the new useEffect AFTER the useMemo that declares { region, pool }. Hook order is otherwise preserved."
+    files_changed:
+      - "src/app/components/compatibility/components/ux/SponsorSlot.js"
+
+  ios_hardening_regression_fix:
+    status: "done"
+    summary: "Reverted three over-aggressive rules from the iOS hardening pass that caused fresh regressions: Android could not scroll the page, iOS could not drop the blue map pin"
+    regressions_fixed:
+      - symptom: "Android Chrome: vertical swipe-to-scroll did not move the page"
+        root_cause: "globals.css applied `overscroll-behavior: contain` on html, body. Combined with the existing `overflow-x: hidden` on the same elements + sticky header, Chrome's scroll-container resolution broke and the document stopped scrolling."
+        fix: "Removed `overscroll-behavior: contain` from html, body. Per-surface usage (sheets, list panels) was already in place and is sufficient."
+      - symptom: "iOS Safari: tapping the map no longer dropped the blue CURRENT_LOCATION_SMALL pin"
+        root_cause: "globals.css applied `-webkit-touch-callout: none; -webkit-user-select: none; user-select: none` to .leaflet-container *. Leaflet itself already sets user-select:none on .leaflet-container in leaflet.css; the descendant-wide selector was redundant and on iOS WebKit it interfered with click event propagation through interactive children."
+        fix: "Narrowed selector to .leaflet-container alone, kept only `-webkit-touch-callout: none` (the long-press callout suppression we actually wanted)."
+      - symptom: "Constant CSS-var recalc on Android during page scroll"
+        root_cause: "IosKeyboardInset.js subscribed to visualViewport.scroll, which fires on every page-scroll event on Android Chrome (different semantics from iOS where keyboard adjusts visualViewport via resize)."
+        fix: "Removed the `scroll` listener; kept only `resize` which is what actually fires when the iOS keyboard opens/closes."
+    files_changed:
+      - "src/app/globals.css"
+      - "src/app/components/compatibility/components/ux/IosKeyboardInset.js"
+
+  bugfixes_resolution_pass_1:
+    status: "done"
+    summary: "Worked through bugfixes.yaml — closed B11, B15–B18; verified B4 + B14 as not_a_bug; classified the rest by why they cannot be code-only fixes right now"
+    closed:
+      - id: "B11"
+        title: "Sponsor expiry clock drift"
+        change: "SponsorSlot.js schedules a precise setTimeout for the soonest-future expiresAt across the active pool, capped at the 10-min interval. Carousel drops expired sponsors within seconds of contract end."
+      - id: "B15"
+        title: "Telefone format validation"
+        change: "App.js handleChangeTelefone strips leading '55' country code on 12/13-digit pastes; only sets telefoneEncryptado for valid 10/11-digit BR numbers; adds telefoneInvalid state flag."
+      - id: "B16"
+        title: "SW stale after deploy"
+        change: "Removed self.skipWaiting() from sw.js install. swRegister.js now listens for updatefound + installed state and surfaces a non-blocking pt-BR toast ('Nova versão disponível — Recarregar') that postMessages SKIP_WAITING and reloads on click. Toast is inlined as raw DOM so it works regardless of React mount state and respects safe-area-inset-bottom."
+      - id: "B17"
+        title: "/parceiros mailto silent no-op"
+        change: "parceiros/page.js CTA monitors window 'blur' / document 'visibilitychange' for 1500ms after click; if focus never leaves the tab, surfaces a copy-paste fallback card with the full composed message + a navigator.clipboard 'Copiar mensagem' button."
+      - id: "B18"
+        title: "Geosearch Nominatim throttle"
+        change: "SearchField.js wraps OpenStreetMapProvider.search with a 350ms debounce + FIFO 50-entry session cache. Cancelled queries resolve to []; failures (incl. 429) resolve to [] so the UI never hangs."
+    not_a_bug:
+      - id: "B4"
+        title: "Double pin-drop watch"
+        finding: "map.js handleMapClick already calls lastMarkedRef.current.remove() before adding the new marker — only the latest pin survives even if click fires twice."
+      - id: "B14"
+        title: "Reports recompute thrash"
+        finding: "build*Report runs once per fetch and result is stored via setReport — there is no per-keystroke filter input that would trigger re-aggregation."
+    pending_device_test:
+      - "B5 iOS PWA install — needs physical iPhone + Add-to-Home-Screen"
+      - "B6 iOS VoiceOver three-step — needs VoiceOver on real iPhone"
+      - "B7 iPad split-view — needs iPad hardware"
+      - "B9 Android tap parity — needs Pixel/Samsung hardware"
+    needs_product_decision:
+      - "B8 default-zoom review — subjective framing call"
+      - "B10 legacy 5-star ratings — replacing with binary verification touches dignity intent + historical data interpretation; needs explicit sign-off"
+    deferred:
+      - "B12 publish queue dup risk — would need pre-retry row fetch (doubles network on slow 3G, the very condition where bug occurs); blocked on duplicate-rate measurement"
+      - "B13 cluster remount perf — premature until pin counts cross 5k in a single viewport"
+    files_changed:
+      - "src/app/components/compatibility/components/ux/SponsorSlot.js"
+      - "src/app/components/compatibility/App.js"
+      - "src/app/components/compatibility/components/ux/swRegister.js"
+      - "public/sw.js"
+      - "src/app/parceiros/page.js"
+      - "src/app/components/compatibility/components/SearchField.js"
+      - "LLM_BRAIN/bugfixes.yaml (status updates)"
+
+  bugfixes_backlog_expanded:
+    status: "done"
+    summary: "Appended B9–B18 to bugfixes.yaml covering non-iOS surfaces and known dignity/data/perf risks"
+    added_entries:
+      - "B9 android_tap_parity — verify tap precision and visualViewport on Android Chrome/Samsung Internet"
+      - "B10 legacy_ratings_dignity — PopupContent 5-star widget violates design_brief § dignity_constraints.never_rank_worth"
+      - "B11 sponsor_expiry_clock_drift — sponsor visible up to 10 min past expiresAt due to nowTick cadence"
+      - "B12 publish_queue_dup_risk — flaky network can double-write the same idempotency_key"
+      - "B13 cluster_remount_perf — filterSig-keyed remount stalls main thread on 5k+ pins"
+      - "B14 reports_recompute_thrash — /relatorios and /relatorio-marketing rebuild aggregations per keystroke"
+      - "B15 telefone_format_validation — non-BR formats break wa.me deep links"
+      - "B16 sw_stale_after_deploy — returning users keep old shell post-deploy"
+      - "B17 parceiros_mailto_no_handler — silent no-op on iOS without Mail configured"
+      - "B18 geosearch_nominatim_throttle — risk of OSM IP block on aggressive typing"
+
   safari_map_click_fix:
     status: "done"
     summary: "Map tap on Safari (desktop + iOS) wasn't dropping the blue pin — regression in hit-testing"

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import './parceiros.css';
 
 // Inbound surface for companies that want to sponsor MAPA FOME. No backend —
@@ -66,8 +66,17 @@ export default function ParceirosPage() {
   const [whatsapp, setWhatsapp] = useState('');
   const [tier, setTier] = useState('cidade');
   const [mensagem, setMensagem] = useState('');
+  // B17: when the user has no mail client configured (common on iOS where
+  // Mail can be uninstalled), the mailto: link silently no-ops. We monitor
+  // page focus after the click — if focus never leaves the tab within
+  // 1.5s, we surface a copy-paste fallback so the prospect still gets the
+  // message out.
+  const [showFallback, setShowFallback] = useState(false);
+  const [copyState, setCopyState] = useState('idle'); // idle | copied | failed
+  const blurredRef = useRef(false);
+  const composedBodyRef = useRef('');
 
-  const mailtoHref = useMemo(() => {
+  const composed = useMemo(() => {
     const subject = `Interesse em patrocínio — ${empresa || '[empresa]'} (${tier})`;
     const body = [
       'Olá, equipe MAPA FOME,',
@@ -85,10 +94,39 @@ export default function ParceirosPage() {
       'Enviado de mapafome.com.br/parceiros',
     ].join('\n');
     const q = `subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    return `mailto:${RECIPIENT}?${q}`;
+    return { subject, body, href: `mailto:${RECIPIENT}?${q}` };
   }, [empresa, contato, cargo, email, whatsapp, tier, mensagem]);
 
+  const mailtoHref = composed.href;
   const canSubmit = empresa.trim() && email.trim();
+
+  function handleCtaClick() {
+    if (!canSubmit) return;
+    blurredRef.current = false;
+    setShowFallback(false);
+    setCopyState('idle');
+    composedBodyRef.current = `Para: ${RECIPIENT}\nAssunto: ${composed.subject}\n\n${composed.body}`;
+    const onBlur = () => { blurredRef.current = true; };
+    const onVisChange = () => { if (document.hidden) blurredRef.current = true; };
+    window.addEventListener('blur', onBlur);
+    document.addEventListener('visibilitychange', onVisChange);
+    setTimeout(() => {
+      window.removeEventListener('blur', onBlur);
+      document.removeEventListener('visibilitychange', onVisChange);
+      if (!blurredRef.current) setShowFallback(true);
+    }, 1500);
+    // Default <a href=mailto:> still navigates; this handler only monitors.
+  }
+
+  async function copyComposed() {
+    try {
+      await navigator.clipboard.writeText(composedBodyRef.current || '');
+      setCopyState('copied');
+      setTimeout(() => setCopyState('idle'), 3000);
+    } catch (_e) {
+      setCopyState('failed');
+    }
+  }
 
   return (
     <main className="mdf-parc">
@@ -198,9 +236,29 @@ export default function ParceirosPage() {
           className={`mdf-parc__cta${canSubmit ? '' : ' mdf-parc__cta--disabled'}`}
           href={canSubmit ? mailtoHref : undefined}
           aria-disabled={!canSubmit}
+          onClick={handleCtaClick}
         >
           Enviar interesse por e-mail
         </a>
+
+        {showFallback && (
+          <div className="mdf-parc__fallback-card" role="status" aria-live="polite">
+            <p>
+              <strong>Não abriu seu cliente de e-mail?</strong> Copie o texto
+              abaixo e envie para <a href={`mailto:${RECIPIENT}`}>{RECIPIENT}</a>.
+            </p>
+            <textarea
+              readOnly
+              rows={8}
+              className="mdf-parc__fallback-text"
+              value={composedBodyRef.current}
+            />
+            <button type="button" onClick={copyComposed} className="mdf-parc__fallback-copy">
+              {copyState === 'copied' ? 'Copiado ✓' : copyState === 'failed' ? 'Falhou — selecione manualmente' : 'Copiar mensagem'}
+            </button>
+          </div>
+        )}
+
         <p className="mdf-parc__fallback">
           Preferir contato direto? Escreva para{' '}
           <a href={`mailto:${RECIPIENT}`}>{RECIPIENT}</a>.

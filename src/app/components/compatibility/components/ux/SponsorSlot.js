@@ -55,6 +55,25 @@ export default function SponsorSlot({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placement, nowTick]);
 
+  // B11: schedule a precise tick at the next sponsor expiresAt boundary so
+  // expired sponsors disappear within seconds of their contract end, not up
+  // to 10 minutes later. Recomputed every render — cheap, one timer at a time.
+  // Must come AFTER the pool useMemo above (TDZ).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let nextDelta = Infinity;
+    for (const s of pool) {
+      const end = s && s.expiresAt ? Date.parse(s.expiresAt) : NaN;
+      if (Number.isFinite(end) && end > Date.now() && end - Date.now() < nextDelta) {
+        nextDelta = end - Date.now();
+      }
+    }
+    if (!Number.isFinite(nextDelta)) return;
+    const delay = Math.min(nextDelta + 1000, 10 * 60 * 1000);
+    const t = setTimeout(() => setNowTick(Date.now()), delay);
+    return () => clearTimeout(t);
+  }, [pool]);
+
   // Keep index in bounds if the pool shrinks (e.g. a sponsor just expired).
   useEffect(() => {
     if (pool.length === 0) return;
