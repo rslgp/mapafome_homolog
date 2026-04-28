@@ -29,6 +29,11 @@ import {
     markerClusterOptionsAnjos,
     markerClusterOptionsEntrega,
 } from './mapUtils';
+import {
+    trackMapTap,
+    trackMapLongPress,
+    trackMapTapSkipped,
+} from './ux/analytics';
 
 // ─── Marker type registry ─────────────────────────────────────────────────────
 // ICONS uses uppercase keys from mapConstants (ICONS.HUB, ICONS.GREEN, etc.)
@@ -123,70 +128,167 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
     const map = useMap();
 
     useEffect(() => {
+        // Tap detection from raw PointerEvents on the map container, NOT from
+        // Leaflet's click event. Reason: Leaflet's click pipeline relies on
+        // either L.Map.Tap (synthesizes click on iOS, but with clientX/Y
+        // that drift to 0 on modern iOS Safari → "fixed" pin) or the
+        // browser's native click (which fires reliably on Samsung A23 but
+        // not on A54 / iPhone, where Leaflet's tap-detection-and-cancel
+        // logic sometimes swallows the click). PointerEvents are unified
+        // across mouse/touch/pen on every modern browser since 2018 and
+        // give us reliable clientX/Y at down/up time.
         const container = map.getContainer();
-        // Capture the most recent pointer/touch coordinates at the container.
-        // On iOS Safari, L.Map.Tap synthesizes a click with clientX/Y that
-        // can default to 0 (→ pin lands at map top-left, "fixed"). The
-        // pointerdown/touchstart events fire BEFORE the synthetic click and
-        // carry the real touch position, so they are the reliable source.
-        const lastPointer = { x: null, y: null, t: 0 };
-        const capturePointer = (ev) => {
-            if (typeof ev.clientX === 'number') {
-                lastPointer.x = ev.clientX;
-                lastPointer.y = ev.clientY;
-            } else if (ev.touches && ev.touches[0]) {
-                lastPointer.x = ev.touches[0].clientX;
-                lastPointer.y = ev.touches[0].clientY;
-            } else {
+        const TAP_MAX_DURATION_MS = 500;
+        const TAP_MAX_DISTANCE_PX = 10;
+        const LONG_PRESS_MS = 600;
+
+        let downX = 0, downY = 0, downT = 0, downId = null, downPointerType = null;
+        let longPressTimer = null;
+        let longPressFired = false;
+        // Timestamp of the most recent long-press timer fire. Used by the
+        // contextmenu handler to suppress the duplicate Android-Chrome
+        // long-press event (F8 in map_click_compatibility.yaml).
+        let lastLongPressFiredAt = 0;
+        const LONG_PRESS_DEDUP_MS = 1000;
+
+        // Walk up the DOM to see if the target is the bare map background.
+        // Leaflet attaches `.leaflet-interactive` to markers/clusters/
+        // popups/controls — Leaflet's own pipeline handles those clicks,
+        // and we must not double-fire.
+        const isMapBackground = (el) => {
+            let cur = el;
+            while (cur && cur !== container) {
+                if (cur.classList && cur.classList.contains('leaflet-interactive')) return false;
+                cur = cur.parentNode;
+            }
+            return !!cur;
+        };
+
+        const toLatLng = (clientX, clientY) => {
+            const rect = container.getBoundingClientRect();
+            return map.containerPointToLatLng([clientX - rect.left, clientY - rect.top]);
+        };
+
+        const cancelLongPress = () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        };
+
+        const onPointerDown = (e) => {
+            if (!isMapBackground(e.target)) {
+                trackMapTapSkipped({ reason: 'leaflet_interactive', pointerType: e.pointerType });
                 return;
             }
-            lastPointer.t = Date.now();
-        };
-        container.addEventListener('pointerdown', capturePointer, { passive: true });
-        container.addEventListener('touchstart', capturePointer, { passive: true });
-
-        // resolveLatLng prefers captured pointer coords (fresh < 1000ms) and
-        // converts via Leaflet 1.9.4's public containerPointToLatLng API.
-        // Falls back to mouseEventToContainerPoint (desktop/Android with
-        // reliable click clientX/Y) and finally to e.latlng.
-        const resolveLatLng = (e) => {
-            const fresh = lastPointer.x != null && Date.now() - lastPointer.t < 1000;
-            if (fresh) {
-                const rect = container.getBoundingClientRect();
-                const x = lastPointer.x - rect.left;
-                const y = lastPointer.y - rect.top;
-                return map.containerPointToLatLng([x, y]);
+            // Non-primary buttons (right/middle mouse click) are owned by the
+            // contextmenu path — don't track them here.
+            if (e.button !== undefined && e.button !== 0) {
+                trackMapTapSkipped({ reason: 'non_primary_button', pointerType: e.pointerType });
+                return;
             }
-            if (e.originalEvent && typeof e.originalEvent.clientX === 'number') {
-                try {
-                    const point = map.mouseEventToContainerPoint(e.originalEvent);
-                    return map.containerPointToLatLng(point);
-                } catch (_err) { /* fall through */ }
-            }
-            return e.latlng;
+            downX = e.clientX;
+            downY = e.clientY;
+            downT = Date.now();
+            downId = e.pointerId;
+            downPointerType = e.pointerType;
+            longPressFired = false;
+            cancelLongPress();
+            // Long-press = ReportSheet shortcut for TOUCH/PEN only. On
+            // desktop mouse, the equivalent is right-click (contextmenu),
+            // so we don't arm the timer for pointerType === 'mouse'.
+            // Without this filter, holding left-click for 600 ms on
+            // desktop would silently open ReportSheet — surprising.
+            if (e.pointerType === 'mouse') return;
+            const startX = e.clientX, startY = e.clientY;
+            const startPointerType = e.pointerType;
+            longPressTimer = setTimeout(() => {
+                longPressTimer = null;
+                longPressFired = true;
+                lastLongPressFiredAt = Date.now();
+                const ll = toLatLng(startX, startY);
+                onMapClick(map, ll.lat, ll.lng);
+                onMapLongPress?.(map, ll.lat, ll.lng);
+                trackMapLongPress({ lat: ll.lat, lng: ll.lng, source: 'timer', pointerType: startPointerType });
+            }, LONG_PRESS_MS);
         };
 
-        const handleClick = (e) => {
-            const ll = resolveLatLng(e);
+        const onPointerMove = (e) => {
+            if (downId === null || e.pointerId !== downId) return;
+            if (Math.abs(e.clientX - downX) > TAP_MAX_DISTANCE_PX ||
+                Math.abs(e.clientY - downY) > TAP_MAX_DISTANCE_PX) {
+                cancelLongPress();
+            }
+        };
+
+        const onPointerUp = (e) => {
+            cancelLongPress();
+            if (downId === null || e.pointerId !== downId) return;
+            const dt = Date.now() - downT;
+            const dx = Math.abs(e.clientX - downX);
+            const dy = Math.abs(e.clientY - downY);
+            const wasLongPress = longPressFired;
+            const pointerType = downPointerType;
+            downId = null;
+            longPressFired = false;
+            if (wasLongPress) return; // already handled by the timer
+            if (dt > TAP_MAX_DURATION_MS) {
+                trackMapTapSkipped({ reason: 'duration', pointerType });
+                return;
+            }
+            if (dx > TAP_MAX_DISTANCE_PX || dy > TAP_MAX_DISTANCE_PX) {
+                trackMapTapSkipped({ reason: 'movement', pointerType });
+                return;
+            }
+            const ll = toLatLng(e.clientX, e.clientY);
             onMapClick(map, ll.lat, ll.lng);
+            trackMapTap({ lat: ll.lat, lng: ll.lng, pointerType, durationMs: dt });
         };
-        const handleLongPress = (e) => {
-            // contextmenu fires on desktop right-click and on mobile long-press.
-            // Suppress the native menu so the app UI can take over.
+
+        const onPointerCancel = () => {
+            cancelLongPress();
+            const pointerType = downPointerType;
+            downId = null;
+            longPressFired = false;
+            if (pointerType !== null) {
+                trackMapTapSkipped({ reason: 'pointer_cancel', pointerType });
+            }
+        };
+
+        container.addEventListener('pointerdown', onPointerDown);
+        container.addEventListener('pointermove', onPointerMove);
+        container.addEventListener('pointerup', onPointerUp);
+        container.addEventListener('pointercancel', onPointerCancel);
+
+        // Desktop right-click still goes through Leaflet's contextmenu event.
+        // Android Chrome ALSO fires contextmenu on long-press (which our
+        // 600 ms PointerEvent timer already handled) — suppress those to
+        // avoid F8 (double ReportSheet open).
+        const handleContextmenu = (e) => {
+            if (Date.now() - lastLongPressFiredAt < LONG_PRESS_DEDUP_MS) {
+                trackMapTapSkipped({ reason: 'contextmenu_dedup', pointerType: 'touch' });
+                return;
+            }
             if (e.originalEvent && e.originalEvent.preventDefault) {
                 e.originalEvent.preventDefault();
             }
-            const ll = resolveLatLng(e);
+            const oe = e.originalEvent;
+            const ll = (oe && typeof oe.clientX === 'number')
+                ? toLatLng(oe.clientX, oe.clientY)
+                : e.latlng;
             onMapClick(map, ll.lat, ll.lng);
             onMapLongPress?.(map, ll.lat, ll.lng);
+            trackMapLongPress({ lat: ll.lat, lng: ll.lng, source: 'contextmenu', pointerType: oe?.pointerType || 'mouse' });
         };
-        map.on('click', handleClick);
-        map.on('contextmenu', handleLongPress);
+        map.on('contextmenu', handleContextmenu);
+
         return () => {
-            container.removeEventListener('pointerdown', capturePointer);
-            container.removeEventListener('touchstart', capturePointer);
-            map.off('click', handleClick);
-            map.off('contextmenu', handleLongPress);
+            cancelLongPress();
+            container.removeEventListener('pointerdown', onPointerDown);
+            container.removeEventListener('pointermove', onPointerMove);
+            container.removeEventListener('pointerup', onPointerUp);
+            container.removeEventListener('pointercancel', onPointerCancel);
+            map.off('contextmenu', handleContextmenu);
         };
     }, [map, onMapClick, onMapLongPress]);
 

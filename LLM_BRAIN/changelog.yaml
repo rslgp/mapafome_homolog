@@ -892,6 +892,136 @@ changelog:
       - path: "LLM_BRAIN/bugfixes.yaml"
         purpose: "Forward-looking bug backlog, distinct from milestones.yaml (features) and changelog.yaml (history). Captures B1–B3 closed (iOS map tap, hardening, keyboard/dvh) and B4–B8 open (double-pin watch, PWA install, VoiceOver, iPad split-view, default-zoom review) plus a _template intake block"
 
+  map_click_compatibility_backlog_implementation:
+    status: "done"
+    summary: "Implemented MC-4 (F8 long-press dedup), MC-14 (.leaflet-interactive contract docs), and MC-16 (vitest tap pipeline test) from map_click_compatibility.yaml backlog."
+    user_directive: "implement @LLM_BRAIN/map_click_compatibility.yaml"
+    items_shipped:
+      MC-4:
+        title: "Resolve F8 — Android long-press double-fire risk"
+        priority: P0
+        status_before: open
+        status_after: in_review
+        change: >
+          MapClickHandler now (1) skips arming the 600 ms long-press timer
+          when pointerType === 'mouse' (mouse uses contextmenu for ReportSheet),
+          and (2) ignores pointerdown with button !== 0 (right/middle click),
+          and (3) records lastLongPressFiredAt when the timer fires;
+          handleContextmenu returns early if that timestamp is within
+          LONG_PRESS_DEDUP_MS (1000 ms). Net effect: touch path uses our
+          PointerEvent timer; mouse path uses contextmenu; Android Chrome's
+          duplicate emulated contextmenu is suppressed.
+        files_changed:
+          - "src/app/components/compatibility/components/mapComponents.js"
+        awaits: "MC-2 user device QA on Samsung A54"
+      MC-14:
+        title: "Document .leaflet-interactive contract on marker components"
+        priority: P3
+        status_before: open
+        status_after: done
+        change: >
+          Added a header comment block to MarkerGroup.js and ReporterMarkers.js
+          explaining how MapClickHandler.isMapBackground() depends on
+          interactive markers carrying the .leaflet-interactive class
+          (Leaflet attaches it by default). Future maintainers replacing
+          these components with custom L.divIcon must keep the class or
+          they will reintroduce F6 (taps on markers drop a stray pin).
+        files_changed:
+          - "src/app/components/compatibility/components/MarkerGroup.js"
+          - "src/app/components/compatibility/components/ReporterMarkers.js"
+      MC-16:
+        title: "Automated test for tap → onMapClick pipeline"
+        priority: P3
+        status_before: open
+        status_after: in_review
+        scope_change: "Descoped from Playwright e2e to vitest unit test (1-day → 2-hour)"
+        change: >
+          Added test/mapClickHandler.test.js with 13 cases covering the
+          PointerEvent pipeline: touch tap, pan, long-press timer, mouse
+          long-press skip (MC-4), right-click ignore, Leaflet contextmenu,
+          contextmenu dedup window (F8), .leaflet-interactive children skip
+          (F6), nested children skip, pointermove cancels timer,
+          pointercancel resets state. react-leaflet's useMap is mocked
+          so no real MapContainer is needed.
+        files_changed:
+          - "test/mapClickHandler.test.js"
+        verification:
+          - "node --check passed (clean syntax)"
+          - "vitest run blocked by env issue: npm install reports ECOMPROMISED on lockfile (not a code issue)"
+        awaits: "User runs `npm install && npm test` once env fix lands"
+    items_NOT_implemented:
+      reason: "Require physical hardware or external dependencies"
+      list:
+        - "MC-1, MC-2, MC-3 — user QA on iPhone / A54 / A23"
+        - "MC-5, MC-6, MC-7, MC-11, MC-13 — blocked on real device hardware"
+        - "MC-8, MC-9, MC-10, MC-12 — single-device smoke tests, faster for user to run than for me to spec"
+        - "MC-15 — blocked on /creators route shipping"
+    backlog_state_after:
+      open: 7
+      blocked: 6
+      in_review: 2
+      done: 1
+    next_action: >
+      User runs MC-1 + MC-2 + MC-3 verification on physical devices.
+      Resolve the npm-install lockfile issue so MC-16 test runs in CI.
+
+  map_tap_pointer_event_rewrite:
+    status: "done"
+    summary: "Stopped depending on Leaflet's click event for tap detection. PointerEvents on the container drive tap → onMapClick directly. Fixes Samsung A54 + iPhone where Leaflet's click never fired (or fired with wrong coords)."
+    user_report: "click on map not registering touched coordinates and blue-dot not marked, on galaxy samsung a23 is ok, but a54 samsung android is not working iphone is not working"
+    why_a23_worked_but_a54_did_not: >
+      Samsung A23 (older Chrome / Samsung Internet) lets the browser's
+      native click event fire after a tap, so Leaflet's map.on('click')
+      handler ran. Samsung A54 (newer browser) — and iPhone in WebKit —
+      have stricter tap-cancel heuristics that interact with Leaflet's
+      L.Map.Tap (tap:true on MapContainer). Net effect on those devices:
+        • the click event either never fires, OR
+        • L.Map.Tap synthesizes a click whose clientX/Y is 0 (the pin
+          appears 'fixed' at the map's top-left), OR
+        • some interaction between native click + synthetic click +
+          Leaflet's drag/zoom gesture state suppresses one or the other.
+      Six iterations on top of Leaflet's click pipeline did not converge.
+    fix: >
+      MapClickHandler now ignores Leaflet's click event entirely and
+      detects taps from raw PointerEvents on map.getContainer():
+        • pointerdown captures (clientX, clientY, t, pointerId) and
+          arms a 600 ms long-press timer.
+        • pointermove cancels the long-press timer if movement > 10 px
+          (lets the user pan without firing tap or long-press).
+        • pointerup fires onMapClick if dt ≤ 500 ms AND |dx|,|dy| ≤ 10 px
+          (true tap), unless the long-press timer already fired.
+        • pointercancel resets state.
+      Conversion still uses Leaflet 1.9.4's public
+      map.containerPointToLatLng([x, y]) API on coords that come straight
+      from the PointerEvent — never trusts Leaflet's click event normalization.
+    why_this_does_not_double_fire_on_markers: >
+      isMapBackground() walks up the DOM from e.target looking for
+      .leaflet-interactive (the class Leaflet attaches to markers,
+      clusters, popups, controls). If found, our handler returns early —
+      Leaflet's own click pipeline handles those targets. Only taps on the
+      bare map background reach onMapClick.
+    why_this_does_not_break_drag_or_zoom: >
+      We do not call preventDefault() on pointerdown. Leaflet's drag and
+      pinch-zoom handlers see the same events and operate independently.
+      Movement > 10 px during the gesture cancels our tap detection, so
+      ending a drag does not drop a pin.
+    files_changed:
+      - "src/app/components/compatibility/components/mapComponents.js"
+    test_path:
+      - "Samsung A23: tap drops pin under finger (regression check, was working)"
+      - "Samsung A54: tap drops pin under finger (was: nothing happened)"
+      - "iPhone Safari: tap drops pin under finger (was: pin fixed at top-left or no pin)"
+      - "Desktop click: pin under cursor"
+      - "Desktop right-click: pin + ReportSheet via onPinDropped"
+      - "Long-press (600 ms still finger): pin + ReportSheet on all platforms"
+      - "Drag the map: no pin dropped on release"
+      - "Pinch-zoom: no pin dropped"
+      - "Tap a marker / cluster: Leaflet's marker click still fires; our handler does NOT also fire"
+    invariants_preserved:
+      - "tap={true} tapTolerance={15} on MapContainer untouched (Leaflet still uses them for its own gestures, but we no longer depend on them)"
+      - "MapSizeInvalidator still keeps Leaflet's container-size cache fresh (cluster rendering depends on it)"
+      - "M1 drop-in animation, ping-ring, ReportSheet on long-press all still wired from CoffeeMap.handleMapClick / handleMapLongPress"
+
   ios_tap_fixed_point_fix:
     status: "done"
     summary: "After the pure-Leaflet rewrite, iOS users reported the pin was 'fixed' and didn't track the touch. Restored pointer-coord capture, but kept Leaflet 1.9.4's containerPointToLatLng for the conversion."

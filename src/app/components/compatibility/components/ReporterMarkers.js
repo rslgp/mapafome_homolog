@@ -3,6 +3,17 @@
 // M2 — reporter marker layer. Renders pins written through the M1 flow
 // (rows with a Categorias array) using the two-axis urgency+type encoding
 // from LLM_BRAIN/design_brief.yaml § visual_system.markers.
+//
+// .leaflet-interactive contract:
+//   MapClickHandler in mapComponents.js skips taps whose DOM target is
+//   inside any element with class .leaflet-interactive (so marker taps
+//   don't drop a stray blue pin — see map_click_compatibility.yaml § F6).
+//   buildMarkerIcon() returns L.divIcon-based icons; react-leaflet's
+//   <Marker /> wraps them in a .leaflet-marker-icon.leaflet-interactive
+//   container by default. If you switch to L.icon or override the
+//   interactive flag, keep .leaflet-interactive on every clickable
+//   element — otherwise marker taps will start dropping pins instead
+//   of opening popups. Tracked as MC-14 in map_click_compatibility.yaml.
 
 import React, { useMemo } from 'react';
 import { Marker } from 'react-leaflet';

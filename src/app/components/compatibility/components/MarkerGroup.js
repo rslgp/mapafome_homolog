@@ -13,6 +13,19 @@ import {
 import { MAP_CONFIG } from './mapConstants';
 import envVariables from './variaveisAmbiente';
 
+// ─── .leaflet-interactive contract ────────────────────────────────────────
+// MapClickHandler.isMapBackground() in mapComponents.js walks up the DOM
+// from the tap target looking for the .leaflet-interactive class. If
+// found, the tap is treated as "owned by Leaflet" and our PointerEvent
+// pipeline does NOT drop a new blue pin (otherwise tapping a marker would
+// drop a pin AND open its popup — see map_click_compatibility.yaml § F6).
+// Leaflet 1.9.4 attaches .leaflet-interactive automatically to L.Marker
+// (and every <Marker /> that react-leaflet renders here). If you replace
+// these with a custom L.divIcon or override `interactive: false`, you
+// MUST keep the class on every clickable marker element — or the popup
+// will stop opening and a stray pin will drop instead.
+// Tracked as MC-14 in LLM_BRAIN/map_click_compatibility.yaml.
+
 /**
  * MarkerGroup Component
  * Renders a cluster of markers based on provided data and configuration
