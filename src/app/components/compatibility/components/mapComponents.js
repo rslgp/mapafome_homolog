@@ -134,10 +134,32 @@ export const TileLayersControl = () => (
 // mirrors rslgp/mapafome's old whenReady → map.on('click') flow.
 
 const TAP_MAX_DURATION_MS = 500;
-const TAP_MAX_DISTANCE_PX = 10;
+// Tap-vs-pan movement threshold. Tighter for fine pointers (mouse, trackpad)
+// where accidental drift is rare; looser for coarse pointers (touchscreen)
+// where finger pads cover several pixels and natural micro-tremor exceeds
+// 10 px. Keeps 10 px fixed if matchMedia is unavailable (very old browsers).
+const TAP_MAX_DISTANCE_FINE_PX = 10;
+const TAP_MAX_DISTANCE_COARSE_PX = 14;
 const LONG_PRESS_MS = 600;
 const LONG_PRESS_DEDUP_MS = 1000;
 const NATIVE_CLICK_DEDUP_MS = 1000;
+
+// Coarse-pointer detection. `(pointer: coarse)` matches touchscreens and
+// stylus-only devices; `(pointer: fine)` matches mouse/trackpad. Reliable
+// since 2017 across all evergreen browsers. Falls back to fine threshold
+// when matchMedia is missing (defensive).
+export const resolveTapDistancePx = () => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+        return TAP_MAX_DISTANCE_FINE_PX;
+    }
+    try {
+        return window.matchMedia('(pointer: coarse)').matches
+            ? TAP_MAX_DISTANCE_COARSE_PX
+            : TAP_MAX_DISTANCE_FINE_PX;
+    } catch (_e) {
+        return TAP_MAX_DISTANCE_FINE_PX;
+    }
+};
 
 // Walks up the DOM checking for .leaflet-interactive (markers, clusters,
 // popups, controls). Returns true only when the target is the bare map.
@@ -195,6 +217,31 @@ const safeCapturePointer = (target, pointerId) => {
 };
 const safeReleasePointer = (target, pointerId) => {
     try { target.releasePointerCapture?.(pointerId); } catch (_e) { /* not captured */ }
+};
+
+// Public DOM event fired after a successful tap chain. Any UI component
+// (e.g. the "Confirmar ponto" button) can listen on `document` without
+// prop drilling and react — disable, highlight, hint, or clear errors.
+// Decoupled signal: works across React boundaries, portals, and even
+// non-React components. CustomEvent has been universal since IE 9.
+//
+// Receivers:
+//   document.addEventListener('mdf:marker-placed', (e) => { e.detail.lat, e.detail.lng });
+//
+// This is the cross-device confirmation that the entire pipeline
+// (touch → coord resolution → marker placement) completed successfully.
+// Listeners can use it to confirm to the user that the tap was received,
+// regardless of which input path (PointerEvent, Leaflet click, contextmenu)
+// drove it.
+export const MARKER_PLACED_EVENT = 'mdf:marker-placed';
+
+const dispatchMarkerPlaced = (lat, lng, source) => {
+    if (typeof document === 'undefined' || typeof CustomEvent !== 'function') return;
+    try {
+        document.dispatchEvent(new CustomEvent(MARKER_PLACED_EVENT, {
+            detail: { lat, lng, source, ts: Date.now() },
+        }));
+    } catch (_e) { /* IE/legacy webview without CustomEvent constructor */ }
 };
 
 // Encapsulates the mutable state machine that drives tap recognition.
@@ -268,9 +315,17 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
         const container = map.getContainer();
         if (!container) return undefined;
         const tracker = createTapTracker();
+        // Resolved once at mount; matchMedia change listeners during a single
+        // session are an over-engineering edge case (user does not switch
+        // input modality mid-tap).
+        const tapMaxDistancePx = resolveTapDistancePx();
 
         // Emits onMapClick + analytics if the resolved coords are finite.
         // Centralizes the boundary guard so every emit path is safe.
+        // After the parent's onMapClick returns (which drops the marker
+        // and sets envVariables.lastMarked), dispatch the public
+        // mdf:marker-placed CustomEvent so any UI listener (e.g. the
+        // "Confirmar ponto" button) can confirm the chain completed.
         const emitTap = (lat, lng, pointerType, durationMs) => {
             if (!isFiniteLatLng({ lat, lng })) {
                 trackMapTapSkipped({ reason: 'non_finite_latlng', pointerType });
@@ -279,6 +334,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             onMapClick(map, lat, lng);
             tracker.markTapFired();
             trackMapTap({ lat, lng, pointerType, durationMs });
+            dispatchMarkerPlaced(lat, lng, 'tap');
         };
 
         const emitLongPress = (lat, lng, source, pointerType) => {
@@ -289,6 +345,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             onMapClick(map, lat, lng);
             onMapLongPress?.(map, lat, lng);
             trackMapLongPress({ lat, lng, source, pointerType });
+            dispatchMarkerPlaced(lat, lng, source);
         };
 
         const onPointerDown = (e) => {
@@ -325,8 +382,8 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
         const onPointerMove = (e) => {
             const { state } = tracker;
             if (state.downId === null || e.pointerId !== state.downId) return;
-            if (Math.abs(e.clientX - state.downX) > TAP_MAX_DISTANCE_PX ||
-                Math.abs(e.clientY - state.downY) > TAP_MAX_DISTANCE_PX) {
+            if (Math.abs(e.clientX - state.downX) > tapMaxDistancePx ||
+                Math.abs(e.clientY - state.downY) > tapMaxDistancePx) {
                 tracker.cancelLongPress();
             }
         };
@@ -346,7 +403,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
                 trackMapTapSkipped({ reason: 'duration', pointerType });
                 return;
             }
-            if (dx > TAP_MAX_DISTANCE_PX || dy > TAP_MAX_DISTANCE_PX) {
+            if (dx > tapMaxDistancePx || dy > tapMaxDistancePx) {
                 trackMapTapSkipped({ reason: 'movement', pointerType });
                 return;
             }
@@ -402,6 +459,19 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             if (document.visibilityState === 'hidden') tracker.clearGesture();
         };
 
+        // lostpointercapture fires when the OS / browser reclaims pointer
+        // focus (system gesture, screen pin, accessibility tool, browser
+        // back-swipe). Without this, downId stays set and the next gesture
+        // is lost. Mirrors pointercancel for completeness — capture loss
+        // is a superset of cancel on some platforms.
+        const handleLostPointerCapture = (e) => {
+            const { state } = tracker;
+            if (state.downId !== null && e.pointerId === state.downId) {
+                tracker.clearGesture();
+                trackMapTapSkipped({ reason: 'pointer_capture_lost', pointerType: state.downPointerType });
+            }
+        };
+
         // pointermove is `{ passive: true }` so the browser does not have
         // to wait for our handler before scrolling/zooming — this is a
         // ~16ms-per-frame win on touch devices and prevents iOS's input
@@ -411,6 +481,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
         container.addEventListener('pointermove', onPointerMove, { passive: true });
         container.addEventListener('pointerup', onPointerUp);
         container.addEventListener('pointercancel', onPointerCancel);
+        container.addEventListener('lostpointercapture', handleLostPointerCapture);
         document.addEventListener('visibilitychange', handleVisibilityChange);
         map.on('click', handleLeafletClick);
         map.on('contextmenu', handleContextmenu);
@@ -421,6 +492,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             container.removeEventListener('pointermove', onPointerMove);
             container.removeEventListener('pointerup', onPointerUp);
             container.removeEventListener('pointercancel', onPointerCancel);
+            container.removeEventListener('lostpointercapture', handleLostPointerCapture);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             map.off('click', handleLeafletClick);
             map.off('contextmenu', handleContextmenu);
