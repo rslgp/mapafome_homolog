@@ -8,21 +8,32 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // google-spreadsheet is heavy and hits the network. We mock the constructor
 // so each test can supply its own behavior.
-const mockUseAuth = vi.fn();
-const mockLoadInfo = vi.fn();
-const mockAddRow = vi.fn();
-const mockGetRows = vi.fn();
-const mockSave = vi.fn();
+//
+// vi.mock(...) is hoisted above all imports/declarations, so its factory
+// cannot reference module-scope `const`s — they would be in the temporal
+// dead zone when the factory runs. vi.hoisted() lifts the mock objects to
+// the same hoisted phase so the factory closure sees them.
+const { mockUseAuth, mockLoadInfo, mockAddRow, mockGetRows, mockSave, mockDoc } = vi.hoisted(() => {
+    const mockUseAuth = vi.fn();
+    const mockLoadInfo = vi.fn();
+    const mockAddRow = vi.fn();
+    const mockGetRows = vi.fn();
+    const mockSave = vi.fn();
+    const mockSheet = { addRow: mockAddRow, getRows: mockGetRows };
+    const mockDoc = {
+        useServiceAccountAuth: mockUseAuth,
+        loadInfo: mockLoadInfo,
+        sheetsByIndex: { 0: mockSheet, 3: mockSheet, 4: mockSheet },
+    };
+    return { mockUseAuth, mockLoadInfo, mockAddRow, mockGetRows, mockSave, mockDoc };
+});
 
-const mockSheet = { addRow: mockAddRow, getRows: mockGetRows };
-const mockDoc = {
-    useServiceAccountAuth: mockUseAuth,
-    loadInfo: mockLoadInfo,
-    sheetsByIndex: { 0: mockSheet, 3: mockSheet, 4: mockSheet },
-};
-
+// Vitest 4 forbids arrow functions in mock implementations that are used
+// with `new`. The source calls `new GoogleSpreadsheet(id)`, so the mock
+// constructor must be a real `function` (or class). We return mockDoc so
+// the constructor call resolves to our shared fixture.
 vi.mock('google-spreadsheet', () => ({
-    GoogleSpreadsheet: vi.fn().mockImplementation(() => mockDoc),
+    GoogleSpreadsheet: vi.fn(function GoogleSpreadsheet() { return mockDoc; }),
 }));
 
 // process.env must be set before the module is imported.

@@ -18,7 +18,7 @@
 // time. Each migrated callsite shrinks App.js by ~6 lines and removes a
 // duplicated network round-trip.
 
-const { GoogleSpreadsheet } = require('google-spreadsheet');
+import { GoogleSpreadsheet } from 'google-spreadsheet';
 
 let docInstance = null;
 let initPromise = null;

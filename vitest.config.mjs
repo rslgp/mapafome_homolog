@@ -6,6 +6,15 @@ import { defineConfig } from 'vitest/config';
 // integration — we test units, not the framework. Coverage thresholds are
 // gating per v5 § critical_metrics.testing.coverage (70-80% branch).
 export default defineConfig({
+    // Source files in this repo are .js but contain JSX (Next.js convention).
+    // Vite's default esbuild loader treats .js as plain JS, so JSX inside
+    // mapComponents.js / test files fails to parse. Tell esbuild to apply
+    // the JSX loader to .js files too so React components compile cleanly.
+    esbuild: {
+        loader: 'jsx',
+        include: /\.[jt]sx?$/,
+        exclude: [],
+    },
     test: {
         environment: 'jsdom',
         globals: true,
