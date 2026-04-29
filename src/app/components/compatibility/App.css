@@ -569,6 +569,93 @@ a.tgme_widget_share_btn {
   pointer-events: none !important;
 }
 
+/* TV-8 (tap_visibility_robustness.yaml): drop shadow on the dropped pin
+ * so it lifts off any tile background — water, dark satellite imagery,
+ * dense urban areas. Same technique Google Maps uses for the My Location
+ * dot. Scoped to .mdf-dropped-pin so we don't affect other markers. */
+.mdf-dropped-pin {
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))
+          drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+}
+
+/* TV-3 (tap_visibility_robustness.yaml): coordinate readout pill.
+ * Shows below the map / above InfoPanel after a successful tap. Read-only;
+ * "Limpar" button resets the marker. role/aria-live on the wrapper let
+ * screen readers announce the placement (TV-7). */
+.mdf-pin-readout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 12px;
+  padding: 6px 12px;
+  background: var(--mdf-surface-1, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  font-size: 0.875rem;
+  color: var(--mdf-ink, #1f1f1f);
+  max-width: max-content;
+}
+.mdf-pin-readout__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+.mdf-pin-readout__coords {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  color: var(--mdf-ink-muted, #555);
+  background: transparent;
+  border: 0;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.mdf-pin-readout__coords:hover,
+.mdf-pin-readout__coords:focus-visible {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--mdf-ink, #1f1f1f);
+  outline: none;
+}
+.mdf-pin-readout__reset {
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  margin-left: 4px;
+  color: var(--mdf-brand, #0a7a3b);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  touch-action: manipulation;
+}
+.mdf-pin-readout__reset:hover,
+.mdf-pin-readout__reset:focus-visible {
+  background: rgba(10, 122, 59, 0.08);
+  outline: none;
+}
+
+/* TV-5 (tap_visibility_robustness.yaml): "Confirmar ponto" button reflects
+ * marker state. Subdued before any tap; highlighted after marker placed.
+ * aria-disabled used semantically — button stays clickable so the
+ * App.js GPS fallback still works for users who never tap the map. */
+.SubmitButton.marcar-local[aria-disabled="true"] {
+  opacity: 0.65;
+  filter: grayscale(0.3);
+}
+.SubmitButton.marcar-local--ready {
+  box-shadow: 0 0 0 3px rgba(10, 122, 59, 0.18);
+  animation: mdf-marcar-ready-pulse 320ms ease-out 1;
+}
+@keyframes mdf-marcar-ready-pulse {
+  0%   { transform: scale(1); }
+  60%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .SubmitButton.marcar-local--ready { animation: none; }
+}
+
 /* ── Marker cluster colors ─────────────────────────── */
 
 .leaflet-marker-icon.marker-cluster.marker-cluster-small.leaflet-zoom-animated.leaflet-interactive {

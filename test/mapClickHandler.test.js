@@ -319,4 +319,81 @@ describe('MapClickHandler — PointerEvent pipeline', () => {
             expect(trackMapTapSkipped).toHaveBeenCalledWith({ reason: 'contextmenu_dedup', pointerType: 'touch' });
         });
     });
+
+    // ─── TV-2 (tap_visibility_robustness.yaml) — haptic vibration ───────
+    // Asserts dispatchMarkerPlaced calls navigator.vibrate for touch/pen
+    // pointers and stays silent for mouse. Tests the integration end-to-end
+    // (PointerEvent up → emitTap → dispatchMarkerPlaced → navigator.vibrate).
+
+    describe('TV-2 — haptic vibration boundary', () => {
+        let vibrateSpy;
+        let prevVibrate;
+
+        beforeEach(() => {
+            prevVibrate = navigator.vibrate;
+            vibrateSpy = vi.fn();
+            Object.defineProperty(navigator, 'vibrate', {
+                configurable: true, writable: true, value: vibrateSpy,
+            });
+        });
+
+        afterEach(() => {
+            if (prevVibrate === undefined) {
+                delete navigator.vibrate;
+            } else {
+                Object.defineProperty(navigator, 'vibrate', {
+                    configurable: true, writable: true, value: prevVibrate,
+                });
+            }
+        });
+
+        it('vibrates 40 ms on a touch tap', () => {
+            render(<MapClickHandler onMapClick={onMapClick} onMapLongPress={onMapLongPress} />);
+            dispatch(container, 'pointerdown', { clientX: 100, clientY: 200, pointerType: 'touch' });
+            dispatch(container, 'pointerup',   { clientX: 100, clientY: 200, pointerType: 'touch' });
+            expect(vibrateSpy).toHaveBeenCalledWith(40);
+        });
+
+        it('vibrates 40 ms on a pen tap', () => {
+            render(<MapClickHandler onMapClick={onMapClick} onMapLongPress={onMapLongPress} />);
+            dispatch(container, 'pointerdown', { clientX: 100, clientY: 200, pointerType: 'pen' });
+            dispatch(container, 'pointerup',   { clientX: 100, clientY: 200, pointerType: 'pen' });
+            expect(vibrateSpy).toHaveBeenCalledWith(40);
+        });
+
+        it('does NOT vibrate on a mouse click (avoid spam on tethered phones)', () => {
+            render(<MapClickHandler onMapClick={onMapClick} onMapLongPress={onMapLongPress} />);
+            dispatch(container, 'pointerdown', { clientX: 100, clientY: 200, pointerType: 'mouse' });
+            dispatch(container, 'pointerup',   { clientX: 100, clientY: 200, pointerType: 'mouse' });
+            expect(vibrateSpy).not.toHaveBeenCalled();
+        });
+
+        it('vibrates on long-press timer (touch path)', async () => {
+            vi.useFakeTimers();
+            render(<MapClickHandler onMapClick={onMapClick} onMapLongPress={onMapLongPress} />);
+            dispatch(container, 'pointerdown', { clientX: 50, clientY: 75, pointerType: 'touch' });
+            await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+            expect(vibrateSpy).toHaveBeenCalledWith(40);
+        });
+    });
+
+    // ─── TV-3 / TV-5 — mdf:marker-placed event fires after a tap ────────
+
+    describe('TV-3 / TV-5 — public marker-placed event contract', () => {
+        it('fires mdf:marker-placed with lat/lng/source/pointerType/ts after tap', () => {
+            const onPlaced = vi.fn();
+            document.addEventListener('mdf:marker-placed', onPlaced);
+            render(<MapClickHandler onMapClick={onMapClick} onMapLongPress={onMapLongPress} />);
+            dispatch(container, 'pointerdown', { clientX: 250, clientY: 175, pointerType: 'touch' });
+            dispatch(container, 'pointerup',   { clientX: 250, clientY: 175, pointerType: 'touch' });
+            expect(onPlaced).toHaveBeenCalledTimes(1);
+            const detail = onPlaced.mock.calls[0][0].detail;
+            expect(detail.lat).toBe(250);
+            expect(detail.lng).toBe(175);
+            expect(detail.source).toBe('tap');
+            expect(detail.pointerType).toBe('touch');
+            expect(typeof detail.ts).toBe('number');
+            document.removeEventListener('mdf:marker-placed', onPlaced);
+        });
+    });
 });

@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
 import { Checkbox } from '@mui/material';
 import InserirEndereco from './googlesheets/endereco';
 import MyLocationButton from './googlesheets/mylocation';
+import { MARKER_PLACED_EVENT, MARKER_CLEARED_EVENT } from './mapComponents';
 // import coffeeBean from '../images/bean.svg';
 // import hub from '../images/hub.svg';
 // import green from '../images/green.svg';
@@ -44,6 +45,24 @@ const MainControls = ({
   dropDownMenuMesPrecisandoBuscar,
   dropDownMenuMesEntregaAlimentoPronto,
 }) => {
+  // TV-5 (tap_visibility_robustness.yaml): the "Confirmar ponto" button
+  // reflects whether a marker has been placed. Subscribes to the public
+  // mdf:marker-placed / mdf:marker-cleared CustomEvents — no prop drilling.
+  // Uses aria-disabled (semantic only, button stays clickable) so the
+  // GPS-fallback path in App.js handleClickMap remains usable for users
+  // who never tap the map.
+  const [hasMarker, setHasMarker] = useState(false);
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const onPlaced = () => setHasMarker(true);
+    const onCleared = () => setHasMarker(false);
+    document.addEventListener(MARKER_PLACED_EVENT, onPlaced);
+    document.addEventListener(MARKER_CLEARED_EVENT, onCleared);
+    return () => {
+      document.removeEventListener(MARKER_PLACED_EVENT, onPlaced);
+      document.removeEventListener(MARKER_CLEARED_EVENT, onCleared);
+    };
+  }, []);
 
   return (
     <Grid size={{ xs: 12, sm: 4 }} >
@@ -242,11 +261,13 @@ const MainControls = ({
                 <CircularProgress />
               ) : (
                 <button
-                  className="SubmitButton marcar-local"
+                  type="button"
+                  className={`SubmitButton marcar-local${hasMarker ? ' marcar-local--ready' : ''}`}
                   onClick={onClickMap}
-                  aria-label="Confirmar ponto no mapa"
+                  aria-label={hasMarker ? 'Confirmar ponto marcado no mapa' : 'Confirmar ponto (toque no mapa primeiro)'}
+                  aria-disabled={!hasMarker}
                 >
-                  Confirmar ponto
+                  {hasMarker ? '✓ Confirmar ponto' : 'Confirmar ponto'}
                 </button>
               )}
             </fieldset>

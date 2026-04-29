@@ -19,6 +19,7 @@ import PinDetailSheet from './components/ux/PinDetailSheet';
 import OfflineToast from './components/ux/OfflineToast';
 import ListView from './components/ux/ListView';
 import LiveAnnouncer from './components/ux/LiveAnnouncer';
+import PinReadout from './components/PinReadout';
 import EmptyViewportOverlay from './components/ux/EmptyViewportOverlay';
 import ViewMoreCue from './components/ux/ViewMoreCue';
 import NotificationPrefs, { hasActedOnPin, markActedOnPin } from './components/ux/NotificationPrefs';
@@ -1138,6 +1139,11 @@ class App extends Component {
             * Without this, users assume the map is the whole page and never
             * scroll to find the legend, sponsors, and info surface. */}
           <ViewMoreCue />
+
+          {/* TV-3 + TV-6 + TV-7 — pin readout pill: shows resolved coords
+              of the dropped marker, includes "Limpar" reset, and serves
+              as the aria-live status region for the marker placement. */}
+          <PinReadout />
 
           {/* Bottom row: InfoPanel (full width below) */}
           <InfoPanel rowCount={this.state.rowCount} />

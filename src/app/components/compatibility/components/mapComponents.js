@@ -235,13 +235,43 @@ const safeReleasePointer = (target, pointerId) => {
 // drove it.
 export const MARKER_PLACED_EVENT = 'mdf:marker-placed';
 
-const dispatchMarkerPlaced = (lat, lng, source) => {
+const dispatchMarkerPlaced = (lat, lng, source, pointerType) => {
     if (typeof document === 'undefined' || typeof CustomEvent !== 'function') return;
     try {
         document.dispatchEvent(new CustomEvent(MARKER_PLACED_EVENT, {
-            detail: { lat, lng, source, ts: Date.now() },
+            detail: { lat, lng, source, pointerType, ts: Date.now() },
         }));
     } catch (_e) { /* IE/legacy webview without CustomEvent constructor */ }
+    // TV-2 (tap_visibility_robustness.yaml): single 40 ms haptic pulse on
+    // touch/pen taps. Cheapest cross-device confirmation that the system
+    // registered the action. Gated to non-mouse pointers so a desktop
+    // user with a Bluetooth-tethered phone doesn't get spam vibrations
+    // on every mouse click. Defensive feature detection — iOS Safari
+    // outside PWA mode + low-end devices without vibration motors are
+    // silent no-ops.
+    if (pointerType === 'mouse') return;
+    if (typeof navigator === 'undefined') return;
+    if (typeof navigator.vibrate !== 'function') return;
+    try { navigator.vibrate(40); } catch (_e) { /* permission denied or motor missing */ }
+};
+
+// Public DOM event fired when the marker is cleared (TV-6 in
+// tap_visibility_robustness.yaml — reset/undo affordance). Receivers
+// (PinReadout, MainControls Confirmar ponto button) flip back to the
+// "no marker" state.
+export const MARKER_CLEARED_EVENT = 'mdf:marker-cleared';
+// Counterpart REQUEST event — UI components dispatch this to ask the
+// map owner (CoffeeMap) to clear the current marker. CoffeeMap listens
+// and dispatches MARKER_CLEARED_EVENT when done.
+export const MARKER_CLEAR_REQUEST_EVENT = 'mdf:marker-clear-request';
+
+export const dispatchMarkerCleared = () => {
+    if (typeof document === 'undefined' || typeof CustomEvent !== 'function') return;
+    try {
+        document.dispatchEvent(new CustomEvent(MARKER_CLEARED_EVENT, {
+            detail: { ts: Date.now() },
+        }));
+    } catch (_e) { /* legacy webview */ }
 };
 
 // Encapsulates the mutable state machine that drives tap recognition.
@@ -334,7 +364,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             onMapClick(map, lat, lng);
             tracker.markTapFired();
             trackMapTap({ lat, lng, pointerType, durationMs });
-            dispatchMarkerPlaced(lat, lng, 'tap');
+            dispatchMarkerPlaced(lat, lng, 'tap', pointerType);
         };
 
         const emitLongPress = (lat, lng, source, pointerType) => {
@@ -345,7 +375,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             onMapClick(map, lat, lng);
             onMapLongPress?.(map, lat, lng);
             trackMapLongPress({ lat, lng, source, pointerType });
-            dispatchMarkerPlaced(lat, lng, source);
+            dispatchMarkerPlaced(lat, lng, source, pointerType);
         };
 
         const onPointerDown = (e) => {

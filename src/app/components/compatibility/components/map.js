@@ -41,6 +41,8 @@ import {
     MapClickHandler,
     MapSizeInvalidator,
     MapViewUpdater,
+    MARKER_CLEAR_REQUEST_EVENT,
+    dispatchMarkerCleared,
 } from './mapComponents';
 import envVariables from './variaveisAmbiente';
 
@@ -102,6 +104,23 @@ const CoffeeMap = ({
         // Apply the class after Leaflet has attached _icon to the DOM.
         if (marker._icon) marker._icon.classList.add('mdf-dropped-pin');
 
+        // TV-1 (tap_visibility_robustness.yaml): pulse halo on every tap.
+        // Reuses the .mdf-ping-ring CSS that fires after a publish — scale
+        // 0.4→3, opacity 1→0 over 600ms. The expanding ring stays visible
+        // past the user's finger so they can SEE the marker landed at the
+        // correct spot even on small phones where the 20px pin is occluded.
+        const pulse = L.marker([lat, lng], {
+            interactive: false,
+            keyboard: false,
+            icon: L.divIcon({
+                className: 'mdf-ping-ring',
+                html: '<span></span>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+            }),
+        }).addTo(map);
+        setTimeout(() => pulse.remove(), 700);
+
         lastMarkedRef.current = marker;
         mapRef.current = map;
 
@@ -113,6 +132,23 @@ const CoffeeMap = ({
     const handleMapLongPress = useCallback((_map, lat, lng) => {
         onPinDropped?.([lat, lng]);
     }, [onPinDropped]);
+
+    // TV-6 (tap_visibility_robustness.yaml): listen for clear-request
+    // events from UI components (e.g., PinReadout reset button) and
+    // remove the current marker. Owning this here keeps the marker
+    // lifecycle in one place — the CoffeeMap component that created it.
+    useEffect(() => {
+        const handleClearRequest = () => {
+            if (lastMarkedRef.current) {
+                lastMarkedRef.current.remove();
+                lastMarkedRef.current = null;
+            }
+            envVariables.lastMarked = undefined;
+            dispatchMarkerCleared();
+        };
+        document.addEventListener(MARKER_CLEAR_REQUEST_EVENT, handleClearRequest);
+        return () => document.removeEventListener(MARKER_CLEAR_REQUEST_EVENT, handleClearRequest);
+    }, []);
 
     // M1 post-publish ping-ring. Parent bumps `pingCoords`; we drop a one-shot
     // marker with a CSS ring animation and recenter the map onto it.
