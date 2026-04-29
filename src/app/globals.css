@@ -42,6 +42,13 @@ textarea {
  * sets user-select:none on .leaflet-container itself in leaflet.css). */
 .leaflet-container {
   -webkit-touch-callout: none;
+  /* touch-action: manipulation eliminates the 300 ms tap delay on iOS
+   * Safari and prevents the browser from hijacking double-tap-to-zoom,
+   * which would otherwise swallow our PointerEvent tap recognition.
+   * Leaflet still receives gestures for its own pan/pinch handlers.
+   * Highest-leverage CSS change for cross-device tap responsiveness.
+   * Tracked under map_click_compatibility.yaml (works on any device). */
+  touch-action: manipulation;
 }
 
 body {
