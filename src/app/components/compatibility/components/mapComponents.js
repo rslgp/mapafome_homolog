@@ -142,7 +142,9 @@ const NATIVE_CLICK_DEDUP_MS = 1000;
 // Walks up the DOM checking for .leaflet-interactive (markers, clusters,
 // popups, controls). Returns true only when the target is the bare map.
 // F6 contract — see MarkerGroup.js header comment.
-const isMapBackground = (el, container) => {
+// EXPORTED for unit testing (GOOS: listen-to-tests; pure logic stays
+// addressable from outside the component).
+export const isMapBackground = (el, container) => {
     let cur = el;
     while (cur && cur !== container) {
         if (cur.classList && cur.classList.contains('leaflet-interactive')) return false;
@@ -154,21 +156,53 @@ const isMapBackground = (el, container) => {
 // Converts viewport coords to lat/lng using Leaflet's public API.
 // Compensates for the container's bounding rect — same math Leaflet
 // uses internally for its native click event.
-const clientToLatLng = (map, container, clientX, clientY) => {
+export const clientToLatLng = (map, container, clientX, clientY) => {
     const rect = container.getBoundingClientRect();
     return map.containerPointToLatLng([clientX - rect.left, clientY - rect.top]);
 };
 
 // Defensive guard at the event boundary (Code Complete ch.8 barricade).
 // Some synthetic dispatches (older webviews, jsdom) lack clientX/Y.
-const hasClientCoords = (e) => e
+export const hasClientCoords = (e) => e
     && typeof e.clientX === 'number'
     && typeof e.clientY === 'number';
+
+// Multitouch safety. PointerEvent.isPrimary is true for the first pointer
+// of its type in an interaction. A second finger landing while the first
+// is still held must NOT overwrite our tracker (otherwise pinch-zoom or
+// two-finger scroll could swap our state mid-gesture and lose the tap).
+// Defaults to true when the field is missing (older synthetic events).
+export const isPrimaryPointer = (e) =>
+    e == null || e.isPrimary === undefined || e.isPrimary === true;
+
+// Final-mile defensive guard before we propagate coordinates into the
+// marker placement and analytics. If invalidateSize fires mid-tap, or
+// the CRS projection produces a degenerate result, we'd otherwise pass
+// NaN/Infinity to L.marker — fail fast at the boundary instead.
+export const isFiniteLatLng = (ll) =>
+    !!ll && Number.isFinite(ll.lat) && Number.isFinite(ll.lng);
+
+// Pointer capture wrapper. Pins the pointer to a single element so all
+// subsequent move/up/cancel events fire there even when the finger drags
+// off-map (over the report sheet, off the screen edge, onto a control).
+// Without this, a finger that strays a few px during a tap on a small
+// phone can cause pointerup to fire on a different element — and our
+// listener never sees it, leaving state stuck. Try/catch because
+// setPointerCapture throws on browsers that lack the API or when the
+// pointerId is already released.
+const safeCapturePointer = (target, pointerId) => {
+    try { target.setPointerCapture?.(pointerId); } catch (_e) { /* unsupported */ }
+};
+const safeReleasePointer = (target, pointerId) => {
+    try { target.releasePointerCapture?.(pointerId); } catch (_e) { /* not captured */ }
+};
 
 // Encapsulates the mutable state machine that drives tap recognition.
 // Replaces 8 free `let` bindings — closes a primitive-obsession smell
 // and gives every mutation a named entry point.
-const createTapTracker = () => {
+// EXPORTED for unit testing — the state machine is the highest-risk
+// surface and warrants direct coverage (Testing strategy § first_principles).
+export const createTapTracker = () => {
     const state = {
         downX: 0,
         downY: 0,
@@ -227,11 +261,46 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
     const map = useMap();
 
     useEffect(() => {
+        // Defensive: useMap can theoretically return null briefly under
+        // React Strict Mode double-effect mounting, or when MapContainer
+        // is still initializing. Bail without binding rather than crash.
+        if (!map || typeof map.getContainer !== 'function') return undefined;
         const container = map.getContainer();
+        if (!container) return undefined;
         const tracker = createTapTracker();
+
+        // Emits onMapClick + analytics if the resolved coords are finite.
+        // Centralizes the boundary guard so every emit path is safe.
+        const emitTap = (lat, lng, pointerType, durationMs) => {
+            if (!isFiniteLatLng({ lat, lng })) {
+                trackMapTapSkipped({ reason: 'non_finite_latlng', pointerType });
+                return;
+            }
+            onMapClick(map, lat, lng);
+            tracker.markTapFired();
+            trackMapTap({ lat, lng, pointerType, durationMs });
+        };
+
+        const emitLongPress = (lat, lng, source, pointerType) => {
+            if (!isFiniteLatLng({ lat, lng })) {
+                trackMapTapSkipped({ reason: 'non_finite_latlng', pointerType });
+                return;
+            }
+            onMapClick(map, lat, lng);
+            onMapLongPress?.(map, lat, lng);
+            trackMapLongPress({ lat, lng, source, pointerType });
+        };
 
         const onPointerDown = (e) => {
             if (!hasClientCoords(e)) return;
+            // Multitouch hardware: ignore secondary contacts (pinch-zoom's
+            // second finger, palm rejection misfires). Without this, a
+            // two-finger gesture could swap our tracked pointer mid-flight
+            // and produce a tap at the wrong coordinates.
+            if (!isPrimaryPointer(e)) {
+                trackMapTapSkipped({ reason: 'non_primary_pointer', pointerType: e.pointerType });
+                return;
+            }
             if (!isMapBackground(e.target, container)) {
                 trackMapTapSkipped({ reason: 'leaflet_interactive', pointerType: e.pointerType });
                 return;
@@ -241,14 +310,15 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
                 return;
             }
             tracker.recordPointerDown(e);
+            // Pin events to the container — finger drags off the map element
+            // (onto a sheet, control, edge) will still fire pointerup here.
+            safeCapturePointer(container, e.pointerId);
             // Long-press for TOUCH/PEN only — desktop mouse uses contextmenu.
             if (e.pointerType === 'mouse') return;
             const { clientX: x, clientY: y, pointerType } = e;
             tracker.armLongPress(() => {
                 const ll = clientToLatLng(map, container, x, y);
-                onMapClick(map, ll.lat, ll.lng);
-                onMapLongPress?.(map, ll.lat, ll.lng);
-                trackMapLongPress({ lat: ll.lat, lng: ll.lng, source: 'timer', pointerType });
+                emitLongPress(ll.lat, ll.lng, 'timer', pointerType);
             });
         };
 
@@ -263,6 +333,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
 
         const onPointerUp = (e) => {
             tracker.cancelLongPress();
+            safeReleasePointer(container, e.pointerId);
             const { state } = tracker;
             if (state.downId === null || e.pointerId !== state.downId) return;
             const dt = Date.now() - state.downT;
@@ -280,12 +351,11 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
                 return;
             }
             const ll = clientToLatLng(map, container, e.clientX, e.clientY);
-            onMapClick(map, ll.lat, ll.lng);
-            tracker.markTapFired();
-            trackMapTap({ lat: ll.lat, lng: ll.lng, pointerType, durationMs: dt });
+            emitTap(ll.lat, ll.lng, pointerType, dt);
         };
 
-        const onPointerCancel = () => {
+        const onPointerCancel = (e) => {
+            if (e?.pointerId !== undefined) safeReleasePointer(container, e.pointerId);
             const { downPointerType: pointerType } = tracker.state;
             tracker.clearGesture();
             if (pointerType !== null) {
@@ -305,13 +375,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             const ll = hasClientCoords(oe)
                 ? clientToLatLng(map, container, oe.clientX, oe.clientY)
                 : e.latlng;
-            onMapClick(map, ll.lat, ll.lng);
-            trackMapTap({
-                lat: ll.lat,
-                lng: ll.lng,
-                pointerType: oe?.pointerType || 'leaflet_click_fallback',
-                durationMs: 0,
-            });
+            emitTap(ll.lat, ll.lng, oe?.pointerType || 'leaflet_click_fallback', 0);
         };
 
         // Desktop right-click + Android Chrome long-press contextmenu.
@@ -327,20 +391,27 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             const ll = hasClientCoords(oe)
                 ? clientToLatLng(map, container, oe.clientX, oe.clientY)
                 : e.latlng;
-            onMapClick(map, ll.lat, ll.lng);
-            onMapLongPress?.(map, ll.lat, ll.lng);
-            trackMapLongPress({
-                lat: ll.lat,
-                lng: ll.lng,
-                source: 'contextmenu',
-                pointerType: oe?.pointerType || 'mouse',
-            });
+            emitLongPress(ll.lat, ll.lng, 'contextmenu', oe?.pointerType || 'mouse');
         };
 
+        // Stuck-pointer recovery: if the user backgrounds the tab or the
+        // OS swallows pointerup (iOS notification, Android system gesture),
+        // our state stays armed and the next tap could be lost. Clearing
+        // on visibility change ensures we always return to a clean slate.
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') tracker.clearGesture();
+        };
+
+        // pointermove is `{ passive: true }` so the browser does not have
+        // to wait for our handler before scrolling/zooming — this is a
+        // ~16ms-per-frame win on touch devices and prevents iOS's input
+        // jank when fingers move quickly. We never call preventDefault()
+        // here, so passive is correct.
         container.addEventListener('pointerdown', onPointerDown);
-        container.addEventListener('pointermove', onPointerMove);
+        container.addEventListener('pointermove', onPointerMove, { passive: true });
         container.addEventListener('pointerup', onPointerUp);
         container.addEventListener('pointercancel', onPointerCancel);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         map.on('click', handleLeafletClick);
         map.on('contextmenu', handleContextmenu);
 
@@ -350,6 +421,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             container.removeEventListener('pointermove', onPointerMove);
             container.removeEventListener('pointerup', onPointerUp);
             container.removeEventListener('pointercancel', onPointerCancel);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             map.off('click', handleLeafletClick);
             map.off('contextmenu', handleContextmenu);
         };
