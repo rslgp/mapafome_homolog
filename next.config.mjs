@@ -1,4 +1,6 @@
 const nextConfig = {
+  allowedDevOrigins: ['10.20.30.191'],
+
   output: 'export',
   images: { unoptimized: true },
 

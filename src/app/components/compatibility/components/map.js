@@ -13,7 +13,7 @@
 //   addGroup helper  → V2 pattern, cleaner than renderSwitch class methods
 //   RedeSocial msg   → inline formatter in addGroup (V2 pattern)
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { MapContainer, Marker, AttributionControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -49,6 +49,15 @@ import envVariables from './variaveisAmbiente';
 // ─── Message formatters ───────────────────────────────────────────────────────
 // Defined outside the component: pure functions, no dependency on props/state,
 // no need to recreate on every render.
+
+// F-4 (dropped_pin_invisible_mobile.yaml): hoist the inline style out of
+// the JSX so its identity is stable across renders. react-leaflet's
+// MapContainer is initial-render-only for most props, but a fresh-
+// identity style object on every render still costs reconciliation
+// work — and a hypothetical react-leaflet upgrade that DID react to
+// style changes would silently remount the map and wipe our
+// imperatively-added L.markers (the dropped pin among them).
+const MAP_CONTAINER_STYLE = { height: '70vh', width: '100%' };
 
 const MSG = {
     doador:               (_, { URL })                        => `Recebendo alimento para distribuir${URL}`,
@@ -93,25 +102,54 @@ const CoffeeMap = ({
     // Encapsulated map click: was anonymous arrow in whenReady in both V1 and V2.
     // V2 stored to lastMarkedRef but still inline; now a proper named callback
     // delegated to MapClickHandler so useMap() hook works correctly.
+    //
+    // Mobile-robustness fixes (dropped_pin_invisible_mobile.yaml):
+    //   F-2 idempotent: skip remove+re-add when the requested coords match
+    //       the current marker's position within float epsilon. Prevents a
+    //       second emitTap (if one slipped past the upstream dedup) from
+    //       wiping the just-placed pin.
+    //   F-8: pin pane explicitly to 'markerPane' so a pane-allocation
+    //       glitch under preferCanvas can never park the marker behind tiles.
+    //   F-9: re-apply .mdf-dropped-pin on the next animation frame in
+    //       case Leaflet's _icon attachment is deferred on slow mobile devices.
+    //   F-10: pulse goes to 'shadowPane' (z-index 500) instead of the
+    //       default markerPane (600), so the pin is ALWAYS painted above
+    //       the pulse — never visually occluded during the 600 ms animation.
     const handleMapClick = useCallback((map, lat, lng) => {
-        if (lastMarkedRef.current) lastMarkedRef.current.remove();
+        // F-2 idempotent guard — same coords ⇒ no-op, keep existing marker
+        if (lastMarkedRef.current) {
+            const cur = lastMarkedRef.current.getLatLng();
+            if (Math.abs(cur.lat - lat) < 1e-9 && Math.abs(cur.lng - lng) < 1e-9) {
+                envVariables.lastMarked = lastMarkedRef.current;
+                return;
+            }
+            lastMarkedRef.current.remove();
+        }
+
         const marker = L.marker([lat, lng], {
             icon: ICONS.CURRENT_LOCATION_SMALL,
             draggable: false,
+            pane: 'markerPane', // F-8
         }).addTo(map);
 
-        // M1 drop-in animation — scale 0→1.1→1.0 over 240ms ease-out-back.
-        // Apply the class after Leaflet has attached _icon to the DOM.
-        if (marker._icon) marker._icon.classList.add('mdf-dropped-pin');
+        // M1 drop-in animation + F-1 visual lift. Apply once synchronously
+        // and once on the next frame — covers slow mobile devices where
+        // _icon may not be attached to the DOM until rAF.
+        const applyPinClass = () => {
+            if (marker._icon) marker._icon.classList.add('mdf-dropped-pin');
+        };
+        applyPinClass();
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(applyPinClass);
+        }
 
-        // TV-1 (tap_visibility_robustness.yaml): pulse halo on every tap.
-        // Reuses the .mdf-ping-ring CSS that fires after a publish — scale
-        // 0.4→3, opacity 1→0 over 600ms. The expanding ring stays visible
-        // past the user's finger so they can SEE the marker landed at the
-        // correct spot even on small phones where the 20px pin is occluded.
+        // TV-1: pulse halo. Lives in shadowPane so it cannot occlude the
+        // pin (F-10). interactive:false + non-interactive CSS rule ⇒ no
+        // pointer events.
         const pulse = L.marker([lat, lng], {
             interactive: false,
             keyboard: false,
+            pane: 'shadowPane', // F-10
             icon: L.divIcon({
                 className: 'mdf-ping-ring',
                 html: '<span></span>',
@@ -286,21 +324,33 @@ const CoffeeMap = ({
         return groups;
     };
 
-    const screensizeZoom = isMobileDevice()
-        ? MAP_CONFIG.DEFAULT_ZOOM_MOBILE
-        : MAP_CONFIG.DEFAULT_ZOOM_DESKTOP;
+    // F-4: memoize the initial-render-only zoom value so that repeated
+    // re-renders don't re-evaluate isMobileDevice() and don't pass a
+    // freshly-allocated number to MapContainer (a hypothetical
+    // react-leaflet upgrade reacting to zoom changes by remount would
+    // wipe our imperative L.markers).
+    const screensizeZoom = useMemo(
+        () => (isMobileDevice() ? MAP_CONFIG.DEFAULT_ZOOM_MOBILE : MAP_CONFIG.DEFAULT_ZOOM_DESKTOP),
+        []
+    );
 
     return (
         <div>
             <MapContainer
-                style={{ height: MAP_CONFIG.MAP_HEIGHT, width: MAP_CONFIG.MAP_WIDTH }}
+                style={MAP_CONTAINER_STYLE}
                 zoom={screensizeZoom}
                 maxZoom={MAP_CONFIG.MAX_ZOOM}
                 center={center}
                 attributionControl={false}
                 preferCanvas={true}
-                tap={true}
-                tapTolerance={15}
+                // Disable Leaflet's legacy L.Map.Tap shim. MapClickHandler
+                // owns tap recognition via PointerEvent + a native-click
+                // fallback (map.on('click')); leaving tap:true on enables
+                // a third path (touchstart→touchend synthesizes a click)
+                // that can race with our pointerup, double-firing emitTap
+                // and replacing the just-placed dropped pin. Mobile-only
+                // because L.Map.Tap is touch-device-only.
+                tap={false}
             >
                 {/* V1 LayersControl with 3 tile options (Waze/OSM/Satellite) */}
                 <TileLayersControl />

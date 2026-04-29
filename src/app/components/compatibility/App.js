@@ -20,6 +20,7 @@ import OfflineToast from './components/ux/OfflineToast';
 import ListView from './components/ux/ListView';
 import LiveAnnouncer from './components/ux/LiveAnnouncer';
 import PinReadout from './components/PinReadout';
+import TapDebugOverlay from './components/_debug/TapDebugOverlay';
 import EmptyViewportOverlay from './components/ux/EmptyViewportOverlay';
 import ViewMoreCue from './components/ux/ViewMoreCue';
 import NotificationPrefs, { hasActedOnPin, markActedOnPin } from './components/ux/NotificationPrefs';
@@ -1144,6 +1145,12 @@ class App extends Component {
               of the dropped marker, includes "Limpar" reset, and serves
               as the aria-live status region for the marker placement. */}
           <PinReadout />
+
+          {/* D-1 + D-2 (LLM_BRAIN/dropped_pin_invisible_mobile.yaml):
+              Opt-in mobile-tap diagnostic overlay. Renders only when
+              the URL has ?debug=tap; renders null otherwise so it has
+              zero cost and zero visibility for normal users. */}
+          <TapDebugOverlay />
 
           {/* Bottom row: InfoPanel (full width below) */}
           <InfoPanel rowCount={this.state.rowCount} />

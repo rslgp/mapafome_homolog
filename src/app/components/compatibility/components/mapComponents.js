@@ -161,15 +161,34 @@ export const resolveTapDistancePx = () => {
     }
 };
 
-// Walks up the DOM checking for .leaflet-interactive (markers, clusters,
-// popups, controls). Returns true only when the target is the bare map.
-// F6 contract — see MarkerGroup.js header comment.
+// Walks up the DOM ruling out clicks that landed on something interactive
+// inside the map. Returns true only when the target is the bare map tile
+// canvas (i.e. a real "tap on the map background" the user wants to mark).
+//
+// Three classes of ancestor disqualify a target:
+//   • .leaflet-interactive — markers, shapes, polygons, popups (set by
+//     L.Map.addInteractiveTarget). Click belongs to the marker's handler.
+//   • .leaflet-control      — built-in controls (zoom, layers,
+//     attribution) and add-ons like the geosearch widget. These do NOT
+//     have .leaflet-interactive but are still children of the map
+//     container. Capturing their pointer events steals input from the
+//     control's button and visibly drops a marker behind it.
+//   • .leaflet-popup        — popup body / tip. Belongs to the popup,
+//     not the map. (Popup ancestors sometimes lack leaflet-interactive
+//     on the wrapper element, even when the popup itself is interactive.)
+//
 // EXPORTED for unit testing (GOOS: listen-to-tests; pure logic stays
 // addressable from outside the component).
+const NON_BACKGROUND_CLASSES = ['leaflet-interactive', 'leaflet-control', 'leaflet-popup'];
+
 export const isMapBackground = (el, container) => {
     let cur = el;
     while (cur && cur !== container) {
-        if (cur.classList && cur.classList.contains('leaflet-interactive')) return false;
+        if (cur.classList) {
+            for (const cls of NON_BACKGROUND_CLASSES) {
+                if (cur.classList.contains(cls)) return false;
+            }
+        }
         cur = cur.parentNode;
     }
     return !!cur;
@@ -178,8 +197,16 @@ export const isMapBackground = (el, container) => {
 // Converts viewport coords to lat/lng using Leaflet's public API.
 // Compensates for the container's bounding rect — same math Leaflet
 // uses internally for its native click event.
+//
+// F-5 (dropped_pin_invisible_mobile.yaml): guard against a collapsed
+// container rect (width or height === 0). On iOS, a transient layout
+// state can produce a 0-sized rect during orientation change or
+// keyboard show/hide; projecting through it yields garbage coords that
+// land the marker off-screen. Returns null in that case so the caller
+// can skip the tap with a typed analytics reason.
 export const clientToLatLng = (map, container, clientX, clientY) => {
     const rect = container.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return null;
     return map.containerPointToLatLng([clientX - rect.left, clientY - rect.top]);
 };
 
@@ -279,6 +306,15 @@ export const dispatchMarkerCleared = () => {
 // and gives every mutation a named entry point.
 // EXPORTED for unit testing — the state machine is the highest-risk
 // surface and warrants direct coverage (Testing strategy § first_principles).
+//
+// F-2 (dropped_pin_invisible_mobile.yaml): gesture-token dedup.
+// Replaces the timestamp-based dedup with a per-gesture id counter +
+// "current gesture already emitted" flag. Bulletproof in any
+// pointerdown→pointerup→click ordering and any speed (a rapid double
+// tap produces two distinct gestureIds, so each gets its own emit).
+// The legacy timestamp dedup remains for handleLeafletClick paths that
+// fire WITHOUT a preceding pointerdown (the A23 case where pointer
+// events are unreliable but the native click still arrives).
 export const createTapTracker = () => {
     const state = {
         downX: 0,
@@ -290,6 +326,8 @@ export const createTapTracker = () => {
         longPressFired: false,
         lastLongPressFiredAt: 0,
         lastTapFiredAt: 0,
+        gestureId: 0,
+        gestureEmitted: false,
     };
     const cancelLongPress = () => {
         if (state.longPressTimer) clearTimeout(state.longPressTimer);
@@ -305,6 +343,8 @@ export const createTapTracker = () => {
             state.downId = e.pointerId;
             state.downPointerType = e.pointerType;
             state.longPressFired = false;
+            state.gestureId += 1;
+            state.gestureEmitted = false;
             cancelLongPress();
         },
         armLongPress(fire) {
@@ -317,6 +357,7 @@ export const createTapTracker = () => {
         },
         markTapFired() {
             state.lastTapFiredAt = Date.now();
+            state.gestureEmitted = true;
         },
         clearGesture() {
             cancelLongPress();
@@ -326,6 +367,15 @@ export const createTapTracker = () => {
         isLongPressDedupActive: () =>
             Date.now() - state.lastLongPressFiredAt < LONG_PRESS_DEDUP_MS,
         isNativeClickDedupActive: () =>
+            Date.now() - state.lastTapFiredAt < NATIVE_CLICK_DEDUP_MS,
+        // Sticky from emit until EITHER (a) a new pointerdown resets the
+        // flag (next gesture starts), OR (b) the native-click dedup
+        // window has elapsed (1000 ms — same horizon as the timestamp
+        // dedup, so the two semantics agree). Without (b) the flag would
+        // persist forever across no-pointerup gestures (timer long-press
+        // followed by an Android contextmenu emulation 1100 ms later).
+        isGestureAlreadyEmitted: () =>
+            state.gestureEmitted === true &&
             Date.now() - state.lastTapFiredAt < NATIVE_CLICK_DEDUP_MS,
     };
 };
@@ -356,22 +406,36 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
         // and sets envVariables.lastMarked), dispatch the public
         // mdf:marker-placed CustomEvent so any UI listener (e.g. the
         // "Confirmar ponto" button) can confirm the chain completed.
+        //
+        // F-2: gesture-token dedup at the boundary. Any caller that
+        // routes through emitTap is guaranteed to fire at most once per
+        // gesture, regardless of how many event paths (pointerup,
+        // native click, contextmenu) reach this function.
         const emitTap = (lat, lng, pointerType, durationMs) => {
+            if (tracker.isGestureAlreadyEmitted()) {
+                trackMapTapSkipped({ reason: 'gesture_already_emitted', pointerType });
+                return;
+            }
             if (!isFiniteLatLng({ lat, lng })) {
                 trackMapTapSkipped({ reason: 'non_finite_latlng', pointerType });
                 return;
             }
-            onMapClick(map, lat, lng);
             tracker.markTapFired();
+            onMapClick(map, lat, lng);
             trackMapTap({ lat, lng, pointerType, durationMs });
             dispatchMarkerPlaced(lat, lng, 'tap', pointerType);
         };
 
         const emitLongPress = (lat, lng, source, pointerType) => {
+            if (tracker.isGestureAlreadyEmitted()) {
+                trackMapTapSkipped({ reason: 'gesture_already_emitted', pointerType });
+                return;
+            }
             if (!isFiniteLatLng({ lat, lng })) {
                 trackMapTapSkipped({ reason: 'non_finite_latlng', pointerType });
                 return;
             }
+            tracker.markTapFired();
             onMapClick(map, lat, lng);
             onMapLongPress?.(map, lat, lng);
             trackMapLongPress({ lat, lng, source, pointerType });
@@ -405,6 +469,10 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             const { clientX: x, clientY: y, pointerType } = e;
             tracker.armLongPress(() => {
                 const ll = clientToLatLng(map, container, x, y);
+                if (!ll) {
+                    trackMapTapSkipped({ reason: 'rect_collapsed', pointerType });
+                    return;
+                }
                 emitLongPress(ll.lat, ll.lng, 'timer', pointerType);
             });
         };
@@ -437,7 +505,22 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
                 trackMapTapSkipped({ reason: 'movement', pointerType });
                 return;
             }
+            // Bidirectional dedup with handleLeafletClick. On some mobile
+            // browsers the native click fires BEFORE pointerup (touchend
+            // → click → pointerup). Without this, both paths call emitTap;
+            // the second call removes the marker that the first just
+            // placed and re-adds one. Note: F-2's gesture-token dedup
+            // also catches this at emitTap level — kept here as an
+            // earlier fast-path so we skip the projection math entirely.
+            if (tracker.isGestureAlreadyEmitted() || tracker.isNativeClickDedupActive()) {
+                trackMapTapSkipped({ reason: 'pointerup_dedup_after_click', pointerType });
+                return;
+            }
             const ll = clientToLatLng(map, container, e.clientX, e.clientY);
+            if (!ll) {
+                trackMapTapSkipped({ reason: 'rect_collapsed', pointerType });
+                return;
+            }
             emitTap(ll.lat, ll.lng, pointerType, dt);
         };
 
@@ -455,6 +538,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
         // the canonical "click works, pointerup doesn't" case). Mirrors
         // rslgp/mapafome's old whenReady → map.on('click') flow.
         const handleLeafletClick = (e) => {
+            if (tracker.isGestureAlreadyEmitted()) return;
             if (tracker.isNativeClickDedupActive()) return;
             if (tracker.isLongPressDedupActive()) return;
             const oe = e.originalEvent;
@@ -462,6 +546,10 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             const ll = hasClientCoords(oe)
                 ? clientToLatLng(map, container, oe.clientX, oe.clientY)
                 : e.latlng;
+            if (!ll) {
+                trackMapTapSkipped({ reason: 'rect_collapsed', pointerType: oe?.pointerType });
+                return;
+            }
             emitTap(ll.lat, ll.lng, oe?.pointerType || 'leaflet_click_fallback', 0);
         };
 
@@ -478,6 +566,10 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             const ll = hasClientCoords(oe)
                 ? clientToLatLng(map, container, oe.clientX, oe.clientY)
                 : e.latlng;
+            if (!ll) {
+                trackMapTapSkipped({ reason: 'rect_collapsed', pointerType: oe?.pointerType });
+                return;
+            }
             emitLongPress(ll.lat, ll.lng, 'contextmenu', oe?.pointerType || 'mouse');
         };
 

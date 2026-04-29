@@ -569,13 +569,23 @@ a.tgme_widget_share_btn {
   pointer-events: none !important;
 }
 
-/* TV-8 (tap_visibility_robustness.yaml): drop shadow on the dropped pin
- * so it lifts off any tile background — water, dark satellite imagery,
- * dense urban areas. Same technique Google Maps uses for the My Location
- * dot. Scoped to .mdf-dropped-pin so we don't affect other markers. */
+/* TV-8 (tap_visibility_robustness.yaml): visual lift on the dropped pin
+ * so it stands out over any tile background. Original implementation
+ * used filter:drop-shadow on the <img>, but Mobile Safari has a
+ * documented bug where filter:drop-shadow on a translate3d-positioned
+ * <img> can render fully transparent — see
+ * dropped_pin_invisible_mobile.yaml § H1.
+ *
+ * F-1 fix: outline + box-shadow on the wrapper element. Both work
+ * reliably on every mobile browser. We also force a GPU layer
+ * (translateZ(0) via will-change) so the pin's compositor layer is
+ * separate from the surrounding canvas — prevents iOS WebKit from
+ * dropping its paint when surrounding tiles repaint. */
 .mdf-dropped-pin {
-  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))
-          drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+  outline: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  border-radius: 50%;
+  will-change: transform;
 }
 
 /* TV-3 (tap_visibility_robustness.yaml): coordinate readout pill.

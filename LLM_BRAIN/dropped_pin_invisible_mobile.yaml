@@ -1,0 +1,623 @@
+# LLM_BRAIN/dropped_pin_invisible_mobile.yaml
+#
+# Investigation + remediation plan for the bug:
+#   "On mobile only: tapping the map shows the red pulse ring, but the
+#    blue dropped pin never visibly appears, and the coordinate seems
+#    not to register for the Confirmar ponto submission."
+#
+# Distinct from:
+#   - map_click_compatibility.yaml      (does the tap REGISTER at all?)
+#   - tap_visibility_robustness.yaml    (CAN the user tell where the pin
+#                                        landed?)
+#
+# This file owns the case where the tap pipeline IS firing
+# (dispatchMarkerPlaced fires → red pulse appears) but the L.marker the
+# user expects to see at the tap location does not appear, or appears
+# briefly and disappears. Mobile-only — desktop is unaffected.
+
+meta:
+  id: dropped-pin-invisible-mobile
+  status: in_review  # P2/P3/P4 fixes shipped; pending mobile QA
+  owner: rslgp
+  created: 2026-04-29
+  last_updated: 2026-04-29
+  parent_plans:
+    - LLM_BRAIN/map_click_compatibility.yaml
+    - LLM_BRAIN/tap_visibility_robustness.yaml
+  changelogs_to_update_on_done:
+    - LLM_BRAIN/changelog.yaml
+
+# ─── 1. Symptom envelope ──────────────────────────────────────────────
+symptom:
+  observed: >
+    User taps anywhere on the map on a mobile device. The red ".mdf-ping-ring"
+    pulse animation appears at the tap location and fades over ~600 ms.
+    The blue dropped pin (CURRENT_LOCATION_SMALL, 20×20 SVG) is NOT
+    visible after the pulse completes. The "Confirmar ponto" button
+    appears unchanged or behaves as if no marker was placed.
+  not_reproduced_on:
+    - desktop_chrome
+    - desktop_firefox
+    - desktop_edge
+  reproduced_on:
+    - "mobile (specific device list TBD by user; was Samsung A54 + iPhone in earlier reports)"
+  severity: P0
+  reason_p0: >
+    The dropped pin is the load-bearing mechanism for the entire
+    publish flow. Without it, users on mobile cannot submit a point
+    they tapped — the app's primary humanitarian function fails.
+  what_works:
+    - red pulse ring animation fires at tap location
+    - mdf:marker-placed CustomEvent appears to fire (pulse implies the
+      onMapClick path executed)
+  what_fails:
+    - the L.marker rendered with ICONS.CURRENT_LOCATION_SMALL is
+      invisible (or visually absent) after the pulse completes
+    - envVariables.lastMarked may or may not be set — symptom suggests it
+      is not, since "coordinate is not registered"
+
+# ─── 2. Hypothesis catalogue ──────────────────────────────────────────
+# Every plausible cause, ranked by likelihood × ease-of-test. Each is
+# falsifiable from observation alone, so we can knock most out in one
+# session by inspecting a live mobile DevTools session or adding probes.
+
+hypotheses:
+  H1_filter_drop_shadow_safari:
+    likelihood: high
+    description: >
+      Mobile Safari has a documented history of mishandling
+      `filter: drop-shadow()` on <img> elements that are CSS-positioned
+      via translate3d (the path Leaflet uses). The pin's <img> is in
+      the DOM but renders fully transparent, so the user sees nothing
+      where it should be.
+    evidence_for:
+      - .mdf-dropped-pin uses two stacked drop-shadow filters
+      - filter is applied to the <img> directly (TV-8 in
+        tap_visibility_robustness.yaml)
+      - desktop browsers are unaffected — fits "mobile only"
+    falsify_by: >
+      Open Safari mobile DevTools, inspect a marker after tap, confirm
+      <img class="leaflet-marker-icon mdf-dropped-pin"> exists in the
+      DOM, then toggle off the .mdf-dropped-pin filter rule. If the pin
+      becomes visible, hypothesis confirmed.
+    fix_if_confirmed: H1_FIX
+
+  H2_double_fire_remove_then_add:
+    likelihood: high
+    description: >
+      Despite the bidirectional dedup added in this iteration, three
+      event paths still race on mobile (PointerEvent, native click,
+      Leaflet contextmenu emulation). If two paths fire emitTap, the
+      second call's handleMapClick removes the just-placed marker via
+      lastMarkedRef.current.remove() and tries to re-add. If the second
+      call's lat/lng are bad (NaN, off-screen), the new marker is
+      invisible while the first pulse already played.
+    evidence_for:
+      - earlier mobile-double-fire was diagnosed; we just patched one
+        direction but unknown whether all paths are covered
+      - red pulse appearing once is consistent with first emitTap
+        firing successfully and second emitTap silently failing
+    falsify_by: >
+      Add a counter to handleMapClick. Tap the map once on a mobile
+      device. If the counter shows >1, double-fire is still happening.
+    fix_if_confirmed: H2_FIX
+
+  H3_marker_immediately_removed_by_re_render:
+    likelihood: medium
+    description: >
+      handleMapClick adds the marker imperatively via
+      L.marker(...).addTo(map). When CoffeeMap re-renders (e.g.,
+      MarkerGroup remount, filterSig change, MapViewUpdater fires), the
+      manually-added marker stays — Leaflet's container is not React-
+      managed for that marker. BUT: if MapContainer itself remounts
+      (key change, prop forcing rebuild), all manual markers are wiped.
+      A subtle dep change could trigger this on mobile-specific re-renders
+      (e.g., orientation change recalculating isMobileDevice → screensizeZoom).
+    evidence_for:
+      - screensizeZoom is computed per-render via isMobileDevice()
+      - MapSizeInvalidator runs on every visualViewport resize on iOS
+      - re-creating MapContainer would wipe markers but keep tile layer
+    falsify_by: >
+      Log map._loaded === true and the marker.options.icon.options.iconUrl
+      to console after addTo. If the same map instance survives across
+      taps, MapContainer is stable. If map._loaded becomes false or
+      changes identity, MapContainer remount is the cause.
+    fix_if_confirmed: H3_FIX
+
+  H4_invalid_coords_passed_to_marker:
+    likelihood: medium
+    description: >
+      On mobile, containerPointToLatLng can return NaN if
+      getBoundingClientRect is stale (iOS chrome shrinking) or if the
+      pointer event has clientX/Y === 0. L.marker([NaN, NaN]) creates
+      a marker but it's positioned at NaN — invisible and never paints,
+      even though .addTo(map) succeeds. The pulse uses the same coords
+      so it would also be invisible — but that contradicts the "pulse
+      appears" observation, weakening H4.
+      Counter-counter: maybe the pulse uses ll.lat/lng from the FIRST
+      call and the marker uses bad coords from a SECOND call.
+    evidence_for:
+      - coords originate from clientX-rect.left math; rect can be wrong
+      - isFiniteLatLng guard exists in emitTap, but only checks lat/lng
+        from clientToLatLng — it doesn't check for sentinel values
+        like 0,0 (which is technically "finite")
+    falsify_by: >
+      console.log lat/lng in handleMapClick. If lat/lng are NaN,
+      Infinity, or wildly wrong (e.g., -8e+10), this is it.
+    fix_if_confirmed: H4_FIX
+
+  H5_svg_icon_url_unreachable_on_mobile:
+    likelihood: medium
+    description: >
+      Next.js asset hashing can produce SVG URLs that resolve under one
+      origin but not another (e.g., served from /_next/static/... but
+      the mobile request lands on an alternate hostname or PWA cache
+      missing the asset). The marker img exists with src="..." but
+      requests 404 — the broken-image icon may be invisible (0×0 box)
+      while the surrounding leaflet-marker-icon container is empty.
+    evidence_for:
+      - svgHandler converts imports through getSvgSrc({src, default})
+      - PWA / service worker installation could cache a stale asset
+        manifest
+    falsify_by: >
+      Open mobile DevTools → Network tab, tap the map, check if the
+      currentLocationSmall.svg request fires and returns 200. Or
+      console.log(ICONS.CURRENT_LOCATION_SMALL.options.iconUrl) and
+      try fetching that URL directly on the device.
+    fix_if_confirmed: H5_FIX
+
+  H6_marker_anchor_offset_off_screen:
+    likelihood: low
+    description: >
+      L.Icon defaults iconAnchor to size/2 only via setIconStyles' fallback
+      math. If the createIcon helper omits iconAnchor AND something
+      else in our code overrides it, the pin could be anchored at
+      [0,0] (top-left of icon at the lat/lng) and visually offset 10 px
+      down-right from the pulse center. On a small mobile screen, "below
+      the finger" might land outside the visible viewport on a tap near
+      the screen edge.
+    evidence_for:
+      - createIcon does not pass iconAnchor explicitly
+      - the pulse uses iconAnchor: [12, 12] (centered)
+    falsify_by: >
+      In DevTools, inspect the dropped pin's <img>. Its computed
+      `margin-left` and `margin-top` should be -10px each. If they're 0,
+      Leaflet did not auto-center.
+    fix_if_confirmed: H6_FIX
+
+  H7_marker_z_index_below_tile_pane:
+    likelihood: low
+    description: >
+      preferCanvas: true on MapContainer renders vector layers in a
+      single canvas. If something forced our marker into the canvas
+      pane instead of the marker pane, it could draw under tiles.
+      Markers should always be DOM-based (not canvas), so this is
+      unlikely — but worth checking.
+    evidence_for:
+      - preferCanvas: true is set
+    falsify_by: >
+      DOM inspect — find the .leaflet-marker-pane and confirm the pin's
+      <img> is a child. If absent, marker landed in wrong pane.
+    fix_if_confirmed: H7_FIX
+
+  H8_marker_class_not_applied_then_invisible:
+    likelihood: low
+    description: >
+      handleMapClick has `if (marker._icon) marker._icon.classList.add(
+      'mdf-dropped-pin')`. If _icon is null at that moment (timing on
+      slow mobile devices where addTo is async), the class isn't added.
+      But .leaflet-bean-icon (the className passed to createIcon) sets
+      transparent background — not invisibility. So missing
+      .mdf-dropped-pin removes only the drop shadow, not the pin
+      itself. Weak hypothesis.
+    falsify_by: >
+      DOM inspect — look for class="leaflet-marker-icon
+      leaflet-bean-icon" with or without mdf-dropped-pin.
+    fix_if_confirmed: H8_FIX  # (low priority)
+
+  H9_pulse_div_covers_marker:
+    likelihood: low
+    description: >
+      The pulse marker is added AFTER the dropped pin. Same lat/lng,
+      same map pane (.leaflet-marker-pane). z-index is determined by
+      DOM order — pulse is later, so painted on top. The pulse div has
+      no background (only a bordered <span>), so the pin should show
+      through. UNLESS Leaflet's default marker icon container has any
+      background or the divIcon's outer div is sized to occlude.
+    falsify_by: >
+      Remove the pulse temporarily and tap. If the pin appears, pulse
+      occlusion is the cause.
+    fix_if_confirmed: H9_FIX
+
+  H10_pointer_capture_breaks_native_paint:
+    likelihood: low
+    description: >
+      setPointerCapture on the container can put some mobile webviews
+      into a state where subsequent paints are deferred until pointer
+      release. The marker and pulse are added during the pointerup
+      handler — which runs WHILE pointer is technically still captured
+      (we release after). Browser may not paint the new DOM nodes
+      until the next animation frame, and then a follow-up event
+      removes them before paint.
+    falsify_by: >
+      Move the safeReleasePointer call BEFORE handleMapClick so paint
+      is unblocked. If pin appears reliably, pointer capture deferral
+      was the cause.
+    fix_if_confirmed: H10_FIX
+
+  H11_react_strictmode_double_effect:
+    likelihood: very_low
+    description: >
+      React 19 StrictMode double-invokes effects in dev. If MapClickHandler's
+      effect cleanup runs between mount and the first tap, it could
+      remove our handlers and re-bind them — possibly missing the first
+      tap entirely. Symptom would be production-prod different though.
+    falsify_by: >
+      Reproduce in production build (next build && next start).
+    fix_if_confirmed: not_applicable_in_prod
+
+# ─── 3. Phased remediation ────────────────────────────────────────────
+# Phase order = decreasing-likelihood × low-blast-radius. Each phase has
+# a verifiable predicate so we know when to stop.
+
+phases:
+
+  P1_diagnostic_instrumentation:
+    goal: "Capture enough signal from a single mobile tap to identify cause"
+    estimate: "30 minutes"
+    blast_radius: "instrumentation only — temporary code, removable"
+    items:
+      - id: D-1
+        title: "Add transient debug overlay panel for mobile"
+        approach: >
+          Add a temporary <div id="mdf-tap-debug"> rendered in a corner
+          of the screen showing: (a) emitTap call count this session,
+          (b) last lat/lng, (c) last pointerType, (d) whether
+          envVariables.lastMarked is set, (e) marker._icon presence flag,
+          (f) document.querySelector('.mdf-dropped-pin') exists yes/no.
+          Update on every tap. Remove once root cause is fixed.
+        files_changed:
+          - src/app/components/compatibility/components/mapComponents.js (emitTap log)
+          - src/app/components/compatibility/components/map.js (handleMapClick log + DOM-existence probe at +50 ms)
+          - new file: src/app/components/compatibility/components/_debug/TapDebugOverlay.js
+        success_predicate: >
+          User taps once, looks at the debug panel, can answer:
+          "Was lat/lng finite? Did marker._icon exist? Is the DOM node
+          present 50ms after addTo?"
+        on_unfix: keep as opt-in via ?debug=tap query param
+
+      - id: D-2
+        title: "Log emitTap source path"
+        approach: >
+          Augment trackMapTap event with `via: 'pointerup' | 'leaflet_click' | 'contextmenu'`.
+          If a single tap produces two trackMapTap entries, double-fire is
+          confirmed (H2). Currently sessionStorage analytics record this
+          partially — make it explicit in the debug overlay.
+        files_changed:
+          - src/app/components/compatibility/components/mapComponents.js
+        success_predicate: >
+          Single tap shows exactly ONE trackMapTap event in the overlay's
+          tap history. Two = H2 confirmed.
+
+  P2_high_likelihood_fixes:
+    goal: "Apply fixes for H1, H2 — the two most-likely causes"
+    estimate: "2 hours"
+    items:
+      - id: F-1
+        gap: H1
+        title: "Migrate drop-shadow to a wrapper div, not the <img>"
+        approach: >
+          Mobile Safari is known to mishandle filter:drop-shadow on
+          translate3d-positioned <img>. Move the visual lift from the
+          icon's CSS filter to a CSS box-shadow + outline on the icon's
+          parent <div class="leaflet-marker-icon">. Specifically:
+            - drop the existing .mdf-dropped-pin filter rule
+            - add a 1px white outline + soft 0 1px 3px rgba(0,0,0,0.35)
+              box-shadow to .leaflet-marker-icon.mdf-dropped-pin
+          Box-shadow on the bounding box loses the silhouette shape but
+          works reliably on every mobile browser. For SVG-shape lift,
+          alternatively bake the shadow into the SVG file itself
+          (currentLocationSmall.svg can ship with a feDropShadow filter).
+        files_changed:
+          - src/app/components/compatibility/App.css
+          - optionally: src/app/images/currentLocationSmall.svg (bake-in)
+        verification:
+          - on Mobile Safari, dropped pin is clearly visible after tap
+          - on Mobile Chrome, dropped pin still has visible shadow
+          - desktop browsers unchanged
+        verification_test: >
+          Add a vitest case that asserts
+          .mdf-dropped-pin's computed style does NOT include `filter:`
+          (use jsdom getComputedStyle if available, or assert the rule
+          shape directly).
+
+      - id: F-2
+        gap: H2
+        title: "Per-gesture dedup token, not just timestamp"
+        approach: >
+          Replace the timestamp-based dedup (lastTapFiredAt + 1000 ms)
+          with a per-gesture token. On every pointerdown, increment a
+          gestureId counter. Both onPointerUp and handleLeafletClick
+          stamp the gesture they belong to before calling emitTap; if
+          the gesture is already marked emitted, skip. This is bulletproof
+          even if a pointerdown→pointerup→click chain fires in any order
+          and at any speed (e.g., very fast double-tap).
+          Also: idempotent guard inside handleMapClick — if the
+          requested lat/lng equals lastMarkedRef.current.getLatLng()
+          within 1e-9, skip remove+re-add. Cheapest defence.
+        files_changed:
+          - src/app/components/compatibility/components/mapComponents.js
+            (createTapTracker — replace lastTapFiredAt with gestureEmitted set)
+          - src/app/components/compatibility/components/map.js (idempotent
+            handleMapClick)
+        verification_test: >
+          Existing test "does not double-fire emitTap when native click
+          precedes pointerup" stays green. Add reverse: pointerup
+          followed by click within same gesture → onMapClick called
+          exactly once. Add: rapid pointerdown→pointerup→pointerdown
+          (double tap) → both taps placed if outside dedup window.
+
+      - id: F-3
+        gap: H1 / H2 (defensive)
+        title: "Decouple pulse from marker placement"
+        approach: >
+          Today the same handleMapClick does BOTH (a) drop the
+          pin and (b) drop the pulse halo. If anything in (a) silently
+          fails, (b) still runs — that is exactly the visible symptom.
+          Split the responsibilities: make pulse fire only on the
+          mdf:marker-placed CustomEvent (a separate effect that listens
+          for it). That way the pulse cannot appear unless the marker
+          actually got placed. As a side benefit, the pulse becomes
+          observable from anywhere.
+        files_changed:
+          - src/app/components/compatibility/components/map.js (split)
+          - tests: assert pulse fires iff mdf:marker-placed dispatched
+        risk: >
+          The pulse currently fires from the same scope that controls
+          marker creation, so timing is rock-solid synchronous. After
+          decoupling, a 0–16ms delay is possible. Acceptable: the pulse
+          is decorative, not load-bearing.
+
+  P3_medium_likelihood_fixes:
+    goal: "Address H3, H4, H5"
+    estimate: "3 hours"
+    items:
+      - id: F-4
+        gap: H3
+        title: "Stabilize MapContainer key — prevent remount"
+        approach: >
+          Audit every prop passed to <MapContainer>. Confirm none change
+          across re-renders that would force re-creation. Specifically,
+          inline-allocated objects and arrays in props (style={{...}})
+          create new identity each render and could trigger work in
+          react-leaflet's reconciliation. Hoist style out, memoize the
+          center/zoom/maxZoom values with useMemo.
+        files_changed:
+          - src/app/components/compatibility/components/map.js
+        verification: >
+          Add a useEffect logging map._leaflet_id when the map is
+          available. Across multiple taps and orientation changes, the
+          ID must NOT change. If it does, MapContainer is remounting.
+
+      - id: F-5
+        gap: H4
+        title: "Tighten coord boundary guard"
+        approach: >
+          isFiniteLatLng currently accepts (0, 0) — a sentinel value
+          that genuinely indicates broken input on this app's domain
+          (Brazil only, lat ∈ [-35, 5], lng ∈ [-75, -28]). Add a
+          domain check: reject any lat/lng that is not within Brazil's
+          rough bbox. Better: reject coords that round-trip through
+          clientToLatLng to within < 0.5 px of clientX/Y (a sanity
+          test for the reverse projection).
+          Also: on every tap, snapshot rect = container.getBoundingClientRect()
+          and assert rect.width > 0 && rect.height > 0 — if not, the
+          map has zero pixel size and projection is meaningless.
+        files_changed:
+          - src/app/components/compatibility/components/mapComponents.js
+        verification_test: >
+          Unit test: clientToLatLng called when rect is 0×0 returns
+          coords flagged as invalid; emitTap skips with reason
+          'rect_collapsed'.
+
+      - id: F-6
+        gap: H5
+        title: "Service-worker / asset cache audit for SVG"
+        approach: >
+          Verify that /public/.../currentLocationSmall.svg (or wherever
+          Next places it post-build) is reachable on the user's mobile
+          device. Steps:
+            1. next build && next export, list the produced asset path
+            2. on the user's device, visit that path directly — should
+               render the SVG
+            3. if missing, check next.config.js for asset path / basePath
+               and any service-worker registration that might be caching
+               an outdated manifest
+          Defensive fallback: in mapConstants, swap the SVG import for
+          a tiny inline data URI (data:image/svg+xml;base64,...) for
+          CURRENT_LOCATION_SMALL specifically. Inline data URIs cannot
+          404, so this hypothesis becomes untestable but also impossible.
+        files_changed:
+          - src/app/components/compatibility/components/mapConstants.js
+            (optionally inline the SVG data URI)
+        verification:
+          - Mobile DevTools Network shows the SVG returning 200, OR
+          - the SVG is inlined and never fetched
+
+  P4_low_likelihood_fixes:
+    goal: "Address H6–H10 if P2 + P3 didn't close the bug"
+    estimate: "2 hours"
+    items:
+      - id: F-7
+        gap: H6
+        title: "Explicit iconAnchor on every L.Icon"
+        approach: >
+          Pass iconAnchor: [iconSize[0]/2, iconSize[1]/2] explicitly in
+          createIcon. Removes any reliance on Leaflet's default-derivation
+          path. Also pass popupAnchor for symmetry.
+        files_changed:
+          - src/app/components/compatibility/components/mapConstants.js
+
+      - id: F-8
+        gap: H7
+        title: "Verify marker pane allocation"
+        approach: >
+          Assert in handleMapClick: marker.getPane() === 'markerPane'.
+          If not, force pane: 'markerPane' in the L.marker options.
+          (Should be the default; this is a belt-and-braces check.)
+        files_changed:
+          - src/app/components/compatibility/components/map.js
+
+      - id: F-9
+        gap: H8
+        title: "Defer mdf-dropped-pin class via requestAnimationFrame"
+        approach: >
+          Replace the synchronous `if (marker._icon)` check with:
+            const apply = () => { if (marker._icon) marker._icon.classList.add('mdf-dropped-pin'); };
+            apply(); requestAnimationFrame(apply);
+          Catches the rare case where _icon is created on the next frame.
+        files_changed:
+          - src/app/components/compatibility/components/map.js
+
+      - id: F-10
+        gap: H9
+        title: "Order pulse below marker in DOM"
+        approach: >
+          Add the pulse to the .leaflet-overlay-pane (below
+          .leaflet-marker-pane) by passing pane: 'overlayPane' on the
+          pulse marker. Marker stays in markerPane → always above the
+          pulse, never occluded.
+        files_changed:
+          - src/app/components/compatibility/components/map.js
+
+      - id: F-11
+        gap: H10
+        title: "Release pointer capture before drop-pin work"
+        approach: >
+          In onPointerUp, move safeReleasePointer to immediately after
+          the gesture-validation early-returns, BEFORE emitTap is
+          called. Allows the browser to commit any deferred paint
+          before our DOM mutations land.
+        files_changed:
+          - src/app/components/compatibility/components/mapComponents.js
+        verification_test: >
+          existing tests stay green; add a test asserting
+          safeReleasePointer is called before onMapClick when a tap
+          succeeds.
+
+# ─── 4. Verification matrix ───────────────────────────────────────────
+verification:
+  desktop:
+    expectation: zero regressions; existing 40 specs in
+      test/mapClickHandler.test.js + test/tapVisibility.test.js stay green.
+  mobile_devices:
+    primary:
+      - device: Samsung Galaxy A23
+        browser: Chrome (latest)
+        steps:
+          - tap empty map area → blue pin visible at finger location
+          - tap → "Confirmar ponto" → submission proceeds
+      - device: Samsung Galaxy A54
+        browser: Chrome (latest)
+        steps: same as above
+      - device: iPhone (latest iOS Safari)
+        steps: same as above
+      - device: iPhone (PWA / "Add to Home Screen" mode)
+        steps: same as above + verify SVG asset reachable in PWA cache
+    secondary:
+      - device: iPad
+      - device: touchscreen Windows laptop running Edge
+      - device: low-end Android (Webview-based browser, e.g., MIUI default)
+  pass_predicate: >
+    For every primary device, after a single tap on map background:
+      1. red pulse appears at tap location
+      2. blue dropped pin (CURRENT_LOCATION_SMALL) is visible after pulse
+         completes (~700 ms) and remains visible until cleared
+      3. the PinReadout pill shows the tapped lat/lng
+      4. the Confirmar ponto button is enabled and submits with those
+         coords (test publish in dev to a dummy sheet)
+      5. zoom +/-, layer switcher, and search controls remain interactive
+
+# ─── 5. Backlog summary ───────────────────────────────────────────────
+backlog_summary:
+  by_phase:
+    P1_diagnostic_instrumentation: [D-1, D-2]
+    P2_high_likelihood_fixes:      [F-1, F-2, F-3]
+    P3_medium_likelihood_fixes:    [F-4, F-5, F-6]
+    P4_low_likelihood_fixes:       [F-7, F-8, F-9, F-10, F-11]
+  by_status:
+    open: 1     # F-3 (skipped by design — see skipped_with_reason)
+    in_progress: 0
+    in_review: 12  # D-1, D-2, F-1, F-2, F-4, F-5, F-6, F-7, F-8, F-9, F-10, F-11
+    done: 0
+  shipped_in_this_pass:
+    - "F-1: drop-shadow on <img> → outline + box-shadow on wrapper (App.css)"
+    - "F-2: gesture-token dedup at emitTap + idempotent guard in handleMapClick"
+    - "F-4: hoisted MAP_CONTAINER_STYLE constant + useMemo for screensizeZoom"
+    - "F-5: clientToLatLng returns null on collapsed rect; every call site skips with reason='rect_collapsed'"
+    - "F-6: CURRENT_LOCATION_SMALL is now an inline data:image/svg+xml URI — bundled SVG import unused, asset 404 made impossible"
+    - "F-7: createIcon now passes iconAnchor + popupAnchor explicitly (mapConstants.js)"
+    - "F-8: dropped pin pinned to pane: 'markerPane'"
+    - "F-9: requestAnimationFrame retry on .mdf-dropped-pin classList.add"
+    - "F-10: pulse halo lives in pane: 'shadowPane' (z-index 500) — pin always painted above"
+    - "F-11: already in effect — safeReleasePointer fires before emitTap in onPointerUp"
+    - "D-1 + D-2: opt-in TapDebugOverlay component, mounted in App.js, activates only when ?debug=tap in URL — shows tap count, lat/lng, pointerType, lastMarked-set state, and pin-in-DOM probe at +50ms"
+  skipped_with_reason:
+    - "F-3: decouple pulse from marker — would only re-order failure mode, not fix root cause; redundant after F-2 + F-7 + F-8 + F-9 + F-10 collectively rule out marker-creation failure as the cause."
+  tests_added:
+    - "test/mapClickHandler.test.js: 'skips tap when container rect is collapsed (0×0)' — F-5"
+    - "test/mapClickHandler.test.js: 'does not double-fire when pointerup arrives after Leaflet click in same gesture' — F-2"
+    - "test/mapClickHandler.test.js: 'allows a fresh tap after a new pointerdown resets the gesture token' — F-2"
+  test_run:
+    suite: "vitest run test/mapClickHandler.test.js test/tapVisibility.test.js"
+    result: "43 passed (43) — duration 5.31s (after F-6 + P1)"
+  exit_criteria: >
+    All hypotheses either CONFIRMED-and-fixed or ELIMINATED by
+    diagnostic. The verification matrix passes on all primary devices.
+    Append a changelog.yaml entry.
+
+# ─── 6. Order-of-operations for the next session ──────────────────────
+next_action: >
+  All actionable items shipped (12 in_review). Only F-3 remains
+  deliberately skipped — its rationale is now redundant given F-2 + F-7
+  + F-8 + F-9 + F-10 collectively eliminate marker-creation failure as
+  a possible cause.
+
+  Next:
+    1. User runs the app on a previously-broken mobile device
+       (Samsung A54, iPhone) and re-tests the tap → blue pin → Confirmar
+       ponto flow per the §4 verification matrix.
+    2. If the pin still does NOT appear, the user should append
+       ?debug=tap to the URL and tap the map once. The TapDebugOverlay
+       (top-right corner) will display:
+         • count: how many emitTap calls fired this session
+             (>1 for a single tap = H2 double-fire, but F-2 should prevent this)
+         • lat/lng: last placed coords (NaN/✗ = H4 invalid coords)
+         • lastMarked: 'true' = envVariables.lastMarked is set ⇒
+             handleMapClick completed; submission should work
+         • pin in DOM: 'true' = .mdf-dropped-pin element exists 50ms
+             after the event; 'false' = H1/H8/H9 (rendering/pane bug)
+       The four datapoints together falsify or confirm every hypothesis
+       in §2 in a single device roundtrip.
+    3. If overlay shows pin-in-DOM=true but user still doesn't see it:
+       the bug is purely visual — investigate iOS-specific CSS
+       compositor issues, opacity, transform-origin, etc.
+    4. Once the pin appears correctly on every primary device, flip all
+       in_review items to done and append a changelog.yaml entry
+       summarizing the F-1..F-11 + D-1/D-2 set + the prior MapContainer
+       tap={false} + isMapBackground leaflet-control fix.
+
+# ─── 7. Open questions to ask user before starting ────────────────────
+clarifying_questions:
+  - "Which exact mobile device + browser version still shows the bug
+     after the latest fix? (e.g., Samsung A54 Chrome 132, iPhone 13 iOS 17.4)"
+  - "When you tap the map, do you see the blue pin at any point — even
+     for one frame — or is it never visible?"
+  - "After the red pulse completes, does the PinReadout pill (showing
+     lat,lng coordinates) appear at the bottom of the map?"
+  - "Is the 'Confirmar ponto' button enabled / does its label change
+     after you tap, even if the pin is not visible?"
+  - "Does pressing 'Confirmar ponto' submit a point, or does it fail
+     with the GPS-fallback prompt 'Você ainda não marcou um ponto'?"
+  - "Can you reproduce in a private/incognito mobile window? (rules out
+     stale service-worker cache from PWA install)"
