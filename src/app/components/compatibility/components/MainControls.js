@@ -70,7 +70,7 @@ const MainControls = ({
               <Checkbox
                 checked={telefoneFilterLocal}
                 onChange={onTelefoneFilterChange}
-                inputProps={{ 'aria-label': 'controlled' }}
+                slotProps={{ input: { 'aria-label': 'Filtrar por telefone' } }}
               />
               <span>Telefone</span>
             </article>
@@ -79,7 +79,7 @@ const MainControls = ({
               <Checkbox
                 checked={ultimoAnoFilterLocal}
                 onChange={onUltimoAnoFilterChange}
-                inputProps={{ 'aria-label': 'controlled' }}
+                slotProps={{ input: { 'aria-label': 'Filtrar pelo último ano' } }}
               />
               <span>Esse ano</span>
             </article>

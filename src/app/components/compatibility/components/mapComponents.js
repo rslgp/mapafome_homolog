@@ -149,7 +149,14 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
         // contextmenu handler to suppress the duplicate Android-Chrome
         // long-press event (F8 in map_click_compatibility.yaml).
         let lastLongPressFiredAt = 0;
+        // Timestamp of the most recent successful tap from the PointerEvent
+        // path. Used to dedupe Leaflet's native click event, which we keep
+        // as a fallback for devices where PointerEvents do not fire
+        // reliably but the native click DOES (the old rslgp/mapafome code
+        // path that worked on Samsung A23 and most desktops).
+        let lastTapFiredAt = 0;
         const LONG_PRESS_DEDUP_MS = 1000;
+        const NATIVE_CLICK_DEDUP_MS = 1000;
 
         // Walk up the DOM to see if the target is the bare map background.
         // Leaflet attaches `.leaflet-interactive` to markers/clusters/
@@ -242,6 +249,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             }
             const ll = toLatLng(e.clientX, e.clientY);
             onMapClick(map, ll.lat, ll.lng);
+            lastTapFiredAt = Date.now();
             trackMapTap({ lat: ll.lat, lng: ll.lng, pointerType, durationMs: dt });
         };
 
@@ -259,6 +267,37 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
         container.addEventListener('pointermove', onPointerMove);
         container.addEventListener('pointerup', onPointerUp);
         container.addEventListener('pointercancel', onPointerCancel);
+
+        // Leaflet native click — kept as a fallback for devices where the
+        // PointerEvent path does not fire reliably (e.g. some webviews,
+        // Samsung A23 was the canonical "click works, pointerup doesn't"
+        // case before the rewrite). This mirrors rslgp/mapafome's original
+        // whenReady → map.on('click') flow.
+        //
+        // Dedup: if our PointerEvent path already fired onMapClick within
+        // NATIVE_CLICK_DEDUP_MS (1 s), Leaflet's click is the duplicate
+        // and we drop it. Otherwise we trust e.latlng (Leaflet's own
+        // resolution from the native click event) and forward it.
+        const handleLeafletClick = (e) => {
+            if (Date.now() - lastTapFiredAt < NATIVE_CLICK_DEDUP_MS) return;
+            if (Date.now() - lastLongPressFiredAt < LONG_PRESS_DEDUP_MS) return;
+            const oe = e.originalEvent;
+            // Skip clicks on interactive markers/clusters/popups — Leaflet
+            // handles those itself (and they would not have a target on the
+            // bare container anyway).
+            if (oe && oe.target && !isMapBackground(oe.target)) return;
+            const ll = (oe && typeof oe.clientX === 'number')
+                ? toLatLng(oe.clientX, oe.clientY)
+                : e.latlng;
+            onMapClick(map, ll.lat, ll.lng);
+            trackMapTap({
+                lat: ll.lat,
+                lng: ll.lng,
+                pointerType: oe?.pointerType || 'leaflet_click_fallback',
+                durationMs: 0,
+            });
+        };
+        map.on('click', handleLeafletClick);
 
         // Desktop right-click still goes through Leaflet's contextmenu event.
         // Android Chrome ALSO fires contextmenu on long-press (which our
@@ -288,6 +327,7 @@ export const MapClickHandler = ({ onMapClick, onMapLongPress }) => {
             container.removeEventListener('pointermove', onPointerMove);
             container.removeEventListener('pointerup', onPointerUp);
             container.removeEventListener('pointercancel', onPointerCancel);
+            map.off('click', handleLeafletClick);
             map.off('contextmenu', handleContextmenu);
         };
     }, [map, onMapClick, onMapLongPress]);
