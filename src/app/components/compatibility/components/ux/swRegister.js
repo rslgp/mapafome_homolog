@@ -37,12 +37,16 @@ function showUpdateToast(reg) {
     'box-shadow:0 8px 24px rgba(0,0,0,0.18)',
     'font:500 14px/1.4 system-ui, sans-serif',
   ].join(';');
+  // Force-update mode (per user requirement 2026-04-30): the dismiss
+  // button is removed so users cannot stay on a stale build. The toast
+  // also auto-accepts after a 30-second grace period — long enough to
+  // finish a sentence in the report sheet, short enough that a user
+  // who walks away returns to the new build.
   el.innerHTML = `
     <span>Nova versão disponível.</span>
     <button type="button" style="appearance:none;border:none;background:#D64545;color:#FFF;padding:6px 12px;border-radius:999px;font:600 13px/1 system-ui,sans-serif;cursor:pointer;min-height:32px">Recarregar</button>
-    <button type="button" aria-label="Adiar" style="appearance:none;border:none;background:transparent;color:rgba(255,255,255,0.6);padding:6px 8px;font:400 18px/1 system-ui,sans-serif;cursor:pointer;min-height:32px">×</button>
   `;
-  const [reloadBtn, dismissBtn] = el.querySelectorAll('button');
+  const reloadBtn = el.querySelector('button');
   let reloadingOnce = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     // Fired once SKIP_WAITING activates the new worker — reload to pick up
@@ -51,11 +55,14 @@ function showUpdateToast(reg) {
     reloadingOnce = true;
     window.location.reload();
   });
-  reloadBtn.addEventListener('click', () => {
+  const adoptUpdate = () => {
     if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-    el.remove();
-  });
-  dismissBtn.addEventListener('click', () => el.remove());
+  };
+  reloadBtn.addEventListener('click', adoptUpdate);
+  // Auto-accept after 30s of inactivity — user has had time to see the
+  // toast and choose to tap. After that the new build is forced in.
+  const FORCE_RELOAD_MS = 30000;
+  setTimeout(adoptUpdate, FORCE_RELOAD_MS);
   document.body.appendChild(el);
 }
 

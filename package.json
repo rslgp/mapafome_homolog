@@ -5,6 +5,7 @@
   "homepage": "https://mapafome.com.br",
   "scripts": {
     "dev": "next dev --webpack",
+    "prebuild": "node scripts/stamp-sw-version.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",

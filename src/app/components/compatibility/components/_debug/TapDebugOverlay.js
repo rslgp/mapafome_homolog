@@ -46,6 +46,18 @@ const TapDebugOverlay = () => {
         droppedPinInDom: null,
         source: null,
     });
+    // Build identifier from /version.json (stamped by scripts/stamp-sw-version.mjs).
+    // Lets the user confirm during device QA which build is loaded — critical
+    // for the Samsung A54/S21 FE force-update scenario where a stale cached
+    // shell could mask whether F-12 actually shipped to the device.
+    const [buildVersion, setBuildVersion] = useState(null);
+    useEffect(() => {
+        if (!enabled || typeof fetch !== 'function') return;
+        fetch('/version.json', { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j) => { if (j && j.version) setBuildVersion(j.version); })
+            .catch(() => { /* dev mode / pre-stamp — fine */ });
+    }, [enabled]);
 
     useEffect(() => {
         if (!enabled || typeof document === 'undefined') return undefined;
@@ -96,6 +108,7 @@ const TapDebugOverlay = () => {
             }}
         >
             <div style={{ fontWeight: 700, marginBottom: 2 }}>TAP DEBUG</div>
+            <div style={{ opacity: 0.7, marginBottom: 4 }}>v: {fmt(buildVersion)}</div>
             <div>count: {stats.count}</div>
             <div>lat: {finite(stats.lat)}</div>
             <div>lng: {finite(stats.lng)}</div>
