@@ -51,7 +51,7 @@ const LEGEND = [
 
 const ACKNOWLEDGEMENTS = [
   'Em agradecimento à formação humana, moral e ética que recebi dos meus professores de Filosofia e Sociologia do ensino médio.',
-  <>Por terem passado o premiado documentário curta de 13 minutos do brasileiro Jorge Furtado, <a target="_blank" rel="noreferrer" href="https://www.youtube.com/watch?v=JcP9v5mZT9w">Ilha das Flores</a>.</>,
+  <>Por terem passado o premiado documentário curta de 13 minutos do brasileiro Jorge Furtado, <a target="_blank" rel="noreferrer" href="https://www.youtube.com/watch?v=h30BO_6kFNM">Ilha das Flores</a>. <a target="_blank" rel="noreferrer" href="https://drive.google.com/file/d/1YmaBTFgVV67k44l5EyxjEXSNTVb5ATjS/view?usp=drive_link">backup</a></>,
   'Após 10 anos de ter assistido, aprendido e internalizado o nosso papel como sociedade, tive a oportunidade de agir usando conhecimento e tecnologias acumulados.',
   'E a base para criação de projetos (pesquisa de campo e Project Manager) obtida na disciplina de Projetão CIn UFPE.',
   'Resultou em obter as ferramentas necessárias para agir em favor das pessoas que passam fome.',
@@ -133,7 +133,7 @@ const InfoPanel = ({ rowCount }) => {
           No mapa, clique em uma bolinha para saber como ajudar. Você pode se incluir
           ou incluir outra pessoa: selecione a situação e confirme o local.{' '}
           (Mais informações <a target="_blank" rel="noreferrer" href="https://g1.globo.com/pe/pernambuco/noticia/2022/02/10/site-criado-por-estudante-da-ufpe-aproxima-pessoas-que-estao-passando-fome-e-doadores-de-comida.ghtml">na matéria da Globo</a>{' '}
-          e no <a target="_blank" rel="noreferrer" href="https://globoplay.globo.com/v/10350537/">Jornal Hoje em rede nacional</a>.)
+          e na Globo no <a target="_blank" rel="noreferrer" href="https://globoplay.globo.com/v/10350537/">Jornal Hoje em rede nacional</a>, confira o jogo <a target="_blank" rel="noreferrer" href="https://mapafome.com.br/solone/">SOLONE</a> para divulgação, marketing e engajamento.)
         </p>
 
         <ul className="ip-legend" aria-label="Legenda das cores no mapa">

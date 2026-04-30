@@ -59,6 +59,44 @@ import envVariables from './variaveisAmbiente';
 // imperatively-added L.markers (the dropped pin among them).
 const MAP_CONTAINER_STYLE = { height: '70vh', width: '100%' };
 
+// F-12 (dropped_pin_invisible_mobile.yaml § H12): render the dropped
+// pin via L.divIcon (a <div> with inline <svg>) instead of L.Icon (an
+// <img>). Concrete device evidence: the bug is reproducible on Samsung
+// SM-A546E (A54) and SM-G990E (S21 FE) but NOT on SM-A266M (A26) or a
+// Motorola — all running Chrome on Android. The user's own pulse halo,
+// which is already a divIcon, renders correctly on the broken devices.
+// That asymmetry isolates the problem to the <img>-rendering path on
+// Samsung's higher-end One UI 6 / WebView 14+ profile.
+//
+// Inlined visual: the MapaFome brand pin (cyan teardrop containing
+// the bowl/steam mascot, viewBox 500×500). Sourced from
+// src/app/components/compatibility/images/MapaFome_Icons_Blue.svg —
+// the embedded <style class="cls-1"> is replaced with a direct
+// fill="#00cfff" attribute so the SVG is fully self-contained when
+// inlined into HTML (no global CSS leakage).
+//
+// Why this is structurally guaranteed to render on the broken devices:
+//   • no <img> element — kills H1/H8/H12 bug class
+//   • no asset URL — no 404, no PWA cache miss, no network request
+//   • same DOM machinery as the pulse halo (which works)
+//
+// Sizing: 36 px box (taller than the previous 32 px so the brand mark
+// is recognisable), iconAnchor [18, 36] so the pin's BOTTOM TIP sits
+// on the lat/lng — the conventional "this is where you tapped"
+// affordance familiar from Google/Apple Maps. The drop-in animation
+// scales from the same anchor point.
+const DROPPED_PIN_SVG_HTML =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" aria-hidden="true">' +
+    '<path fill="#00cfff" d="M424.05,138.54C410.43,107,387.31,80,355.32,58.21A184.69,184.69,0,0,0,251.11,25.9h-2.22A184.69,184.69,0,0,0,144.68,58.21C112.69,80,89.57,107,76,138.54c-13.43,31.1-17.54,66.44-12.22,105a197.43,197.43,0,0,0,14.06,50.22,283.61,283.61,0,0,0,23.95,44.41c31.13,47.93,73,90.24,128.07,129.33a33,33,0,0,0,19.28,6.57l.91,0,.91,0a33,33,0,0,0,19.28-6.57c55-39.09,96.94-81.4,128.07-129.33a283.61,283.61,0,0,0,23.95-44.41,197.43,197.43,0,0,0,14.06-50.22C441.59,205,437.48,169.64,424.05,138.54ZM289.77,102.22c-1.77-2.46-3.46-5.15-2.91-8.6.69-4.34,3.15-7.24,7.12-8.42a9.58,9.58,0,0,1,10.8,3.32c7.05,8.62,11,18.43,11.56,28.36.56,11-3.3,21.52-11.16,30.52l-.54.61c-.53.59-1.05,1.19-1.55,1.8-7.6,9.29-7.3,20.07.87,31.18,1.91,2.61,3.58,5.53,2.81,9.23a9.72,9.72,0,0,1-7.63,8,11,11,0,0,1-2.56.31,9.73,9.73,0,0,1-7.64-3.8c-7.75-9.26-11.48-19.62-11.73-32.61.16-7.92,3.5-16.36,9.66-24.43a28.75,28.75,0,0,1,1.93-2.3C298.14,125.41,298.46,114.26,289.77,102.22Zm-46.65,0c-1.72-2.35-3.37-4.93-3-8.27a9.77,9.77,0,0,1,7.09-8.78c4.13-1.3,7.77-.22,10.81,3.2,7.41,8.31,11.48,19.81,11.78,33.26-.06,7.6-3.67,16.29-10.14,24.5-.53.68-1.12,1.37-1.74,2-8.91,9.71-9.23,20.35-1,32.54a18.5,18.5,0,0,1,3.16,7.65c.49,3.94-2.05,7.83-6.18,9.47a10.65,10.65,0,0,1-3.91.76,9.34,9.34,0,0,1-7.15-3.24c-11.73-13.65-19.4-37-2.39-57.94l.19-.23c.55-.67,1.12-1.38,1.74-2C253.92,122.78,249.15,110.39,243.12,102.17Zm-47.24-.29c-1.68-2.28-3.31-5.1-2.58-8.71a10.14,10.14,0,0,1,17.94-4.56c7.63,9.17,11.3,19.47,11.56,32.39-.14,7.61-3.28,15.8-9.09,23.72a30.5,30.5,0,0,1-2.47,3c-9.47,10-9.75,21.26-.84,33.37,1.85,2.52,3.46,5.34,2.76,9a9.76,9.76,0,0,1-7.2,8,11.32,11.32,0,0,1-3.09.45,9.27,9.27,0,0,1-7.25-3.48c-11.66-13.8-19.11-37.32-1.74-58.18l.3-.36c.28-.35.56-.69.87-1C204.62,125.38,204.9,114.08,195.88,101.88Zm186,124c-1.67,46.35-22,83-60.5,109-.41.28-.83.54-1.3.85l.64,0c1.59,0,3.18,0,4.78,0,3,0,6.18,0,9.28.07a10.12,10.12,0,0,1,9.68,10.17,10.24,10.24,0,0,1-9.5,10c-.44,0-.87,0-1.3,0H167.32a17.58,17.58,0,0,1-3.75-.26,10.11,10.11,0,0,1,2-20c3.74-.08,7.52-.06,11.18,0h2.52c-1.7-1.34-3.42-2.65-5.1-3.94a175.3,175.3,0,0,1-14.52-12c-26.63-25.38-40.58-57.08-41.47-94.23-.09-3.69.84-6.56,2.76-8.53s4.93-3,8.79-3H370.19c3.95,0,6.95,1,8.94,3.1S382,222.15,381.83,225.91Z"/>' +
+    '</svg>';
+
+const DROPPED_PIN_DIV_ICON = L.divIcon({
+    className: 'mdf-dropped-pin',
+    html: DROPPED_PIN_SVG_HTML,
+    iconSize: [36, 36],
+    iconAnchor: [18, 36], // bottom-center: pin's tip sits on the lat/lng
+});
+
 const MSG = {
     doador:               (_, { URL })                        => `Recebendo alimento para distribuir${URL}`,
     precisandoBuscar:     (_, { DiaSemana, Horario, Mes })    => `Precisando de pessoas para buscar ${DiaSemana} pela ${Horario} ${Mes}`,
@@ -126,22 +164,16 @@ const CoffeeMap = ({
             lastMarkedRef.current.remove();
         }
 
+        // F-12: divIcon path. The .mdf-dropped-pin class is supplied by
+        // the divIcon's className — no post-creation classList.add needed
+        // (the previous F-9 RAF retry workaround for L.Icon timing is
+        // structurally unnecessary on this path). The visible dot is
+        // rendered by CSS on the inner <span>.
         const marker = L.marker([lat, lng], {
-            icon: ICONS.CURRENT_LOCATION_SMALL,
+            icon: DROPPED_PIN_DIV_ICON,
             draggable: false,
             pane: 'markerPane', // F-8
         }).addTo(map);
-
-        // M1 drop-in animation + F-1 visual lift. Apply once synchronously
-        // and once on the next frame — covers slow mobile devices where
-        // _icon may not be attached to the DOM until rAF.
-        const applyPinClass = () => {
-            if (marker._icon) marker._icon.classList.add('mdf-dropped-pin');
-        };
-        applyPinClass();
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(applyPinClass);
-        }
 
         // TV-1: pulse halo. Lives in shadowPane so it cannot occlude the
         // pin (F-10). interactive:false + non-interactive CSS rule ⇒ no

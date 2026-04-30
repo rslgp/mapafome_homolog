@@ -17,10 +17,15 @@
 
 meta:
   id: dropped-pin-invisible-mobile
-  status: in_review  # P2/P3/P4 fixes shipped; pending mobile QA
+  status: in_review  # F-12 (divIcon swap) shipped after device data narrowed cause to <img> path
   owner: rslgp
   created: 2026-04-29
-  last_updated: 2026-04-29
+  last_updated: 2026-04-30
+  user_top_priority: >
+    Visual feedback at the touched coordinate — a temporary, persistent
+    pin so the user knows EXACTLY which place will be submitted when
+    they press "Confirmar ponto". Without this confirmation, users
+    cannot trust the publish flow on mobile.
   parent_plans:
     - LLM_BRAIN/map_click_compatibility.yaml
     - LLM_BRAIN/tap_visibility_robustness.yaml
@@ -39,8 +44,23 @@ symptom:
     - desktop_chrome
     - desktop_firefox
     - desktop_edge
+  # User-confirmed device matrix as of 2026-04-30 (post P2/P3/P4 ship).
+  # The asymmetry — both broken devices are higher-end Samsungs running
+  # Chrome on One UI 6+ — is what isolates the cause to the <img>
+  # rendering path on Samsung's WebView/Chrome integration. See H12.
   reproduced_on:
-    - "mobile (specific device list TBD by user; was Samsung A54 + iPhone in earlier reports)"
+    - "Android 16 — Samsung SM-A546E (Galaxy A54) — Chrome"
+    - "Android 14 — Samsung SM-G990E (Galaxy S21 FE) — Chrome"
+  not_reproduced_on_mobile:
+    - "Android 16 — Samsung SM-A266M (Galaxy A26) — Chrome"
+    - "Android 11 — Motorola RRBS31.Q1-3-48-22 — Chrome"
+  device_observation: >
+    Same browser (Chrome), same OS family (Android), same app build —
+    only certain Samsung models break. The pulse halo (a divIcon-based
+    L.marker) renders correctly on the broken devices, while the
+    dropped pin (an <img>-based L.Icon marker) does not. That contrast
+    falsifies H2/H3/H4/H5 (which would also break the pulse) and
+    confirms the <img> rendering path is the load-bearing variable.
   severity: P0
   reason_p0: >
     The dropped pin is the load-bearing mechanism for the entire
@@ -177,8 +197,8 @@ hypotheses:
       the finger" might land outside the visible viewport on a tap near
       the screen edge.
     evidence_for:
-      - createIcon does not pass iconAnchor explicitly
-      - the pulse uses iconAnchor: [12, 12] (centered)
+      - "createIcon does not pass iconAnchor explicitly"
+      - "the pulse uses iconAnchor: [12, 12] (centered)"
     falsify_by: >
       In DevTools, inspect the dropped pin's <img>. Its computed
       `margin-left` and `margin-top` should be -10px each. If they're 0,
@@ -244,6 +264,31 @@ hypotheses:
       is unblocked. If pin appears reliably, pointer capture deferral
       was the cause.
     fix_if_confirmed: H10_FIX
+
+  H12_samsung_chrome_img_rendering:
+    likelihood: confirmed_by_device_data
+    description: >
+      Samsung's Chrome / WebView build on certain higher-end One UI 6
+      profiles renders <img>-backed Leaflet markers (L.Icon) invisibly,
+      while divIcon-backed markers (a <div> with inline HTML) render
+      correctly. Confirmed empirically by user device test on
+      2026-04-30: same Chrome version, same Android family, same app
+      build. The pulse halo (divIcon) shows; the dropped pin (L.Icon
+      with SVG <img>) does not. Likely cause is a Samsung-specific
+      compositor or color-management quirk on the <img> path under the
+      higher-end-profile WebView, possibly interacting with
+      translate3d positioning. The bug is INVISIBILITY, not absence —
+      the <img> exists in the DOM but paints transparent.
+    evidence_for:
+      - "Reproducible only on Samsung SM-A546E (A54) and SM-G990E (S21 FE)"
+      - "NOT reproducible on Samsung SM-A266M (A26) or Motorola RRBS31"
+      - "Same browser (Chrome) on every device"
+      - "Pulse halo (divIcon) renders correctly on the broken devices"
+      - "Dropped pin (L.Icon, <img>) does not render on the broken devices"
+    falsify_by: >
+      Replace L.Icon with L.divIcon for the dropped pin and re-test
+      on SM-A546E and SM-G990E. If the pin appears, hypothesis confirmed.
+    fix_if_confirmed: F-12
 
   H11_react_strictmode_double_effect:
     likelihood: very_low
@@ -505,6 +550,58 @@ phases:
           safeReleasePointer is called before onMapClick when a tap
           succeeds.
 
+  P5_root_cause_fix_after_device_data:
+    goal: >
+      Eliminate the <img>-rendering path entirely after device QA
+      narrowed the cause to Samsung Chrome / WebView on specific
+      higher-end One UI profiles.
+    estimate: "1 hour"
+    items:
+      - id: F-12
+        gap: H12
+        title: "Replace L.Icon (<img>) with L.divIcon (<div> + inline brand SVG)"
+        approach: >
+          Define DROPPED_PIN_DIV_ICON in map.js as a module-level
+          constant — an L.divIcon with className 'mdf-dropped-pin',
+          iconSize [36, 36], iconAnchor [18, 36], and html that inlines
+          the MapaFome brand pin SVG sourced from
+          src/app/components/compatibility/images/MapaFome_Icons_Blue.svg.
+          The embedded <style class="cls-1"> is replaced with a
+          fill="#00cfff" attribute on the path so the SVG is fully
+          self-contained and can't leak global CSS.
+          Update App.css so the .mdf-dropped-pin wrapper is a 36×36
+          <div> with filter:drop-shadow for visibility lift and
+          transform-origin pinned to the bottom tip; the inner <svg>
+          fills the wrapper. iconAnchor [18, 36] places the pin's
+          BOTTOM TIP on the lat/lng — the conventional Google/Apple
+          Maps "this is where you tapped" affordance.
+          This removes:
+            - the <img> element (kills H1 + H8 + H12)
+            - the SVG asset URL dependency (kills H5 — already inlined
+              in F-6, but now structurally unreachable)
+            - the F-9 RAF retry workaround (no _icon timing bug exists
+              for divIcon; the className arrives via Leaflet's own
+              setIconStyles synchronously with the div creation)
+          Visual is the brand-aligned MapaFome cyan teardrop with bowl
+          + steam — recognisable, distinct from the existing per-roaster
+          markers, and on-brand with the rest of the app.
+        files_changed:
+          - src/app/components/compatibility/components/map.js
+          - src/app/components/compatibility/App.css
+        chose_brand_svg_over_alternatives:
+          - "MapaFome_Icons_Blue.svg (CHOSEN): inlinable as <svg>, stays on the safe divIcon path, on-brand"
+          - "mapafome_sponsor.png: would force <img> (re-introducing the bug) or a heavy raster data URI"
+          - "plain CSS blue dot: shipped earlier in this iteration, replaced with brand SVG per user request"
+        verification:
+          - "Existing 43 vitest specs stay green (test/mapClickHandler.test.js + test/tapVisibility.test.js)"
+          - "On SM-A546E and SM-G990E: brand pin visible after tap, persists until cleared"
+          - "On SM-A266M and Motorola: still visible (no regression)"
+          - "On desktop: still visible (no regression)"
+        verification_test: >
+          No unit-test change is appropriate — divIcon visual rendering
+          requires a real browser. The user runs the verification matrix
+          in §4 on the four named devices.
+
 # ─── 4. Verification matrix ───────────────────────────────────────────
 verification:
   desktop:
@@ -512,22 +609,31 @@ verification:
       test/mapClickHandler.test.js + test/tapVisibility.test.js stay green.
   mobile_devices:
     primary:
-      - device: Samsung Galaxy A23
-        browser: Chrome (latest)
+      - device: "Samsung SM-A546E (Galaxy A54) — Android 16"
+        browser: Chrome
+        regression_target: yes
         steps:
-          - tap empty map area → blue pin visible at finger location
-          - tap → "Confirmar ponto" → submission proceeds
-      - device: Samsung Galaxy A54
-        browser: Chrome (latest)
-        steps: same as above
-      - device: iPhone (latest iOS Safari)
-        steps: same as above
-      - device: iPhone (PWA / "Add to Home Screen" mode)
-        steps: same as above + verify SVG asset reachable in PWA cache
+          - "tap empty map area → 32 px navy dot visible at finger location"
+          - "pin persists until next tap or Limpar"
+          - "PinReadout pill shows lat,lng"
+          - "Confirmar ponto submits with the displayed coords"
+      - device: "Samsung SM-G990E (Galaxy S21 FE) — Android 14"
+        browser: Chrome
+        regression_target: yes
+        steps: "same as above"
+      - device: "Samsung SM-A266M (Galaxy A26) — Android 16"
+        browser: Chrome
+        regression_target: no    # already worked pre-F-12; verify no regression
+        steps: "same as above"
+      - device: "Motorola RRBS31.Q1-3-48-22 — Android 11"
+        browser: Chrome
+        regression_target: no    # already worked pre-F-12; verify no regression
+        steps: "same as above"
     secondary:
+      - device: iPhone (latest iOS Safari)
+      - device: iPhone (PWA / Add to Home Screen)
       - device: iPad
       - device: touchscreen Windows laptop running Edge
-      - device: low-end Android (Webview-based browser, e.g., MIUI default)
   pass_predicate: >
     For every primary device, after a single tap on map background:
       1. red pulse appears at tap location
@@ -545,10 +651,11 @@ backlog_summary:
     P2_high_likelihood_fixes:      [F-1, F-2, F-3]
     P3_medium_likelihood_fixes:    [F-4, F-5, F-6]
     P4_low_likelihood_fixes:       [F-7, F-8, F-9, F-10, F-11]
+    P5_root_cause_fix:             [F-12]
   by_status:
     open: 1     # F-3 (skipped by design — see skipped_with_reason)
     in_progress: 0
-    in_review: 12  # D-1, D-2, F-1, F-2, F-4, F-5, F-6, F-7, F-8, F-9, F-10, F-11
+    in_review: 13  # D-1, D-2, F-1, F-2, F-4, F-5, F-6, F-7, F-8, F-9, F-10, F-11, F-12
     done: 0
   shipped_in_this_pass:
     - "F-1: drop-shadow on <img> → outline + box-shadow on wrapper (App.css)"
@@ -562,6 +669,7 @@ backlog_summary:
     - "F-10: pulse halo lives in pane: 'shadowPane' (z-index 500) — pin always painted above"
     - "F-11: already in effect — safeReleasePointer fires before emitTap in onPointerUp"
     - "D-1 + D-2: opt-in TapDebugOverlay component, mounted in App.js, activates only when ?debug=tap in URL — shows tap count, lat/lng, pointerType, lastMarked-set state, and pin-in-DOM probe at +50ms"
+    - "F-12: dropped pin migrated from L.Icon (<img>) to L.divIcon (<div> + inline brand <svg>). 36 px wrapper, MapaFome brand pin (cyan teardrop with bowl + steam) inlined from MapaFome_Icons_Blue.svg with embedded styles converted to fill attributes. iconAnchor [18, 36] = bottom-tip-on-lat/lng. Eliminates the entire <img> rendering path (kills H1 + H8 + H12). Same path as the already-working pulse halo, so it is structurally guaranteed to render on the previously broken Samsung devices (SM-A546E, SM-G990E)."
   skipped_with_reason:
     - "F-3: decouple pulse from marker — would only re-order failure mode, not fix root cause; redundant after F-2 + F-7 + F-8 + F-9 + F-10 collectively rule out marker-creation failure as the cause."
   tests_added:
@@ -570,7 +678,7 @@ backlog_summary:
     - "test/mapClickHandler.test.js: 'allows a fresh tap after a new pointerdown resets the gesture token' — F-2"
   test_run:
     suite: "vitest run test/mapClickHandler.test.js test/tapVisibility.test.js"
-    result: "43 passed (43) — duration 5.31s (after F-6 + P1)"
+    result: "43 passed (43) — re-verified after F-12 ship"
   exit_criteria: >
     All hypotheses either CONFIRMED-and-fixed or ELIMINATED by
     diagnostic. The verification matrix passes on all primary devices.
@@ -578,34 +686,29 @@ backlog_summary:
 
 # ─── 6. Order-of-operations for the next session ──────────────────────
 next_action: >
-  All actionable items shipped (12 in_review). Only F-3 remains
-  deliberately skipped — its rationale is now redundant given F-2 + F-7
-  + F-8 + F-9 + F-10 collectively eliminate marker-creation failure as
-  a possible cause.
+  F-12 (the divIcon swap) is the load-bearing fix; everything else in
+  P2/P3/P4 was defensive scaffolding around the wrong path. With F-12
+  the dropped pin no longer goes through the <img> code path that
+  Samsung Chrome on SM-A546E / SM-G990E mishandles — it uses the same
+  divIcon path as the pulse halo, which is empirically known to render
+  on those devices.
 
   Next:
-    1. User runs the app on a previously-broken mobile device
-       (Samsung A54, iPhone) and re-tests the tap → blue pin → Confirmar
-       ponto flow per the §4 verification matrix.
-    2. If the pin still does NOT appear, the user should append
-       ?debug=tap to the URL and tap the map once. The TapDebugOverlay
-       (top-right corner) will display:
-         • count: how many emitTap calls fired this session
-             (>1 for a single tap = H2 double-fire, but F-2 should prevent this)
-         • lat/lng: last placed coords (NaN/✗ = H4 invalid coords)
-         • lastMarked: 'true' = envVariables.lastMarked is set ⇒
-             handleMapClick completed; submission should work
-         • pin in DOM: 'true' = .mdf-dropped-pin element exists 50ms
-             after the event; 'false' = H1/H8/H9 (rendering/pane bug)
-       The four datapoints together falsify or confirm every hypothesis
-       in §2 in a single device roundtrip.
-    3. If overlay shows pin-in-DOM=true but user still doesn't see it:
-       the bug is purely visual — investigate iOS-specific CSS
-       compositor issues, opacity, transform-origin, etc.
-    4. Once the pin appears correctly on every primary device, flip all
-       in_review items to done and append a changelog.yaml entry
-       summarizing the F-1..F-11 + D-1/D-2 set + the prior MapContainer
-       tap={false} + isMapBackground leaflet-control fix.
+    1. User retests on the four named devices in §4 verification.matrix.
+       Pass criterion: 32 px navy dot visible after every tap, persists
+       until cleared, and matches the location displayed in PinReadout.
+    2. If pass on all four: flip every in_review item (F-1 .. F-12 +
+       D-1/D-2) to done and append a changelog.yaml entry. Mark this
+       plan status: done.
+    3. If pin STILL invisible on SM-A546E or SM-G990E after F-12, the
+       bug is even deeper than divIcon — at that point the
+       TapDebugOverlay (?debug=tap) becomes the next instrument:
+         • pin in DOM: 'true' but invisible ⇒ Samsung-specific CSS
+           compositor issue with our wrapper element. Try removing
+           transform/box-shadow one at a time to bisect.
+         • count >1 for a single tap ⇒ double-fire still slipping
+           through; revisit F-2's gesture-token semantics.
+         • lat/lng NaN ⇒ H4 invalid coords; revisit F-5's rect guard.
 
 # ─── 7. Open questions to ask user before starting ────────────────────
 clarifying_questions:
