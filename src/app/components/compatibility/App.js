@@ -1082,10 +1082,31 @@ class App extends Component {
             the user's top-priority signal — "this is where Confirmar
             ponto will publish" — the most prominent piece of UI as
             soon as a tap registers. */}
+        {/* ─── Page layout (SRP, v5 § solid_quick.SRP + refactoring_patterns.move_function) ───
+            Each section is a sibling at this single level. Reorder by
+            moving its line — no other file or scope to edit. The Grid
+            below owns ONE responsibility (the 2-column map+controls
+            row); every other section is independently positioned.
+
+            Order is currently:
+              1. PinReadout      — active-tap coord pill (top priority signal)
+              2. LiveAnnouncer   — screen-reader-only aria-live region
+              3. Grid            — map + controls 2-column row
+              4. ViewMoreCue     — scroll affordance below the map
+              5. TapDebugOverlay — opt-in ?debug=tap diagnostic
+              6. ContextBar      — ambient point counts + Lista button
+              7. InfoPanel       — legend / info surface
+            To reorder, move whole blocks within this scope. */}
+
+        {/* 1. Tap-coord readout — only renders after a tap. */}
         <PinReadout />
+
+        {/* 2. Screen-reader status region. */}
         <LiveAnnouncer dataMaps={this.state.dataMaps} />
+
+        {/* 3. Map + controls — the only Grid in this layout. SRP:
+              owns the responsive 2-column map/controls row, nothing else. */}
         <Grid container spacing={2}>
-          {/* Top row: MainMap (left) and MainControls (right) */}
           <MainMap
             dataMaps={this.state.dataMaps}
             center={this.state.center}
@@ -1104,7 +1125,6 @@ class App extends Component {
             onReporterPinClick={this.handleReporterPinClick}
             nowTick={this.state.nowTick}
           />
-
           <MainControls
             isLoading={this.state.isLoading}
             alimento={this.state.alimento}
@@ -1138,39 +1158,24 @@ class App extends Component {
             dropDownMenuMesPrecisandoBuscar={this.dropDownMenuMesPrecisandoBuscar}
             dropDownMenuMesEntregaAlimentoPronto={this.dropDownMenuMesEntregaAlimentoPronto}
           />
-
-          {/* Scroll-affordance between the map row and the legend/info below.
-            * Without this, users assume the map is the whole page and never
-            * scroll to find the legend, sponsors, and info surface. */}
-          <ViewMoreCue />
-
-          {/* PinReadout was previously here — hoisted to the top of <main>
-              above the ContextBar on 2026-04-30 so the user's
-              top-priority "this is where Confirmar ponto will publish"
-              signal is the most prominent UI as soon as a tap registers. */}
-
-          {/* D-1 + D-2 (LLM_BRAIN/dropped_pin_invisible_mobile.yaml):
-              Opt-in mobile-tap diagnostic overlay. Renders only when
-              the URL has ?debug=tap; renders null otherwise so it has
-              zero cost and zero visibility for normal users. */}
-          <TapDebugOverlay />
-
-          {/* ContextBar (point counts + Lista button) — moved here on
-              2026-04-30 to render as the LAST piece of contextual
-              information immediately before the InfoPanel. PinReadout
-              now owns the top-of-page slot for the active-tap signal;
-              ContextBar provides ambient context just above the legend. */}
-          <ContextBar
-            key={`ctx-${this.state.nowTick}`}
-            dataMaps={this.state.dataMaps}
-            userCoords={this.state.center}
-            onOpenList={() => this.setState({ listOpen: true })}
-          />
-
-          {/* Bottom row: InfoPanel (full width below) */}
-          <InfoPanel rowCount={this.state.rowCount} />
-
         </Grid>
+
+        {/* 4. Scroll affordance — signals there's content below the map. */}
+        <ViewMoreCue />
+
+        {/* 5. Diagnostic overlay — opt-in via ?debug=tap. */}
+        <TapDebugOverlay />
+
+        {/* 6. Ambient context — point counts + Lista button. */}
+        <ContextBar
+          key={`ctx-${this.state.nowTick}`}
+          dataMaps={this.state.dataMaps}
+          userCoords={this.state.center}
+          onOpenList={() => this.setState({ listOpen: true })}
+        />
+
+        {/* 7. Legend / info surface (#MoreInfo). */}
+        <InfoPanel rowCount={this.state.rowCount} />
         </main>
 
         <GuidedTutorial
