@@ -1,0 +1,19 @@
+/* VersionFooter — bottom-of-page build identifier.
+ * Tone: subtle. Users should be able to find/copy it for a bug report,
+ * but it should not compete with the InfoPanel content above it. */
+
+.mdf-version-footer {
+  display: flex;
+  justify-content: center;
+  padding: var(--mdf-space-3) var(--mdf-space-2);
+  /* Keep clear of the iOS home indicator. */
+  padding-bottom: calc(var(--mdf-space-3) + env(safe-area-inset-bottom, 0px));
+  color: var(--mdf-ink-subtle, #888);
+}
+
+.mdf-version-footer__label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.6875rem; /* 11px — quiet, legible, copy-pasteable */
+  letter-spacing: 0.02em;
+  user-select: text;
+}

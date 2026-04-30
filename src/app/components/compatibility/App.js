@@ -20,6 +20,7 @@ import OfflineToast from './components/ux/OfflineToast';
 import ListView from './components/ux/ListView';
 import LiveAnnouncer from './components/ux/LiveAnnouncer';
 import PinReadout from './components/PinReadout';
+import VersionFooter from './components/VersionFooter';
 import TapDebugOverlay from './components/_debug/TapDebugOverlay';
 import EmptyViewportOverlay from './components/ux/EmptyViewportOverlay';
 import ViewMoreCue from './components/ux/ViewMoreCue';
@@ -1096,6 +1097,7 @@ class App extends Component {
               5. TapDebugOverlay — opt-in ?debug=tap diagnostic
               6. ContextBar      — ambient point counts + Lista button
               7. InfoPanel       — legend / info surface
+              8. VersionFooter   — last child: build version (copy-paste for bug reports)
             To reorder, move whole blocks within this scope. */}
 
         {/* 1. Tap-coord readout — only renders after a tap. */}
@@ -1176,6 +1178,11 @@ class App extends Component {
 
         {/* 7. Legend / info surface (#MoreInfo). */}
         <InfoPanel rowCount={this.state.rowCount} />
+
+        {/* 8. Version footer — last child of <main>. Renders nothing
+              until /version.json resolves. SRP: shows ONLY the build
+              identifier (no other footer concerns). */}
+        <VersionFooter />
         </main>
 
         <GuidedTutorial
