@@ -1074,12 +1074,15 @@ class App extends Component {
           onStartTour={this.handleStartTour}
         />
         <main id="mdf-main" className="mdf-main">
-        <ContextBar
-          key={`ctx-${this.state.nowTick}`}
-          dataMaps={this.state.dataMaps}
-          userCoords={this.state.center}
-          onOpenList={() => this.setState({ listOpen: true })}
-        />
+        {/* TV-3 + TV-6 + TV-7 — pin readout pill (hoisted above ContextBar
+            on user request 2026-04-30): shows resolved coords of the
+            dropped marker and the Limpar reset button. Renders null
+            when no marker is placed, so it costs zero vertical space
+            until the user taps. Placing it ABOVE the ContextBar makes
+            the user's top-priority signal — "this is where Confirmar
+            ponto will publish" — the most prominent piece of UI as
+            soon as a tap registers. */}
+        <PinReadout />
         <LiveAnnouncer dataMaps={this.state.dataMaps} />
         <Grid container spacing={2}>
           {/* Top row: MainMap (left) and MainControls (right) */}
@@ -1141,16 +1144,28 @@ class App extends Component {
             * scroll to find the legend, sponsors, and info surface. */}
           <ViewMoreCue />
 
-          {/* TV-3 + TV-6 + TV-7 — pin readout pill: shows resolved coords
-              of the dropped marker, includes "Limpar" reset, and serves
-              as the aria-live status region for the marker placement. */}
-          <PinReadout />
+          {/* PinReadout was previously here — hoisted to the top of <main>
+              above the ContextBar on 2026-04-30 so the user's
+              top-priority "this is where Confirmar ponto will publish"
+              signal is the most prominent UI as soon as a tap registers. */}
 
           {/* D-1 + D-2 (LLM_BRAIN/dropped_pin_invisible_mobile.yaml):
               Opt-in mobile-tap diagnostic overlay. Renders only when
               the URL has ?debug=tap; renders null otherwise so it has
               zero cost and zero visibility for normal users. */}
           <TapDebugOverlay />
+
+          {/* ContextBar (point counts + Lista button) — moved here on
+              2026-04-30 to render as the LAST piece of contextual
+              information immediately before the InfoPanel. PinReadout
+              now owns the top-of-page slot for the active-tap signal;
+              ContextBar provides ambient context just above the legend. */}
+          <ContextBar
+            key={`ctx-${this.state.nowTick}`}
+            dataMaps={this.state.dataMaps}
+            userCoords={this.state.center}
+            onOpenList={() => this.setState({ listOpen: true })}
+          />
 
           {/* Bottom row: InfoPanel (full width below) */}
           <InfoPanel rowCount={this.state.rowCount} />
