@@ -1073,7 +1073,6 @@ class App extends Component {
         />
         <StepsHint
           activeStep={this.state.activeStep}
-          onStartTour={this.handleStartTour}
         />
         <main id="mdf-main" className="mdf-main">
         {/* TV-3 + TV-6 + TV-7 — pin readout pill (hoisted above ContextBar

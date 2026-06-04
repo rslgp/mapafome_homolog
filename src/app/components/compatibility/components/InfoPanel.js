@@ -4,6 +4,7 @@ import Paper from '@mui/material/Paper';
 import Sugestao from './googlesheets/sugestao';
 import { bean as coffeeBean, hub, green, red } from './image/svgHandler';
 import ImagemInstagram from './home/ImagemInstagram';
+import Apoiadores from './home/Apoiadores';
 import SponsorSlot from './ux/SponsorSlot';
 import { PLACEMENTS } from './ux/sponsors';
 import './InfoPanel.css';
@@ -78,6 +79,7 @@ const HUNGER_TIMELINE = [
 
 const InfoPanel = ({ rowCount }) => {
   const [showAgradecimentos, setShowAgradecimentos] = useState(false);
+  const [showApoiadores, setShowApoiadores] = useState(false);
   const [showTabela, setShowTabela] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -175,7 +177,7 @@ const InfoPanel = ({ rowCount }) => {
                 onClick={handleInstall}
                 aria-label="Baixar o app no Google Play (PWA-lite)"
               >
-                <img alt="Disponível no Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/pt_badge_web_generic.png" />
+                <img className="imgGooglePlay" alt="Disponível no Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/pt_badge_web_generic.png" />
               </button>
               <button
                 type="button"
@@ -189,7 +191,7 @@ const InfoPanel = ({ rowCount }) => {
           )}
 
           <a
-            className="mdf-btn mdf-btn--secondary mdf-btn--brand-outline mdf-btn--lg mdf-btn--rich"
+            className="mdf-btn mdf-btn--secondary mdf-btn--lg mdf-btn--rich"
             target="_blank"
             rel="noreferrer"
             href="https://mapafome.com.br/solone/"
@@ -225,6 +227,22 @@ const InfoPanel = ({ rowCount }) => {
           >
             <ImagemInstagram />
           </a>
+          <a
+            className="mdf-btn mdf-btn--primary mdf-btn--lg"
+            target="_blank"
+            rel="noreferrer"
+            href="https://nubank.com.br/pagar/2i6kb/zRE5wsvEe2"
+            aria-label="Doar via Pix"
+            title="Doar via Pix"
+          >
+            <span className="mdf-btn__logo-chip">
+              <img
+                src="https://www.bcb.gov.br/content/estabilidadefinanceira/piximg/logo_pix.png"
+                alt="Pix"
+              />
+            </span>
+            <span>Doar agora</span>
+          </a>
         </div>
         {installHint && (
           <p className="ip-apps__hint" role="status">{installHint}</p>
@@ -236,6 +254,23 @@ const InfoPanel = ({ rowCount }) => {
           (Mais informações <a target="_blank" rel="noreferrer" href="https://g1.globo.com/pe/pernambuco/noticia/2022/02/10/site-criado-por-estudante-da-ufpe-aproxima-pessoas-que-estao-passando-fome-e-doadores-de-comida.ghtml">na matéria da Globo</a>{' '}
           e na Globo no <a target="_blank" rel="noreferrer" href="https://globoplay.globo.com/v/10350537/">Jornal Hoje em rede nacional</a>, confira o jogo <a target="_blank" rel="noreferrer" href="https://mapafome.com.br/solone/">SOLONE</a> para divulgação, marketing e engajamento.)
         </p>
+
+        <section className="ip-support" aria-label="Apoie o MAPA FOME">
+          <h3>Ajude a manter esse site desde 2022 online e a descoberta de mais pessoas</h3>
+          <div className="ip-support__actions">
+            <a
+              className="mdf-btn mdf-btn--secondary mdf-btn--channel-patreon mdf-btn--lg"
+              target="_blank"
+              rel="noreferrer"
+              href="https://www.patreon.com/reifel/membership"
+              aria-label="Apoio mensal no Patreon"
+              title="Apoio mensal no Patreon"
+            >
+              <span aria-hidden="true">★</span>
+              Apoio mensal no Patreon
+            </a>
+          </div>
+        </section>
 
         <ul className="ip-legend" aria-label="Legenda das cores no mapa">
           {LEGEND.map((item) => (
@@ -265,6 +300,15 @@ const InfoPanel = ({ rowCount }) => {
           <button
             type="button"
             className="mdf-btn mdf-btn--secondary"
+            onClick={() => setShowApoiadores((v) => !v)}
+            aria-expanded={showApoiadores}
+            aria-controls="ip-collapse-apoiadores"
+          >
+            {showApoiadores ? 'Esconder apoiadores' : 'Ver Apoiadores'}
+          </button>
+          <button
+            type="button"
+            className="mdf-btn mdf-btn--secondary"
             onClick={() => setShowTabela((v) => !v)}
             aria-expanded={showTabela}
             aria-controls="ip-collapse-tabela"
@@ -284,6 +328,16 @@ const InfoPanel = ({ rowCount }) => {
                 <li key={`ack-${i}`}>{line}</li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {showApoiadores && (
+          <section
+            id="ip-collapse-apoiadores"
+            className="ip-collapse"
+            aria-label="Apoiadores"
+          >
+            <Apoiadores />
           </section>
         )}
 
@@ -352,39 +406,6 @@ const InfoPanel = ({ rowCount }) => {
           sofrimento de outro ser humano.
         </p>
 
-        <section className="ip-support" aria-label="Apoie o MAPA FOME">
-          <h3>Ajude a alimentar quem tem fome</h3>
-          <div className="ip-support__actions">
-            <a
-              className="mdf-btn mdf-btn--primary mdf-btn--lg"
-              target="_blank"
-              rel="noreferrer"
-              href="https://nubank.com.br/pagar/2i6kb/zRE5wsvEe2"
-              aria-label="Doar via Pix"
-              title="Doar via Pix"
-            >
-              <span className="mdf-btn__logo-chip">
-                <img
-                  src="https://www.bcb.gov.br/content/estabilidadefinanceira/piximg/logo_pix.png"
-                  alt="Pix"
-                />
-              </span>
-              <span>Doar agora (Pix)</span>
-            </a>
-            <a
-              className="mdf-btn mdf-btn--secondary mdf-btn--channel-patreon mdf-btn--lg"
-              target="_blank"
-              rel="noreferrer"
-              href="https://www.patreon.com/reifel/membership"
-              aria-label="Apoio mensal no Patreon"
-              title="Apoio mensal no Patreon"
-            >
-              <span aria-hidden="true">★</span>
-              Apoio mensal no Patreon
-            </a>
-          </div>
-        </section>
-
         <footer className="ip-footer">
           <div className="ip-contact">
             <span className="ip-contact__label">Contato:</span>
@@ -424,7 +445,7 @@ const InfoPanel = ({ rowCount }) => {
             aria-label="Contribuir / abrir PR no GitHub"
             title="Contribuir / abrir PR no GitHub"
           >
-            <img className="mdf-btn__brandmark" src="https://brand.github.com/_next/static/media/logo-03.cc5e5332.png" alt="GitHub" />
+            <img className="mdf-btn__brandmark imgGithub" src="https://brand.github.com/_next/static/media/logo-03.cc5e5332.png" alt="GitHub" />
           </a>
           <p className="ip-closing">
             Ninguém deveria passar fome ao nosso lado. Faça hoje a sua parte —

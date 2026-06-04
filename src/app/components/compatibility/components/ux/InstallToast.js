@@ -22,6 +22,10 @@ const DISMISS_KEY = 'mdf_install_dismissed_until';
 const DISMISS_MS = 14 * 24 * 60 * 60 * 1000; // 14 days — don't nag
 const SHOW_DELAY_MS = 1500;                  // let the map settle before inviting
 
+// Single switch to turn swipe-to-dismiss off. When false, the toast is only
+// dismissed via the "Agora não" button (the native install flow is unaffected).
+const SWIPE_DISMISS_ENABLED = true;
+
 function dismissedRecently() {
   try {
     const until = Number(localStorage.getItem(DISMISS_KEY) || 0);
@@ -43,6 +47,8 @@ const InstallToast = () => {
   const [promptEvent, setPromptEvent] = useState(null);
   const [visible, setVisible] = useState(false);
   const timerRef = useRef(null);
+  const toastRef = useRef(null);
+  const dragRef = useRef({ x: 0, y: 0, dragging: false });
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -110,14 +116,81 @@ const InstallToast = () => {
     setVisible(false);
   }, []);
 
+  // ── Swipe-to-dismiss (touch) ────────────────────────────────────────────
+  // Drag the toast and release past a threshold to dismiss (same 14-day
+  // back-off as "Agora não"); snap back if the drag is short. CSS sets
+  // touch-action:none so the gesture is ours — no preventDefault needed, and
+  // button taps still fire (a tap is just a sub-threshold drag → snap back).
+  const finishSwipe = (dx, dy) => {
+    const el = toastRef.current;
+    const horizontal = Math.abs(dx) > Math.abs(dy);
+    const THRESHOLD = 72;
+    const shouldDismiss = horizontal ? Math.abs(dx) > THRESHOLD : dy > THRESHOLD;
+
+    if (!shouldDismiss) {
+      if (el) {
+        el.style.transition = 'transform 160ms ease-out, opacity 160ms ease-out';
+        el.style.transform = '';
+        el.style.opacity = '';
+      }
+      return;
+    }
+
+    rememberDismiss();
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!el || reduce) {
+      setVisible(false);
+      return;
+    }
+    // Fly out in the gesture's direction, then unmount.
+    const offX = horizontal ? Math.sign(dx) * ((window.innerWidth || 400) * 0.9) : 0;
+    const offY = horizontal ? 0 : 260;
+    el.style.transition = 'transform 180ms ease-out, opacity 180ms ease-out';
+    el.style.transform = `translate(calc(-50% + ${offX}px), ${offY}px)`;
+    el.style.opacity = '0';
+    window.setTimeout(() => setVisible(false), 170);
+  };
+
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    dragRef.current = { x: t.clientX, y: t.clientY, dragging: true };
+    if (toastRef.current) toastRef.current.style.transition = 'none';
+  };
+
+  const onTouchMove = (e) => {
+    const d = dragRef.current;
+    if (!d.dragging) return;
+    const t = e.touches[0];
+    const dx = t.clientX - d.x;
+    const dy = t.clientY - d.y;
+    const el = toastRef.current;
+    if (!el) return;
+    const resistedDy = dy > 0 ? dy : dy * 0.25; // bottom toast: resist upward drag
+    el.style.transform = `translate(calc(-50% + ${dx}px), ${resistedDy}px)`;
+    const travel = Math.max(Math.abs(dx), Math.max(0, dy));
+    el.style.opacity = String(Math.max(0.35, 1 - travel / 260));
+  };
+
+  const onTouchEnd = (e) => {
+    const d = dragRef.current;
+    if (!d.dragging) return;
+    d.dragging = false;
+    const t = e.changedTouches[0];
+    finishSwipe(t.clientX - d.x, t.clientY - d.y);
+  };
+
   if (!visible) return null;
 
   return (
     <div
-      className="mdf-install-toast"
+      ref={toastRef}
+      className={`mdf-install-toast${SWIPE_DISMISS_ENABLED ? ' mdf-install-toast--swipeable' : ''}`}
       role="dialog"
       aria-live="polite"
       aria-label="Instalar o aplicativo MAPA FOME"
+      onTouchStart={SWIPE_DISMISS_ENABLED ? onTouchStart : undefined}
+      onTouchMove={SWIPE_DISMISS_ENABLED ? onTouchMove : undefined}
+      onTouchEnd={SWIPE_DISMISS_ENABLED ? onTouchEnd : undefined}
     >
       <img className="mdf-install-toast__icon" src="/logo192.png" alt="" width="40" height="40" />
       <div className="mdf-install-toast__body">

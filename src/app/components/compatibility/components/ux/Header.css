@@ -176,7 +176,7 @@
 .mdf-header__report {
   min-height: var(--mdf-touch-target);
   padding: 0 var(--mdf-space-3);
-  background: var(--mdf-brand);
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
   border: 1px solid var(--mdf-brand);
   border-radius: var(--mdf-radius-pill);
@@ -241,6 +241,60 @@
 
 @media (min-width: 768px) {
   .mdf-header__tour {
+    padding: 0 var(--mdf-space-4);
+    font-size: var(--mdf-fs-small);
+  }
+}
+
+/* Instalar — installs the PWA-lite. Secondary look (matches "Como funciona");
+ * "Relatar" keeps the only brand-red primary. Icon-only on phones to spare
+ * width with three actions; icon + label from 640px. */
+.mdf-header__install {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-1);
+  min-height: var(--mdf-touch-target);
+  min-width: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-2);
+  background: var(--mdf-surface-2);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              transform var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-header__install:hover {
+  background: var(--mdf-border);
+}
+
+.mdf-header__install:active {
+  transform: scale(0.98);
+}
+
+.mdf-header__install-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.mdf-header__install-label {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .mdf-header__install-label {
+    display: inline;
+  }
+}
+
+@media (min-width: 768px) {
+  .mdf-header__install {
     padding: 0 var(--mdf-space-4);
     font-size: var(--mdf-fs-small);
   }

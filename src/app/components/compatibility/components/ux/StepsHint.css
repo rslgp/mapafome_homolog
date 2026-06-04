@@ -29,11 +29,27 @@
 .mdf-steps__item {
   display: flex;
   align-items: center;
-  gap: var(--mdf-space-2);
   flex-shrink: 0;
   color: var(--mdf-ink-muted);
   font-size: var(--mdf-fs-caption);
   font-weight: 500;
+}
+
+.mdf-steps__btn {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mdf-steps__btn:hover .mdf-steps__label {
+  text-decoration: underline;
 }
 
 .mdf-steps__item + .mdf-steps__item::before {
@@ -65,7 +81,7 @@
 }
 
 .mdf-steps__item--active .mdf-steps__dot {
-  background: var(--mdf-brand);
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
 }
 

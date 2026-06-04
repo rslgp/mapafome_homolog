@@ -32,7 +32,7 @@
   padding: 0 var(--mdf-space-3);
   background: var(--mdf-surface-2);
   color: var(--mdf-ink);
-  border: 1px solid var(--mdf-border);
+  border: 1px solid var(--mdf-ink-subtle);
   border-radius: var(--mdf-radius-pill);
   font-family: inherit;
   font-size: var(--mdf-fs-caption);

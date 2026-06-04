@@ -139,7 +139,7 @@
 }
 
 .mdf-tour__btn--primary {
-  background: var(--mdf-brand);
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
 }
 

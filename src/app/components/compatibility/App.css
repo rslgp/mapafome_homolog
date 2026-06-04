@@ -311,9 +311,9 @@ legend {
   justify-content: center;
   min-height: var(--mdf-touch-target);
   padding: 0 var(--mdf-space-4);
-  background: var(--mdf-brand);
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
-  border: 1px solid var(--mdf-brand);
+  border: 1px solid var(--mdf-brand-hover);
   border-radius: var(--mdf-radius-pill);
   font-family: inherit;
   font-size: var(--mdf-fs-small);
@@ -495,7 +495,7 @@ a.tgme_widget_share_btn {
   min-height: var(--mdf-touch-target);
   min-width: var(--mdf-touch-target);
   padding: 0 var(--mdf-space-3);
-  background: #54A9EB;
+  background: var(--mdf-channel-tg);
   border-radius: var(--mdf-radius-pill);
   text-decoration: none;
   margin-left: var(--mdf-space-2);

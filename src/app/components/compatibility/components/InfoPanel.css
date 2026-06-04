@@ -201,6 +201,16 @@
   box-shadow: var(--mdf-elev-1);
 }
 
+/* googleplay */
+.imgGooglePlay {
+  transform: scale(1.3);
+}
+
+.imgGithub {
+  transform: scale(2);
+}
+
+
 /* CHANNEL — Telegram: brand-blue fill behind the white logo glyph (the glyph
    is a brand logo, exempt from contrast SC); unified geometry + resting
    elevation gives the edge a visible boundary. */
@@ -454,7 +464,7 @@
   width: 8px;
   height: 8px;
   border-radius: var(--mdf-radius-pill);
-  background: var(--mdf-brand);
+  background: var(--mdf-ink-subtle);
 }
 
 .ip-bullets a {
@@ -499,10 +509,6 @@
   font-weight: 600;
   white-space: nowrap;
   color: var(--mdf-ink);
-}
-
-.ip-table tbody tr:hover {
-  background: var(--mdf-surface-2);
 }
 
 /* Risk pill — color paired with text label (Foundation 4: never color alone) */
@@ -625,7 +631,7 @@
   content: "—";
   position: absolute;
   left: 0;
-  color: var(--mdf-brand);
+  color: var(--mdf-ink-subtle);
   font-weight: 700;
 }
 

@@ -24,6 +24,17 @@
   animation: mdf-install-toast-in var(--mdf-dur-base) var(--mdf-ease-out);
 }
 
+/* Swipe-to-dismiss enabled (SWIPE_DISMISS_ENABLED in InstallToast.js): hand the
+   gesture to JS so the toast follows the finger (no browser pan/scroll) while
+   button taps still fire. When disabled, the class is absent and normal touch
+   behavior is restored. */
+.mdf-install-toast--swipeable {
+  touch-action: none;
+  will-change: transform;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* Keep the centered toast clear of the bottom-right FAB on small screens */
 @media (max-width: 640px) {
   .mdf-install-toast {

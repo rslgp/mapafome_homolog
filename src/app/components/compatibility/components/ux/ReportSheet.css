@@ -275,7 +275,7 @@
   gap: var(--mdf-space-2);
   min-height: var(--mdf-touch-target);
   padding: 0 var(--mdf-space-6);
-  background: var(--mdf-brand);
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
   border: none;
   border-radius: var(--mdf-radius-pill);
@@ -324,7 +324,14 @@
   height: var(--mdf-fab-size);
   border-radius: var(--mdf-radius-pill);
   border: none;
-  background: var(--mdf-brand);
+  /* Center the "+" glyph optically: flex centering + line-height:1 + zero
+     padding removes the baseline/line-box offset that leaves the glyph high. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
   font-size: 28px;
   font-weight: 400;

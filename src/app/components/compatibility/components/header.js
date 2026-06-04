@@ -3,8 +3,20 @@
 import React from 'react';
 import './ux/Header.css';
 import mapaFomeMark from '../images/MapaFome_Icons_Blue.svg';
+import useInstallPrompt from './ux/useInstallPrompt';
 
 export default function Header({ rowCountProp, onStartTour, onStartReport }) {
+  const { isInstalled, promptInstall } = useInstallPrompt();
+
+  const handleInstallClick = async () => {
+    const result = await promptInstall();
+    if (result === 'ios') {
+      window.alert('No iPhone/iPad (Safari): toque em Compartilhar e escolha "Adicionar à Tela de Início" para instalar.');
+    } else if (result === 'unavailable') {
+      window.alert('Para instalar: abra o menu do navegador (⋮) e escolha "Instalar app" ou "Adicionar à tela inicial".');
+    }
+  };
+
   const hasCount =
     typeof rowCountProp === 'number' ||
     (typeof rowCountProp === 'string' && rowCountProp !== '');
@@ -65,6 +77,27 @@ export default function Header({ rowCountProp, onStartTour, onStartReport }) {
             >
               <span className="mdf-header__tour-label">Como funciona</span>
               <span className="mdf-header__tour-icon" aria-hidden="true">?</span>
+            </button>
+          )}
+          {!isInstalled && (
+            <button
+              type="button"
+              className="mdf-header__install"
+              onClick={handleInstallClick}
+              aria-label="Instalar o aplicativo MAPA FOME (PWA-lite)"
+            >
+              <svg
+                className="mdf-header__install-icon"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3a1 1 0 1 1 1.42 1.42l-4 4a1 1 0 0 1-1.42 0l-4-4a1 1 0 0 1 1.42-1.42l2.29 2.3V4a1 1 0 0 1 1-1Z" />
+                <path fill="currentColor" d="M5 15a1 1 0 0 1 1 1v3h12v-3a1 1 0 1 1 2 0v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1Z" />
+              </svg>
+              <span className="mdf-header__install-label">Instalar</span>
             </button>
           )}
         </div>

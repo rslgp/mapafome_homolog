@@ -31,7 +31,7 @@
 .mdf-empty__cta {
   min-height: var(--mdf-touch-target);
   padding: 0 var(--mdf-space-6);
-  background: var(--mdf-brand);
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
   border: none;
   border-radius: var(--mdf-radius-pill);
