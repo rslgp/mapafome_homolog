@@ -327,7 +327,7 @@
 /* Globo badge: the source asset has wide whitespace around the logo, so the
    image is scaled up inside its (overflow-clipped) framed badge box. */
 .ip-apps__globo { overflow: hidden; }
-.ip-apps__globo img { transform: scale(2.2); }
+.ip-apps__globo img { transform: scale(1.75); }
 
 /* ── Intro paragraph ───────────────────────────────── */
 
