@@ -7,7 +7,7 @@
     "dev": "next dev --webpack",
     "prebuild": "node scripts/stamp-sw-version.mjs",
     "build": "next build --webpack",
-    "start": "next start",
+    "start": "npm build && npx serve@latest out",
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -21,11 +21,9 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^9.0.0",
     "@mui/material": "^9.0.0",
     "aes-encryption": "^1.0.4",
     "google-spreadsheet": "3.0.10",
-    "javascript-time-ago": "^2.6.4",
     "leaflet": "^1.9.4",
     "leaflet-geosearch": "^4.4.0",
     "leaflet.markercluster": "^1.5.3",
@@ -33,9 +31,7 @@
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "react-leaflet": "^5.0.0",
-    "react-leaflet-markercluster": "^5.0.0-rc.0",
-    "twemoji": "^14.0.2",
-    "universal-cookie": "^8.1.0"
+    "react-leaflet-markercluster": "^5.0.0-rc.0"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",

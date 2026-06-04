@@ -10,6 +10,7 @@
   --mdf-space-2: 8px;
   --mdf-space-3: 12px;
   --mdf-space-4: 16px;
+  --mdf-space-5: 20px;
   --mdf-space-6: 24px;
   --mdf-space-8: 32px;
   --mdf-space-12: 48px;
@@ -34,6 +35,10 @@
   --mdf-brand: #D64545;
   --mdf-brand-ink: #FFFFFF;
   --mdf-brand-hover: #B93838;
+
+  /* Color — partner/channel brand accents (share + support buttons).
+     Used as logo fills only; brand logos are exempt from text-contrast SC. */
+  --mdf-channel-tg: #54A9EB;   /* Telegram blue */
 
   /* Color — urgency (time-based, not user-set) */
   --mdf-urgency-fresh: #4A7C59;

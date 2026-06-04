@@ -1,13 +1,7 @@
 
 import React, { Component } from 'react';
 
-import TimeAgo from 'javascript-time-ago';
-
-import pt from 'javascript-time-ago/locale/pt.json';
-// TimeAgo.addDefaultLocale(pt);
-TimeAgo.addLocale(pt);
-
-const timeAgo = new TimeAgo('pt-PT');
+import { formatRelativeTime } from '../relativeTime';
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 
@@ -30,7 +24,7 @@ class CleanOld extends Component {
             const rows = await sheet.getRows();
             rows.forEach((x) => { 
                 let dateMarked;
-                if(x.DateISO) dateMarked = timeAgo.format(Date.now() - (Date.now() - new Date(x.DateISO).getTime()) );
+                if(x.DateISO) dateMarked = formatRelativeTime(x.DateISO);
                 
                 //filtrar datas antigas
                 if(

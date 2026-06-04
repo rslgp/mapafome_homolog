@@ -7,8 +7,12 @@
  *     ──── A ────   blue    (wide)
  *     ── B ── B ──  red | green (half)
  *
- * Toggle buttons sit in a flex row directly under the legend (Foundation 1
- * recognition_over_recall: actions next to the content they reveal).
+ * BUTTONS: every interactive control uses the unified .mdf-btn system below
+ * (one base + variants). Exactly ONE --primary per view (the Pix donation).
+ * Heights converge to md 44 / lg 52; a single calm hover idiom; AA-verified
+ * (contrast, 44px touch floor, reduced-motion). Derived from a multi-source
+ * UX review (Yablonski/Krug/Norman/Hoober + SOLONE consultants) under the
+ * calm-tone governor: dignity > delight.
  */
 
 .ip-panel {
@@ -31,6 +35,237 @@
   }
 }
 
+/* ============================================================
+   Unified button system — .mdf-btn
+   One base + variants, token-only, works for <button> AND <a>.
+   Collapses the old three hover idioms (brightness / translateY+shadow /
+   opacity) into ONE calm idiom: surface/elevation shift on hover, a fast
+   dignified depress on :active. focus-visible reuses --mdf-focus-ring and
+   appears instantly. Reduced-motion: durations already become 0ms in
+   tokens.css; transforms are additionally hard-nulled below.
+   ============================================================ */
+.mdf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);              /* icon↔label only; inter-target spacing (≥12px) is the container's flex gap */
+  box-sizing: border-box;
+  min-height: var(--mdf-touch-target);  /* 44px floor in both axes (Fitts) */
+  padding: 0 var(--mdf-space-4);
+  border: 1px solid transparent;        /* stable geometry across solid/outline variants */
+  border-radius: var(--mdf-radius-pill);
+  font-family: var(--mdf-font-stack);
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;                /* so <a> buttons stop reading as links */
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--mdf-dur-fast) var(--mdf-ease-out),
+    border-color var(--mdf-dur-fast) var(--mdf-ease-out),
+    box-shadow var(--mdf-dur-fast) var(--mdf-ease-out),
+    transform var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-btn:hover {
+  background: var(--mdf-surface-2);
+  box-shadow: var(--mdf-elev-1);
+}
+
+.mdf-btn:active {
+  transform: translateY(1px) scale(0.99);
+  box-shadow: none;
+}
+
+/* Focus ring is immediately perceivable — never animate it in (WCAG 2.4.7) */
+.mdf-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  transition: none;
+}
+
+.mdf-btn:disabled,
+.mdf-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.mdf-btn[data-pending="true"] {
+  cursor: progress;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* Zero positional movement for motion-sensitive users (property-based = future-proof) */
+@media (prefers-reduced-motion: reduce) {
+  .mdf-btn,
+  .mdf-btn:hover,
+  .mdf-btn:active {
+    transform: none;
+  }
+}
+
+/* ── Variants (defined after the base so equal-specificity overrides win) ── */
+
+/* PRIMARY — the single reserved call-to-action: Pix donation.
+   Resting fill = brand-hover #B93838 → white label = 5.70:1 (AA pass).
+   Plain --mdf-brand #D64545 would be 4.38:1 (FAIL) so it is kept for
+   borders/focus only, never as a text-bearing fill. */
+.mdf-btn--primary {
+  background: var(--mdf-brand-hover);
+  border-color: var(--mdf-brand-hover);
+  color: var(--mdf-brand-ink);
+}
+.mdf-btn--primary:hover {
+  background: var(--mdf-brand-hover);
+  border-color: var(--mdf-brand-hover);
+  box-shadow: var(--mdf-elev-2);
+}
+
+/* SECONDARY — default for everything that is not the one primary.
+   Border = ink-subtle #8A8A8A (3.45:1 on surface-1) so the outline that
+   defines the control clears the 3:1 UI-component minimum (--mdf-border
+   #E5E2DC would be 1.29:1, invisible). */
+.mdf-btn--secondary {
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border-color: var(--mdf-ink-subtle);
+}
+.mdf-btn--secondary:hover {
+  background: var(--mdf-surface-2);
+  border-color: var(--mdf-ink);
+  box-shadow: var(--mdf-elev-1);
+}
+
+/* BRAND-OUTLINE — add-on for the one secondary that may read slightly louder
+   (SOLONE): 2px brand ring. #D64545 on surface-1 = 3.94:1 (≥3:1 non-text OK). */
+.mdf-btn--brand-outline {
+  border-width: 2px;
+  border-color: var(--mdf-brand);
+}
+.mdf-btn--brand-outline:hover {
+  border-color: var(--mdf-brand);
+}
+
+/* TERTIARY — quiet, text-weight (GitHub contribute). */
+.mdf-btn--tertiary {
+  background: transparent;
+  border-color: transparent;
+  color: var(--mdf-ink-muted);
+}
+.mdf-btn--tertiary:hover {
+  background: var(--mdf-surface-2);
+  color: var(--mdf-ink);
+  box-shadow: none;
+}
+
+/* ICON — square, guaranteed 44×44 even for a small glyph. Pair w/ aria-label. */
+.mdf-btn--icon {
+  min-width: var(--mdf-touch-target);
+  width: var(--mdf-touch-target);
+  padding: 0;
+  gap: 0;
+}
+
+/* BADGE — image-only affordance (store badges / Globo / Instagram). The image
+   IS the control; inherits the 44px floor (both axes), focus ring, hover,
+   reduced-motion. A pill on a rectangular logo reads wrong → card radius. */
+.mdf-btn--badge {
+  min-width: var(--mdf-touch-target);
+  padding: var(--mdf-space-2);
+  background: transparent;
+  border-color: transparent;
+  border-radius: var(--mdf-radius-card);
+}
+.mdf-btn--badge:hover {
+  background: transparent;
+  box-shadow: var(--mdf-elev-1);
+}
+.mdf-btn--badge img {
+  display: block;
+  height: 39px;
+  width: auto;
+}
+/* Globo keeps its hairline card frame, at rest and on hover */
+.mdf-btn--badge.mdf-btn--framed {
+  background: var(--mdf-surface-1);
+  border-color: var(--mdf-border);
+}
+.mdf-btn--badge.mdf-btn--framed:hover {
+  background: var(--mdf-surface-1);
+  box-shadow: var(--mdf-elev-1);
+}
+
+/* CHANNEL — Telegram: brand-blue fill behind the white logo glyph (the glyph
+   is a brand logo, exempt from contrast SC); unified geometry + resting
+   elevation gives the edge a visible boundary. */
+.mdf-btn--channel-tg {
+  background: var(--mdf-channel-tg);
+  border-color: var(--mdf-channel-tg);
+  box-shadow: var(--mdf-elev-1);
+}
+.mdf-btn--channel-tg:hover {
+  background: var(--mdf-channel-tg);
+  border-color: var(--mdf-channel-tg);
+  box-shadow: var(--mdf-elev-2);
+}
+
+/* CHANNEL — Patreon: keeps its dark identity but as a SECONDARY so it does not
+   shout beside the brand-fill primary. White label on ink = 17.4:1. */
+.mdf-btn--channel-patreon {
+  background: var(--mdf-ink);
+  color: var(--mdf-surface-1);
+  border-color: var(--mdf-ink);
+}
+.mdf-btn--channel-patreon:hover {
+  background: var(--mdf-ink);
+  border-color: var(--mdf-ink-subtle);
+  box-shadow: var(--mdf-elev-1);
+}
+
+/* SIZES — converge the old 44/52/55 jitter onto md (44, default) and lg (52).
+   (--sm was dropped: it fell below the 44px touch floor.) */
+.mdf-btn--lg {
+  min-height: 52px;
+  padding: 0 var(--mdf-space-5);
+  font-size: var(--mdf-fs-body);
+}
+
+/* RICH — two-line label (SOLONE: icon + title + subtitle) */
+.mdf-btn--rich { line-height: 1.15; }
+.mdf-btn__label-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.mdf-btn__title { font-weight: 700; color: var(--mdf-ink); }
+.mdf-btn__sub { font-size: var(--mdf-fs-caption); font-weight: 400; color: var(--mdf-ink-muted); }
+
+/* Icon / media sizing inside buttons */
+.mdf-btn__ico { width: 22px; height: 22px; display: block; }
+.mdf-btn__media {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--mdf-radius-card);
+  flex-shrink: 0;
+  display: block;
+}
+.mdf-btn__brandmark { height: 24px; width: auto; display: block; }
+/* Pix logo on a white chip so the turquoise mark reads on the red fill */
+.mdf-btn__logo-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--mdf-space-1) var(--mdf-space-2);
+  background: var(--mdf-surface-1);
+  border-radius: var(--mdf-radius-chip);
+}
+.mdf-btn__logo-chip img { height: 20px; width: auto; display: block; }
+
 /* ── Share row ─────────────────────────────────────── */
 
 .ip-share {
@@ -38,10 +273,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--mdf-space-3);
-}
-
-.ip-share .wpbtn span {
-  font-weight: 600;
 }
 
 /* ── Stats line ────────────────────────────────────── */
@@ -65,7 +296,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── App badges ────────────────────────────────────── */
+/* ── App badges / actions row ──────────────────────── */
 
 .ip-apps {
   display: flex;
@@ -74,17 +305,29 @@
   gap: var(--mdf-space-3);
 }
 
-.ip-apps__badge {
+/* Install affordance: the two store badges grouped as one install control */
+.ip-apps__install-badges {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  text-decoration: none;
+  gap: var(--mdf-space-2);
 }
 
-.ip-apps__badge img {
-  height: 55px;
-  width: auto;
-  display: block;
+/* Dica de instalação manual (Safari/iOS ou navegador sem prompt nativo) */
+.ip-apps__hint {
+  margin: 0;
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-2);
+  border-radius: var(--mdf-radius-card);
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
 }
+
+/* Globo badge: the source asset has wide whitespace around the logo, so the
+   image is scaled up inside its (overflow-clipped) framed badge box. */
+.ip-apps__globo { overflow: hidden; }
+.ip-apps__globo img { transform: scale(2.2); }
 
 /* ── Intro paragraph ───────────────────────────────── */
 
@@ -160,10 +403,21 @@
   justify-content: center;
 }
 
+/* Layout only — the look comes from .mdf-btn--secondary on each button */
 .ip-actions > button {
-  margin: 0;
   flex: 1 1 220px;
   max-width: 320px;
+}
+
+/* Caret signifier driven by the already-present aria-expanded state */
+.ip-actions > button::after {
+  content: "\25BE";
+  font-size: 0.8em;
+  transition: transform var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.ip-actions > button[aria-expanded="true"]::after {
+  transform: rotate(180deg);
 }
 
 /* ── Collapsible sections ──────────────────────────── */
@@ -187,6 +441,7 @@
 .ip-bullets li {
   position: relative;
   padding-left: var(--mdf-space-6);
+  max-width: 65ch;
   line-height: var(--mdf-lh-body);
   color: var(--mdf-ink);
 }
@@ -274,6 +529,35 @@
   color: var(--mdf-ink);
   line-height: var(--mdf-lh-body);
   margin: 0;
+}
+
+/* ── Support / donations ───────────────────────────── */
+
+.ip-support {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--mdf-space-4);
+  padding: var(--mdf-space-6);
+  background: var(--mdf-surface-0);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+  text-align: center;
+}
+
+.ip-support h3 {
+  margin: 0;
+  font-size: var(--mdf-fs-h2);
+  font-weight: 600;
+  color: var(--mdf-ink);
+  line-height: var(--mdf-lh-heading);
+}
+
+.ip-support__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--mdf-space-3);
 }
 
 /* ── ODS figure ────────────────────────────────────── */
@@ -388,10 +672,37 @@
 }
 
 .ip-legal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mdf-touch-target);
+  padding: var(--mdf-space-1) var(--mdf-space-2);
   color: var(--mdf-ink-muted);
   text-decoration: underline;
 }
 
 .ip-legal a:hover {
   color: var(--mdf-ink);
+}
+
+/* Closing mission line — leaves the reader on the appeal, not the chrome (peak-end) */
+.ip-closing {
+  margin: 0;
+  padding-top: var(--mdf-space-4);
+  border-top: 1px solid var(--mdf-border);
+  text-align: center;
+  color: var(--mdf-ink);
+  line-height: var(--mdf-lh-body);
+  font-weight: 600;
+}
+
+/* ── Keyboard focus for plain text LINKS (not .mdf-btn) ──
+   Unified buttons get their ring from .mdf-btn:focus-visible (base).
+   These remaining entries keep keyboard focus visible on real links. */
+.ip-intro a:focus-visible,
+.ip-bullets a:focus-visible,
+.ip-contact a:focus-visible,
+.ip-legal a:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-radius: var(--mdf-radius-chip);
 }

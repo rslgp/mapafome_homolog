@@ -1,12 +1,10 @@
 import L from 'leaflet';
-import TimeAgo from 'javascript-time-ago';
-import pt from 'javascript-time-ago/locale/pt.json';
 import { CLUSTER_THRESHOLDS } from './mapConstants';
 
-// Initialize TimeAgo - with safety check to prevent duplicate registration
-TimeAgo.addLocale(pt);
-
-const timeAgo = new TimeAgo('pt-PT');
+// formatRelativeTime now lives in its own dependency-free SOT module (built on
+// Intl.RelativeTimeFormat). Re-exported here so existing importers of
+// './mapUtils' are unaffected.
+export { formatRelativeTime } from './relativeTime';
 
 /**
  * Creates a marker cluster icon based on child count and cluster type
@@ -120,18 +118,6 @@ export const calculateRating = (avaliacao) => {
   const nota = Math.round((weightedSum / totalClicks) * 100) / 100;
 
   return { nota, totalClicks };
-};
-
-/**
- * Formats a date as relative time
- * @param {string} dateISO - ISO date string
- * @returns {string} Formatted relative time
- */
-export const formatRelativeTime = (dateISO) => {
-  if (!dateISO) return '';
-
-  const timestamp = new Date(dateISO).getTime();
-  return timeAgo.format(Date.now() - (Date.now() - timestamp));
 };
 
 /**

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Sugestao from './googlesheets/sugestao';
@@ -79,6 +79,54 @@ const HUNGER_TIMELINE = [
 const InfoPanel = ({ rowCount }) => {
   const [showAgradecimentos, setShowAgradecimentos] = useState(false);
   const [showTabela, setShowTabela] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [installHint, setInstallHint] = useState('');
+
+  // Captura o evento de instalação do PWA (Chrome/Edge/Android) para oferecer
+  // a instalação da versão lite direto no botão, sem passar pela loja.
+  useEffect(() => {
+    const onBeforeInstall = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    const onInstalled = () => {
+      setDeferredPrompt(null);
+      setIsInstalled(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    window.addEventListener('appinstalled', onInstalled);
+
+    if (window.matchMedia?.('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+      }
+      setDeferredPrompt(null);
+      return;
+    }
+    // Sem prompt nativo (Safari/iOS, ou navegador que ainda não atingiu o
+    // critério de instalabilidade): orienta a instalação manual.
+    const ua = navigator.userAgent || '';
+    if (/iphone|ipad|ipod/i.test(ua) || (/safari/i.test(ua) && !/chrome|crios|android/i.test(ua))) {
+      setInstallHint('No iPhone/iPad (Safari): toque em Compartilhar e escolha "Adicionar à Tela de Início".');
+    } else {
+      setInstallHint('Abra o menu do navegador (⋮) e escolha "Instalar app" ou "Adicionar à tela inicial".');
+    }
+  };
 
   return (
     <Grid size={{ xs: 12, sm: 12 }}>
@@ -87,7 +135,7 @@ const InfoPanel = ({ rowCount }) => {
           <a
             className="wpbtn"
             title="Compartilhar no WhatsApp"
-            href="whatsapp://send?text=Para marcar no mapa e alimentar quem tem fome, achei esse site: www.mapafome.com.br"
+            href="whatsapp://send?text=No MAPA FOME dá pra ver no mapa quem está com fome e ajudar agora. Faça a sua parte: www.mapafome.com.br"
           >
             <img className="wp" src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="" />
             <span>Compartilhar no WhatsApp</span>
@@ -110,13 +158,54 @@ const InfoPanel = ({ rowCount }) => {
         </div>
 
         <div className="ip-apps">
+          {!isInstalled && (
+            <div className="ip-apps__install-badges" role="group" aria-label="Baixar o app (PWA-lite)">
+              <button
+                type="button"
+                className="ip-apps__store"
+                onClick={handleInstall}
+                aria-label="Baixar o app no Google Play (PWA-lite)"
+              >
+                <img alt="Disponível no Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/pt_badge_web_generic.png" />
+              </button>
+              <button
+                type="button"
+                className="ip-apps__store"
+                onClick={handleInstall}
+                aria-label="Baixar o app na App Store (PWA-lite)"
+              >
+                <img alt="Baixar na App Store" src="https://www.gov.br/cnpq/pt-br/acesso-a-informacao/acoes-e-programas/servicos/app-store-selo.png" />
+              </button>
+            </div>
+          )}
+
           <a
-            className="ip-apps__badge"
+            className="ip-apps__solone"
             target="_blank"
             rel="noreferrer"
-            href="https://play.google.com/store/apps/details?id=br.com.mapafome"
+            href="https://mapafome.com.br/solone/"
+            aria-label="Jogue SOLONE — o jogo do MAPA FOME"
           >
-            <img alt="Disponível no Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/pt_badge_web_generic.png" />
+            <img
+              className="ip-apps__solone-icon"
+              src="https://rslgp.github.io/games/charleslike/icons/icon-512.png"
+              alt=""
+              width="44"
+              height="44"
+            />
+            <span className="ip-apps__solone-text">
+              <strong>Jogue SOLONE</strong>
+              <small>O jogo do MAPA FOME</small>
+            </span>
+          </a>
+          <a
+            className="ip-apps__badge ip-apps__globo"
+            target="_blank"
+            rel="noreferrer"
+            href="https://globoplay.globo.com/v/10350537/"
+            aria-label="MAPA FOME no Jornal Hoje (Globo)"
+          >
+            <img alt="Globo" src="https://cdn.guiademarcas.globo/capa_globo_corporativa_bf2z6hY.png" />
           </a>
           <a
             className="ip-apps__badge"
@@ -128,6 +217,9 @@ const InfoPanel = ({ rowCount }) => {
             <ImagemInstagram />
           </a>
         </div>
+        {installHint && (
+          <p className="ip-apps__hint" role="status">{installHint}</p>
+        )}
 
         <p className="ip-intro">
           No mapa, clique em uma bolinha para saber como ajudar. Você pode se incluir
@@ -159,7 +251,7 @@ const InfoPanel = ({ rowCount }) => {
             aria-expanded={showAgradecimentos}
             aria-controls="ip-collapse-agradecimentos"
           >
-            {showAgradecimentos ? 'Esconder agradecimentos' : 'Agradecimentos'}
+            {showAgradecimentos ? 'Esconder agradecimentos' : 'Ver agradecimentos'}
           </button>
           <button
             type="button"
@@ -168,7 +260,7 @@ const InfoPanel = ({ rowCount }) => {
             aria-expanded={showTabela}
             aria-controls="ip-collapse-tabela"
           >
-            {showTabela ? 'Esconder tabela' : 'Ver consequências da fome'}
+            {showTabela ? 'Esconder consequências' : 'Ver consequências da fome'}
           </button>
         </div>
 
@@ -180,7 +272,7 @@ const InfoPanel = ({ rowCount }) => {
           >
             <ul className="ip-bullets">
               {ACKNOWLEDGEMENTS.map((line, i) => (
-                <li key={i}>{line}</li>
+                <li key={`ack-${i}`}>{line}</li>
               ))}
             </ul>
           </section>
@@ -219,12 +311,6 @@ const InfoPanel = ({ rowCount }) => {
           </section>
         )}
 
-        <p className="ip-conclusion">
-          <strong>Conclusão:</strong> faço um apelo a você para tomar medidas e ações
-          solidárias recorrentes, em intervalos de 1 a 14 dias. Alivie a dor e o
-          sofrimento de outro ser humano.
-        </p>
-
         <figure className="ip-ods">
           <img
             className="ods"
@@ -249,6 +335,43 @@ const InfoPanel = ({ rowCount }) => {
           <p className="ip-uses__note">
             É possível traçar uma rota ao destino: clique em <em>Ir para o destino</em> para abrir no Google Maps.
           </p>
+        </section>
+
+        <p className="ip-conclusion">
+          <strong>Conclusão:</strong> faço um apelo a você para tomar medidas e ações
+          solidárias recorrentes, em intervalos de 1 a 14 dias. Alivie a dor e o
+          sofrimento de outro ser humano.
+        </p>
+
+        <section className="ip-support" aria-label="Apoie o MAPA FOME">
+          <h3>Ajude a alimentar quem tem fome</h3>
+          <div className="ip-support__actions">
+            <a
+              className="ip-support__pix"
+              target="_blank"
+              rel="noreferrer"
+              href="https://nubank.com.br/pagar/2i6kb/zRE5wsvEe2"
+              aria-label="Doar via Pix"
+              title="Doar via Pix"
+            >
+              <img
+                src="https://www.bcb.gov.br/content/estabilidadefinanceira/piximg/logo_pix.png"
+                alt="Pix"
+              />
+              <span>Doar agora (Pix)</span>
+            </a>
+            <a
+              className="ip-support__patreon"
+              target="_blank"
+              rel="noreferrer"
+              href="https://www.patreon.com/reifel/membership"
+              aria-label="Apoio mensal no Patreon"
+              title="Apoio mensal no Patreon"
+            >
+              <span className="ip-support__patreon-icon" aria-hidden="true">★</span>
+              Apoio mensal no Patreon
+            </a>
+          </div>
         </section>
 
         <footer className="ip-footer">
@@ -279,7 +402,23 @@ const InfoPanel = ({ rowCount }) => {
             <a href="/relatorio-marketing">Relatório de marketing (parceiros)</a>
             <span aria-hidden="true">·</span>
             <a href="/parceiros">Seja parceiro</a>
+            <span aria-hidden="true">·</span>
+            <a href="/imprensa">Imprensa</a>
           </nav>
+          <a
+            className="ip-github"
+            target="_blank"
+            rel="noreferrer"
+            href="https://github.dev/rslgp/mapafome_homolog/src/app/components/compatibility/components/README.md"
+            aria-label="Contribuir / abrir PR no GitHub"
+            title="Contribuir / abrir PR no GitHub"
+          >
+            <img src="https://brand.github.com/_next/static/media/logo-03.cc5e5332.png" alt="GitHub" />
+          </a>
+          <p className="ip-closing">
+            Ninguém deveria passar fome ao nosso lado. Faça hoje a sua parte —
+            doe, marque um ponto no mapa ou compartilhe o MAPA FOME.
+          </p>
         </footer>
       </Paper>
     </Grid>

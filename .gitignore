@@ -10,6 +10,9 @@
 !.yarn/releases
 !.yarn/versions
 
+/LLM_BRAIN
+/LLM_BRAIN*
+
 # testing
 /coverage
 

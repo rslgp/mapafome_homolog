@@ -50,9 +50,8 @@ import insta from './images/insta.svg';
 // import AesEncryption from "./components/security/Aes";
 import AesEncryption from 'aes-encryption';
 
-import Cookies from 'universal-cookie';
+import { getCookie, setCookie } from './components/cookies';
 
-const cookies = new Cookies();
 const EXPIRE_DAY = 7;
 const aes = new AesEncryption();
 
@@ -218,7 +217,7 @@ class App extends Component {
     const coordsStr = JSON.stringify(coords);
     const coordsKey = Array.isArray(coords) ? coords.join(',') : String(coords);
     const cookieName = 'pontosAvaliados';
-    const pontos = cookies.get(cookieName) || '';
+    const pontos = getCookie(cookieName) || '';
 
     // Cookie gate runs FIRST so a repeat click on an already-rated point
     // gives the user an honest "já avaliou" message instead of a silent
@@ -240,7 +239,7 @@ class App extends Component {
         }
         const cookieExpireDate = new Date();
         cookieExpireDate.setDate(cookieExpireDate.getDate() + EXPIRE_DAY);
-        cookies.set(cookieName, pontos + coordsKey, { path: '/', expires: cookieExpireDate });
+        setCookie(cookieName, pontos + coordsKey, { path: '/', expires: cookieExpireDate });
         // No full page reload — reload() wiped in-progress tour state and made
         // the interaction feel violent. Toast is enough; next natural fetch
         // will pick up the refreshed count.

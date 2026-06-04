@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import Cookies from 'universal-cookie';
+import { getCookie, setCookie, removeCookie } from '../cookies';
 import './GuidedTutorial.css';
 import { trackReportStarted } from './analytics';
 
@@ -206,10 +206,9 @@ export default function GuidedTutorial({ open, onClose }) {
   }, [open, flow, index]);
 
   function persistDone() {
-    const cookies = new Cookies();
     const expires = new Date();
     expires.setDate(expires.getDate() + COOKIE_TTL_DAYS);
-    cookies.set(COOKIE_NAME, '1', { path: '/', expires });
+    setCookie(COOKIE_NAME, '1', { path: '/', expires });
   }
 
   function handleSkip() {
@@ -358,11 +357,9 @@ export default function GuidedTutorial({ open, onClose }) {
 
 export function hasSeenTour() {
   if (typeof document === 'undefined') return true;
-  const cookies = new Cookies();
-  return cookies.get(COOKIE_NAME) === '1';
+  return getCookie(COOKIE_NAME) === '1';
 }
 
 export function resetTour() {
-  const cookies = new Cookies();
-  cookies.remove(COOKIE_NAME, { path: '/' });
+  removeCookie(COOKIE_NAME, { path: '/' });
 }
