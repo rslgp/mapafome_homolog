@@ -1,5 +1,5 @@
 const nextConfig = {
-  allowedDevOrigins: ['10.20.30.191'],
+  allowedDevOrigins: ['10.20.30.191', '8a34-2804-372c-13e-ac00-3911-8220-33e7-e7b5.ngrok-free.app'],
 
   output: 'export',
   images: { unoptimized: true },

@@ -1,0 +1,123 @@
+/*
+ * InstallToast — fixed bottom invitation to install the PWA-lite.
+ * Self-contained (token-based) so it never depends on InfoPanel.css being
+ * loaded. Buttons mirror the .mdf-btn look (brand-hover primary fill = white
+ * label at 5.70:1 AA). Reduced-motion safe.
+ */
+
+.mdf-install-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--mdf-space-4) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 2400;
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-3);
+  width: min(560px, calc(100vw - 2 * var(--mdf-space-4)));
+  padding: var(--mdf-space-3) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-sheet);
+  box-shadow: var(--mdf-elev-3);
+  color: var(--mdf-ink);
+  animation: mdf-install-toast-in var(--mdf-dur-base) var(--mdf-ease-out);
+}
+
+/* Keep the centered toast clear of the bottom-right FAB on small screens */
+@media (max-width: 640px) {
+  .mdf-install-toast {
+    bottom: calc(var(--mdf-fab-size) + 2 * var(--mdf-space-4) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@keyframes mdf-install-toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mdf-install-toast { animation: none; }
+}
+
+.mdf-install-toast__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--mdf-radius-card);
+  flex-shrink: 0;
+  display: block;
+}
+
+.mdf-install-toast__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.mdf-install-toast__title {
+  font-weight: 700;
+  font-size: var(--mdf-fs-small);
+  color: var(--mdf-ink);
+}
+
+.mdf-install-toast__sub {
+  font-size: var(--mdf-fs-caption);
+  color: var(--mdf-ink-muted);
+  line-height: var(--mdf-lh-body);
+}
+
+.mdf-install-toast__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  flex-shrink: 0;
+}
+
+.mdf-install-toast__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-4);
+  border: 1px solid transparent;
+  border-radius: var(--mdf-radius-pill);
+  font: 600 var(--mdf-fs-small) / 1 var(--mdf-font-stack);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--mdf-dur-fast) var(--mdf-ease-out),
+    box-shadow var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-install-toast__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.mdf-install-toast__btn--install {
+  background: var(--mdf-brand-hover);
+  border-color: var(--mdf-brand-hover);
+  color: var(--mdf-brand-ink);
+}
+
+.mdf-install-toast__btn--install:hover {
+  box-shadow: var(--mdf-elev-2);
+}
+
+.mdf-install-toast__btn--later {
+  background: transparent;
+  color: var(--mdf-ink-muted);
+}
+
+.mdf-install-toast__btn--later:hover {
+  background: var(--mdf-surface-2);
+  color: var(--mdf-ink);
+}
+
+/* Narrow screens: let the text wrap and push actions to their own row */
+@media (max-width: 480px) {
+  .mdf-install-toast { flex-wrap: wrap; }
+  .mdf-install-toast__actions { width: 100%; justify-content: flex-end; }
+}

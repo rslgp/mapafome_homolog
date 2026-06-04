@@ -34,6 +34,16 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="canonical" href="https://mapafome.com.br/" />
         <meta name="referrer" content="no-referrer" />
+        {/* PWA install bridge — capture `beforeinstallprompt` at page-parse time
+            (before React mounts) so the event is never missed. The install
+            button reads window.__mdf_install_prompt and calls .prompt() on it.
+            Pattern mirrors the SOLONE pwa-lite host-page install bridge. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){window.__mdf_install_prompt=window.__mdf_install_prompt||null;window.__mdf_app_installed=window.__mdf_app_installed||false;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__mdf_install_prompt=e;});window.addEventListener('appinstalled',function(){window.__mdf_install_prompt=null;window.__mdf_app_installed=true;});})();",
+          }}
+        />
       </head>
       <body suppressHydrationWarning>{children}</body>
     </html>

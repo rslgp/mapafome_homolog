@@ -95,6 +95,11 @@ const InfoPanel = ({ rowCount }) => {
       setIsInstalled(true);
     };
 
+    // Adota um evento que disparou ANTES deste componente montar — capturado
+    // cedo pelo bridge em layout.js (window.__mdf_install_prompt).
+    if (window.__mdf_install_prompt) setDeferredPrompt(window.__mdf_install_prompt);
+    if (window.__mdf_app_installed) setIsInstalled(true);
+
     window.addEventListener('beforeinstallprompt', onBeforeInstall);
     window.addEventListener('appinstalled', onInstalled);
 
@@ -109,13 +114,17 @@ const InfoPanel = ({ rowCount }) => {
   }, []);
 
   const handleInstall = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+    // Usa o evento do state ou o capturado cedo pelo bridge (layout.js).
+    const promptEvent = deferredPrompt || (typeof window !== 'undefined' ? window.__mdf_install_prompt : null);
+    if (promptEvent) {
+      promptEvent.prompt();
+      const { outcome } = await promptEvent.userChoice;
       if (outcome === 'accepted') {
         setIsInstalled(true);
       }
       setDeferredPrompt(null);
+      if (typeof window !== 'undefined') window.__mdf_install_prompt = null;
+      setInstallHint('');
       return;
     }
     // Sem prompt nativo (Safari/iOS, ou navegador que ainda não atingiu o

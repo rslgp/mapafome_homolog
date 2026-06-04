@@ -70,16 +70,26 @@ export function registerOnce() {
   if (registered) return;
   if (typeof window === 'undefined') return;
   if (!('serviceWorker' in navigator)) return;
-  // Only register in production-style served contexts. In Next.js dev the HMR
-  // runtime conflicts with cache-first shells and you see stale bundles.
-  if (window.location.hostname === 'localhost' && window.location.port) return;
+  // Skip registration ONLY under the Next.js dev server, where the HMR runtime
+  // conflicts with a cache-first shell (stale bundles). Any PRODUCTION-built
+  // bundle registers — whether deployed (HTTPS) or served locally via
+  // `npm run build && npx serve out` (http://localhost is a secure context).
+  // This is what makes the PWA installable + the install flow testable without
+  // a deploy. (NODE_ENV is inlined at build time by Next.)
+  if (process.env.NODE_ENV !== 'production') return;
 
   registered = true;
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js', { scope: '/' })
+      // updateViaCache:'none' stops the HTTP cache from masking a new sw.js so
+      // a fresh deploy is picked up (PWA-lite builder PWAL-A2).
+      .register('/sw.js', { scope: '/', updateViaCache: 'none' })
       .then((reg) => {
         if (!reg) return;
+        // Force an update check on every load: a freshly deployed sw.js is
+        // adopted promptly and Chrome re-evaluates installability criteria
+        // (so `beforeinstallprompt` can fire for the install button).
+        try { reg.update(); } catch (e) { /* update is best-effort */ }
         // Already-waiting SW from a previous visit — show toast immediately.
         if (reg.waiting && navigator.serviceWorker.controller) showUpdateToast(reg);
         // New SW arrives mid-session — wait for installation, then prompt.
