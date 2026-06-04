@@ -188,7 +188,7 @@
 }
 .mdf-btn--badge img {
   display: block;
-  height: 39px;
+  height: var(--mdf-touch-target); /* 44px floor — badge image is the control */
   width: auto;
 }
 /* Globo keeps its hairline card frame, at rest and on hover */

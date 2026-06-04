@@ -13,7 +13,7 @@
  * the user sees UI feedback. This SW is read-biased.
  */
 
-const SW_VERSION = '0.1.0-1780594792227-f80f7d7';
+const SW_VERSION = '0.1.0-1780595555567-db46071';
 const SHELL_CACHE = `${SW_VERSION}-shell`;
 const TILE_CACHE  = `${SW_VERSION}-tiles`;
 const DATA_CACHE  = `${SW_VERSION}-data`;

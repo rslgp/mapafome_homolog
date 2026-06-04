@@ -133,22 +133,22 @@ const InfoPanel = ({ rowCount }) => {
       <Paper id="MoreInfo" className="ip-panel" elevation={0}>
         <header className="ip-share">
           <a
-            className="wpbtn"
+            className="mdf-btn mdf-btn--secondary"
             title="Compartilhar no WhatsApp"
             href="whatsapp://send?text=No MAPA FOME dá pra ver no mapa quem está com fome e ajudar agora. Faça a sua parte: www.mapafome.com.br"
           >
-            <img className="wp" src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="" />
+            <img className="mdf-btn__ico" src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="" />
             <span>Compartilhar no WhatsApp</span>
           </a>
           <a
             target="_blank"
             rel="noreferrer"
-            className="tgme_widget_share_btn"
+            className="mdf-btn mdf-btn--icon mdf-btn--channel-tg"
             title="Compartilhar no Telegram"
             aria-label="Compartilhar no Telegram"
             href="https://t.me/share?url=www.mapafome.com.br&text=Para%20marcar%20no%20mapa%20e%20alimentar%20quem%20tem%20fome%2C%20achei%20esse%20site%3A"
           >
-            <img className="telegram" src="https://telegram.org/img/WidgetButton_LogoSmall.png" alt="" />
+            <img className="mdf-btn__ico" src="https://telegram.org/img/WidgetButton_LogoSmall.png" alt="" />
           </a>
         </header>
 
@@ -162,7 +162,7 @@ const InfoPanel = ({ rowCount }) => {
             <div className="ip-apps__install-badges" role="group" aria-label="Baixar o app (PWA-lite)">
               <button
                 type="button"
-                className="ip-apps__store"
+                className="mdf-btn mdf-btn--badge"
                 onClick={handleInstall}
                 aria-label="Baixar o app no Google Play (PWA-lite)"
               >
@@ -170,7 +170,7 @@ const InfoPanel = ({ rowCount }) => {
               </button>
               <button
                 type="button"
-                className="ip-apps__store"
+                className="mdf-btn mdf-btn--badge"
                 onClick={handleInstall}
                 aria-label="Baixar o app na App Store (PWA-lite)"
               >
@@ -180,26 +180,26 @@ const InfoPanel = ({ rowCount }) => {
           )}
 
           <a
-            className="ip-apps__solone"
+            className="mdf-btn mdf-btn--secondary mdf-btn--brand-outline mdf-btn--lg mdf-btn--rich"
             target="_blank"
             rel="noreferrer"
             href="https://mapafome.com.br/solone/"
             aria-label="Jogue SOLONE — o jogo do MAPA FOME"
           >
             <img
-              className="ip-apps__solone-icon"
+              className="mdf-btn__media"
               src="https://rslgp.github.io/games/charleslike/icons/icon-512.png"
               alt=""
               width="44"
               height="44"
             />
-            <span className="ip-apps__solone-text">
-              <strong>Jogue SOLONE</strong>
-              <small>O jogo do MAPA FOME</small>
+            <span className="mdf-btn__label-wrap">
+              <strong className="mdf-btn__title">Jogue SOLONE</strong>
+              <small className="mdf-btn__sub">O jogo do MAPA FOME</small>
             </span>
           </a>
           <a
-            className="ip-apps__badge ip-apps__globo"
+            className="mdf-btn mdf-btn--badge mdf-btn--framed ip-apps__globo"
             target="_blank"
             rel="noreferrer"
             href="https://globoplay.globo.com/v/10350537/"
@@ -208,7 +208,7 @@ const InfoPanel = ({ rowCount }) => {
             <img alt="Globo" src="https://cdn.guiademarcas.globo/capa_globo_corporativa_bf2z6hY.png" />
           </a>
           <a
-            className="ip-apps__badge"
+            className="mdf-btn mdf-btn--badge"
             target="_blank"
             rel="noreferrer"
             href="https://instagram.com/mapafome"
@@ -246,7 +246,7 @@ const InfoPanel = ({ rowCount }) => {
         <div className="ip-actions">
           <button
             type="button"
-            className="alignElementCenter"
+            className="mdf-btn mdf-btn--secondary"
             onClick={() => setShowAgradecimentos((v) => !v)}
             aria-expanded={showAgradecimentos}
             aria-controls="ip-collapse-agradecimentos"
@@ -255,7 +255,7 @@ const InfoPanel = ({ rowCount }) => {
           </button>
           <button
             type="button"
-            className="alignElementCenter"
+            className="mdf-btn mdf-btn--secondary"
             onClick={() => setShowTabela((v) => !v)}
             aria-expanded={showTabela}
             aria-controls="ip-collapse-tabela"
@@ -347,28 +347,30 @@ const InfoPanel = ({ rowCount }) => {
           <h3>Ajude a alimentar quem tem fome</h3>
           <div className="ip-support__actions">
             <a
-              className="ip-support__pix"
+              className="mdf-btn mdf-btn--primary mdf-btn--lg"
               target="_blank"
               rel="noreferrer"
               href="https://nubank.com.br/pagar/2i6kb/zRE5wsvEe2"
               aria-label="Doar via Pix"
               title="Doar via Pix"
             >
-              <img
-                src="https://www.bcb.gov.br/content/estabilidadefinanceira/piximg/logo_pix.png"
-                alt="Pix"
-              />
+              <span className="mdf-btn__logo-chip">
+                <img
+                  src="https://www.bcb.gov.br/content/estabilidadefinanceira/piximg/logo_pix.png"
+                  alt="Pix"
+                />
+              </span>
               <span>Doar agora (Pix)</span>
             </a>
             <a
-              className="ip-support__patreon"
+              className="mdf-btn mdf-btn--secondary mdf-btn--channel-patreon mdf-btn--lg"
               target="_blank"
               rel="noreferrer"
               href="https://www.patreon.com/reifel/membership"
               aria-label="Apoio mensal no Patreon"
               title="Apoio mensal no Patreon"
             >
-              <span className="ip-support__patreon-icon" aria-hidden="true">★</span>
+              <span aria-hidden="true">★</span>
               Apoio mensal no Patreon
             </a>
           </div>
@@ -406,14 +408,14 @@ const InfoPanel = ({ rowCount }) => {
             <a href="/imprensa">Imprensa</a>
           </nav>
           <a
-            className="ip-github"
+            className="mdf-btn mdf-btn--tertiary"
             target="_blank"
             rel="noreferrer"
             href="https://github.dev/rslgp/mapafome_homolog/src/app/components/compatibility/components/README.md"
             aria-label="Contribuir / abrir PR no GitHub"
             title="Contribuir / abrir PR no GitHub"
           >
-            <img src="https://brand.github.com/_next/static/media/logo-03.cc5e5332.png" alt="GitHub" />
+            <img className="mdf-btn__brandmark" src="https://brand.github.com/_next/static/media/logo-03.cc5e5332.png" alt="GitHub" />
           </a>
           <p className="ip-closing">
             Ninguém deveria passar fome ao nosso lado. Faça hoje a sua parte —
