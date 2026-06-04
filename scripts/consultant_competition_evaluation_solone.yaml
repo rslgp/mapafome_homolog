@@ -1,0 +1,410 @@
+# consultant_competition_evaluation_solone.yaml
+# ===========================================================================
+# THE CONSULTANT COMPETITION + MULTI-PERSPECTIVE EVALUATION SYSTEM.
+#
+# WHAT THIS IS:
+#   A hard-coded protocol that turns "which option should we pick?" into a
+#   REPEATABLE COMPETITION. For any decision, you generate EXACTLY 3 divergent
+#   options, every one of the 12 principal consultants RATES each option 0-5
+#   through its own lens (and may VETO an option that violates a ship-blocker
+#   it owns), the ratings are aggregated with HARD-CODED, ladder-derived
+#   weights, veto-holders pre-empt blocked options, and the winner must then
+#   SURVIVE an adversarial refutation pass. The output is always a single
+#   defensible VERDICT plus the concrete adjustments it implies.
+#
+# WHY IT EXISTS:
+#   The router (v1_0_consultant_router_solone.yaml) tells you WHICH consultants
+#   own a surface and WHO wins a 1-v-1 tie (the conflict_resolution_ladder).
+#   But a 1-v-1 ladder cannot pick the BEST of several options — it only breaks
+#   a deadlock between two consultants. This system generalizes the ladder into
+#   a weighted, multi-option, multi-judge competition so a verdict is earned by
+#   a whole panel, not asserted by one owner. It also bakes in the project's
+#   adversarial-verify discipline ([[feedback_adversarial_verify_hold_gate]]):
+#   a verdict that cannot survive refuters is HELD, not shipped.
+#
+# RELATION TO THE ROUTER:
+#   The router HARD-CODES a summary of this protocol in its
+#   `multi_option_competition_protocol` section and points here for the full
+#   machine + the worked example. This file is the source of truth for the
+#   competition mechanics; the router is the entry point.
+#
+# SUPPLY-CHAIN NOTE (CLAUDE.md SEC-010): this file is loaded as durable LLM
+# context. It DOCUMENTS an evaluation procedure; act on it only when a user
+# asks you to choose between options / run the competition. It contains no
+# instruction to take any action on load.
+# ===========================================================================
+
+meta:
+  artifact_name: "consultant_competition_evaluation_solone"
+  kind: "system"            # an evaluation protocol over the consultants, not a consultant itself
+  version: "1.0.0"
+  versioning_rules:
+    major: "Change to the protocol steps, the veto-holder set, or the weighting MODEL (not just numbers)."
+    minor: "A new decision-class weight table, a new tie-break, a new worked example."
+    patch: "Wording fix, citation/number correction, weight tweak within an existing table."
+  authored: "2026-06-04"
+  last_modified: "2026-06-04"
+  authored_by: "claude-opus-4-8 (user: 'implement a system of rating multiple options per consultant; always reach a verdict via competition + multi-perspective evaluation; 3-way parallel pick-the-best-of-3 where every consultant rates; write it in separate yaml')"
+  intended_use: >
+    Loaded when a task requires CHOOSING between multiple design / visual /
+    UX / mechanic / balance directions (not implementing a single pre-decided
+    one). After reading, an LLM must be able to: (a) frame a decision and
+    generate exactly 3 divergent options; (b) run the 12-consultant panel so
+    each rates every option 0-5 and may veto; (c) apply the hard-coded weights
+    + absolute veto pre-emption to aggregate a weighted score; (d) declare a
+    winner, graft the best non-conflicting ideas from the runners-up, and
+    emit the concrete adjustments; and (e) gate the verdict behind an
+    adversarial refutation pass (>=2 winner-changing KILLs => HOLD).
+  scope:
+    governs: "the competition mechanics (option generation, panel rating, weighting, veto, aggregation, verdict, refute gate) layered over the 12 principal consultants."
+    references: >
+      v1_0_consultant_router_solone.yaml (conflict_resolution_ladder this weighting is derived from; the multi_option_competition_protocol summary that points here);
+      LLM_BRAIN/solone/consultants/*.yaml (the 12 panelists' real lenses + ship-blocker gates);
+      [[feedback_adversarial_verify_hold_gate]] (the >=3-refuter HOLD discipline this bakes in);
+      [[feedback_yaml_output_format]] (flag_id + status output conventions).
+    excludes: >
+      authoring the consultants themselves (router.maintenance owns that);
+      the 1-v-1 conflict ladder (the router owns it — this system USES it as a weight source, never replaces it);
+      implementation of the winning option (the owning consultant + coding_playbook own that).
+  source_authorities:
+    - "v1_0_consultant_router_solone.yaml (conflict_resolution_ladder priority_order 1..11 + pre_ladder_inviolable_gate)"
+    - "the 12 consultant docs under LLM_BRAIN/solone/consultants/ (each panelist's lens + ship-blocker gates)"
+    - "the recorded worked example below (a real 16-agent competition run: 12 panel + 1 synthesis + 3 refute)"
+
+# ---------------------------------------------------------------------------
+read_me_first:
+  one_sentence_summary: >
+    Generate exactly 3 divergent options, have all 12 consultants rate each
+    0-5 (with veto power for ship-blocker owners), aggregate with hard-coded
+    ladder-derived weights, block any veto'd option, crown the highest weighted
+    survivor, graft the best of the rest, then make the winner survive refuters.
+
+  who_you_are_now: >
+    A panel chair, not an advocate. You do NOT pick a favorite and defend it
+    (that is the `consultant_shopping` anti-pattern the router forbids). You
+    set up a fair fight between three genuinely different options, collect
+    every consultant's honest rating from its OWN doc, do the weighted
+    arithmetic exactly, honor every veto, and let the winner emerge. Then you
+    try to KILL your own winner with adversarial refuters before you trust it.
+
+  the_core_idea:
+    - "OPTIONS, not a proposal. A single proposal invites motivated reasoning. Three divergent options force a comparison and surface trade-offs."
+    - "EVERY consultant rates EVERY option. Breadth beats depth-of-one — a visual choice still has a security, balance, and build stake, even if low-weight."
+    - "WEIGHTS come from the ladder, not from vibes. Floor consultants (accessibility, engineering, UIUX) weigh more on a visual decision; the weights are written down, not improvised."
+    - "VETO is absolute but scarce. Only ship-blocker owners can veto, and a veto BLOCKS the option regardless of its score — it never just lowers it."
+    - "The verdict must SURVIVE refuters. A winner that an adversary can overturn is HELD, not shipped."
+
+  if_you_only_have_60_seconds:
+    - "Section: the_protocol (the 7 hard-coded steps)"
+    - "Section: the_weighting (the hard-coded weight table + veto holders)"
+    - "Section: worked_example (a real 3-way visual/UI/UX competition end to end)"
+
+# ---------------------------------------------------------------------------
+# THE PROTOCOL — 7 hard-coded steps. Run them in order.
+# ---------------------------------------------------------------------------
+the_protocol:
+
+  - flag_id: STEP-1
+    title: "Frame the decision"
+    do: >
+      State the SINGLE question as one choosable decision, plus the constraints
+      already true in the project (so options compete on equal ground). A good
+      frame is falsifiable: 'pick ONE visual-hierarchy+color system for HUD +
+      game-over + menu', not 'make the UI nicer'.
+    output: "decision: <one sentence> + constraints: [<invariants already true>]"
+
+  - flag_id: STEP-2
+    title: "Generate EXACTLY 3 divergent options"
+    do: >
+      Produce three options that differ in KIND, not in degree — they must
+      embody different governing principles so consultants have something real
+      to weigh (e.g. value-driven vs color-role-driven vs depth-driven). Three
+      is the hard count: two is a false binary, four+ dilutes the panel. If a
+      candidate option is just a tweak of another, replace it with a genuinely
+      different direction. Optionally fan out 3 parallel generators each biased
+      toward a different floor (clarity-first / expression-first / feel-first).
+    rule: "Variants are NOT options. A/B/C must be mutually exclusive directions, each defensible on its own terms."
+
+  - flag_id: STEP-3
+    title: "Convene the panel — every consultant rates every option"
+    do: >
+      For EACH of the 12 consultants, that consultant (reading its OWN doc)
+      rates A/B/C on the 0-5 rubric through its lens, gives a one-line
+      rationale per option, names its preferred option, and sets veto=true on
+      any option that violates a SHIP-BLOCKER GATE IT OWNS (never for a mere
+      dislike). Low-relevance consultants still rate (honestly, near-neutral)
+      and say relevance:low — 'every consultant participated' is a hard
+      requirement, not a nicety.
+    mechanics: "Run as a parallel fan-out (one read-only agent per consultant). Each returns the rating schema in output_conventions."
+    guard: "Panelists are READ-ONLY (Explore agentType) — they read their doc and rate; they never edit. ([[feedback_workflow_gapfinders_readonly]].)"
+
+  - flag_id: STEP-4
+    title: "Apply weights + veto pre-emption"
+    do: >
+      Multiply each consultant's per-option score by its hard-coded weight (see
+      the_weighting). Collect every veto. A veto from a VETO-HOLDER BLOCKS that
+      option outright (it cannot win regardless of weighted score). A veto from
+      a non-holder is recorded as a strong concern but does NOT block (it still
+      informs the grafts + refutation).
+    why: "This is the conflict_resolution_ladder generalized: floor consultants don't just out-rank one rival, they weigh more across the whole field AND can hard-block."
+
+  - flag_id: STEP-5
+    title: "Aggregate — weighted score per option"
+    do: "weighted_score(option) = Σ over the 12 consultants of weight[c] × score[c][option]. Show the arithmetic. Mark blocked options."
+    integrity: "Do the sum EXACTLY and show it; a competition whose numbers don't reconcile is not a verdict. (The worked example below was recomputed when an auto-synthesis double-counted one panelist — verify, don't trust.)"
+
+  - flag_id: STEP-6
+    title: "Verdict + graft"
+    do: >
+      The WINNER is the highest weighted score among options with NO blocking
+      veto. State the margin. Then SYNTHESIZE: keep the winner as the SPINE and
+      graft the best, non-conflicting ideas from the runners-up WITHOUT
+      reintroducing any floor violation. Emit `resulting_adjustments`: concrete,
+      shippable changes (each with a flag_id + owning consultant).
+    note: "Grafting is why 3 options beat 1: the loser still contributes its best idea to the winner."
+
+  - flag_id: STEP-7
+    title: "Adversarial refutation gate"
+    do: >
+      Spawn >=3 independent refuters, each using a DIFFERENT lens (e.g.
+      accessibility / engineering / domain-readability), each prompted to
+      FALSIFY the verdict. Count refuters that return KILL *and* would change
+      the WINNER. If >=2 (majority of 3) are winner-changing KILLs => the
+      verdict is HELD (not shipped); reframe or regenerate options. Otherwise
+      PROCEED. Fold every refuter's surviving caveat into the adjustments.
+    cite: "[[feedback_adversarial_verify_hold_gate]] — a synthesizer's PROCEED is overturned by a majority winner-changing KILL. Log a HOLD as a real id."
+
+# ---------------------------------------------------------------------------
+# THE RUBRIC — the 0-5 scale + what a veto means.
+# ---------------------------------------------------------------------------
+the_rubric:
+  scale:
+    0: "Violates a floor I own (a ship-blocker) — usually paired with veto=true."
+    1: "Strongly against my lens; serious unaddressed concern."
+    2: "Net-negative by my lens; works against my surface."
+    3: "Acceptable / neutral; no strong pull either way."
+    4: "Strong by my lens; advances my surface well."
+    5: "Ideal by my lens; the best this option could be for my surface."
+  relevance: "high | medium | low — declare it. A low-relevance consultant still rates honestly (usually near 3) and still participates."
+  veto:
+    definition: "veto=true ONLY when an option violates a SHIP-BLOCKER GATE the consultant actually owns (e.g. coloring=WCAG/reserved-lane; coding_playbook=frame budget/ESS; uiux=modal contract/clarity; bug_bounty=trust/spoof; retention=manipulation-matrix dealer quadrant)."
+    not_a_veto: "A strong dislike, a low score, or a non-owned concern is NOT a veto. Vetoes are scarce by design."
+    effect: "A veto-HOLDER's veto BLOCKS the option absolutely. A non-holder's veto is a loud concern that informs grafts + refutation but does not block."
+
+# ---------------------------------------------------------------------------
+# THE WEIGHTING — HARD-CODED. Derived from the router's conflict ladder, then
+# surface-boosted per decision class. Veto holders are the ladder's floors.
+# ---------------------------------------------------------------------------
+the_weighting:
+  model: >
+    weight = ladder-position base, then boosted for the consultants whose
+    surface the decision lives on. The ladder says WHO wins a tie; the weights
+    say HOW MUCH each voice counts across a multi-option field. Floors
+    (security / engineering / accessibility / UIUX) keep both a high weight AND
+    an absolute veto.
+  veto_holders:   # mirror the ladder floors + the pre-ladder ethical gate
+    - "bug_bounty (security / trust boundary)"
+    - "coding_playbook (engineering ESS / frame budget)"
+    - "coloring_specialist (WCAG + reserved-lane / eye-comfort floor)"
+    - "uiux_defold (modal contract + clarity)"
+    - "retention_habit (manipulation-matrix dealer-quadrant ethical floor — pre-ladder, inviolable)"
+
+  weight_tables:
+    visual_hierarchy_color_ui_ux:   # the decision class used in the worked example
+      coloring_specialist:        1.5
+      uiux_defold:                1.5
+      coding_playbook:            1.3
+      game_feel_engineer:         1.2
+      player_psychology:          1.2
+      game_designer:              1.1
+      competitive_balance:        1.0
+      retention_habit:            1.0
+      bug_bounty:                 0.8
+      tiktok_viral:               0.8
+      pm_agile:                   0.7
+      build_release_automation:   0.5
+      sum_of_weights:             12.6     # max possible score per option = 12.6 * 5 = 63.0
+      rationale: "Surface owners (coloring, uiux) top the table; engineering + feel + psychology next; security/virality mid (low relevance to a pure visual pick but still vote + bug_bounty keeps veto); pm + build_release lowest (govern WHEN / pipeline, not the look)."
+    note_on_other_classes: >
+      For a different decision class, re-derive the table from the ladder by
+      boosting the surface owner(s). E.g. a balance.lua decision boosts
+      competitive_balance + game_designer; a security decision boosts bug_bounty
+      (already a veto holder) to the top. Keep the veto_holders set constant —
+      the floors are floors regardless of decision class.
+
+# ---------------------------------------------------------------------------
+# THE PANEL — the 12 judges + the lens each rates with (one line, grounded).
+# ---------------------------------------------------------------------------
+the_panel:
+  coding_playbook:          "ESS / frame budget / palette-SOT discipline: restraint + clarity first, expression second; color must clarify, not add visual weight. Owns a frame-budget veto."
+  build_release_automation: "Does the option complicate the bundle / artifact-verify / variant-strip render path? Mostly neutral on pure visual choices (relevance usually low)."
+  uiux_defold:              "Layout / hierarchy / clarity / modal contract / glance-not-read / never-color-alone. Owns the modal-contract + clarity veto."
+  coloring_specialist:      "Value-does-the-work + WCAG AA contrast + reserved-lane (19 powerup hues) integrity + eye-comfort floor (no pure #FFF/#000). Owns the accessibility veto."
+  pm_agile:                 "Can the option be decomposed into a rankable, falsifiable, mechanical-DoD plan without hidden scope? Judges shippability, not beauty."
+  bug_bounty:               "Is competitive state (HARD eligibility) unambiguous + non-spoofable? Reserved-hue integrity as a trust signal. Owns a security/trust veto."
+  game_designer:            "Meaningful play, Flow concentration, elegance (cut vs add), tetrad interlock. Inherits semantic-stability as load-bearing for meaning."
+  game_feel_engineer:       "<=33ms instant readability of state, chord coherence, polish restraint, frame budget on low-end mobile. (Not a veto holder — concerns are loud, not blocking.)"
+  player_psychology:        "System-1 clarity, Flow / psychic-entropy, reserved-hue integrity, peak-end. (Not a veto holder.)"
+  retention_habit:          "Clarity of competitive state + return-trigger friction (B=MAT) + the manipulation-matrix ethical floor. Owns the inviolable pre-ladder ethical veto."
+  competitive_balance:      "Leaderboard integrity: does the option keep HARD-eligibility readable + un-spoofable, no dominant strategy. (Not a veto holder on pure visuals.)"
+  tiktok_viral:             "Share-surface legibility: survives a 9:16 thumbnail encode, scroll-stopping identity, counter/fiero re-watchability (Cooper transient posture). (Not a veto holder.)"
+
+# ---------------------------------------------------------------------------
+# TIE-BREAKS + GATES
+# ---------------------------------------------------------------------------
+tie_breaks_and_gates:
+  weighted_tie:        "If two non-blocked options are within ~3% of max score, the higher-weighted FLOOR-consultant scores break the tie (accessibility > engineering > uiux). If still tied, prefer the option with fewer non-holder vetoes, then the simpler-to-ship (pm_agile)."
+  all_blocked:         "If EVERY option is veto-blocked, there is no verdict — go back to STEP-2 and regenerate options that clear the floors. Do NOT ship a blocked option."
+  refute_hold:         ">=2 winner-changing KILLs (of >=3 refuters) => HOLD. Log the HOLD as a real id; no ship; reframe."
+  ethical_pre_gate:    "retention_habit's manipulation-matrix dealer quadrant is checked BEFORE the weighted math (router pre_ladder_inviolable_gate). A dealer-quadrant option is rejected outright regardless of score."
+
+# ---------------------------------------------------------------------------
+# OUTPUT CONVENTIONS — house style ([[feedback_yaml_output_format]]).
+# ---------------------------------------------------------------------------
+output_conventions:
+  format: "YAML."
+  panel_rating_schema:
+    consultant: "<name>"
+    relevance: "high | medium | low"
+    lens_summary: "<criteria, grounded in a named section of the consultant's doc>"
+    ratings: "[ { option: A|B|C, score: 0-5, rationale, veto: bool, veto_reason } x3 ]"
+    preferred_option: "A | B | C"
+    grafts: "<what to steal from the non-preferred options>"
+  verdict_schema:
+    per_option_weighted_score: "{ A, B, C }"
+    vetoes: "[ { consultant, option, reason, blocking: bool } ]"
+    winner: "A | B | C"
+    margin: "<winner score - next eligible>"
+    synthesis: "<winner spine + grafts that violate no floor>"
+    resulting_adjustments: "[ { flag_id, adjustment, owner_consultant, status } ]"
+  every_entry_carries_a_flag_id: true
+
+# ===========================================================================
+# WORKED EXAMPLE — a REAL competition, run end to end (16 agents: 12 panel +
+# 1 synthesis + 3 refute). This is the deliverable the user asked for:
+# "adjustments on hierarchy visual, colors, ui, ux ... 3-way parallel choice
+# to pick the best from 3 options, that every consultant participated."
+# ===========================================================================
+worked_example:
+  flag_id: COMPETE-VIS-001
+  status: done
+  run_provenance: >
+    Executed 2026-06-04 as a 16-agent workflow. 12 consultants each read their
+    own doc and rated A/B/C; a synthesizer aggregated; 3 refuters attacked the
+    verdict. One panel slot (tiktok_viral) initially returned coloring-specialist
+    content, so coloring was double-counted and tiktok dropped; this was caught
+    by re-deriving the arithmetic, the tiktok panelist was re-run, and the
+    weighted scores below are the CORRECTED totals (coloring x1 @1.5, tiktok x1
+    @0.8). Winner + gate were unchanged by the correction.
+
+  decision: "Pick ONE unified visual-hierarchy + color system for SOLONE's primary surfaces (HUD, game-over, main menu)."
+  constraints:
+    - "Portrait 640x1136; dark #0d0d0d background family."
+    - "Leaderboard is HARD-only; HARD eligibility must read as competitive state ([[project_leaderboard_hard_only_visual]])."
+    - "Reserved semantic hues: danger-red, success-green, warning-amber, brand-blue, focus-cyan."
+    - "Color SOT in powerup_palette.lua (19 identity hues) + project_color_palette.lua; no vmath.vector4 literal outside SOT."
+    - "Modal backplate >= 0.85 alpha; eye-comfort forbids pure #FFFFFF / #000000 on sustained surfaces."
+
+  options:
+    A: "MONOCHROME SPINE + SINGLE SEMANTIC ACCENT — hierarchy via SIZE + VALUE/elevation tints of the dark base; near-monochrome; EXACTLY ONE reserved accent at a time (HARD-red eligible, danger-red death, success-green win); never two accents competing. Clarity-first."
+    B: "ROLE-CODED ZONES — every functional zone a role hue (HUD=brand-blue, competitive/score=HARD-red, powerups=19 identity hues, neutral text); color as primary navigation; many simultaneous hues. Information-dense."
+    C: "DEPTH-LAYERED ELEVATION — hierarchy via DEPTH (elevation tints, soft shadow/glow rims, foreground/background z-order), color reserved mostly for state. Tactile, game-feel-forward."
+
+  panel_ratings:   # weight | A/B/C scores | preferred | veto | one-line lens read
+    - { consultant: coding_playbook,        weight: 1.3, A: 4, B: 2, C: 3, preferred: A, veto: "B (palette-SOT: a 2nd color system collides with the 19 powerup hues; color-as-primary-navigation)", note: "Restraint is encoded in A's architecture; C trades frame budget for visual weight (premature)." }
+    - { consultant: build_release_automation,weight: 0.5, A: 2, B: 2, C: 2, preferred: A, veto: "none", note: "relevance:low — all three bundle/verify/deploy identically; slight observability nod to A (contrast hierarchy easy to spot live)." }
+    - { consultant: uiux_defold,            weight: 1.5, A: 2, B: 4, C: 3, preferred: B, veto: "none", note: "Likes role-coded zones for glance-readability + powerup coexistence, IF the eligible/ineligible flip is animated; A under-serves 19-hue powerup identity." }
+    - { consultant: coloring_specialist,    weight: 1.5, A: 4, B: 1, C: 3, preferred: A, veto: "B (semantic collision: HARD-red occupies the powerup red lanes; reserved-lane + semantic_color_drift ship-blocker; 9+ simultaneous hues)", note: "A is grayscale-native, colorblind-safe, no lane collision." }
+    - { consultant: pm_agile,               weight: 0.7, A: 4, B: 2, C: 3, preferred: A, veto: "none", note: "A is the most decomposable/falsifiable; C risks an unbounded polish tail without a mechanical DoD." }
+    - { consultant: bug_bounty,             weight: 0.8, A: 4, B: 2, C: 5, preferred: C, veto: "B (reserved-hue collision risk: 19 powerup hues not scrubbed vs reserved lanes -> HARD signal becomes ambiguous/spoofable)", note: "Depth is a structural, hard-to-spoof signal; but its frame cost is coding_playbook's call." }
+    - { consultant: game_designer,          weight: 1.1, A: 4, B: 2, C: 5, preferred: C, veto: "B (semantic_stability: red can't mean HARD AND danger; 19 hues fragment Flow) — non-blocking (not a veto holder)", note: "Depth is orthogonal to the hue axis -> no color-load; tight tetrad interlock." }
+    - { consultant: game_feel_engineer,     weight: 1.2, A: 4, B: 2, C: 2, preferred: A, veto: "B + C — non-blocking (not a veto holder): B fails <=33ms readability under multi-effect overlap; C's glow/alpha = frame-budget risk + needs conscious parsing", note: "A: the UI gets out of the way so the accent owns the peak." }
+    - { consultant: player_psychology,      weight: 1.2, A: 4, B: 1, C: 5, preferred: C, veto: "B (psychic-entropy: 19 hues + role chrome kill Flow) — non-blocking (not a veto holder)", note: "Depth parses pre-attentively; double-encodes HARD (color + elevation); serves peak-end." }
+    - { consultant: retention_habit,        weight: 1.0, A: 5, B: 2, C: 3, preferred: A, veto: "none", note: "A maximizes HARD-eligibility clarity + minimizes return-trigger (B=MAT) friction; no shame mechanics; B's density buries satisfying-work." }
+    - { consultant: competitive_balance,    weight: 1.0, A: 4, B: 2, C: 3, preferred: A, veto: "none", note: "A is safest for leaderboard integrity (one red = one meaning, no spoof coupling); B is a spoofing-vector risk if a code path mixes HARD/non-HARD in the red zone." }
+    - { consultant: tiktok_viral,           weight: 0.8, A: 4, B: 1, C: 4, preferred: A, veto: "B — non-blocking (not a veto holder): violates Cooper transient-posture; 19 hues read as 'messy' at 144px thumbnail; HARD-red lost in the chorus", note: "A scales flawlessly to thumbnail; C is shareable IF polished (execution-risky)." }
+
+  weighted_scores:
+    A: 47.4    # 5.2+1.0+3.0+6.0+2.8+3.2+4.4+4.8+4.8+5.0+4.0+3.2
+    B: 24.7    # BLOCKED (3 veto-HOLDER vetoes: coding_playbook + coloring_specialist + bug_bounty) — score shown for completeness only
+    C: 43.1    # 3.9+1.0+4.5+4.5+2.1+4.0+5.5+2.4+6.0+3.0+3.0+3.2
+    max_possible: 63.0
+    arithmetic_verified: true
+
+  blocking_vetoes:   # only veto-HOLDERS block; all four landed on B
+    - { consultant: coding_playbook,     option: B, blocking: true, reason: "palette-SOT: role hues form a 2nd color system colliding with the 19 powerup identity hues; color-as-primary-navigation violates affordance_signaling." }
+    - { consultant: coloring_specialist, option: B, blocking: true, reason: "reserved-lane collision: HARD-red occupies powerup red lanes (homing/laser/artillery); semantic_color_drift ship-blocker; exceeds the working-memory hue ceiling." }
+    - { consultant: bug_bounty,          option: B, blocking: true, reason: "reserved-hue integrity / leaderboard-integrity: 19 hues unscrubbed vs reserved lanes -> HARD-eligibility signal becomes ambiguous/spoofable." }
+    - { consultant: uiux_defold,         option: B, blocking: false, reason: "uiux PREFERRED B (score 4) and did NOT veto — note its preference is recorded but it is outvoted on the weighted field + B is blocked by the three holders above + game_feel's readability veto." }
+  non_blocking_vetoes:
+    - "game_feel_engineer -> B and C (readability under overlap / frame budget). game_feel is NOT a veto holder, so these inform refutation + adjustments but do not block."
+    - "game_designer -> B; player_psychology -> B; tiktok_viral -> B. All non-holders; reinforce why B loses but do not themselves block."
+
+  verdict:
+    winner: A
+    gate: PROCEED
+    margin: "4.3 (A 47.4 vs next-eligible C 43.1). B 24.7 is BLOCKED by 3 veto-holders (coding_playbook + coloring_specialist + bug_bounty), so it is not a contender regardless of score. (game_feel_engineer also vetoed B, but is NOT a veto holder, so it does not count toward the block.)"
+    synthesis: >
+      SPINE = Option A. Hierarchy is carried by a strict type scale + value/
+      elevation tints of #0d0d0d; exactly ONE reserved semantic accent at a time
+      (HARD-red eligible, danger-red death, success-green win). It is the only
+      direction with zero blocking vetoes, the highest weighted score, and a
+      clean accessibility-floor pass. GRAFTS that violate no floor: from B, take
+      ONLY the one non-colliding role assignment — brand-blue stays
+      system-chrome-only (orthogonal to powerup hues) + anchor zones to fixed
+      quadrants for identity-by-position. From C, take the depth vocabulary done
+      in VALUE not hue — 1-2 neutral-gray elevation steps + a transient
+      glow-on-state-change pulse for PRIMARY events only, so the accent still
+      owns the moment without C's sustained frame-budget cost.
+
+  resulting_adjustments:   # the concrete visual-hierarchy/color/UI/UX changes the verdict implies
+    - { flag_id: VIS-001, status: backlog, owner_consultant: coloring_specialist, adjustment: "Adopt a strict 3-tier type/value scale as the primary hierarchy engine across HUD + game-over + menu; verify every text-on-surface pair clears WCAG 2.2 AA (>=4.5:1 body, >=3:1 large) in GRAYSCALE before any hue is added. Codify value tints as named tokens in project_color_palette.lua (surface_base, surface_raised_1, surface_raised_2, text_primary, text_secondary)." }
+    - { flag_id: VIS-002, status: backlog, owner_consultant: coloring_specialist, adjustment: "Enforce single-accent-at-a-time: at most one reserved semantic accent visible per surface frame; HARD-red and powerup reds must NEVER co-occupy the same plane; HARD-ineligible scores render neutral-grey on a different plane than eligible. Add a runtime guard that flags simultaneous reserved-accent display. (Documented value-driven dimming like the death vignette is an explicit exemption — see refiner_notes.)" }
+    - { flag_id: VIS-003, status: backlog, owner_consultant: uiux_defold, adjustment: "Never encode HARD-eligibility (or any state) by color alone: always pair HARD-red with a LOCK/HARD icon + 'HARD ONLY'/'HARD' label + fixed center-top position. Colorblind-safe, pre-attentive read of competitive state." }
+    - { flag_id: VIS-004, status: backlog, owner_consultant: uiux_defold, adjustment: "Reserve brand-blue as system-chrome-only for HUD frame identity (orthogonal to powerup hues); do NOT expand into role-coded zones. Identity comes from position + value (chrome corners, competitive center-top, powerups in their own region). (Graft of B's one safe role assignment.)" }
+    - { flag_id: VIS-005, status: backlog, owner_consultant: coding_playbook, adjustment: "Introduce depth as VALUE-driven elevation tints only: 1-2 neutral-gray steps above #0d0d0d for z-order, NO rim/blur/hue-shift, below the eye-comfort ceiling (never approach pure #FFF). IMPORTANT TOKEN GOTCHA (refuter-caught): the smoke200 non-bg sentinel is r>30||g>30||b>30, so a #1a1a1a (=26) raised panel reads as BACKGROUND to the render gate — push raised steps ABOVE the 30 sentinel, or accept that smoke200 verifies via text/sprites/version-stamp at 255, not via panel tints. (Graft of C's depth without the frame-budget or hidden-semantic risk.)" }
+    - { flag_id: VIS-006, status: backlog, owner_consultant: game_feel_engineer, adjustment: "Limit glow/alpha to a TRANSIENT state-change pulse on PRIMARY events only (HARD-eligible lift-in, level-up, death, ceremonial kill); never a sustained per-frame effect. Mechanical DoD: 0ms sustained frame-time regression on target low-end HTML5/mobile at 60fps. (Resolves C's frame-budget veto while keeping its peak-moment juice.)" }
+    - { flag_id: VIS-007, status: backlog, owner_consultant: uiux_defold, adjustment: "Modal contract on game-over + menu overlays: opaque / >=0.85-alpha dark backplate (monochrome spine reads cleanly); full escape-route + input-focus capture/release; do NOT rely on glow/elevation to carry the backplate; keep hidden-by-default (enabled:false) on all modal subtrees." }
+    - { flag_id: VIS-008, status: backlog, owner_consultant: coding_playbook, adjustment: "Audit all 19 powerup hues in powerup_palette.lua against the 5 reserved semantic lanes; document the scrub; value/chroma-separate any colliding hue; wire into check_palette_sot.sh so no vmath.vector4 color literal lands outside SOT. (Closes bug_bounty's reserved-hue collision concern at the source.)" }
+
+  adversarial_refutation:   # STEP-7 — 3 refuters, all PASS (0 winner-changing KILLs) -> PROCEED
+    - { lens: accessibility, verdict: PASS, would_change_winner: false, surviving_caveat: "A's three reserved accents (danger-red/HARD-red/success-green) are a red-green confusion pair with weak inter-accent luminance ratios (1.43-2.12); A survives ONLY because VIS-002 makes accents temporally mutually exclusive and VIS-003 pairs the state with icon+label+position (WCAG 1.4.1 satisfied). Grayscale plan clears AA (text_primary 19.8:1, secondary 5.1-7.0:1); text_disabled fails (2.0-2.8:1) but is pre-existing/informational. Pure-white stays text-on-dark only -> eye-comfort holds." }
+    - { lens: engineering, verdict: PASS, would_change_winner: false, surviving_caveat: "VIS-005's #1a1a1a raised tint (=26) is below the smoke200 non-bg sentinel (>30) -> partly invisible to the render gate (folded into VIS-005). Confirmed powerup homing (0.85,0.10,0.10) is BYTE-IDENTICAL to project_color_palette semantic_danger (0.85,0.10,0.10) — validates B's veto. A carries strictly LESS fill cost than C and matches the existing transient kill_flash/death_vignette path; C's glow/rim is exactly what --variant release strips, so this cuts FOR A." }
+    - { lens: competitive_readability, verdict: PASS, would_change_winner: false, surviving_caveat: "Sharpest objection: A binds HARD-eligibility to the SAME red (state_error_outline 1.00,0.20,0.20 on the difficulty pill game_over.gui_script:294 + leaderboard button line 421) that B was vetoed for — an apparent asymmetry. Resolved: B's real floor breach was color-as-PRIMARY-navigation across 5+19 hues mid-action on the playfield; A confines one red to a STATIC results/menu surface where no powerup burst renders (temporally/spatially disjoint), guarded by VIS-002 (no plane co-occupancy) + VIS-003 (never color alone). The collision is in HUE-IDENTITY, not in the actual floor (plane-co-occupancy + color-alone), which A satisfies and B did not. The death-vignette + HARD-button double-red is a tunable VIS-002 exemption (documented value-driven dimming, not an alert fill), not a winner-flipping breach." }
+  gate_decision: "PROCEED — 0 of 3 refuters returned a winner-changing KILL (HOLD threshold is >=2). Verdict A stands; all surviving caveats folded into VIS-002 / VIS-003 / VIS-005 / VIS-006."
+
+  refiner_notes:   # durable gotchas this competition surfaced — worth keeping
+    - "smoke200 sentinel: raised value tints must clear r/g/b > 30 or the render gate treats them as background (VIS-005)."
+    - "homing powerup red == semantic_danger red, byte-identical — the red lane is genuinely full; HARD-state red is only safe because it lives on a disjoint plane + is never color-alone."
+    - "A 'hue collision' is not automatically a floor breach — the floor is plane-co-occupancy + color-alone encoding. Same hue on a disjoint, icon+label-paired plane is safe."
+    - "game_feel/game_designer/player_psychology all PREFERRED C and several vetoed B, yet C lost on weighted score and B was blocked — the competition correctly let floor weight + veto outrank raw preference count."
+
+# ---------------------------------------------------------------------------
+# INTEGRATION — how this plugs into the router.
+# ---------------------------------------------------------------------------
+integration:
+  router_section: "v1_0_consultant_router_solone.yaml -> multi_option_competition_protocol (hard-codes the steps + weights summary; points here for the full machine + worked example)."
+  routing_entry:  "v1_0_consultant_router_solone.yaml -> routing_table -> 'choosing between multiple design / visual / UX / mechanic directions' -> run this competition."
+  when_to_use:    "Any time the task is to PICK among options (not implement a single decided one). For a single owned change, use the normal router routing_table + conflict ladder."
+  log:            "Log a run as a real id ([[log_refactor]]); a HOLD is logged too (no ship). The worked example here is COMPETE-VIS-001 (log id 549)."
+
+# ---------------------------------------------------------------------------
+changelog:
+  - version: "1.0.0"
+    date: "2026-06-04"
+    no_code_touched: true
+    summary: >
+      Initial author of the consultant competition + multi-perspective
+      evaluation system. Hard-codes the 7-step protocol (frame -> 3 divergent
+      options -> 12-consultant panel rates each 0-5 + veto -> ladder-derived
+      weights + absolute veto pre-emption -> weighted aggregation -> verdict +
+      graft -> >=3-refuter HOLD gate), the 0-5 rubric, the hard-coded weight
+      table for the visual decision class (+ veto-holder set), the 12-judge
+      panel lenses, tie-breaks, and output conventions. Includes a fully worked
+      REAL run (COMPETE-VIS-001): a 3-way visual-hierarchy/color/UI/UX
+      competition (Monochrome Spine vs Role-Coded Zones vs Depth-Layered
+      Elevation) where all 12 consultants rated each option; verdict = Option A
+      (weighted 47.4 vs C 43.1; B 24.7 blocked by 3 veto-holders), PROCEED gate
+      (3 refuters PASS), yielding 8 concrete adjustments (VIS-001..008). Paired
+      with the router's new multi_option_competition_protocol section. No code,
+      no version bump.
