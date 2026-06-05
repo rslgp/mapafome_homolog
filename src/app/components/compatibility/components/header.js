@@ -41,7 +41,7 @@ export default function Header({ rowCountProp, onStartTour, onStartReport }) {
                 className="mdf-header__backup"
                 href="https://rslgp.github.io/mapafome"
               >
-                {' — mapafome.com.br '}
+                {' · mapafome.com.br '}
               </a>
             </span>
           </span>

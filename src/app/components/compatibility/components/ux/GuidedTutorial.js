@@ -25,7 +25,7 @@ const CHOOSER = {
     {
       key: 'helper',
       label: 'Represento uma iniciativa que ajuda',
-      hint: 'Igreja, ONG ou grupo — ponto azul ou vermelho',
+      hint: 'Igreja, ONG ou grupo, ponto azul ou vermelho',
       swatchClass: 'mdf-tour__swatch--bluered',
     },
   ],
@@ -34,17 +34,17 @@ const CHOOSER = {
 const REPORTER_STOPS = [
   {
     selectors: ['.leaflet-container', '#mdf-target-map'],
-    title: 'Passo 1 — Toque no mapa',
+    title: 'Passo 1: Toque no mapa',
     body: 'Encontre no mapa o local onde você viu a pessoa e toque para marcar o ponto.',
   },
   {
     selectors: ['#CoffeeTable', '#mdf-target-controls'],
-    title: 'Passo 2 — Escolha a categoria amarela',
+    title: 'Passo 2: Escolha a categoria amarela',
     body: 'Marque "Pessoa precisando de Alimento pronto" ou "Cesta básica". As duas aparecem como pontos amarelos no mapa.',
   },
   {
     selectors: ['#mdf-target-confirm', '.marcar-local'],
-    title: 'Passo 3 — Confirme o ponto',
+    title: 'Passo 3: Confirme o ponto',
     body: 'Revise e confirme. O ponto fica visível para que um voluntário próximo possa levar ajuda.',
   },
 ];
@@ -52,17 +52,17 @@ const REPORTER_STOPS = [
 const HELPER_STOPS = [
   {
     selectors: ['.leaflet-container', '#mdf-target-map'],
-    title: 'Passo 1 — Toque onde sua iniciativa atua',
+    title: 'Passo 1: Toque onde sua iniciativa atua',
     body: 'Marque no mapa o ponto fixo onde sua igreja, ONG ou grupo recebe doações ou entrega refeições.',
   },
   {
     selectors: ['#CoffeeTable', '#mdf-target-controls'],
-    title: 'Passo 2 — Azul ou vermelho?',
+    title: 'Passo 2: Azul ou vermelho?',
     body: 'Azul: você recebe alimentos ou recursos para distribuir (ONGs, sopão, voluntários). Vermelho: você entrega refeição em ponto fixo da rua em certo dia da semana.',
   },
   {
     selectors: ['.tfMarginUp', '#mdf-target-confirm'],
-    title: 'Passo 3 — Contato, Instagram e confirmação',
+    title: 'Passo 3: Contato, Instagram e confirmação',
     body: 'Adicione um telefone com DDD e o Instagram (ou Facebook) da sua iniciativa para que doadores cheguem até você. Depois confirme o ponto.',
   },
 ];

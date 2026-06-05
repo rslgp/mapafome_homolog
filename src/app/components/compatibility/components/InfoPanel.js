@@ -21,7 +21,7 @@ const LEGEND = [
     chipClass: 'yellowHub',
     icon: coffeeBean,
     label: 'Em amarelo',
-    desc: 'Pessoas em vulnerabilidade social e insegurança alimentar que estão com fome em casa ou na rua — precisam de alimento.',
+    desc: 'Pessoas em vulnerabilidade social e insegurança alimentar que estão com fome em casa ou na rua e precisam de alimento.',
     span: 'wide',
   },
   {
@@ -29,7 +29,7 @@ const LEGEND = [
     chipClass: 'blueHub',
     icon: hub,
     label: 'Em azul',
-    desc: 'Pessoas ou iniciativas que recebem alimentos ou recursos para distribuir na comunidade (sopão solidário, ONGs, voluntários) — precisam de doações.',
+    desc: 'Pessoas ou iniciativas que recebem alimentos ou recursos para distribuir na comunidade (sopão solidário, ONGs, voluntários) e precisam de doações.',
     span: 'wide',
   },
   {
@@ -37,7 +37,7 @@ const LEGEND = [
     chipClass: 'redHub',
     icon: red,
     label: 'Em vermelho',
-    desc: 'Pessoas ou grupos que entregam refeição em ponto fixo na rua em certo dia da semana — ponto de entrega de alimento pronto.',
+    desc: 'Pessoas ou grupos que entregam refeição em ponto fixo na rua em certo dia da semana, como ponto de entrega de alimento pronto.',
     span: 'half',
   },
   {
@@ -45,7 +45,7 @@ const LEGEND = [
     chipClass: 'greenHub',
     icon: green,
     label: 'Em verde',
-    desc: 'Pessoas que trabalham com alimentos e precisam destinar o que não foi comercializado (restaurante, hotel, feira, supermercado) — precisam de voluntários para buscar.',
+    desc: 'Pessoas que trabalham com alimentos e precisam destinar o que não foi comercializado (restaurante, hotel, feira, supermercado) e precisam de voluntários para buscar.',
     span: 'half',
   },
 ];
@@ -59,7 +59,7 @@ const ACKNOWLEDGEMENTS = [
   'E dar visibilidade, contribuindo junto com as pessoas de bom coração que rotineiramente alimentam quem não tem dinheiro para comprar comida.',
   'E contribuir com os comerciantes de alimentos a reduzirem o desperdício.',
   'E motivar e ofertar ferramentas para cada ser humano fazer sua parte e colaborar de forma recorrente.',
-  'Ou, se não com o alimento, com o compartilhamento de informação — informando da existência do MAPA FOME a quem precisa e a quem pode ajudar.',
+  'Ou, se não com o alimento, com o compartilhamento de informação, informando da existência do MAPA FOME a quem precisa e a quem pode ajudar.',
   'Sem comida, qualquer ser humano morre prematuramente. Deixar de prestar assistência, quando possível fazê-lo sem risco pessoal, configura crime de Omissão de Socorro (Art. 135 do Código Penal Brasileiro).',
 ];
 
@@ -195,7 +195,7 @@ const InfoPanel = ({ rowCount }) => {
             target="_blank"
             rel="noreferrer"
             href="https://mapafome.com.br/solone/"
-            aria-label="Jogue SOLONE — o jogo do MAPA FOME"
+            aria-label="Jogue SOLONE, o jogo do MAPA FOME"
           >
             <img
               className="mdf-btn__media"
@@ -377,7 +377,7 @@ const InfoPanel = ({ rowCount }) => {
         <figure className="ip-ods">
           <img
             className="ods"
-            alt="ODS 2 da ONU — Fome Zero e Agricultura Sustentável"
+            alt="ODS 2 da ONU, Fome Zero e Agricultura Sustentável"
             src="https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-2.svg"
           />
           <figcaption>
@@ -394,6 +394,7 @@ const InfoPanel = ({ rowCount }) => {
             <li>mapear iniciativas que recebem recursos para fazer doação</li>
             <li>mostrar no mapa onde e quando tem alimento sendo distribuído</li>
             <li>mostrar lugares comerciais ou residenciais que precisam de voluntários para buscar alimentos não consumidos</li>
+            <li>mapear e ajudar vítimas de desastres naturais, como nas enchentes do Sul em 2024, quando atingidos entraram em contato e pediram o filtro <em>Esse ano</em></li>
           </ul>
           <p className="ip-uses__note">
             É possível traçar uma rota ao destino: clique em <em>Ir para o destino</em> para abrir no Google Maps.
@@ -448,7 +449,7 @@ const InfoPanel = ({ rowCount }) => {
             <img className="mdf-btn__brandmark imgGithub" src="https://brand.github.com/_next/static/media/logo-03.cc5e5332.png" alt="GitHub" />
           </a>
           <p className="ip-closing">
-            Ninguém deveria passar fome ao nosso lado. Faça hoje a sua parte —
+            Ninguém deveria passar fome ao nosso lado. Faça hoje a sua parte:
             doe, marque um ponto no mapa ou compartilhe o MAPA FOME.
           </p>
         </footer>

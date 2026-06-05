@@ -58,7 +58,7 @@ export default function StepsHint({ activeStep = 0 }) {
                 type="button"
                 className="mdf-steps__btn"
                 onClick={() => scrollToSelectors(selectors)}
-                aria-label={`Passo ${n}: ${label} — ir para essa área`}
+                aria-label={`Passo ${n}: ${label}, ir para essa área`}
               >
                 <span className="mdf-steps__dot" aria-hidden="true">
                   {n}

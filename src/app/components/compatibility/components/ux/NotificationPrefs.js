@@ -75,7 +75,7 @@ export default function NotificationPrefs({ open, onClose }) {
 
         <p className="mdf-notif__intro">
           Você decide se quer ser avisado quando alguém precisar de ajuda por perto.
-          Tudo começa desligado — ligue só o que faz sentido para você.
+          Tudo começa desligado. Ligue só o que faz sentido para você.
         </p>
 
         <label className="mdf-notif__row">
@@ -125,7 +125,7 @@ export default function NotificationPrefs({ open, onClose }) {
                 disabled={perm === 'denied'}
               >
                 {perm === 'denied'
-                  ? 'Permissão bloqueada — ajuste no ícone do navegador'
+                  ? 'Permissão bloqueada, ajuste no ícone do navegador'
                   : 'Permitir notificações neste navegador'}
               </button>
             )}
@@ -133,7 +133,7 @@ export default function NotificationPrefs({ open, onClose }) {
         )}
 
         <p className="mdf-notif__foot">
-          Desligar é reversível a qualquer momento — volte aqui e desmarque.
+          Desligar é reversível a qualquer momento, volte aqui e desmarque.
         </p>
 
         <LocaleSwitch />

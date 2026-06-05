@@ -246,7 +246,7 @@ const MainControls = ({
             <br></br>
 
             <fieldset id="mdf-target-confirm">
-              <legend>Passo 3 — Marcar Localização</legend>
+              <legend>Passo 3: Marcar Localização</legend>
               <MyLocationButton
                 location={center}
                 alimento={alimento}

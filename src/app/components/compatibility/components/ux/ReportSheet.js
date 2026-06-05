@@ -251,7 +251,7 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
           open={contactOpen}
           onToggle={(e) => setContactOpen(e.target.open)}
         >
-          <summary>Seu contato — opcional</summary>
+          <summary>Seu contato (opcional)</summary>
           <p className="mdf-sheet__helper">
             Um voluntário pode querer confirmar com você antes de ir até o local.
           </p>

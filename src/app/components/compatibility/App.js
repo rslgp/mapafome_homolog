@@ -697,7 +697,7 @@ class App extends Component {
       if (looksLikeNetwork) {
         await enqueuePublish(payload);
         this.setState({
-          offlineToast: 'Conexão instável. Ponto salvo localmente — enviaremos em breve.',
+          offlineToast: 'Conexão instável. Ponto salvo localmente e enviaremos em breve.',
         });
         return;
       }
