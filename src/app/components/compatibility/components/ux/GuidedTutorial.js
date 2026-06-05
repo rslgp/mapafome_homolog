@@ -120,6 +120,25 @@ export default function GuidedTutorial({ open, onClose }) {
     };
   }, [open, isChooser, stop, index]);
 
+  // Move the page so the highlighted step is actually on screen. The spotlight
+  // is viewport-positioned, so a target below the fold (common on mobile —
+  // steps 2/3 sit under the map) would otherwise land off-screen. Mirrors the
+  // "Ver mais" / steps-hint scroll: align the target just below the sticky
+  // header. Honors reduced-motion.
+  useEffect(() => {
+    if (!open || isChooser) return;
+    if (typeof window === 'undefined') return;
+    const el = findEl(stop.selectors);
+    if (!el) return;
+    const header = document.querySelector('.mdf-header');
+    const headerH = header ? header.getBoundingClientRect().height : 0;
+    const top = el.getBoundingClientRect().top + window.scrollY - headerH - 12;
+    const reduceMotion =
+      window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: Math.max(top, 0), behavior: reduceMotion ? 'auto' : 'smooth' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isChooser, flow, index]);
+
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement;

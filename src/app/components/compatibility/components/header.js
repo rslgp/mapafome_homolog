@@ -100,6 +100,23 @@ export default function Header({ rowCountProp, onStartTour, onStartReport }) {
               <span className="mdf-header__install-label">Instalar</span>
             </button>
           )}
+          <a
+            className="mdf-header__donate"
+            href="https://nubank.com.br/pagar/2i6kb/zRE5wsvEe2"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Doar via Pix"
+            title="Doar via Pix"
+          >
+            <img
+              className="mdf-header__donate-icon"
+              src="/presskit/emoji_heart.png"
+              alt=""
+              width="22"
+              height="22"
+            />
+            <span className="mdf-header__donate-label">Doar</span>
+          </a>
         </div>
       </div>
     </header>

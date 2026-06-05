@@ -300,6 +300,63 @@
   }
 }
 
+/* Doar — opens the Pix donation link. Quiet/secondary (Relatar keeps the only
+ * brand-red primary); the heart icon carries the meaning. Icon-only on phones,
+ * icon + label from 640px — same pattern as Instalar. */
+.mdf-header__donate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-1);
+  min-height: var(--mdf-touch-target);
+  min-width: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-2);
+  background: var(--mdf-surface-2);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              transform var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-header__donate:hover {
+  background: var(--mdf-border);
+}
+
+.mdf-header__donate:active {
+  transform: scale(0.98);
+}
+
+.mdf-header__donate-icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.mdf-header__donate-label {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .mdf-header__donate-label {
+    display: inline;
+  }
+}
+
+@media (min-width: 768px) {
+  .mdf-header__donate {
+    padding: 0 var(--mdf-space-4);
+    font-size: var(--mdf-fs-small);
+  }
+}
+
 /* ── Very narrow safeguard (<360px) ───────────────── */
 
 @media (max-width: 359px) {
