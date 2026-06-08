@@ -7,13 +7,19 @@ import { defineConfig } from 'vitest/config';
 // gating per v5 § critical_metrics.testing.coverage (70-80% branch).
 export default defineConfig({
     // Source files in this repo are .js but contain JSX (Next.js convention).
-    // Vite's default esbuild loader treats .js as plain JS, so JSX inside
-    // mapComponents.js / test files fails to parse. Tell esbuild to apply
-    // the JSX loader to .js files too so React components compile cleanly.
-    esbuild: {
-        loader: 'jsx',
+    // Vitest 4 transforms via Oxc, not esbuild. Oxc's default include is
+    // /\.(m?ts|[jt]sx)$/ with exclude /\.js$/, so .js files are skipped and
+    // their JSX never parses ("Unexpected JSX expression"). The legacy
+    // `esbuild` option is silently ignored under Oxc (Vite logs a warning).
+    // Configure Oxc directly: widen `include` to cover .js, drop the .js
+    // exclude, and force `lang: 'jsx'` (the extension-derived lang for .js is
+    // "js", which disables JSX parsing). This lets React component tests and
+    // mapComponents.js compile cleanly.
+    oxc: {
+        lang: 'jsx',
+        jsx: { runtime: 'automatic' },
         include: /\.[jt]sx?$/,
-        exclude: [],
+        exclude: /node_modules/,
     },
     test: {
         environment: 'jsdom',

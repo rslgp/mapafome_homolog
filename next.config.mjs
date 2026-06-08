@@ -1,5 +1,5 @@
 const nextConfig = {
-  allowedDevOrigins: ['10.20.30.191', 'dashing-swift-precious.ngrok-free.app'],
+  allowedDevOrigins: ['10.20.30.191', '10.0.10.205', 'dashing-swift-precious.ngrok-free.app'],
 
   output: 'export',
   images: { unoptimized: true },

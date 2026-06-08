@@ -79,11 +79,18 @@
   background: currentColor;
 }
 
-.mdf-pin-sheet__status--fresh   { color: var(--mdf-urgency-fresh);   background: var(--mdf-risk-none-bg); }
-.mdf-pin-sheet__status--waiting { color: var(--mdf-urgency-waiting); background: var(--mdf-risk-low-bg); }
-.mdf-pin-sheet__status--stale   { color: var(--mdf-urgency-stale);   background: var(--mdf-risk-high-bg); }
-.mdf-pin-sheet__status--going   { color: var(--mdf-urgency-waiting); background: var(--mdf-risk-mod-bg); }
-.mdf-pin-sheet__status--done    { color: var(--mdf-urgency-done);    background: var(--mdf-surface-2); }
+/* WCAG AA: these status chips paint the urgency hue as 13px/600 text on its
+   own light tinted background. The saturated hues fail 4.5:1 (fresh 4.14,
+   waiting 2.13, going 1.89, stale 3.59, done 3.63). Use the dark companion
+   ink that already pairs with each background (6.78 / 5.73 / 6.24 / 6.72) and
+   ink-muted for done (5.82). Background hue is unchanged so the urgency
+   color-coding is preserved; the ::before dot inherits currentColor and stays
+   >=3:1 graphical. */
+.mdf-pin-sheet__status--fresh   { color: var(--mdf-risk-none-ink);   background: var(--mdf-risk-none-bg); }
+.mdf-pin-sheet__status--waiting { color: var(--mdf-risk-low-ink); background: var(--mdf-risk-low-bg); }
+.mdf-pin-sheet__status--stale   { color: var(--mdf-risk-high-ink);   background: var(--mdf-risk-high-bg); }
+.mdf-pin-sheet__status--going   { color: var(--mdf-risk-mod-ink); background: var(--mdf-risk-mod-bg); }
+.mdf-pin-sheet__status--done    { color: var(--mdf-ink-muted);    background: var(--mdf-surface-2); }
 
 /* Post-mark-attended desaturate + fade per brief. 400ms transition then
  * the sheet itself closes; pin layer handles the 24h archive elsewhere. */

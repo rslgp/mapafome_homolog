@@ -144,9 +144,13 @@
   white-space: nowrap;
 }
 
-.mdf-list__status--waiting       { color: var(--mdf-urgency-waiting); background: var(--mdf-risk-low-bg); }
-.mdf-list__status--someone_going { color: var(--mdf-urgency-waiting); background: var(--mdf-risk-mod-bg); }
-.mdf-list__status--done          { color: var(--mdf-urgency-done);    background: var(--mdf-surface-2); }
+/* WCAG AA: the urgency hue as 13px/600 text on its own light tint failed
+   4.5:1 (waiting 2.13, someone_going 1.89, done 3.63). Use the dark companion
+   ink that already pairs with each background (5.73 / 6.24) and ink-muted for
+   done (5.82). Background hue unchanged so the urgency coding is preserved. */
+.mdf-list__status--waiting       { color: var(--mdf-risk-low-ink); background: var(--mdf-risk-low-bg); }
+.mdf-list__status--someone_going { color: var(--mdf-risk-mod-ink); background: var(--mdf-risk-mod-bg); }
+.mdf-list__status--done          { color: var(--mdf-ink-muted);    background: var(--mdf-surface-2); }
 
 .mdf-list__detail {
   grid-column: 1 / -1;

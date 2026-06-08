@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import './ListView.css';
 import envVariables from '../variaveisAmbiente';
 import { urgencyOf, isArchived } from './mdfMarkers';
@@ -100,6 +100,15 @@ export default function ListView({ open, dataMaps, userCoords, onSelectPin, onCl
     enriched.sort((a, b) => a.rank - b.rank);
     return enriched;
   }, [open, dataMaps, userCoords]);
+
+  // Escape closes the dialog — matches the dismissal contract of the other
+  // modal sheets (close button, backdrop tap, Esc).
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
   if (!open) return null;
 

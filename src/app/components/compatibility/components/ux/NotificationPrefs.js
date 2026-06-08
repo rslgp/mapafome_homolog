@@ -45,10 +45,15 @@ export default function NotificationPrefs({ open, onClose }) {
   const [perm, setPerm] = useState('default');
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     setPrefs(loadPrefs());
     if (typeof Notification !== 'undefined') setPerm(Notification.permission);
-  }, [open]);
+    // Escape closes the dialog — matches the dismissal contract of the other
+    // modal sheets (close button, backdrop tap, Esc).
+    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
   if (!open) return null;
 
