@@ -2,6 +2,7 @@ const { test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { timingSafeEqual, isAuthentic } = require('../lib/webhookAuth');
 const { mapRail } = require('../lib/asaasClient');
+const { createMemoryStore } = require('../lib/idempotencyStore');
 
 // Minimal fake res that records status + body.
 function fakeRes() {
@@ -87,6 +88,64 @@ test('webhook handler — 500 when processing throws (so Asaas retries)', async 
     { method: 'POST', headers: { 'asaas-access-token': 'tok' }, body: { event: 'PAYMENT_RECEIVED', payment: { id: 'pZ' } } },
     res,
     boom
+  );
+  assert.equal(res.statusCode, 500);
+});
+
+test('webhook handler — injected DURABLE store dedupes across a simulated cold start', async () => {
+  process.env.ASAAS_WEBHOOK_TOKEN = 'tok';
+  delete require.cache[require.resolve('../api/asaas/webhook.js')];
+  const handler = require('../api/asaas/webhook.js');
+
+  // A single durable store that OUTLIVES the handler instance — this is the seam:
+  // even though each call below simulates a fresh cold start (the in-memory Set
+  // inside the handler would reset), the injected store remembers the key.
+  const store = createMemoryStore();
+  const calls = [];
+  const proc = async (ev) => calls.push(ev.payment.id);
+  const req = {
+    method: 'POST',
+    headers: { 'asaas-access-token': 'tok' },
+    body: { event: 'PAYMENT_CONFIRMED', payment: { id: 'cold1' } },
+  };
+
+  // Cold start #1: not yet processed -> processEvent runs, store records it.
+  let res = fakeRes();
+  await handler(req, res, proc, store);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(calls, ['cold1']);
+  assert.equal(await store.isProcessed('PAYMENT_CONFIRMED:cold1'), true);
+
+  // Cold start #2: a brand-new handler module instance (its own empty in-memory
+  // fallback) but the SAME durable store injected -> deduped, processEvent NOT
+  // re-run. This is the bug the milestone closes.
+  delete require.cache[require.resolve('../api/asaas/webhook.js')];
+  const handler2 = require('../api/asaas/webhook.js');
+  res = fakeRes();
+  await handler2(req, res, proc, store);
+  assert.equal(res.statusCode, 200);
+  assert.match(res.body, /deduped/);
+  assert.deepEqual(calls, ['cold1']); // still one — no double apply
+});
+
+test('webhook handler — 500 (retry) when the idempotency store itself fails', async () => {
+  process.env.ASAAS_WEBHOOK_TOKEN = 'tok';
+  delete require.cache[require.resolve('../api/asaas/webhook.js')];
+  const handler = require('../api/asaas/webhook.js');
+
+  // A store whose isProcessed throws (KV outage) must fail closed: 500 so Asaas
+  // retries, rather than risk a silent double- or zero-apply.
+  const flakyStore = {
+    async isProcessed() { throw new Error('kv unreachable'); },
+    async markProcessed() {},
+  };
+  const res = fakeRes();
+  const proc = async () => {};
+  await handler(
+    { method: 'POST', headers: { 'asaas-access-token': 'tok' }, body: { event: 'PAYMENT_RECEIVED', payment: { id: 'pK' } } },
+    res,
+    proc,
+    flakyStore
   );
   assert.equal(res.statusCode, 500);
 });

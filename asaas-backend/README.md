@@ -57,17 +57,39 @@ Asaas dashboard → Configurações → **Webhooks** → add:
 
 ## Idempotency note
 
-`webhook.js` dedupes by `event:paymentId` in an **in-memory** Set — a backstop
-that resets on cold start. For cross-instance correctness, replace
-`defaultProcessEvent` with one that records processed event ids in a durable
-store (Vercel KV / Upstash / your DB) and checks it before applying effects.
-The handler already returns **500 on failure** so Asaas retries, and **200 on
-dedupe** so it stops — the store just makes "processed once" durable.
+`webhook.js` dedupes by `event:paymentId` through an **injectable idempotency
+store** (`lib/idempotencyStore.js`) — the handler depends on the
+`{ isProcessed, markProcessed }` interface, not on a concrete KV (Dependency
+Inversion, same as the existing `processEvent` seam). The key is marked **after**
+`processEvent` succeeds, so a failed effect stays unmarked and Asaas's retry
+re-runs it. The handler returns **500 on failure** (Asaas retries) and **200 on
+dedupe** (Asaas stops); the store makes "processed once" survive cold starts.
+
+**Store selection** (`selectIdempotencyStore()`, at module load):
+
+| Condition | Store | Durable? |
+|---|---|---|
+| `KV_REST_API_URL` + `KV_REST_API_TOKEN` set (or `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`) | Upstash Redis over REST (`fetch`, no npm dep) | **yes** — survives cold starts + spans instances |
+| neither set | in-memory `Set` fallback | **no** — resets on cold start; logs a one-time `DURABLE IDEMPOTENCY OFF` warning |
+
+- Keys are namespaced `asaas:webhook:idem:<event>:<paymentId>` and written with a
+  **60-day TTL** (`DEFAULT_TTL_SECONDS`) — long enough to outlast any Asaas retry
+  window, short enough that the keyspace never grows unbounded.
+- **Production:** create a Vercel KV / Upstash database and set its REST URL + token
+  env vars (Vercel KV exposes `KV_REST_API_URL` / `KV_REST_API_TOKEN` automatically
+  when you link a KV store to the project). Without them the backend still boots and
+  works — just **not durably**, which is fine for a first cutover but should be set
+  before relying on at-most-once effects.
+- A store outage (`isProcessed`/`markProcessed` throws) is treated as a processing
+  failure → **500**, so Asaas retries rather than risk a silent double/zero apply.
+- For the side effect itself, inject `processEvent` (or replace `defaultProcessEvent`)
+  to update your DB / grant access. Both seams are injected by the tests, so the
+  handler runs under `node --test` with no live KV.
 
 ## Security checklist (before going to production)
 
 - [ ] `ASAAS_API_KEY` is the **production** key and set ONLY in the deploy env (never committed, never `NEXT_PUBLIC_`).
 - [ ] `ASAAS_WEBHOOK_TOKEN` is a long random secret, identical in the deploy env and the Asaas webhook config.
 - [ ] `ALLOWED_ORIGINS` lists only your real origins.
-- [ ] Durable idempotency store wired into `processEvent`.
+- [ ] Durable idempotency store configured (`KV_REST_API_URL` + `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` pair) — no `DURABLE IDEMPOTENCY OFF` warning in prod logs.
 - [ ] Card data is never logged (it is only forwarded to Asaas).
