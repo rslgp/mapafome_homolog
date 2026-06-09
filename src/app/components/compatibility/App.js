@@ -55,6 +55,7 @@ import AesEncryption from 'aes-encryption';
 import { getCookie, setCookie } from './components/cookies';
 
 import { runMain, installDebugHelpers } from './appMainBootstrap';
+import { coordsFromPin } from './domain/pinCoords';
 
 const EXPIRE_DAY = 7;
 const aes = new AesEncryption();
@@ -528,11 +529,7 @@ class App extends Component {
   // localStorage too so THIS session's donor sees the "Marcar como atendido"
   // swap without another fetch. Soft by design — no hard lock.
   async handleClaimPin(pin) {
-    const coords = (() => {
-      if (Array.isArray(pin.mapCoords) && pin.mapCoords.length === 2) return pin.mapCoords;
-      try { if (pin.Coordinates) return JSON.parse(pin.Coordinates); } catch (_e) {}
-      return null;
-    })();
+    const coords = coordsFromPin(pin);
     if (!coords) return;
 
     const claim = { claimedAt: new Date().toISOString() };
@@ -583,11 +580,7 @@ class App extends Component {
   // Shared low-level helper: locate the row by DateISO + Coordinates and
   // apply a mutator function to the parsed Dados JSON, then save.
   async persistPinPatch(pin, mutate) {
-    const coords = (() => {
-      if (Array.isArray(pin.mapCoords) && pin.mapCoords.length === 2) return pin.mapCoords;
-      try { if (pin.Coordinates) return JSON.parse(pin.Coordinates); } catch (_e) {}
-      return null;
-    })();
+    const coords = coordsFromPin(pin);
     if (!coords) return;
 
     await doc.useServiceAccountAuth({
