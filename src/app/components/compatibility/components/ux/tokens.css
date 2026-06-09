@@ -40,9 +40,16 @@
      Used as logo fills only; brand logos are exempt from text-contrast SC. */
   --mdf-channel-tg: #54A9EB;   /* Telegram blue */
 
-  /* Color — urgency (time-based, not user-set) */
+  /* Color — urgency (time-based, not user-set).
+     Marker-ring hues double as WCAG 2.2 SC 1.4.11 non-text contrast (3:1)
+     against both the white marker fill (--mdf-surface-1) and a light map
+     tile (OSM Mapnik land ≈ #F2EFE9). Ring THICKNESS (2/3/5px in
+     ux/mdfMarkers.js) remains the primary urgency signal; hue reinforces.
+     waiting darkened from #D4A017 (≈2.1:1 — failed) to #A07410 (≥3.6:1 on
+     the lightest tile); hue held at H≈42° so it stays the same gold/amber,
+     distinct from fresh-green (H≈138°) and stale-red (H≈6°). */
   --mdf-urgency-fresh: #4A7C59;
-  --mdf-urgency-waiting: #D4A017;
+  --mdf-urgency-waiting: #A07410;
   --mdf-urgency-stale: #B84A3D;
   --mdf-urgency-done: #7C7C7C;
 
