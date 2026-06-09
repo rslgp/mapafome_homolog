@@ -76,7 +76,11 @@
 .mdf-parc__tier-ref {
   font-size: var(--mdf-fs-small);
   font-weight: 700;
-  color: var(--mdf-brand);
+  /* AA: brand red (#D64545) on the card/cream is 4.38–4.19:1 — fails 4.5:1.
+     14px bold is below the 18.66px-bold large-text cutoff, so 4.5:1 applies.
+     Use the darker brand-hover (#B93838) for the small red label → 5.70:1
+     (the repo's established "small red text → brand-hover" pattern). */
+  color: var(--mdf-brand-hover);
 }
 .mdf-parc__tier dl {
   display: grid;
@@ -102,9 +106,12 @@
   cursor: pointer;
 }
 .mdf-parc__tier--selected button {
-  background: var(--mdf-brand);
+  /* AA: white-on-brand (#FFF/#D64545) is 4.38:1 — fails 4.5:1 normal text.
+     Fill the selected button with the darker brand-hover (#B93838) → 5.70:1.
+     Border stays full brand so the selected card keeps its red identity ring. */
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
-  border-color: var(--mdf-brand);
+  border-color: var(--mdf-brand-hover);
 }
 
 .mdf-parc__section--form {
@@ -162,14 +169,20 @@
   min-height: var(--mdf-touch-target);
   padding: 0 var(--mdf-space-6);
   line-height: var(--mdf-touch-target);
-  background: var(--mdf-brand);
+  /* AA: white-on-brand (#FFF/#D64545) is 4.38:1 — fails 4.5:1 normal text.
+     Resting fill uses the darker brand-hover (#B93838) → 5.70:1. (This CTA
+     ships disabled/gray by default, so axe saw the gray state; this fixes the
+     enabled red state once the form validates.) Page-scoped, not the token. */
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
   border-radius: var(--mdf-radius-pill);
   text-decoration: none;
   font-weight: 700;
   font-size: var(--mdf-fs-body);
 }
-.mdf-parc__cta:hover { background: var(--mdf-brand-hover); }
+/* Hover darkens (filter) rather than lightening to brand: keeps the resting
+   5.70:1 white-on-red as the floor in every state. */
+.mdf-parc__cta:hover { filter: brightness(0.92); }
 .mdf-parc__cta--disabled {
   background: var(--mdf-surface-2);
   color: var(--mdf-ink-subtle);

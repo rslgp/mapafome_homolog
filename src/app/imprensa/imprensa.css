@@ -213,14 +213,19 @@
   gap: var(--mdf-space-2);
   min-height: var(--mdf-touch-target);
   padding: 0 var(--mdf-space-4);
-  background: var(--mdf-brand);
+  /* AA: white-on-brand (#FFF/#D64545) is 4.38:1 — fails 4.5:1 normal text.
+     Pair the darker brand-hover (#B93838) as the resting fill → 5.70:1.
+     Page-scoped (not the global --mdf-brand token) so the map page is untouched. */
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
   border-radius: var(--mdf-radius-pill);
   text-decoration: none;
   font-weight: 700;
   font-size: var(--mdf-fs-small);
 }
-.mdf-press__download:hover { background: var(--mdf-brand-hover); text-decoration: none; }
+/* Hover darkens (filter) rather than lightening to brand: keeps white-on-red
+   above AA in every state (resting 5.70:1; hover stays darker, ~6.5:1). */
+.mdf-press__download:hover { filter: brightness(0.92); text-decoration: none; }
 
 /* ---- Brand colors ---- */
 .mdf-press__swatches {
@@ -410,14 +415,18 @@
   min-height: var(--mdf-touch-target);
   margin-top: var(--mdf-space-3);
   padding: 0 var(--mdf-space-6);
-  background: var(--mdf-brand);
+  /* AA: white-on-brand (#FFF/#D64545) is 4.38:1 — fails 4.5:1 normal text.
+     Resting fill uses the darker brand-hover (#B93838) → 5.70:1; page-scoped. */
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
   border-radius: var(--mdf-radius-pill);
   text-decoration: none;
   font-weight: 700;
   font-size: var(--mdf-fs-body);
 }
-.mdf-press__cta:hover { background: var(--mdf-brand-hover); text-decoration: none; }
+/* Hover darkens (filter) rather than lightening to brand: keeps the resting
+   5.70:1 white-on-red as the floor in every state. */
+.mdf-press__cta:hover { filter: brightness(0.92); text-decoration: none; }
 .mdf-press__email-row {
   display: flex;
   flex-wrap: wrap;
