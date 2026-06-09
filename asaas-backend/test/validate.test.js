@@ -61,7 +61,10 @@ test('validateSubscriptionInput — rejects bad rail / value / docs', () => {
   assert.ok(r.errors.some((e) => e.includes('CPF/CNPJ')));
 });
 
-test('validateSubscriptionInput — cartão requires card data', () => {
+test('validateSubscriptionInput — cartão with NO card data is OK (hosted checkout)', () => {
+  // The cartão rail no longer collects inline card data: a CREDIT_CARD
+  // subscription is created card-less and Asaas issues a hosted invoice where the
+  // donor enters the PAN/CVV. So a cartão request with no creditCard must PASS.
   const r = validateSubscriptionInput({
     rail: 'cartao',
     value: 25,
@@ -69,8 +72,26 @@ test('validateSubscriptionInput — cartão requires card data', () => {
     email: 'maria@example.com',
     cpfCnpj: '52998224725',
   });
-  assert.equal(r.ok, false);
-  assert.ok(r.errors.some((e) => e.includes('cartão')));
+  assert.equal(r.ok, true);
+  assert.ok(!r.errors.some((e) => e.includes('cartão')));
+});
+
+test('validateSubscriptionInput — a creditCard sent on cartão is NOT forwarded (no PAN server-side)', () => {
+  // Even if a client sends a card object, the validator must drop it: no rail
+  // forwards card data, so a PAN never reaches our Asaas client. The hosted
+  // checkout is the only place card data is collected.
+  const r = validateSubscriptionInput({
+    rail: 'cartao',
+    value: 25,
+    name: 'Maria',
+    email: 'maria@example.com',
+    cpfCnpj: '52998224725',
+    creditCard: { number: '4111111111111111', expiryMonth: '12', expiryYear: '2030', ccv: '123', holderName: 'Maria' },
+    creditCardHolderInfo: { name: 'Maria' },
+  });
+  assert.equal(r.ok, true);
+  assert.equal(r.clean.creditCard, undefined);
+  assert.equal(r.clean.creditCardHolderInfo, undefined);
 });
 
 // ── P20 characterization — capture current real behavior, no source change ──
@@ -258,8 +279,9 @@ test('validateSubscriptionInput — clean is a fresh whitelist; unknown keys are
   });
   assert.equal(r.ok, true);
   // Only the documented fields survive — no caller-supplied key leaks through.
+  // No card fields: card data is never accepted server-side (hosted checkout).
   assert.deepEqual(Object.keys(r.clean).sort(), [
-    'cpfCnpj', 'creditCard', 'creditCardHolderInfo', 'cycle',
+    'cpfCnpj', 'cycle',
     'description', 'email', 'mobilePhone', 'name', 'rail', 'value',
   ]);
   assert.equal(r.clean.evil, undefined);
@@ -281,61 +303,42 @@ test('validateSubscriptionInput — a __proto__ payload cannot pollute (whitelis
   assert.equal(Object.prototype.hasOwnProperty.call(r.clean, '__proto__'), false);
 });
 
-// --- validateSubscriptionInput: cartão rail card handling ---
+// --- validateSubscriptionInput: cartão rail = hosted checkout, no card data ---
+//
+// The data-collection flow changed: the cartão rail creates a CREDIT_CARD
+// subscription WITHOUT card data. Asaas issues a hosted invoice and the donor
+// enters the PAN/CVV on Asaas's checkout. So the validator never requires a card
+// AND never forwards one (for ANY rail) — no PAN reaches the Asaas client.
 
-test('validateSubscriptionInput — cartão accepts complete card and carries it on clean', () => {
-  const card = { number: '4111111111111111', expiryMonth: '12', expiryYear: '2030', ccv: '123', holderName: 'Maria' };
+test('validateSubscriptionInput — cartão without any card data passes and forwards no card', () => {
   const r = validateSubscriptionInput({
     rail: 'cartao', value: 25, name: 'Maria', email: 'm@e.com', cpfCnpj: VALID_CPF,
-    creditCard: card, creditCardHolderInfo: { name: 'Maria' },
   });
   assert.equal(r.ok, true);
-  assert.deepEqual(r.clean.creditCard, card);
-  assert.deepEqual(r.clean.creditCardHolderInfo, { name: 'Maria' });
+  assert.equal(r.clean.rail, 'cartao');
+  assert.equal(r.clean.creditCard, undefined);
+  assert.equal(r.clean.creditCardHolderInfo, undefined);
 });
 
-test('validateSubscriptionInput — non-cartão rails do not carry card fields on clean', () => {
+test('validateSubscriptionInput — a card sent on cartão is dropped, never forwarded (no PCI scope)', () => {
+  const r = validateSubscriptionInput({
+    rail: 'cartao', value: 25, name: 'Maria', email: 'm@e.com', cpfCnpj: VALID_CPF,
+    creditCard: { number: '4111111111111111', expiryMonth: '12', expiryYear: '2030', ccv: '123', holderName: 'M' },
+    creditCardHolderInfo: { name: 'M' },
+  });
+  assert.equal(r.ok, true);
+  // The PAN never lands on clean — it can't reach our Asaas client.
+  assert.equal(r.clean.creditCard, undefined);
+  assert.equal(r.clean.creditCardHolderInfo, undefined);
+  assert.equal(Object.prototype.hasOwnProperty.call(r.clean, 'creditCard'), false);
+});
+
+test('validateSubscriptionInput — non-cartão rails also carry no card fields on clean', () => {
   const r = validateSubscriptionInput({
     rail: 'pix', value: 25, name: 'Maria', email: 'm@e.com', cpfCnpj: VALID_CPF,
     creditCard: { number: '4111', expiryMonth: '12', expiryYear: '2030', ccv: '123', holderName: 'M' },
   });
   assert.equal(r.ok, true);
-  // A card sent on a pix/boleto request is discarded — not forwarded.
   assert.equal(r.clean.creditCard, undefined);
   assert.equal(r.clean.creditCardHolderInfo, undefined);
-});
-
-test('validateSubscriptionInput — cartão with a PARTIAL card (one field missing) is rejected', () => {
-  // The all-missing case is covered above; this trips the `||` chain on a single
-  // absent field (ccv) so the partial-card rejection branch is exercised too.
-  const r = validateSubscriptionInput({
-    rail: 'cartao', value: 25, name: 'Maria', email: 'm@e.com', cpfCnpj: VALID_CPF,
-    creditCard: { number: '4111', expiryMonth: '12', expiryYear: '2030', holderName: 'M' }, // no ccv
-  });
-  assert.equal(r.ok, false);
-  assert.ok(r.errors.some((e) => e.includes('cartão')));
-});
-
-test('validateSubscriptionInput — cartão with a complete card but no holderInfo: clean.creditCardHolderInfo is undefined', () => {
-  // creditCardHolderInfo is optional: a valid card without it passes, and the field
-  // lands undefined (not {} / null) on clean — msg-safe, mirrors omitted mobilePhone.
-  const r = validateSubscriptionInput({
-    rail: 'cartao', value: 25, name: 'Maria', email: 'm@e.com', cpfCnpj: VALID_CPF,
-    creditCard: { number: '4111', expiryMonth: '12', expiryYear: '2030', ccv: '123', holderName: 'M' },
-  });
-  assert.equal(r.ok, true);
-  assert.equal(r.clean.creditCardHolderInfo, undefined);
-});
-
-test('validateSubscriptionInput — cartão forwards the card object RAW (no field whitelist)', () => {
-  // REPORT note: on the cartão rail the validator checks card-field PRESENCE
-  // only, then passes the whole `body.creditCard` object through to `clean`
-  // verbatim — extra/unknown keys included. Locked in as current behavior; the
-  // downstream Asaas client/server is responsible for what it forwards.
-  const r = validateSubscriptionInput({
-    rail: 'cartao', value: 25, name: 'Maria', email: 'm@e.com', cpfCnpj: VALID_CPF,
-    creditCard: { number: '4111', expiryMonth: '12', expiryYear: '2030', ccv: '123', holderName: 'M', junk: 'passthrough' },
-  });
-  assert.equal(r.ok, true);
-  assert.equal(r.clean.creditCard.junk, 'passthrough');
 });

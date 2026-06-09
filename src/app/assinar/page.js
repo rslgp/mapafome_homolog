@@ -216,12 +216,6 @@ export default function AssinarPage() {
   const [cpfCnpj, setCpfCnpj] = useState('');
   const [telefone, setTelefone] = useState('');
 
-  // Card-only fields (rendered only for the cartão rail).
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [cardExpiry, setCardExpiry] = useState(''); // MM/AA
-  const [cardCcv, setCardCcv] = useState('');
-
   const [status, setStatus] = useState('idle'); // idle | submitting | success | error
   const [errors, setErrors] = useState([]);
   const [result, setResult] = useState(null);
@@ -251,29 +245,17 @@ export default function AssinarPage() {
       mobilePhone: telefone.replace(/\D/g, '') || undefined,
       cycle: 'MONTHLY',
     };
-    if (rail === 'cartao') {
-      const [mm, aa] = cardExpiry.split('/').map((s) => (s || '').trim());
-      input.creditCard = {
-        holderName: cardName.trim(),
-        number: cardNumber.replace(/\s/g, ''),
-        expiryMonth: mm,
-        expiryYear: aa && aa.length === 2 ? `20${aa}` : aa,
-        ccv: cardCcv.trim(),
-      };
-      input.creditCardHolderInfo = {
-        name: nome.trim(),
-        email: email.trim(),
-        cpfCnpj: cpfCnpj.replace(/\D/g, ''),
-        mobilePhone: telefone.replace(/\D/g, '') || undefined,
-      };
-    }
+    // The cartão rail no longer collects card data here: we create the CREDIT_CARD
+    // subscription WITHOUT a creditCard, Asaas issues a hosted invoice, and the
+    // donor enters the PAN/CVV on Asaas's checkout (via the invoiceUrl link). No
+    // card data ever reaches our code = no PCI scope.
     return input;
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     const input = buildInput();
-    const localErrors = validateBeforeSubmit({ ...input, creditCard: input.creditCard });
+    const localErrors = validateBeforeSubmit(input);
     if (localErrors.length) {
       setErrors(localErrors);
       setStatus('error');
@@ -418,30 +400,6 @@ export default function AssinarPage() {
           <span>{t('assinar.field.phone')}</span>
           <input type="tel" autoComplete="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
         </label>
-
-        {rail === 'cartao' && (
-          <fieldset className="mdf-field mdf-card">
-            <legend>{t('assinar.card.legend')}</legend>
-            <label className="mdf-field">
-              <span>{t('assinar.card.number')}</span>
-              <input type="text" inputMode="numeric" autoComplete="cc-number" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} />
-            </label>
-            <label className="mdf-field">
-              <span>{t('assinar.card.name')}</span>
-              <input type="text" autoComplete="cc-name" value={cardName} onChange={(e) => setCardName(e.target.value)} />
-            </label>
-            <div className="mdf-card__row">
-              <label className="mdf-field">
-                <span>{t('assinar.card.expiry')}</span>
-                <input type="text" inputMode="numeric" autoComplete="cc-exp" placeholder="MM/AA" value={cardExpiry} onChange={(e) => setCardExpiry(e.target.value)} />
-              </label>
-              <label className="mdf-field">
-                <span>{t('assinar.card.cvv')}</span>
-                <input type="text" inputMode="numeric" autoComplete="cc-csc" value={cardCcv} onChange={(e) => setCardCcv(e.target.value)} />
-              </label>
-            </div>
-          </fieldset>
-        )}
 
         {status === 'error' && errors.length > 0 && (
           <div className="mdf-errors" role="alert">

@@ -93,24 +93,25 @@ describe('validateBeforeSubmit', () => {
     expect(validateBeforeSubmit({ ...valid, cpfCnpj: '123' })).toContain('Informe um CPF ou CNPJ válido.');
   });
 
-  it('requires full card data on the cartão rail', () => {
-    const errs = validateBeforeSubmit({ ...valid, rail: 'cartao', creditCard: { number: '4111' } });
-    expect(errs).toContain('Preencha todos os dados do cartão.');
+  it('passes the cartão rail with NO card data (hosted checkout collects it)', () => {
+    // The cartão rail no longer collects inline card data: the CREDIT_CARD
+    // subscription is created card-less and the donor enters the PAN/CVV on the
+    // Asaas hosted checkout. So an otherwise-valid cartão input with no card MUST
+    // pass — there is no longer a "Preencha todos os dados do cartão" error.
+    expect(validateBeforeSubmit({ ...valid, rail: 'cartao' })).toEqual([]);
   });
 
-  it('accepts complete card data on the cartão rail', () => {
-    const errs = validateBeforeSubmit({
-      ...valid,
-      rail: 'cartao',
-      creditCard: { number: '4111111111111111', expiryMonth: '12', expiryYear: '2030', ccv: '123', holderName: 'Maria Silva' },
-    });
+  it('does not error on the cartão rail even if a stray card object is passed', () => {
+    // Robustness: a leftover/garbage creditCard must not change the result — the
+    // validator ignores card data entirely now.
+    const errs = validateBeforeSubmit({ ...valid, rail: 'cartao', creditCard: { number: '4111' } });
     expect(errs).toEqual([]);
   });
 
   // --- P20 characterization: remaining rails + edges ---
 
-  it('passes each non-card rail with otherwise-valid input', () => {
-    for (const rail of ['pix', 'boleto']) {
+  it('passes each rail with otherwise-valid input (pix, cartao, boleto)', () => {
+    for (const rail of ['pix', 'cartao', 'boleto']) {
       expect(validateBeforeSubmit({ ...valid, rail })).toEqual([]);
     }
   });
@@ -166,6 +167,31 @@ describe('createSubscription (injected fetch — no network)', () => {
     expect(res.ok).toBe(true);
     expect(res.subscriptionId).toBe('sub_1');
     expect(res.invoiceUrl).toBe('https://asaas/x');
+  });
+
+  it('maps a cartão subscription response carrying the hosted invoiceUrl', async () => {
+    // The cartão rail sends NO card data; Asaas returns a hosted-checkout
+    // invoiceUrl that PaymentArtifacts/CardPayment render as the "Pagar no Asaas"
+    // link. Assert the client carries that invoiceUrl through, and that no card
+    // data was ever sent in the request body.
+    let captured = null;
+    const fetchImpl = async (url, opts) => {
+      captured = { url, body: JSON.parse(opts.body) };
+      return {
+        ok: true,
+        json: async () => ({ ok: true, subscriptionId: 'sub_c', rail: 'cartao', status: 'ACTIVE', value: 25, cycle: 'MONTHLY', invoiceUrl: 'https://asaas/checkout/c' }),
+      };
+    };
+    const res = await createSubscription(
+      { rail: 'cartao', value: 25, name: 'Maria', email: 'm@e.com', cpfCnpj: '52998224725' },
+      { fetchImpl, baseUrl: 'https://backend.test' }
+    );
+    expect(captured.body.rail).toBe('cartao');
+    expect(captured.body.creditCard).toBeUndefined();
+    expect(captured.body.creditCardHolderInfo).toBeUndefined();
+    expect(res.ok).toBe(true);
+    expect(res.rail).toBe('cartao');
+    expect(res.invoiceUrl).toBe('https://asaas/checkout/c');
   });
 
   it('surfaces backend validation messages on failure', async () => {

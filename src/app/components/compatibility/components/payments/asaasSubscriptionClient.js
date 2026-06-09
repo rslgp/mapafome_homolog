@@ -37,11 +37,6 @@ export const ASSINAR_I18N_KEYS = [
   'assinar.field.email',
   'assinar.field.cpfcnpj',
   'assinar.field.phone',
-  'assinar.card.legend',
-  'assinar.card.number',
-  'assinar.card.name',
-  'assinar.card.expiry',
-  'assinar.card.cvv',
   'assinar.cta.submitting',
   'assinar.cta.support',
   'assinar.note',
@@ -183,7 +178,10 @@ export async function fetchSubscriptionPayment(subscriptionId, opts = {}) {
 
 // Light client-side validation mirrors the server (which is authoritative).
 // Returns an array of pt-BR error strings; empty array = ready to submit.
-export function validateBeforeSubmit({ rail, value, name, email, cpfCnpj, creditCard }) {
+// The cartão rail no longer requires inline card data: the CREDIT_CARD
+// subscription is created card-less and Asaas collects the PAN/CVV on its hosted
+// checkout (invoiceUrl), so there is no card-field check here.
+export function validateBeforeSubmit({ rail, value, name, email, cpfCnpj }) {
   const errors = [];
   if (!RAILS.some((r) => r.id === rail)) errors.push('Escolha uma forma de pagamento.');
   if (!(Number(value) >= 5)) errors.push('O valor mínimo é R$ 5.');
@@ -191,11 +189,5 @@ export function validateBeforeSubmit({ rail, value, name, email, cpfCnpj, credit
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '')) errors.push('Informe um e-mail válido.');
   const digits = String(cpfCnpj || '').replace(/\D/g, '');
   if (digits.length !== 11 && digits.length !== 14) errors.push('Informe um CPF ou CNPJ válido.');
-  if (rail === 'cartao') {
-    const c = creditCard || {};
-    if (!c.number || !c.expiryMonth || !c.expiryYear || !c.ccv || !c.holderName) {
-      errors.push('Preencha todos os dados do cartão.');
-    }
-  }
   return errors;
 }

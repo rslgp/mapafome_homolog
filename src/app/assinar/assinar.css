@@ -173,21 +173,6 @@
   box-shadow: var(--mdf-focus-ring);
 }
 
-.mdf-card {
-  padding: var(--mdf-space-4);
-  border: 1px solid var(--mdf-ink-subtle, var(--mdf-border));
-  border-radius: var(--mdf-radius-card);
-}
-
-.mdf-card__row {
-  display: flex;
-  gap: var(--mdf-space-3);
-}
-
-.mdf-card__row .mdf-field {
-  flex: 1;
-}
-
 /* ── CTA + errors ───────────────────────────────────────────────────────── */
 .mdf-assinar__cta {
   display: inline-block;

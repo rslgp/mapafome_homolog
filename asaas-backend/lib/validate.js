@@ -71,13 +71,10 @@ function validateSubscriptionInput(body) {
   if (!isValidEmail(body.email)) errors.push('email inválido');
   if (!isValidCpfCnpj(body.cpfCnpj)) errors.push('CPF/CNPJ inválido');
 
-  // Card rail needs card data; other rails must NOT carry it.
-  if (rail === 'cartao') {
-    const c = body.creditCard || {};
-    if (!c.number || !c.expiryMonth || !c.expiryYear || !c.ccv || !c.holderName) {
-      errors.push('dados do cartão incompletos (number, expiryMonth, expiryYear, ccv, holderName)');
-    }
-  }
+  // No rail collects inline card data. The cartão rail creates a CREDIT_CARD
+  // subscription WITHOUT a creditCard; Asaas issues a hosted invoice and the donor
+  // enters the PAN/CVV on Asaas's checkout. So a card object is never required —
+  // and (below) never forwarded — keeping PANs out of our code (no PCI scope).
 
   if (errors.length) return { ok: false, errors, clean: null };
 
@@ -90,8 +87,6 @@ function validateSubscriptionInput(body) {
     mobilePhone: body.mobilePhone ? onlyDigits(body.mobilePhone) : undefined,
     description: body.description ? String(body.description).slice(0, 255) : 'Apoio recorrente — MAPA FOME',
     cycle: body.cycle && ['WEEKLY', 'MONTHLY', 'YEARLY'].includes(body.cycle) ? body.cycle : 'MONTHLY',
-    creditCard: rail === 'cartao' ? body.creditCard : undefined,
-    creditCardHolderInfo: rail === 'cartao' ? body.creditCardHolderInfo : undefined,
   };
   return { ok: true, errors: [], clean };
 }
