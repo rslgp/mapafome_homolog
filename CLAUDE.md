@@ -41,3 +41,22 @@ the change, it does not author the code.
 **Why:** commit history is a first-class, reviewable artifact (read during a 2am `git bisect`);
 centralizing commit/versioning craft in one specialist keeps `git log` atomic, conventional,
 and honest about WHY instead of drifting per-session.
+
+## Verification gate — always run `smoke200`
+
+A change ships only when the full gate is green. **`npm run smoke200` is part of that gate and
+must ALWAYS be run** (after `npm run build`) — never skip it:
+
+| Check | Command |
+|---|---|
+| Lint | `npm run lint` (0 errors) |
+| Unit tests | `npm run test` |
+| Fitness functions | `npm run fitness` |
+| Build | `npm run build` |
+| **Render smoke** | **`npm run smoke200`** — serves the static `out/` and asserts every discovered route returns **HTTP 200 + a real render** (not the Next error shell) |
+| Accessibility | `npm run a11y` (served build) + the overlay `vitest-axe` harness in `npm run test` |
+
+`smoke200` is load-bearing because `next build` exiting 0 proves the BUILD ran, not that every
+page actually serves and renders — a route can return 200 with an error shell or a blank body
+while every on-disk check still passes. Run `build` then `smoke200` on every pass and report its
+per-route result in the gate table.
