@@ -4,7 +4,6 @@
 //
 // FF1: no JS file in src/ exceeds 1000 LOC (v5 § critical_metrics.size hard limit)
 // FF2: no function exceeds 100 LOC (parsed line-naively; conservative bound)
-// FF3: bundle size budget (placeholder — needs `next build` first; skipped if .next missing)
 // FF4: no remaining TODO/FIXME/XXX in production code over a threshold
 
 import fs from 'node:fs';
@@ -18,6 +17,20 @@ const SRC = path.join(ROOT, 'src');
 const FILE_LOC_HARD_LIMIT = 1000;
 const FUNCTION_LOC_HARD_LIMIT = 100;
 const TODO_HARD_LIMIT = 50;
+
+// FF2 baseline (pre-existing debt allowlist). Widening the FF2 regex to catch
+// exported arrows (`export const X = (..) => {`) surfaced ONE genuine >100-LOC
+// arrow that the old regex was blind to. It is a REAL long-method finding, not
+// a regex false positive — refactoring it is out of scope for the gate change.
+// Allowlisted here so the gate (a) still hard-fails on any NEW long arrow and
+// (b) does not pretend this one does not exist. Delete this entry when the
+// component (MapClickHandler — one big useEffect of event-binding closures) is
+// split; do NOT raise FUNCTION_LOC_HARD_LIMIT to hide it.
+//   key = `<rel-path>:<1-based-decl-line>` (matches the FF2 failure string).
+//   NOTE: line-anchored — refresh the line number if the component moves.
+const FF2_BASELINE = new Set([
+    'src/app/components/compatibility/components/mapComponents.js:387',
+]);
 
 function walk(dir) {
     const out = [];
@@ -46,12 +59,21 @@ for (const file of walk(SRC)) {
 }
 
 // FF2: per-function LOC. Naive — counts braces per function/method declaration.
-// Misses arrow-function-only files but flags the long-method smell where it
-// matters most (class methods, top-level function declarations).
+// Flags the long-method smell where it matters most: class methods, top-level
+// function declarations, assignment arrows (`x = (..) => {`), and top-level
+// exported arrows (`export const X = (..) => {`, incl. async).
+//
+// Residual gap (honest): only brace-bodied forms are measured. Implicit-return
+// arrows (`export const f = (..) => expr`, `=> (`, or a multi-line arrow whose
+// `=>` sits on a later line than the signature) are NOT matched — the brace
+// counter can't bound a body that has no opening `{` on the declaration line,
+// and matching them would mis-measure across the next braced sibling. These
+// expression-bodied arrows are inherently short, so the long-method risk there
+// is low; long logic belongs in a braced body, which IS caught.
 function approxFunctionLOCs(source) {
     const lines = source.split('\n');
     const fnStarts = [];
-    const fnPattern = /^(\s*)(async\s+)?(function\s+\w+|[\w$]+\s*\([^)]*\)\s*\{|[\w$]+\s*=\s*(async\s+)?\([^)]*\)\s*=>)/;
+    const fnPattern = /^(\s*)(async\s+)?(function\s+\w+|[\w$]+\s*\([^)]*\)\s*\{|[\w$]+\s*=\s*(async\s+)?\([^)]*\)\s*=>|export\s+const\s+[\w$]+\s*=\s*(async\s+)?\([^)]*\)\s*=>\s*\{)/;
     for (let i = 0; i < lines.length; i++) {
         if (fnPattern.test(lines[i])) fnStarts.push(i);
     }
@@ -73,11 +95,15 @@ function approxFunctionLOCs(source) {
     return results;
 }
 
+let ff2BaselineHits = 0;
 for (const file of walk(SRC)) {
     const src = fs.readFileSync(file, 'utf8');
     for (const fn of approxFunctionLOCs(src)) {
         if (fn.loc > FUNCTION_LOC_HARD_LIMIT) {
-            failures.push(`FF2: ${rel(file)}:${fn.start + 1} — function ${fn.loc} LOC > ${FUNCTION_LOC_HARD_LIMIT}: ${fn.declaration}`);
+            // Normalize to forward slashes so the baseline key is OS-independent.
+            const key = `${rel(file).split(path.sep).join('/')}:${fn.start + 1}`;
+            if (FF2_BASELINE.has(key)) { ff2BaselineHits++; continue; }
+            failures.push(`FF2: ${key} — function ${fn.loc} LOC > ${FUNCTION_LOC_HARD_LIMIT}: ${fn.declaration}`);
         }
     }
 }
@@ -100,3 +126,6 @@ if (failures.length > 0) {
 }
 
 console.log(`[fitness] OK — file-loc, function-loc, todo-density all within v5 hard limits.`);
+if (ff2BaselineHits > 0) {
+    console.log(`[fitness] note: ${ff2BaselineHits} FF2 baseline-allowlisted long function(s) (pre-existing debt — see FF2_BASELINE).`);
+}
