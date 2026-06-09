@@ -22,14 +22,7 @@ import PropTypes from 'prop-types';
 import { buildMarkerIcon, isArchived } from './ux/mdfMarkers';
 import { markerClusterOptionsPrecisando } from './mapUtils';
 import { MAP_CONFIG } from './mapConstants';
-
-function getCoords(row) {
-  if (Array.isArray(row.mapCoords) && row.mapCoords.length === 2) return row.mapCoords;
-  try {
-    if (row.Coordinates) return JSON.parse(row.Coordinates);
-  } catch (_e) { /* ignore */ }
-  return null;
-}
+import { coordsFromPin } from '../domain/pinCoords';
 
 const ReporterMarkers = ({ dataMaps, onPinClick, nowTick }) => {
   const reporterPins = useMemo(() => {
@@ -54,7 +47,7 @@ const ReporterMarkers = ({ dataMaps, onPinClick, nowTick }) => {
       iconCreateFunction={markerClusterOptionsPrecisando}
     >
       {reporterPins.map((row, i) => {
-        const coords = getCoords(row);
+        const coords = coordsFromPin(row);
         if (!coords) return null;
         const icon = buildMarkerIcon({
           dateIso: row.DateISO,

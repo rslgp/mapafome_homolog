@@ -5,6 +5,7 @@ import './ListView.css';
 import envVariables from '../variaveisAmbiente';
 import { urgencyOf, isArchived } from './mdfMarkers';
 import { t, useLocale } from './strings';
+import { coordsFromPin } from '../../domain/pinCoords';
 
 // M4 — accessible list alternative to the Leaflet map. Ranking:
 //   rank = (distance_norm × 0.6) + (age_norm × 0.4)
@@ -21,12 +22,6 @@ function isReporterPin(row) {
   if (!row) return false;
   if (Array.isArray(row.Categorias) && row.Categorias.length > 0) return true;
   return LEGACY_NEED_ROASTERS.has(row.Roaster);
-}
-
-function coordsOf(row) {
-  if (Array.isArray(row?.mapCoords) && row.mapCoords.length === 2) return row.mapCoords;
-  try { if (row?.Coordinates) return JSON.parse(row.Coordinates); } catch (_e) {}
-  return null;
 }
 
 function hoursSince(dateIso) {
@@ -90,7 +85,7 @@ export default function ListView({ open, dataMaps, userCoords, onSelectPin, onCl
     // Normalise distance and age to [0,1] within this batch so the weighted
     // ranking is stable regardless of overall scale.
     const enriched = candidates.map((r) => {
-      const c = coordsOf(r);
+      const c = coordsFromPin(r);
       const km = (origin && c)
         ? envVariables.distanceInKmBetweenEarthCoordinates(origin[0], origin[1], c[0], c[1])
         : null;

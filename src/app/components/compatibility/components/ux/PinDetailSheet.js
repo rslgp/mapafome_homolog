@@ -7,6 +7,7 @@ import { resolveContact } from './contactLink';
 import { track } from './analytics';
 import { t, useLocale } from './strings';
 import envVariables from '../variaveisAmbiente';
+import { coordsFromPin } from '../../domain/pinCoords';
 
 // M3 — donor response surface: status, distance, time-since, soft claim,
 // mark-as-attended. Reporter contact is only ever exposed as a tap-to-act
@@ -45,16 +46,8 @@ function formatEta(km) {
   return `~${minutes} min a pé`;
 }
 
-function coordsOf(row) {
-  if (Array.isArray(row?.mapCoords) && row.mapCoords.length === 2) return row.mapCoords;
-  try {
-    if (row?.Coordinates) return JSON.parse(row.Coordinates);
-  } catch (_e) { /* ignore */ }
-  return null;
-}
-
 function pinId(row) {
-  const c = coordsOf(row);
+  const c = coordsFromPin(row);
   return `${row?.DateISO || ''}|${c ? c.join(',') : ''}`;
 }
 
@@ -118,7 +111,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
 
   const derived = useMemo(() => {
     if (!pin) return null;
-    const coords = coordsOf(pin);
+    const coords = coordsFromPin(pin);
     const distanceKm = (Array.isArray(userCoords) && userCoords.length === 2 && coords)
       ? envVariables.distanceInKmBetweenEarthCoordinates(
         userCoords[0], userCoords[1], coords[0], coords[1],

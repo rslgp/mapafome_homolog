@@ -57,4 +57,16 @@ describe('coordsFromPin', () => {
     it('returns null when Coordinates is an empty string (falsy → skipped)', () => {
         expect(coordsFromPin({ Coordinates: '' })).toBeNull();
     });
+
+    // P10 — null-safety: coordsFromPin became a STRICT SUPERSET of the original
+    // App.js IIFE so the ListView/PinDetailSheet sites (which guarded row?.…)
+    // could adopt it without behavior change. A null/undefined record returns
+    // null instead of throwing; every non-null case above is unchanged.
+    it('returns null (does NOT throw) when the record is null', () => {
+        expect(coordsFromPin(null)).toBeNull();
+    });
+
+    it('returns null (does NOT throw) when the record is undefined', () => {
+        expect(coordsFromPin(undefined)).toBeNull();
+    });
 });

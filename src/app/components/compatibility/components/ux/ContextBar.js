@@ -5,20 +5,12 @@ import './ContextBar.css';
 import envVariables from '../variaveisAmbiente';
 import { URGENCY, urgencyOf, isArchived } from './mdfMarkers';
 import { t, useLocale } from './strings';
+import { coordsFromPin } from '../../domain/pinCoords';
 
 // M2 context bar — live counts for the reporter/donor map surface.
 // "X pontos em Y km · N aguardando há mais de 6h"
 
 const RADIUS_KM = 2;
-
-function extractCoords(row) {
-  if (!row) return null;
-  if (Array.isArray(row.mapCoords) && row.mapCoords.length === 2) return row.mapCoords;
-  try {
-    if (row.Coordinates) return JSON.parse(row.Coordinates);
-  } catch (_e) { /* ignore */ }
-  return null;
-}
 
 // Any row that represents an individual person's need (not a fixed initiative).
 // Covers M1 writes (Categorias array) AND legacy roasters so the count matches
@@ -51,7 +43,7 @@ export default function ContextBar({ dataMaps, userCoords, radiusKm = RADIUS_KM,
       const attended = Boolean(row.AlimentoEntregue);
       if (isArchived(row.DateISO, { attended })) continue;
 
-      const coords = extractCoords(row);
+      const coords = coordsFromPin(row);
       if (origin && coords) {
         const km = envVariables.distanceInKmBetweenEarthCoordinates(
           origin[0], origin[1], coords[0], coords[1],
