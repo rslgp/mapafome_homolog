@@ -1,0 +1,212 @@
+import { describe, it, expect } from 'vitest';
+import { buildReport } from '../src/app/components/compatibility/components/ux/reports.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Characterization tests for buildReport (reports.js).
+//
+// These pin the CURRENT behavior of the aggregate-report builder. The
+// load-bearing invariant is the k>=5 LGPD anonymity rule (kAnonymize): any
+// month-bucket inside a category/region with fewer than 5 pins must collapse
+// into "outros" so a single reported person can never be re-identified by
+// cross-referencing region + category + month. The prose comment at reports.js
+// ~line 97 becomes an enforced forcing-function here.
+//
+// These tests assert what the code DOES today, not what we wish it did. If a
+// future change moves the collapse threshold or stops excluding donor/initiative
+// rows, these fail loudly.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// A real row is a Google-Sheets record whose `Dados` column is a JSON string.
+// Inside that blob, `Coordinates` is itself a JSON string of [lat, lng].
+// This helper mirrors that exact two-level encoding.
+function makeRow({ coords, ...fields }) {
+  const d = { ...fields };
+  if (coords !== undefined) d.Coordinates = JSON.stringify(coords);
+  return { Dados: JSON.stringify(d) };
+}
+
+// Coordinate inside the Recife metro bbox (regionResolver -> 'pe-recife').
+const RECIFE = [-8.05, -34.88];
+// Fixed clock so monthKey()/age math is deterministic regardless of run date.
+const NOW = Date.parse('2025-06-15T12:00:00Z');
+
+// A reporter pin in a single category + single month, attended already so the
+// age/alert math never interferes with the bucket-count assertions we care about.
+function reporterPin(dateISO, category = 'comida') {
+  return makeRow({
+    coords: RECIFE,
+    DateISO: dateISO,
+    Categorias: [category],
+    AlimentoEntregue: true,
+  });
+}
+
+describe('buildReport — k>=5 LGPD anonymity (kAnonymize)', () => {
+  it('collapses a month-bucket with fewer than 5 pins into "outros"', () => {
+    // 4 pins, same category ("comida"), same month (2025-03) -> below k=5.
+    const rows = Array.from({ length: 4 }, () => reporterPin('2025-03-10T09:00:00Z'));
+    const report = buildReport(rows, { now: NOW });
+
+    const comida = report.pontos_por_categoria_mes.comida;
+    expect(comida).toBeDefined();
+    // The real 2025-03 key is gone; its 4 pins are stashed under "outros".
+    expect(comida['2025-03']).toBeUndefined();
+    expect(comida.outros).toBe(4);
+  });
+
+  it('keeps a month-bucket with exactly 5 pins (at the k=5 threshold)', () => {
+    // 5 pins, same category, same month -> meets k=5, survives unmasked.
+    const rows = Array.from({ length: 5 }, () => reporterPin('2025-03-10T09:00:00Z'));
+    const report = buildReport(rows, { now: NOW });
+
+    const comida = report.pontos_por_categoria_mes.comida;
+    expect(comida['2025-03']).toBe(5);
+    expect(comida.outros).toBeUndefined();
+  });
+
+  it('applies the same sub-5 collapse to the per-region month series', () => {
+    // 3 pins in pe-recife, same month -> region series collapses to "outros".
+    const rows = Array.from({ length: 3 }, () => reporterPin('2025-04-01T09:00:00Z'));
+    const report = buildReport(rows, { now: NOW });
+
+    const region = report.pontos_por_regiao_mes['pe-recife'];
+    expect(region).toBeDefined();
+    expect(region['2025-04']).toBeUndefined();
+    expect(region.outros).toBe(3);
+  });
+
+  it('aggregates several sub-5 months into a single "outros" total', () => {
+    // 3 pins in 2025-01 + 2 pins in 2025-02 = 5 stashed, both below k=5.
+    const rows = [
+      ...Array.from({ length: 3 }, () => reporterPin('2025-01-05T09:00:00Z')),
+      ...Array.from({ length: 2 }, () => reporterPin('2025-02-05T09:00:00Z')),
+    ];
+    const report = buildReport(rows, { now: NOW });
+
+    const comida = report.pontos_por_categoria_mes.comida;
+    expect(comida['2025-01']).toBeUndefined();
+    expect(comida['2025-02']).toBeUndefined();
+    expect(comida.outros).toBe(5);
+  });
+});
+
+describe('buildReport — reporter-pin exclusion (isReporterPin)', () => {
+  it('excludes donor/initiative rows that are not reporter pins', () => {
+    const rows = [
+      // 5 genuine reporter pins (Categorias non-empty) — counted.
+      ...Array.from({ length: 5 }, () => reporterPin('2025-05-02T09:00:00Z')),
+      // A donor row: no Categorias[], Roaster not in LEGACY_NEED_ROASTERS.
+      makeRow({ coords: RECIFE, DateISO: '2025-05-02T09:00:00Z', Roaster: 'Doador' }),
+      // An empty-Categorias row — also not a reporter pin.
+      makeRow({ coords: RECIFE, DateISO: '2025-05-02T09:00:00Z', Categorias: [] }),
+    ];
+    const report = buildReport(rows, { now: NOW });
+
+    // Only the 5 reporter pins are aggregated; the 2 non-reporter rows drop out.
+    expect(report.meta.total_pontos_reportados).toBe(5);
+    expect(report.resumo_executivo.total_pontos_reportados).toBe(5);
+    expect(report.pontos_por_categoria_mes.comida['2025-05']).toBe(5);
+  });
+
+  it('treats unparseable Dados blobs as excluded (parseRow returns null)', () => {
+    const rows = [
+      { Dados: '{not valid json' },
+      ...Array.from({ length: 5 }, () => reporterPin('2025-05-02T09:00:00Z')),
+    ];
+    const report = buildReport(rows, { now: NOW });
+    expect(report.meta.total_pontos_reportados).toBe(5);
+  });
+
+  it('counts legacy Roaster rows (MoradorRua) as reporter pins', () => {
+    // MoradorRua is in LEGACY_NEED_ROASTERS -> reporter pin even with no Categorias[].
+    const rows = Array.from({ length: 5 }, () =>
+      makeRow({ coords: RECIFE, DateISO: '2025-05-02T09:00:00Z', Roaster: 'MoradorRua' }),
+    );
+    const report = buildReport(rows, { now: NOW });
+    expect(report.meta.total_pontos_reportados).toBe(5);
+  });
+});
+
+describe('buildReport — legacy foodSubtype / categoriesOf mapping', () => {
+  it("maps Roaster 'Alimento pronto' to the alimento_pronto category + subtype", () => {
+    const rows = Array.from({ length: 5 }, () =>
+      makeRow({ coords: RECIFE, DateISO: '2025-05-02T09:00:00Z', Roaster: 'Alimento pronto' }),
+    );
+    const report = buildReport(rows, { now: NOW });
+
+    // categoriesOf -> ['alimento_pronto'] -> per-category month series.
+    expect(report.pontos_por_categoria_mes.alimento_pronto['2025-05']).toBe(5);
+    // foodSubtype -> 'alimento_pronto' -> vulnerability breakdown by region.
+    const vul = report.vulnerabilidade_alimentar_por_regiao['pe-recife'];
+    expect(vul.alimento_pronto).toBe(5);
+    expect(vul.cesta_basica).toBe(0);
+    expect(vul.comida_generico).toBe(0);
+    expect(vul.total).toBe(5);
+  });
+
+  it("maps Roaster 'CestaBasica' to the cesta_basica category + subtype", () => {
+    const rows = Array.from({ length: 5 }, () =>
+      makeRow({ coords: RECIFE, DateISO: '2025-05-02T09:00:00Z', Roaster: 'CestaBasica' }),
+    );
+    const report = buildReport(rows, { now: NOW });
+
+    expect(report.pontos_por_categoria_mes.cesta_basica['2025-05']).toBe(5);
+    const vul = report.vulnerabilidade_alimentar_por_regiao['pe-recife'];
+    expect(vul.cesta_basica).toBe(5);
+    expect(vul.alimento_pronto).toBe(0);
+  });
+
+  it("maps Roaster 'MoradorRua' to the comida category and 'generico' subtype", () => {
+    const rows = Array.from({ length: 5 }, () =>
+      makeRow({ coords: RECIFE, DateISO: '2025-05-02T09:00:00Z', Roaster: 'MoradorRua' }),
+    );
+    const report = buildReport(rows, { now: NOW });
+
+    // categoriesOf('MoradorRua') -> ['comida'].
+    expect(report.pontos_por_categoria_mes.comida['2025-05']).toBe(5);
+    // foodSubtype('MoradorRua') -> 'generico' -> comida_generico in the breakdown.
+    const vul = report.vulnerabilidade_alimentar_por_regiao['pe-recife'];
+    expect(vul.comida_generico).toBe(5);
+    expect(vul.alimento_pronto).toBe(0);
+    expect(vul.cesta_basica).toBe(0);
+  });
+
+  it('lets an explicit Categorias[] array override the Roaster fallback', () => {
+    // Categorias present -> categoriesOf returns it verbatim, ignoring Roaster.
+    const rows = Array.from({ length: 5 }, () =>
+      makeRow({
+        coords: RECIFE,
+        DateISO: '2025-05-02T09:00:00Z',
+        Roaster: 'CestaBasica',
+        Categorias: ['agua'],
+      }),
+    );
+    const report = buildReport(rows, { now: NOW });
+    expect(report.pontos_por_categoria_mes.agua['2025-05']).toBe(5);
+    expect(report.pontos_por_categoria_mes.cesta_basica).toBeUndefined();
+  });
+});
+
+describe('buildReport — meta.nota_dignidade is always present', () => {
+  it('emits the dignity/LGPD note for a populated report', () => {
+    const rows = Array.from({ length: 5 }, () => reporterPin('2025-05-02T09:00:00Z'));
+    const report = buildReport(rows, { now: NOW });
+    expect(report.meta).toBeDefined();
+    expect(typeof report.meta.nota_dignidade).toBe('string');
+    expect(report.meta.nota_dignidade).toMatch(/outros/);
+    expect(report.meta.nota_dignidade).toMatch(/reidentifica/i);
+  });
+
+  it('emits the dignity note even for empty input', () => {
+    const report = buildReport([], { now: NOW });
+    expect(report.meta.nota_dignidade).toMatch(/Nenhum dado pessoal/);
+    expect(report.meta.total_pontos_reportados).toBe(0);
+  });
+
+  it('emits the dignity note even for non-array / garbage input', () => {
+    const report = buildReport(null, { now: NOW });
+    expect(typeof report.meta.nota_dignidade).toBe('string');
+    expect(report.meta.nota_dignidade.length).toBeGreaterThan(0);
+    expect(report.meta.total_pontos_reportados).toBe(0);
+  });
+});
