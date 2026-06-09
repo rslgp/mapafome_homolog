@@ -53,6 +53,8 @@ import AesEncryption from 'aes-encryption';
 
 import { getCookie, setCookie } from './components/cookies';
 
+import { runMain, installDebugHelpers } from './appMainBootstrap';
+
 const EXPIRE_DAY = 7;
 const aes = new AesEncryption();
 
@@ -758,135 +760,9 @@ class App extends Component {
 
     var self = this;
 
-    //current location
-    function runMain(self) {
-    (async function main(self) {
-      // Use service account creds
-      await doc.useServiceAccountAuth({
-        client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-      });
-
-      await doc.loadInfo(); // Loads document properties and worksheets
-
-      /*https://www.keene.edu/campus/maps/tool/
-        long, lat
-        x, y
-        -52.2070313, 2.20
-        -52.4267578, -13.9234039
-        -34.3212891, -14.0939572
-        -34.3212891, 1.6696855
-0: -8.0256189
-1: -34.9175702
-        -55.4589844, -32.6578757
-        -55.5468750, -14.1791861
-        -38.1445313, -14.1791861
-        -38.0566406, -32.8426736
-      */
-      //limitar regiao
-      let regiao;
-      if (envVariables.dentroLimites(self.state.center)) {
-        regiao = 0;
-      }
-      else {
-        alert("Região ainda não suportada");
-        return;
-      }
-      const sheet = doc.sheetsByIndex[regiao];
-      if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
-      const rows = envVariables.rows;
-      // Total row count
-      self.setState({ rowCount: rows.length });
-
-      // rows.filter( (x) => { return !x.Data}).map( (x) => {
-      //   x.Dados = JSON.stringify(
-      //     { 
-      //       "Roaster": x.Roaster, 
-      //       "URL": x.URL, 
-      //       "City": x.City, 
-      //       "Coordinates": x.Coordinates, 
-      //       "DateISO": x.DateISO, 
-      //       "Telefone": x.Telefone, 
-      //       "DiaSemana": x.DiaSemana,
-      //       "Horario": x.Horario,
-      //       "AlimentoEntregue": x.AlimentoEntregue
-      //     }
-      //   );
-      //   (async function main(x){
-
-      //   await x.save();
-      //   })(x);
-
-      // })
-      rows.forEach((x) => {
-        let dados = JSON.parse(x.Dados);
-        for (let key in dados) {
-          x[key] = dados[key];
-        }
-        // x.Roaster = dados.Roaster;
-        // x.URL = dados.URL;
-        // x.City = dados.City;
-        // x.DateISO = dados.DateISO;
-        // x.DiaSemana = dados.DiaSemana;
-        // x.Horario = dados.Horario;
-        // x.Mes = dados.Mes;
-        // x.AlimentoEntregue = dados.AlimentoEntregue;
-        // x.RedeSocial = dados.RedeSocial;
-        // x.Avaliacao = dados.Avaliacao;
-
-        if (dados.Coordinates) {
-          x.mapCoords = JSON.parse(x.Coordinates);
-          if (dados.Telefone) {
-            try {
-              x.Telefone = aes.decrypt(x.Telefone);
-            } catch (e) {
-              //problema ao decriptar, string nao esta no formato hex
-            }
-          }
-        }
-
-      });
-      self.setState({ dataMaps: rows });
-
-      // var needsUpdates = rows.filter((x) => { x = JSON.parse(x); return !x.Coordinates; });
-      // if(needsUpdates.length === 0) console.log("nao precisa atualizar");
-      // if (needsUpdates && needsUpdates.length > 0) {
-      //     for (let index in needsUpdates) {
-      //       // if(needsUpdates[index]._rawData.length===0) needsUpdates[index].delete(); //se deixar rows vazias na planilha
-      //         let city = needsUpdates[index].City;
-      //         setTimeout(() => 
-      //             {
-      //                 (async function main() {
-      //                     try{
-      //                         let providerResult = await provider.search({ query: city.replace('-',",") + ', Brazil' });
-
-      //                         if(providerResult.length !== 0 ){
-      //                             // throw new Error("endereco-nao-encontrado");
-
-      //                             console.log(providerResult);
-      //                             let latlon = [providerResult[0].y, providerResult[0].x];
-      //                             needsUpdates[index].Coordinates = JSON.stringify(latlon); // Convert obj to string
-      //                             //needsUpdates[index].mapCoords = latlon;
-      //                             await needsUpdates[index].save(); // Save to remote Google Sheet
-      //                         }
-      //                     }catch(e){
-      //                         console.log("ERRO");
-      //                         console.log(e);
-      //                     }
-      //                 })();
-
-      //             },1300                        
-      //         );
-
-      //     }
-      //   self.setState({ dataMaps: rows });
-      // }
-
-      // Loading message 
-      self.setState({ isLoading: false })
-
-    })(self);
-    } // end runMain
+    // Collaborators passed into the extracted bootstrap/debug helpers
+    // (appMainBootstrap.js) so that module stays a pure function of its inputs.
+    const bootstrapDeps = { doc, envVariables, aes, sheetsGetSheet };
 
     console.log('[geo] requesting device location...');
     navigator.geolocation.getCurrentPosition(
@@ -896,185 +772,87 @@ class App extends Component {
         envVariables.currentLocation = coords;
         self.setState({ center: coords }, function () {
           console.log('[geo] state.center after setState:', self.state.center);
-          runMain(self);
+          runMain(self, bootstrapDeps);
         });
       },
       function (err) {
         console.warn('[geo] FAILED (code=' + err.code + '):', err.message, '- using default center:', self.state.center);
-        runMain(self);
+        runMain(self, bootstrapDeps);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 
-    window.fixarPonto = async function (endereco, coords) {
-      try {
-        const sheet = await sheetsGetSheet(0);
-        if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
-        const matches = envVariables.rows.filter((x) => JSON.parse(x.Dados).City.includes(endereco));
-        for (const x of matches) {
-          const dados = JSON.parse(x.Dados);
-          dados.Coordinates = JSON.stringify(coords);
-          x.Dados = JSON.stringify(dados);
-          await x.save();
-        }
-      } catch (_e) { /* debug helper — silent on error */ }
-    }
-
-    //retornar os pontos proximos a 5km
-    window.distance = function () {
-      const rows = envVariables.rows;
-      let proximos = [];
-      rows.forEach((x) => {
-        let dado = JSON.parse(x.Dados);
-        if (dado.Coordinates) {
-          let coords = JSON.parse(dado.Coordinates);
-          let distancia = envVariables.distanceInKmBetweenEarthCoordinates(
-            envVariables.currentLocation[0],
-            envVariables.currentLocation[1],
-            coords[0],
-            coords[1]);
-          dado.distancia = distancia;
-          if (distancia < 5) proximos.push(dado);
-        }
-      });
-
-      proximos.sort(function (a, b) {
-        return a.distancia - b.distancia;
-      });
-      console.log(proximos);
-
-    }
-    window.stats = function () {
-      (async function main() {
-        try {
-          const sheet = await sheetsGetSheet(0);
-          if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
-          const rows = envVariables.rows;
-
-          let rowEncontrada = rows.filter((x) => {
-            return JSON.parse(x.Dados).clicado;
-          }
-          );
-          var SortedPoints = [];
-          var tmp;
-          rowEncontrada.forEach((x) => {
-            let dadosNovos = JSON.parse(x.Dados);
-            if (dadosNovos.Telefone) dadosNovos.Telefone = "https://wa.me/55" + aes.decrypt(dadosNovos.Telefone);
-            SortedPoints.push(dadosNovos);
-            for (var i = SortedPoints.length - 1; i > 0 && SortedPoints[i].clicado > SortedPoints[i - 1].clicado; i--) {
-              tmp = SortedPoints[i];
-              SortedPoints[i] = SortedPoints[i - 1];
-              SortedPoints[i - 1] = tmp;
-            }
-          });
-          console.log("mais clicados");
-          console.log(SortedPoints);
-
-
-          rowEncontrada = rows.filter((x) => {
-            return JSON.parse(x.Dados).clickTel;
-          }
-          );
-          var SortedPoints = [];
-          var tmp;
-          rowEncontrada.forEach((x) => {
-            let dadosNovos = JSON.parse(x.Dados);
-            dadosNovos.Telefone = "https://wa.me/55" + aes.decrypt(dadosNovos.Telefone);
-            SortedPoints.push(dadosNovos);
-            for (var i = SortedPoints.length - 1; i > 0 && SortedPoints[i].clickTel > SortedPoints[i - 1].clickTel; i--) {
-              tmp = SortedPoints[i];
-              SortedPoints[i] = SortedPoints[i - 1];
-              SortedPoints[i - 1] = tmp;
-            }
-          });
-          console.log("mais clicados em telefone");
-          console.log(SortedPoints);
-
-          rowEncontrada = rows.filter((x) => {
-            return JSON.parse(x.Dados).AlimentoEntregue;
-          }
-          );
-          var SortedPoints = [];
-          var tmp;
-          rowEncontrada.forEach((x) => {
-            let dadosNovos = JSON.parse(x.Dados);
-            SortedPoints.push(dadosNovos);
-            for (var i = SortedPoints.length - 1; i > 0 && SortedPoints[i].AlimentoEntregue > SortedPoints[i - 1].AlimentoEntregue; i--) {
-              tmp = SortedPoints[i];
-              SortedPoints[i] = SortedPoints[i - 1];
-              SortedPoints[i - 1] = tmp;
-            }
-          });
-          console.log("mais entregues");
-          console.log(SortedPoints);
-
-
-          rowEncontrada = rows.filter((x) => {
-            return JSON.parse(x.Dados).Avaliacao;
-          }
-          );
-          var SortedPoints = [];
-          var tmp;
-          rowEncontrada.forEach((x) => {
-            let dadosNovos = JSON.parse(x.Dados);
-
-            let AvaliacaoData = { nota: 0, totalClicks: 0 };
-            if (dadosNovos.Avaliacao) {
-              AvaliacaoData.totalClicks = (dadosNovos.Avaliacao["5"] + dadosNovos.Avaliacao["4"] + dadosNovos.Avaliacao["3"] + dadosNovos.Avaliacao["2"] + dadosNovos.Avaliacao["1"]);
-              if (AvaliacaoData.totalClicks === 0) {
-                //dadosNovos.Avaliacao="Nenhuma";
-              } else {
-                dadosNovos.Avaliacao = (dadosNovos.Avaliacao["5"] * 5 +
-                  dadosNovos.Avaliacao["4"] * 4 +
-                  dadosNovos.Avaliacao["3"] * 3 +
-                  dadosNovos.Avaliacao["2"] * 2 +
-                  dadosNovos.Avaliacao["1"] * 1)
-                  /
-                  (AvaliacaoData.totalClicks);
-
-                AvaliacaoData.nota = Math.round(dadosNovos.Avaliacao * 100) / 100;
-                AvaliacaoData.nota = AvaliacaoData.nota * 100000 + AvaliacaoData.totalClicks;
-              }
-            }
-
-            //AvaliacaoData.nota = dadosNovos.Avaliacao;
-
-            if (AvaliacaoData.nota > 0) SortedPoints.push({ ...JSON.parse(x.Dados), "nota": AvaliacaoData.nota });
-            for (var i = SortedPoints.length - 1; i > 0 && SortedPoints[i].nota > SortedPoints[i - 1].nota; i--) {
-              tmp = SortedPoints[i];
-              SortedPoints[i] = SortedPoints[i - 1];
-              SortedPoints[i - 1] = tmp;
-            }
-          });
-          console.log("maiores notas");
-          console.log(SortedPoints);
-
-
-        } catch (e) {
-
-        }
-
-      })();
-    }
+    installDebugHelpers(self, bootstrapDeps);
 
   }
 
 
 
-  render() {
+  // The 2-column map + controls row. Extracted from render() verbatim to keep
+  // render() within the fitness per-function LOC budget — same JSX/bindings.
+  renderMapGrid() {
     return (
-      <div className="App">
-        <IosKeyboardInset />
-        <InstallToast />
-        <Header
-          rowCountProp={this.state.rowCount}
-          onStartTour={this.handleStartTour}
-          onStartReport={this.handleOpenReportSheet}
+      <Grid container spacing={2}>
+        <MainMap
+          dataMaps={this.state.dataMaps}
+          center={this.state.center}
+          tileMapOption={this.state.tileMapOption}
+          filtro={this.state.filtro}
+          telefoneFilterActive={this.state.telefoneFilterLocal}
+          ultimoAnoFilterActive={this.state.ultimoAnoFilterLocal}
+          onRemoverPonto={this.removerPonto}
+          onVerificarPonto={this.verificarPonto}
+          onEntregarAlimento={this.entregarAlimento}
+          onAvaliar={this.avaliar}
+          onContabilizarClicado={this.contabilizarClicado}
+          onClicouTelefone={this.clicouTelefone}
+          onPinDropped={this.handlePinDroppedOnMap}
+          pingCoords={this.state.pingCoords}
+          onReporterPinClick={this.handleReporterPinClick}
+          nowTick={this.state.nowTick}
         />
-        <StepsHint
-          activeStep={this.state.activeStep}
+        <MainControls
+          isLoading={this.state.isLoading}
+          alimento={this.state.alimento}
+          telefoneEncryptado={this.state.telefoneEncryptado}
+          diaSemana={this.state.diaSemana}
+          horario={this.state.horario}
+          mes={this.state.mes}
+          center={this.state.center}
+          numero={this.state.numero}
+          redesocial={this.state.redesocial}
+          telefoneFilterLocal={this.state.telefoneFilterLocal}
+          ultimoAnoFilterLocal={this.state.ultimoAnoFilterLocal}
+          onFiltroChange={this.setFiltro}
+          onTipoAlimentoChange={this.setTipoAlimento}
+          onDiaSemanaChange={this.setDiaSemana}
+          onHorarioChange={this.setHorario}
+          onMesChange={this.setMes}
+          onTelefoneChange={this.handleChangeTelefone}
+          onNumeroChange={this.handleChangeNumero}
+          onRedeSocialChange={this.handleChangeRedeSocial}
+          onClickMap={this.handleClickMap}
+          onTelefoneFilterChange={this.telefoneFilterChange}
+          onUltimoAnoFilterChange={this.ultimoAnoFilterChange}
+          dropDownMenuSemanaEntregaAlimentoPronto={this.dropDownMenuSemanaEntregaAlimentoPronto}
+          dropDownMenuHorarioEntregaAlimentoPronto={this.dropDownMenuHorarioEntregaAlimentoPronto}
+          dropDownMenuSemanaPrecisandoBuscar={this.dropDownMenuSemanaPrecisandoBuscar}
+          dropDownMenuHorarioPrecisandoBuscar={this.dropDownMenuHorarioPrecisandoBuscar}
+          dropDownMenuFiltro={this.dropDownMenuFiltro}
+          redesocialRef={this.redesocialRef}
+          dropDownMenuRedeSocial={this.dropDownMenuRedeSocial}
+          dropDownMenuMesPrecisandoBuscar={this.dropDownMenuMesPrecisandoBuscar}
+          dropDownMenuMesEntregaAlimentoPronto={this.dropDownMenuMesEntregaAlimentoPronto}
         />
-        <main id="mdf-main" className="mdf-main">
+      </Grid>
+    );
+  }
+
+  // The in-flow page content (<main>): the ordered column of sections.
+  // Extracted from render() verbatim — same JSX, ordering, and comments.
+  renderMain() {
+    return (
+      <main id="mdf-main" className="mdf-main">
         {/* TV-3 + TV-6 + TV-7 — pin readout pill (hoisted above ContextBar
             on user request 2026-04-30): shows resolved coords of the
             dropped marker and the Limpar reset button. Renders null
@@ -1084,21 +862,10 @@ class App extends Component {
             ponto will publish" — the most prominent piece of UI as
             soon as a tap registers. */}
         {/* ─── Page layout (SRP, v5 § solid_quick.SRP + refactoring_patterns.move_function) ───
-            Each section is a sibling at this single level. Reorder by
-            moving its line — no other file or scope to edit. The Grid
-            below owns ONE responsibility (the 2-column map+controls
-            row); every other section is independently positioned.
-
-            Order is currently:
-              1. PinReadout      — active-tap coord pill (top priority signal)
-              2. LiveAnnouncer   — screen-reader-only aria-live region
-              3. Grid            — map + controls 2-column row
-              4. ViewMoreCue     — scroll affordance below the map
-              5. TapDebugOverlay — opt-in ?debug=tap diagnostic
-              6. ContextBar      — ambient point counts + Lista button
-              7. InfoPanel       — legend / info surface
-              8. VersionFooter   — last child: build version (copy-paste for bug reports)
-            To reorder, move whole blocks within this scope. */}
+            Each numbered section below is a sibling at this single level;
+            reorder by moving its block within this scope (no other file to
+            edit). The Grid owns ONE responsibility (the 2-column map+controls
+            row); every other section is independently positioned. */}
 
         {/* 1. Tap-coord readout — only renders after a tap. */}
         <PinReadout />
@@ -1108,59 +875,7 @@ class App extends Component {
 
         {/* 3. Map + controls — the only Grid in this layout. SRP:
               owns the responsive 2-column map/controls row, nothing else. */}
-        <Grid container spacing={2}>
-          <MainMap
-            dataMaps={this.state.dataMaps}
-            center={this.state.center}
-            tileMapOption={this.state.tileMapOption}
-            filtro={this.state.filtro}
-            telefoneFilterActive={this.state.telefoneFilterLocal}
-            ultimoAnoFilterActive={this.state.ultimoAnoFilterLocal}
-            onRemoverPonto={this.removerPonto}
-            onVerificarPonto={this.verificarPonto}
-            onEntregarAlimento={this.entregarAlimento}
-            onAvaliar={this.avaliar}
-            onContabilizarClicado={this.contabilizarClicado}
-            onClicouTelefone={this.clicouTelefone}
-            onPinDropped={this.handlePinDroppedOnMap}
-            pingCoords={this.state.pingCoords}
-            onReporterPinClick={this.handleReporterPinClick}
-            nowTick={this.state.nowTick}
-          />
-          <MainControls
-            isLoading={this.state.isLoading}
-            alimento={this.state.alimento}
-            telefoneEncryptado={this.state.telefoneEncryptado}
-            diaSemana={this.state.diaSemana}
-            horario={this.state.horario}
-            mes={this.state.mes}
-            center={this.state.center}
-            numero={this.state.numero}
-            redesocial={this.state.redesocial}
-            telefoneFilterLocal={this.state.telefoneFilterLocal}
-            ultimoAnoFilterLocal={this.state.ultimoAnoFilterLocal}
-            onFiltroChange={this.setFiltro}
-            onTipoAlimentoChange={this.setTipoAlimento}
-            onDiaSemanaChange={this.setDiaSemana}
-            onHorarioChange={this.setHorario}
-            onMesChange={this.setMes}
-            onTelefoneChange={this.handleChangeTelefone}
-            onNumeroChange={this.handleChangeNumero}
-            onRedeSocialChange={this.handleChangeRedeSocial}
-            onClickMap={this.handleClickMap}
-            onTelefoneFilterChange={this.telefoneFilterChange}
-            onUltimoAnoFilterChange={this.ultimoAnoFilterChange}
-            dropDownMenuSemanaEntregaAlimentoPronto={this.dropDownMenuSemanaEntregaAlimentoPronto}
-            dropDownMenuHorarioEntregaAlimentoPronto={this.dropDownMenuHorarioEntregaAlimentoPronto}
-            dropDownMenuSemanaPrecisandoBuscar={this.dropDownMenuSemanaPrecisandoBuscar}
-            dropDownMenuHorarioPrecisandoBuscar={this.dropDownMenuHorarioPrecisandoBuscar}
-            dropDownMenuFiltro={this.dropDownMenuFiltro}
-            redesocialRef={this.redesocialRef}
-            dropDownMenuRedeSocial={this.dropDownMenuRedeSocial}
-            dropDownMenuMesPrecisandoBuscar={this.dropDownMenuMesPrecisandoBuscar}
-            dropDownMenuMesEntregaAlimentoPronto={this.dropDownMenuMesEntregaAlimentoPronto}
-          />
-        </Grid>
+        {this.renderMapGrid()}
 
         {/* 4. Scroll affordance — signals there's content below the map. */}
         <ViewMoreCue />
@@ -1183,8 +898,17 @@ class App extends Component {
               until /version.json resolves. SRP: shows ONLY the build
               identifier (no other footer concerns). */}
         <VersionFooter />
-        </main>
+      </main>
+    );
+  }
 
+  // Floating overlays + sheets rendered as siblings of <main>: tour, FAB,
+  // report/pin sheets, toasts, list, empty-state, notifications. Extracted
+  // from render() verbatim. Wrapped in a fragment (no DOM node) so the
+  // overlays stay direct children of .App in the same render order.
+  renderOverlays() {
+    return (
+      <>
         <GuidedTutorial
           open={this.state.tourOpen}
           onClose={this.handleCloseTour}
@@ -1237,7 +961,25 @@ class App extends Component {
           open={this.state.notifOpen}
           onClose={() => this.setState({ notifOpen: false })}
         />
+      </>
+    );
+  }
 
+  render() {
+    return (
+      <div className="App">
+        <IosKeyboardInset />
+        <InstallToast />
+        <Header
+          rowCountProp={this.state.rowCount}
+          onStartTour={this.handleStartTour}
+          onStartReport={this.handleOpenReportSheet}
+        />
+        <StepsHint
+          activeStep={this.state.activeStep}
+        />
+        {this.renderMain()}
+        {this.renderOverlays()}
       </div >
     );
   }
