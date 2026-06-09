@@ -263,6 +263,20 @@ const InfoPanel = ({ rowCount }) => {
           <h3>Ajude a manter esse site desde 2022 online e a descoberta de mais pessoas</h3>
           <div className="ip-support__actions">
             <a
+              className="mdf-btn mdf-btn--secondary mdf-btn--brand-outline mdf-btn--lg"
+              href="/assinar"
+              aria-label="Assinatura mensal via Pix, cartão ou boleto"
+              title="Assinatura mensal via Pix, cartão ou boleto"
+            >
+              <span className="mdf-btn__logo-chip">
+                <img
+                  src="https://www.bcb.gov.br/content/estabilidadefinanceira/piximg/logo_pix.png"
+                  alt="Pix"
+                />
+              </span>
+              Assinar apoio mensal
+            </a>
+            <a
               className="mdf-btn mdf-btn--secondary mdf-btn--channel-patreon mdf-btn--lg"
               target="_blank"
               rel="noreferrer"
@@ -432,7 +446,7 @@ const InfoPanel = ({ rowCount }) => {
             <span aria-hidden="true">·</span>
             <a target="_blank" rel="noreferrer" href="./terms.html">Termos de Uso</a>
             <span aria-hidden="true">·</span>
-            <a href="/apoiar">Apoie o projeto</a>
+            <a href="/assinar">Apoie o projeto</a>
             <span aria-hidden="true">·</span>
             <a href="/relatorios">Relatórios (órgãos públicos)</a>
             <span aria-hidden="true">·</span>
