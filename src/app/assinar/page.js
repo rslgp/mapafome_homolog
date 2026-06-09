@@ -8,6 +8,7 @@ import {
   validateBeforeSubmit,
 } from '../components/compatibility/components/payments/asaasSubscriptionClient';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
+import { useRovingRadioGroup } from './useRovingRadioGroup';
 import './assinar.css';
 
 // Interpolate a single {value} placeholder into a translated string. Keeps the
@@ -41,6 +42,21 @@ export default function AssinarPage() {
   const [status, setStatus] = useState('idle'); // idle | submitting | success | error
   const [errors, setErrors] = useState([]);
   const [result, setResult] = useState(null);
+
+  // Roving-tabindex + arrow-key navigation for the two single-select pickers.
+  // Both are real radiogroups (mutually-exclusive choices), so they get the full
+  // APG keyboard contract, not just the role. The preset picker's "selected" id
+  // is the value as a string; when a custom amount is typed no preset matches
+  // (presetSelected === null) and the group is left with no checked radio, which
+  // a radiogroup tolerates and the arrow keys re-enter at an end.
+  const railIds = RAILS.map((r) => r.id);
+  const onRailKeyDown = useRovingRadioGroup(railIds, rail, setRail);
+
+  const presetIds = PRESET_VALUES.map(String);
+  const presetSelected = presetIds.includes(String(value)) ? String(value) : null;
+  const onPresetKeyDown = useRovingRadioGroup(presetIds, presetSelected, (id) =>
+    setValue(Number(id)),
+  );
 
   function buildInput() {
     const input = {
@@ -131,13 +147,20 @@ export default function AssinarPage() {
       <form onSubmit={handleSubmit} noValidate>
         <fieldset className="mdf-field">
           <legend>{t('assinar.legend.rail')}</legend>
-          <div className="mdf-rails" role="radiogroup" aria-label={t('assinar.legend.rail')}>
+          <div
+            className="mdf-rails"
+            role="radiogroup"
+            aria-label={t('assinar.legend.rail')}
+            onKeyDown={onRailKeyDown}
+          >
             {RAILS.map((r) => (
               <button
                 key={r.id}
                 type="button"
                 role="radio"
                 aria-checked={rail === r.id}
+                tabIndex={rail === r.id ? 0 : -1}
+                data-radio-id={r.id}
                 className={`mdf-rail ${rail === r.id ? 'is-on' : ''}`}
                 onClick={() => setRail(r.id)}
               >
@@ -150,18 +173,33 @@ export default function AssinarPage() {
 
         <fieldset className="mdf-field">
           <legend>{t('assinar.legend.value')}</legend>
-          <div className="mdf-chips">
-            {PRESET_VALUES.map((v) => (
-              <button
-                key={v}
-                type="button"
-                aria-pressed={Number(value) === v}
-                className={`mdf-chip ${Number(value) === v ? 'is-on' : ''}`}
-                onClick={() => setValue(v)}
-              >
-                R$ {v}
-              </button>
-            ))}
+          <div
+            className="mdf-chips"
+            role="radiogroup"
+            aria-label={t('assinar.value.presets')}
+            onKeyDown={onPresetKeyDown}
+          >
+            {PRESET_VALUES.map((v, i) => {
+              const checked = Number(value) === v;
+              // Roving tabindex: the checked preset is tabbable. When a custom
+              // amount is typed (no preset checked) keep the group reachable by
+              // making the first chip the tab stop.
+              const tabbable = checked || (presetSelected === null && i === 0);
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  role="radio"
+                  aria-checked={checked}
+                  tabIndex={tabbable ? 0 : -1}
+                  data-radio-id={String(v)}
+                  className={`mdf-chip ${checked ? 'is-on' : ''}`}
+                  onClick={() => setValue(v)}
+                >
+                  R$ {v}
+                </button>
+              );
+            })}
           </div>
           <label className="mdf-amount">
             <span>{t('assinar.value.other')}</span>

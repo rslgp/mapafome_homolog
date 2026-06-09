@@ -28,6 +28,7 @@ export const ASSINAR_I18N_KEYS = [
   'assinar.sub',
   'assinar.legend.rail',
   'assinar.legend.value',
+  'assinar.value.presets',
   'assinar.value.other',
   'assinar.field.name',
   'assinar.field.email',
