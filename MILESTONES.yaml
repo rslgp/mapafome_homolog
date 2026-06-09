@@ -42,13 +42,14 @@ milestones:
     gate: ["npm run a11y", "npm run lint", "npm run test"]
     status: shipped
 
-  # ---------- Phase 4: code-smell backlog (analysis done; NOT yet implemented) ----------
+  # ---------- Phase 4: code-smell backlog (P11/P13/P15/P16 SHIPPED; P12 next; P14 later) ----------
   - id: P11
     title: "Consolidate 4 Haversine copies onto the dead domain/Coordinates.js"
     owner: softwareengineer
     scope: "Include: SOLID/SOT — collapse 4 duplicate Haversine copies + 2 bbox literals onto the dead-but-complete domain/Coordinates.js (re-point marketingReports.js + sponsors.js first; defer variaveisAmbiente.dentroLimites — different bounds contract). Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
     gate: ["npm run test", "npm run fitness", "npm run lint"]
-    status: next
+    status: shipped
+    commit: "4d9c0b0 refactor(ux): route distanceKm through Coordinates VO"
 
   - id: P12
     title: "Extract shared csvEsc / downloadBlob / fetch seam (kill copy-paste export plumbing)"
@@ -62,7 +63,8 @@ milestones:
     owner: softwareengineer
     scope: "Include: architecture/SOT — route appPinActions.js writes (lines 113/156/210) through sheetsClient.ensureReady()/getSheet(0) like its siblings, killing the 3 raw auth sites + the doc field from _pinDeps; keep the 10s withTimeout. Prerequisite that shrinks the P14 key cutover from 9 sites to 1. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
     gate: ["npm run test", "npm run fitness", "npm run build"]
-    status: next
+    status: shipped
+    commit: "3e1838a refactor(app): route pin writes through sheetsClient.getSheet"
 
   - id: P14
     title: "NEXT_PUBLIC_GOOGLE_PRIVATE_KEY ships the Google service-account private key into the client bundle (HIGH severity)"
@@ -76,16 +78,18 @@ milestones:
     owner: softwareengineer
     scope: "Include: testability — add test/reports.test.js characterizing buildReport: sub-5 buckets collapse to 'outros', reporter-pin rows excluded, foodSubtype/categoriesOf mapping, meta.nota_dignidade always present — turning the k>=5 LGPD re-identification guard into an enforced forcing-function (470 LOC, zero tests). Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
     gate: ["npm run test"]
-    status: next
+    status: shipped
+    commit: "55b91a8 test(reports): pin k>=5 LGPD anonymity in buildReport"
 
   - id: P16
     title: "Implement-or-delete the dead FF3 fitness placeholder + close the FF2 arrow-fn-LOC gap"
     owner: softwareengineer
     scope: "Include: fitness forcing-function — implement FF3 against the real next-build output size OR delete the never-run placeholder (excise); extend the FF2 per-function-LOC regex to catch 'export const X = (…) => {' arrows or document the accepted gap. One isolated change each. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
     gate: ["npm run fitness", "npm run lint"]
-    status: next
+    status: shipped
+    commit: "169943a build(fitness): widen FF2 to exported arrows, drop dead FF3"
 
-  # ---------- Phase 5: just-landed Asaas recurring-payment surface (NOT yet shipped) ----------
+  # ---------- Phase 5: Asaas recurring-payment surface (P17-P20 SHIPPED) ----------
   - id: P17
     title: "A11y of the new /assinar subscription form — WCAG AA contrast + >=44px touch targets + radiogroup/aria"
     owner: [coloring-ict6, uiux-defold]
@@ -93,28 +97,32 @@ milestones:
       coloring-ict6: "Include: WCAG 2.2 AA contrast of the new src/app/assinar/page.js + assinar.css payment form (rail buttons, value chips, CTA, error alert) against MUI theme + --mdf-* tokens. Exclude: vmath/Lua palette literals."
       uiux-defold: "Include: >=44px touch-targets on rail/chip/CTA buttons, the role=radiogroup + aria-checked semantics of the rail picker, aria-pressed value chips, and the role=alert error region in src/app/assinar/page.js. Exclude: .gui / msg.post / Defold engine."
     gate: ["npm run a11y", "npm run lint"]
-    status: next
+    status: shipped
+    commit: "9158d2c feat(assinar): add APG radiogroup keyboard nav to pickers"
 
   - id: P18
     title: "pt-BR/es i18n parity for the new /assinar payment strings (page hardcodes pt-BR, never calls t())"
     owner: uiux-defold
     scope: "Include: pt-BR<->es i18n parity for the new payment copy — src/app/assinar/page.js currently HARDCODES pt-BR strings and never calls t(); route every payment/rail/error string through useLocale()/t() and add the matching es locale entries (parity test). Exclude: .gui / msg.post / Defold engine."
     gate: ["npm run test", "npm run lint"]
-    status: next
+    status: shipped
+    commit: "af15f76 feat(i18n): wire /assinar copy through t() with es parity"
 
   - id: P19
     title: "Security review of asaas webhook auth + CORS + secret handling + DURABLE idempotency store"
     owner: softwareengineer
     scope: "Include: asaas-backend security + idempotency — review asaas-backend/api/asaas/webhook.js + lib/webhookAuth.js (constant-time compare, fails closed — already sound) + lib/http.js CORS + ASAAS_API_KEY server-only secret handling, and REPLACE the in-memory Set dedupe (resets on cold start — NOT durable) with a durable idempotency store (Vercel KV/Upstash) in processEvent. Threat-model handoff to the bug-bounty consultant. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
     gate: ["cd asaas-backend && npm test"]
-    status: next
+    status: shipped
+    commit: "5386d5f fix(asaas): make webhook dedupe durable across cold starts (lib/idempotencyStore.js; KV/Upstash w/ in-memory fallback)"
 
   - id: P20
     title: "Characterization/unit tests for asaas-backend lib validate.js + webhookAuth.js and the subscription client"
     owner: softwareengineer
     scope: "Include: testability — characterization/unit tests for asaas-backend/lib/validate.js (CPF/CNPJ + untrusted-body cleaning) and lib/webhookAuth.js (constant-time compare, missing-token + mismatch fail-closed), plus broaden test/asaasSubscriptionClient.test.js for src/app/components/compatibility/components/payments/asaasSubscriptionClient.js. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
     gate: ["cd asaas-backend && npm test", "npm run test"]
-    status: next
+    status: shipped
+    commit: "8d3dea4 test(assinar): pin asaasSubscriptionClient behavior; 86b37f7 test(asaas): pin validate and webhookAuth behavior (rail contract closed by 7513c10 fix(asaas)!: drop debito)"
 
   # ---------- Out of scope: zero-overlap SOLONE game consultants ----------
   - id: P90
@@ -148,3 +156,11 @@ notes: |
     have zero overlap and appear only as out_of_scope.
   - PHASE/order: independent slices (P11, P12, P15, P17, P18) run in parallel; dependent ones are
     sequential — P13 precedes P14 (the secret cutover); P19/P20 jointly harden the asaas-backend.
+  - STATUS (as of 2026-06-09): SHIPPED = P1-P6, P11, P13, P15, P16, P17, P18, P19, P20 (commit shas
+    recorded per-milestone above). REMAINING: P12 (next — extract the csvEsc/downloadBlob/fetch seam;
+    the byte-identical dups still live in reports.js + marketingReports.js + the two relatorio* pages)
+    and P14 (later — the NEXT_PUBLIC_GOOGLE_PRIVATE_KEY client-bundle secret; a bug-bounty /
+    secret-architecture handoff, NOT autonomous softwareengineer scope; its P13 groundwork is done).
+  - RAIL CONTRACT: the recurring rails are pix | cartao | boleto only. The earlier "débito automático"
+    rail was removed (7513c10) — Asaas's subscription billingType enum has no bank-debit value, so it
+    produced a runtime 400; P20's committed tests assert the 3-rail contract.
