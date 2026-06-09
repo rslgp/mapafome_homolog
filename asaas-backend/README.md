@@ -27,16 +27,31 @@ The four supported rails map to Asaas `billingType`:
 
 ## Local dev
 
+**Recommended — no Vercel CLI, zero new deps** (uses Node's built-in `http`):
+
 ```bash
 cd asaas-backend
 cp .env.example .env.local      # fill ASAAS_API_KEY (sandbox) + ASAAS_WEBHOOK_TOKEN
-npm install -g vercel           # one-time
-vercel dev                      # serves http://localhost:3000/api/asaas/*
+npm run dev                     # serves http://localhost:3001/api/asaas/*  (PORT to override)
 npm test                        # runs the unit tests (node --test)
+npm run smoke                   # optional: prove the sandbox key reaches Asaas
+npm run smoke:sub               # optional: prove the full Pix subscription path + idempotency
 ```
 
-Point the static site at it during dev:
-`NEXT_PUBLIC_ASAAS_BACKEND_URL=http://localhost:3000` in the **main** repo's `.env.local`.
+`npm run dev` mounts the **same** `api/asaas/*.js` handlers behind a tiny local server
+(`scripts/dev-server.mjs`) that loads `.env.local` and shims the Vercel `req.body` / `res.status` /
+`res.send` contract. It runs on **port 3001** by default — deliberately off `:3000` so it doesn't
+collide with the site's `next dev`.
+
+Point the static site at it during dev (in the **main** repo's `.env.local`):
+`NEXT_PUBLIC_ASAAS_BACKEND_URL=http://localhost:3001`.
+
+**Alternative — Vercel CLI** (closest to production runtime):
+
+```bash
+npm install -g vercel           # one-time
+vercel dev                      # serves http://localhost:3000/api/asaas/*  (set the URL to :3000)
+```
 
 ## Deploy (Vercel — recommended)
 

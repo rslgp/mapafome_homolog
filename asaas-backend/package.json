@@ -5,7 +5,10 @@
   "description": "Server-side Asaas recurring-payment backend for MAPA FOME. Deploys as serverless functions (Vercel/Netlify). The Asaas secret key lives here as a server env var, never in the static site bundle.",
   "type": "commonjs",
   "scripts": {
-    "test": "node --test"
+    "dev": "node scripts/dev-server.mjs",
+    "test": "node --test",
+    "smoke": "node scripts/live-smoke.mjs",
+    "smoke:sub": "node scripts/live-subscription.mjs"
   },
   "engines": {
     "node": ">=18"
