@@ -56,6 +56,7 @@ import { getCookie, setCookie } from './components/cookies';
 
 import { runMain, installDebugHelpers } from './appMainBootstrap';
 import { coordsFromPin } from './domain/pinCoords';
+import { normalizeTelefoneInput } from './domain/telefoneInput';
 
 const EXPIRE_DAY = 7;
 const aes = new AesEncryption();
@@ -352,22 +353,15 @@ class App extends Component {
   }
 
   handleChangeTelefone(event) {
-    if (event.target.value.length > 15) return;
-    let telefoneValue = event.target.value.replace(/[^0-9]/g, '');
-    // B15: accept "+55" prefix by stripping the country code so a paste of
-    // "+5583999998888" normalizes to "83999998888". Only strip if the result
-    // would be a valid 10/11-digit BR number; otherwise leave the user's
-    // input untouched so they can edit.
-    if (telefoneValue.length === 12 && telefoneValue.startsWith('55')) {
-      telefoneValue = telefoneValue.slice(2);
-    } else if (telefoneValue.length === 13 && telefoneValue.startsWith('55')) {
-      telefoneValue = telefoneValue.slice(2);
-    }
+    // Pure normalization (B15 country-code strip + digit-count validity) lives in
+    // domain/telefoneInput.js; the side effects (encrypt + setState) stay here.
+    const normalized = normalizeTelefoneInput(event.target.value);
+    if (normalized.tooLong) return;
+    const { digits: telefoneValue, isValidBr } = normalized;
     // Only mark as valid (and encrypt) when the digit count matches a real
     // BR phone — 10 (landline + DDD) or 11 (mobile + DDD). Anything else
     // is in-progress input or a non-BR number; we still let the user keep
     // typing but don't lock in the encrypted value.
-    const isValidBr = telefoneValue.length === 10 || telefoneValue.length === 11;
     if (isValidBr) {
       this.setState({ telefoneEncryptado: aes.encrypt(telefoneValue) });
     } else if (telefoneValue.length === 0) {
