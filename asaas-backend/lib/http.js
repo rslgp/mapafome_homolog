@@ -3,15 +3,27 @@
 
 // Origins allowed to call this backend from the browser. The static site is the
 // only first-party caller; localhost is for dev. Set ALLOWED_ORIGINS (comma-sep)
-// in the server env to override.
+// in the server env to override — in production this is ALWAYS set, so the
+// localhost fallbacks below never apply there.
+//
+// The dev fallback lists 3000/3001/3002 because `next dev` walks UP from :3000
+// when a port is busy: with this backend already on :3001, the site commonly
+// lands on :3002 (or :3001 is free and it stays on :3000). Allowing the whole
+// small range means a dev never has to hand-edit ALLOWED_ORIGINS just because
+// Next picked the next free port. Override via ALLOWED_ORIGINS to lock it down.
+const DEV_FALLBACK_ORIGINS = [
+  'https://mapafome.com.br',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+];
+
 function allowedOrigins() {
   const fromEnv = (process.env.ALLOWED_ORIGINS || '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  return fromEnv.length
-    ? fromEnv
-    : ['https://mapafome.com.br', 'http://localhost:3000'];
+  return fromEnv.length ? fromEnv : DEV_FALLBACK_ORIGINS;
 }
 
 function applyCors(req, res) {
