@@ -7,7 +7,14 @@ import {
   createSubscription,
   validateBeforeSubmit,
 } from '../components/compatibility/components/payments/asaasSubscriptionClient';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 import './assinar.css';
+
+// Interpolate a single {value} placeholder into a translated string. Keeps the
+// number formatting in JS so only the surrounding words are translated.
+function withValue(key, value) {
+  return t(key).replace('{value}', value);
+}
 
 // Assinatura de apoio recorrente (Asaas). Brazilians recognize these four rails:
 // Pix Automático, cartão (assinatura), boleto, débito automático. The secret
@@ -17,6 +24,7 @@ import './assinar.css';
 const PRESET_VALUES = [10, 25, 50, 100];
 
 export default function AssinarPage() {
+  useLocale(); // re-render on locale switch so t() re-reads the active locale
   const [rail, setRail] = useState('pix');
   const [value, setValue] = useState(25);
   const [nome, setNome] = useState('');
@@ -79,27 +87,34 @@ export default function AssinarPage() {
       setResult(res);
       setStatus('success');
     } else {
-      setErrors(res.messages || ['Não foi possível concluir. Tente novamente.']);
+      setErrors(res.messages || [t('assinar.error.fallback')]);
       setStatus('error');
     }
   }
 
   if (status === 'success' && result) {
+    // Split the translated sentence on {value} so the amount renders inside a
+    // <strong> while the surrounding words stay translatable as one string.
+    const [subPrefix, subSuffix] = t('assinar.success.sub').split('{value}');
+    const successCtaKey =
+      rail === 'pix' ? 'assinar.success.cta.pix'
+      : rail === 'boleto' ? 'assinar.success.cta.boleto'
+      : 'assinar.success.cta.other';
     return (
       <main className="mdf-assinar-ok">
-        <Link href="/" className="mdf-assinar__back">← Voltar ao mapa</Link>
-        <h1>Obrigado pelo apoio 💛</h1>
+        <Link href="/" className="mdf-assinar__back">{t('assinar.back')}</Link>
+        <h1>{t('assinar.success.title')}</h1>
         <p className="mdf-assinar__sub">
-          Sua assinatura de <strong>R$ {Number(result.value).toFixed(2)}</strong> por mês foi criada.
+          {subPrefix}<strong>R$ {Number(result.value).toFixed(2)}</strong>{subSuffix}
         </p>
         {result.invoiceUrl ? (
           <p>
             <a className="mdf-assinar__cta" href={result.invoiceUrl} target="_blank" rel="noopener noreferrer">
-              {rail === 'pix' ? 'Pagar com Pix agora' : rail === 'boleto' ? 'Abrir o boleto' : 'Concluir pagamento'}
+              {t(successCtaKey)}
             </a>
           </p>
         ) : (
-          <p className="mdf-assinar__sub">A cobrança recorrente já está ativa.</p>
+          <p className="mdf-assinar__sub">{t('assinar.success.active')}</p>
         )}
       </main>
     );
@@ -107,16 +122,16 @@ export default function AssinarPage() {
 
   return (
     <main className="mdf-assinar">
-      <Link href="/" className="mdf-assinar__back">← Voltar ao mapa</Link>
-      <h1>Apoie o MAPA FOME</h1>
+      <Link href="/" className="mdf-assinar__back">{t('assinar.back')}</Link>
+      <h1>{t('assinar.title')}</h1>
       <p className="mdf-assinar__sub">
-        Uma contribuição mensal ajuda a manter o mapa no ar. Escolha a forma que preferir.
+        {t('assinar.sub')}
       </p>
 
       <form onSubmit={handleSubmit} noValidate>
         <fieldset className="mdf-field">
-          <legend>Forma de pagamento</legend>
-          <div className="mdf-rails" role="radiogroup" aria-label="Forma de pagamento">
+          <legend>{t('assinar.legend.rail')}</legend>
+          <div className="mdf-rails" role="radiogroup" aria-label={t('assinar.legend.rail')}>
             {RAILS.map((r) => (
               <button
                 key={r.id}
@@ -126,15 +141,15 @@ export default function AssinarPage() {
                 className={`mdf-rail ${rail === r.id ? 'is-on' : ''}`}
                 onClick={() => setRail(r.id)}
               >
-                <span className="mdf-rail__label">{r.label}</span>
-                <span className="mdf-rail__hint">{r.hint}</span>
+                <span className="mdf-rail__label">{t(r.labelKey)}</span>
+                <span className="mdf-rail__hint">{t(r.hintKey)}</span>
               </button>
             ))}
           </div>
         </fieldset>
 
         <fieldset className="mdf-field">
-          <legend>Valor mensal</legend>
+          <legend>{t('assinar.legend.value')}</legend>
           <div className="mdf-chips">
             {PRESET_VALUES.map((v) => (
               <button
@@ -149,7 +164,7 @@ export default function AssinarPage() {
             ))}
           </div>
           <label className="mdf-amount">
-            <span>Outro valor (R$)</span>
+            <span>{t('assinar.value.other')}</span>
             <input
               type="number"
               min="5"
@@ -162,17 +177,17 @@ export default function AssinarPage() {
         </fieldset>
 
         <label className="mdf-field">
-          <span>Nome completo</span>
+          <span>{t('assinar.field.name')}</span>
           <input type="text" autoComplete="name" value={nome} onChange={(e) => setNome(e.target.value)} required />
         </label>
 
         <label className="mdf-field">
-          <span>E-mail</span>
+          <span>{t('assinar.field.email')}</span>
           <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
 
         <label className="mdf-field">
-          <span>CPF ou CNPJ</span>
+          <span>{t('assinar.field.cpfcnpj')}</span>
           <input
             type="text"
             inputMode="numeric"
@@ -184,28 +199,28 @@ export default function AssinarPage() {
         </label>
 
         <label className="mdf-field">
-          <span>Celular (opcional)</span>
+          <span>{t('assinar.field.phone')}</span>
           <input type="tel" autoComplete="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
         </label>
 
         {rail === 'cartao' && (
           <fieldset className="mdf-field mdf-card">
-            <legend>Dados do cartão</legend>
+            <legend>{t('assinar.card.legend')}</legend>
             <label className="mdf-field">
-              <span>Número do cartão</span>
+              <span>{t('assinar.card.number')}</span>
               <input type="text" inputMode="numeric" autoComplete="cc-number" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} />
             </label>
             <label className="mdf-field">
-              <span>Nome impresso no cartão</span>
+              <span>{t('assinar.card.name')}</span>
               <input type="text" autoComplete="cc-name" value={cardName} onChange={(e) => setCardName(e.target.value)} />
             </label>
             <div className="mdf-card__row">
               <label className="mdf-field">
-                <span>Validade (MM/AA)</span>
+                <span>{t('assinar.card.expiry')}</span>
                 <input type="text" inputMode="numeric" autoComplete="cc-exp" placeholder="MM/AA" value={cardExpiry} onChange={(e) => setCardExpiry(e.target.value)} />
               </label>
               <label className="mdf-field">
-                <span>CVV</span>
+                <span>{t('assinar.card.cvv')}</span>
                 <input type="text" inputMode="numeric" autoComplete="cc-csc" value={cardCcv} onChange={(e) => setCardCcv(e.target.value)} />
               </label>
             </div>
@@ -221,11 +236,13 @@ export default function AssinarPage() {
         )}
 
         <button type="submit" className="mdf-assinar__cta" disabled={status === 'submitting'}>
-          {status === 'submitting' ? 'Processando…' : `Apoiar com R$ ${Number(value).toFixed(2)}/mês`}
+          {status === 'submitting'
+            ? t('assinar.cta.submitting')
+            : withValue('assinar.cta.support', Number(value).toFixed(2))}
         </button>
 
         <p className="mdf-assinar__note">
-          Pagamento processado pela Asaas. Você pode cancelar quando quiser.
+          {t('assinar.note')}
         </p>
       </form>
     </main>

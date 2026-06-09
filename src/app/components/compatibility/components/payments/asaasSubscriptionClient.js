@@ -6,11 +6,48 @@
 //
 // Pure, framework-free, and unit-testable: the fetch impl is injectable.
 
+// RAILS is the structural source of truth: the rail ids + their stable order are
+// authoritative here (and asserted by asaasSubscriptionClient.test.js). The
+// pt-BR label/hint remain as a non-i18n fallback, but the rendered display copy
+// is pulled from the i18n dictionary via labelKey/hintKey — so strings.js stays
+// the single translation SOT and pt-BR/es parity is testable.
 export const RAILS = [
-  { id: 'pix', label: 'Pix', hint: 'Pix Automático — débito recorrente, sem taxa de cartão' },
-  { id: 'cartao', label: 'Cartão de crédito', hint: 'Assinatura no cartão, renovação automática' },
-  { id: 'boleto', label: 'Boleto', hint: 'Um boleto por mês — você paga cada um' },
-  { id: 'debito', label: 'Débito automático', hint: 'Débito direto na sua conta' },
+  { id: 'pix', labelKey: 'assinar.rail.pix.label', hintKey: 'assinar.rail.pix.hint', label: 'Pix', hint: 'Pix Automático — débito recorrente, sem taxa de cartão' },
+  { id: 'cartao', labelKey: 'assinar.rail.cartao.label', hintKey: 'assinar.rail.cartao.hint', label: 'Cartão de crédito', hint: 'Assinatura no cartão, renovação automática' },
+  { id: 'boleto', labelKey: 'assinar.rail.boleto.label', hintKey: 'assinar.rail.boleto.hint', label: 'Boleto', hint: 'Um boleto por mês — você paga cada um' },
+  { id: 'debito', labelKey: 'assinar.rail.debito.label', hintKey: 'assinar.rail.debito.hint', label: 'Débito automático', hint: 'Débito direto na sua conta' },
+];
+
+// i18n key registry for the /assinar page. Co-located with the payments feature
+// so the dictionary's "no dead keys" guard (i18n.test.js scans the compatibility
+// tree) sees every key as a live literal even though the page lives outside it.
+// page.js renders each via t(); RAILS rail keys are listed above on the rails.
+export const ASSINAR_I18N_KEYS = [
+  'assinar.back',
+  'assinar.title',
+  'assinar.sub',
+  'assinar.legend.rail',
+  'assinar.legend.value',
+  'assinar.value.other',
+  'assinar.field.name',
+  'assinar.field.email',
+  'assinar.field.cpfcnpj',
+  'assinar.field.phone',
+  'assinar.card.legend',
+  'assinar.card.number',
+  'assinar.card.name',
+  'assinar.card.expiry',
+  'assinar.card.cvv',
+  'assinar.cta.submitting',
+  'assinar.cta.support',
+  'assinar.note',
+  'assinar.error.fallback',
+  'assinar.success.title',
+  'assinar.success.sub',
+  'assinar.success.cta.pix',
+  'assinar.success.cta.boleto',
+  'assinar.success.cta.other',
+  'assinar.success.active',
 ];
 
 export function backendUrl() {
