@@ -16,6 +16,7 @@ talk to Asaas.
 | File | Role |
 |---|---|
 | `api/asaas/create-subscription.js` | POST — validates input, ensures an Asaas customer, creates a recurring subscription on the chosen rail (Pix / cartão / boleto). |
+| `api/asaas/subscription-payment.js` | GET `?subscriptionId=` — returns the **payable artifacts** for the current charge so the site can render its own payment screen: Pix `{payload, qrImage}`, boleto `{bankSlipUrl, line, barCode}`, and the hosted `invoiceUrl` (card redirects to this; no PAN touches us). Read-only. |
 | `api/asaas/webhook.js` | POST — receives Asaas payment events; **authenticated** (`asaas-access-token`) + **idempotent** (dedupes retries). |
 | `lib/asaasClient.js` | Server-only Asaas REST client (reads `ASAAS_API_KEY`). |
 | `lib/validate.js` | Pure input validation + CPF/CNPJ check (untrusted body → clean). |
