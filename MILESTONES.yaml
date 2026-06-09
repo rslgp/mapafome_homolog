@@ -1,0 +1,150 @@
+milestones:
+  # ---------- Phase 1-3: SHIPPED ----------
+  - id: P1
+    title: "Test/lint/fitness baseline + vitest JSX transform fix + ESLint downgrade + 25 lint errors"
+    owner: softwareengineer
+    scope: "Include: vitest JSX transform (esbuild->oxc) fix, ESLint ^10->^9 downgrade + 25 lint errors fixed, fitness harness, suite green at 131/131 — on JS/React source. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
+    gate: ["npm run test", "npm run lint", "npm run fitness"]
+    status: shipped
+
+  - id: P2
+    title: "App.js 1247->685 LOC decomposition (appMainBootstrap, pinCoords, normalizeTelefoneInput)"
+    owner: softwareengineer
+    scope: "Include: SOLID/testability decomposition of App.js — coordsFromPin -> domain/pinCoords.js, pure normalizeTelefoneInput extraction, appMainBootstrap split. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
+    gate: ["npm run test", "npm run lint", "npm run fitness"]
+    status: shipped
+
+  - id: P3
+    title: "Status-chip + marker-ring WCAG 2.2 AA contrast fixes"
+    owner: coloring-ict6
+    scope: "Include: MUI theme + --mdf-* tokens, status-chip and marker-ring WCAG 2.2 AA contrast (e.g. --mdf-urgency-waiting #D4A017->#A07410 for the 3:1 SC 1.4.11 ring) on the map. Exclude: vmath/Lua palette literals."
+    gate: ["npm run a11y", "npm run lint"]
+    status: shipped
+
+  - id: P4
+    title: "Escape-key modal dismissal + modal contract (ListView + NotificationPrefs)"
+    owner: uiux-defold
+    scope: "Include: layout, Escape-key modal dismissal, the 3-path modal escape contract / >=44px touch-targets on JS/React UI. Exclude: .gui / msg.post / Defold engine."
+    gate: ["npm run test", "npm run lint"]
+    status: shipped
+
+  - id: P5
+    title: "i18n es locale wired live via useLocale()/t() (was dead code)"
+    owner: uiux-defold
+    scope: "Include: pt-BR<->es i18n parity, es locale wired live through a useLocale() re-render hook + ~18 t() keys across ReportSheet/PinDetailSheet/ListView/ContextBar/header/App. Exclude: .gui / msg.post / Defold engine."
+    gate: ["npm run test", "npm run lint"]
+    status: shipped
+
+  - id: P6
+    title: "no-img-element rule + metadata advisories cleared + live a11y audit (0 violations)"
+    owner: coloring-ict6
+    scope: "Include: map legibility + live axe-core a11y audit at 0 violations on /,/imprensa,/parceiros,/relatorios, the vitest-axe open-state overlay harness, no-img-element rule resolved (output:export + unoptimized), metadata advisories cleared. Exclude: vmath/Lua palette literals."
+    gate: ["npm run a11y", "npm run lint", "npm run test"]
+    status: shipped
+
+  # ---------- Phase 4: code-smell backlog (analysis done; NOT yet implemented) ----------
+  - id: P11
+    title: "Consolidate 4 Haversine copies onto the dead domain/Coordinates.js"
+    owner: softwareengineer
+    scope: "Include: SOLID/SOT — collapse 4 duplicate Haversine copies + 2 bbox literals onto the dead-but-complete domain/Coordinates.js (re-point marketingReports.js + sponsors.js first; defer variaveisAmbiente.dentroLimites — different bounds contract). Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
+    gate: ["npm run test", "npm run fitness", "npm run lint"]
+    status: next
+
+  - id: P12
+    title: "Extract shared csvEsc / downloadBlob / fetch seam (kill copy-paste export plumbing)"
+    owner: softwareengineer
+    scope: "Include: DRY/testability — extract ux/csv.js (csvEsc), ux/downloadBlob.js, and a fetchSheetRows()/useSheetReport(buildFn) wrapper; retire the byte-identical esc()/downloadBlob()/load() dups across reports.js, marketingReports.js, and the two relatorio* pages. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
+    gate: ["npm run test", "npm run lint", "npm run build"]
+    status: next
+
+  - id: P13
+    title: "Route appPinActions writes through sheetsClient.ensureReady (kill 3 raw auth sites)"
+    owner: softwareengineer
+    scope: "Include: architecture/SOT — route appPinActions.js writes (lines 113/156/210) through sheetsClient.ensureReady()/getSheet(0) like its siblings, killing the 3 raw auth sites + the doc field from _pinDeps; keep the 10s withTimeout. Prerequisite that shrinks the P14 key cutover from 9 sites to 1. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
+    gate: ["npm run test", "npm run fitness", "npm run build"]
+    status: next
+
+  - id: P14
+    title: "NEXT_PUBLIC_GOOGLE_PRIVATE_KEY ships the Google service-account private key into the client bundle (HIGH severity)"
+    owner: softwareengineer
+    scope: "Include: security/secret-architecture — NEXT_PUBLIC_GOOGLE_PRIVATE_KEY + NEXT_PUBLIC_CRYPTSEED are inlined into the static output:export bundle across 9 client files; any visitor reads the Sheets-write key. Threat model + remediation (server write proxy / Apps-Script vs least-privilege rotated token) is a bug-bounty-consultant handoff; softwareengineer does the P13 groundwork. Depends on P13. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
+    gate: ["npm run build", "npm run lint"]
+    status: later
+
+  - id: P15
+    title: "Characterization tests for reports.js buildReport (k>=5 LGPD anonymity is load-bearing, zero tests today)"
+    owner: softwareengineer
+    scope: "Include: testability — add test/reports.test.js characterizing buildReport: sub-5 buckets collapse to 'outros', reporter-pin rows excluded, foodSubtype/categoriesOf mapping, meta.nota_dignidade always present — turning the k>=5 LGPD re-identification guard into an enforced forcing-function (470 LOC, zero tests). Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
+    gate: ["npm run test"]
+    status: next
+
+  - id: P16
+    title: "Implement-or-delete the dead FF3 fitness placeholder + close the FF2 arrow-fn-LOC gap"
+    owner: softwareengineer
+    scope: "Include: fitness forcing-function — implement FF3 against the real next-build output size OR delete the never-run placeholder (excise); extend the FF2 per-function-LOC regex to catch 'export const X = (…) => {' arrows or document the accepted gap. One isolated change each. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
+    gate: ["npm run fitness", "npm run lint"]
+    status: next
+
+  # ---------- Phase 5: just-landed Asaas recurring-payment surface (NOT yet shipped) ----------
+  - id: P17
+    title: "A11y of the new /assinar subscription form — WCAG AA contrast + >=44px touch targets + radiogroup/aria"
+    owner: [coloring-ict6, uiux-defold]
+    scope:
+      coloring-ict6: "Include: WCAG 2.2 AA contrast of the new src/app/assinar/page.js + assinar.css payment form (rail buttons, value chips, CTA, error alert) against MUI theme + --mdf-* tokens. Exclude: vmath/Lua palette literals."
+      uiux-defold: "Include: >=44px touch-targets on rail/chip/CTA buttons, the role=radiogroup + aria-checked semantics of the rail picker, aria-pressed value chips, and the role=alert error region in src/app/assinar/page.js. Exclude: .gui / msg.post / Defold engine."
+    gate: ["npm run a11y", "npm run lint"]
+    status: next
+
+  - id: P18
+    title: "pt-BR/es i18n parity for the new /assinar payment strings (page hardcodes pt-BR, never calls t())"
+    owner: uiux-defold
+    scope: "Include: pt-BR<->es i18n parity for the new payment copy — src/app/assinar/page.js currently HARDCODES pt-BR strings and never calls t(); route every payment/rail/error string through useLocale()/t() and add the matching es locale entries (parity test). Exclude: .gui / msg.post / Defold engine."
+    gate: ["npm run test", "npm run lint"]
+    status: next
+
+  - id: P19
+    title: "Security review of asaas webhook auth + CORS + secret handling + DURABLE idempotency store"
+    owner: softwareengineer
+    scope: "Include: asaas-backend security + idempotency — review asaas-backend/api/asaas/webhook.js + lib/webhookAuth.js (constant-time compare, fails closed — already sound) + lib/http.js CORS + ASAAS_API_KEY server-only secret handling, and REPLACE the in-memory Set dedupe (resets on cold start — NOT durable) with a durable idempotency store (Vercel KV/Upstash) in processEvent. Threat-model handoff to the bug-bounty consultant. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
+    gate: ["cd asaas-backend && npm test"]
+    status: next
+
+  - id: P20
+    title: "Characterization/unit tests for asaas-backend lib validate.js + webhookAuth.js and the subscription client"
+    owner: softwareengineer
+    scope: "Include: testability — characterization/unit tests for asaas-backend/lib/validate.js (CPF/CNPJ + untrusted-body cleaning) and lib/webhookAuth.js (constant-time compare, missing-token + mismatch fail-closed), plus broaden test/asaasSubscriptionClient.test.js for src/app/components/compatibility/components/payments/asaasSubscriptionClient.js. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
+    gate: ["cd asaas-backend && npm test", "npm run test"]
+    status: next
+
+  # ---------- Out of scope: zero-overlap SOLONE game consultants ----------
+  - id: P90
+    title: "competitive-balance — no game balance/leaderboard surface exists in this web app"
+    owner: competitive-balance
+    scope: "Include: nothing — no game balance, economy, or leaderboard exists in this web app. Exclude: all current MAPA FOME web + asaas-backend work; re-activates only if real game mechanics are added."
+    gate: []
+    status: out_of_scope
+
+  - id: P91
+    title: "game-designer — target is not a game; no mechanics or interest-curve to design"
+    owner: game-designer
+    scope: "Include: nothing — no mechanics, interest-curve, or game loop exists in this web app. Exclude: all current MAPA FOME web + asaas-backend work; re-activates only if real game mechanics are added."
+    gate: []
+    status: out_of_scope
+
+notes: |
+  - Every completed pass ends with a what/why table (per CLAUDE.md): one row per file/logical change
+    (File/Change · What · Why), plus a separate gate-results table when checks were run, and an honest
+    list of deferred items.
+  - All commits route through the git-commit-specialist agent — Conventional Commits
+    (type(scope): subject) with the WHY in the body, atomic one-concern-per-commit splits, correct
+    footers and the repo Co-Authored-By trailer; never hand-stage a grab-bag working tree.
+  - This orchestrator EMITS the plan only; it does NOT edit source until the plan is approved.
+  - The full repo gate is: npm run test, npm run build, npm run fitness, npm run lint, npm run a11y,
+    npm run smoke200 (served-build render gate — always run after build, never skip), and for the
+    backend cd asaas-backend && npm test. A milestone is done only when its listed gate(s) pass.
+  - PARTIAL-FIT note: the roster is a SOLONE Defold/Lua mobile-GAME consultant set (coloring-ict6,
+    competitive-balance, game-designer, softwareengineer, uiux-defold) routed onto a Next.js 16 /
+    React 19 static-export web app + serverless asaas-backend; competitive-balance and game-designer
+    have zero overlap and appear only as out_of_scope.
+  - PHASE/order: independent slices (P11, P12, P15, P17, P18) run in parallel; dependent ones are
+    sequential — P13 precedes P14 (the secret cutover); P19/P20 jointly harden the asaas-backend.
