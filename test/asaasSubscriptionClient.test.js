@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import {
   RAILS,
+  ASSINAR_I18N_KEYS,
+  backendUrl,
   createSubscription,
   validateBeforeSubmit,
 } from '../src/app/components/compatibility/components/payments/asaasSubscriptionClient.js';
@@ -9,6 +11,57 @@ describe('asaasSubscriptionClient — RAILS', () => {
   it('exposes the four BR rails familiar to brasileiros', () => {
     const ids = RAILS.map((r) => r.id);
     expect(ids).toEqual(['pix', 'cartao', 'boleto', 'debito']);
+  });
+
+  // Robust to the concurrent i18n pass: a rail MUST carry an id + display label +
+  // hint. We assert on STRUCTURE (id present, label/hint non-empty strings), not
+  // on exact copy, so adding labelKey/hintKey (or editing the pt-BR fallback)
+  // doesn't break this characterization.
+  it('every rail has an id and non-empty label/hint (i18n-shape robust)', () => {
+    for (const r of RAILS) {
+      expect(typeof r.id).toBe('string');
+      expect(r.id.length).toBeGreaterThan(0);
+      expect(typeof r.label).toBe('string');
+      expect(r.label.length).toBeGreaterThan(0);
+      expect(typeof r.hint).toBe('string');
+      expect(r.hint.length).toBeGreaterThan(0);
+    }
+  });
+
+  // --- P20 characterization: the labelKey/hintKey i18n additions ---
+
+  // Each rail carries the i18n keys that page.js renders via t(). The keys follow
+  // the `assinar.rail.<id>.{label,hint}` convention; pinning the derivation makes a
+  // future rename a conscious change (and keeps the keys discoverable by the
+  // dictionary's no-dead-keys scan).
+  it('every rail carries labelKey/hintKey derived from its id', () => {
+    for (const r of RAILS) {
+      expect(r.labelKey).toBe(`assinar.rail.${r.id}.label`);
+      expect(r.hintKey).toBe(`assinar.rail.${r.id}.hint`);
+    }
+  });
+});
+
+describe('asaasSubscriptionClient — ASSINAR_I18N_KEYS registry', () => {
+  it('is a non-empty array of unique assinar.* namespaced string keys', () => {
+    expect(Array.isArray(ASSINAR_I18N_KEYS)).toBe(true);
+    expect(ASSINAR_I18N_KEYS.length).toBeGreaterThan(0);
+    for (const k of ASSINAR_I18N_KEYS) {
+      expect(typeof k).toBe('string');
+      expect(k.startsWith('assinar.')).toBe(true);
+    }
+    // No duplicate literals — a dupe would silently mask a dropped key.
+    expect(new Set(ASSINAR_I18N_KEYS).size).toBe(ASSINAR_I18N_KEYS.length);
+  });
+
+  // The per-rail keys live on RAILS (not in this flat registry) by design — the
+  // comment on ASSINAR_I18N_KEYS says "RAILS rail keys are listed above on the
+  // rails". Pin that split so the two key sources stay disjoint and intentional.
+  it('does NOT duplicate the per-rail keys that already live on RAILS', () => {
+    for (const r of RAILS) {
+      expect(ASSINAR_I18N_KEYS).not.toContain(r.labelKey);
+      expect(ASSINAR_I18N_KEYS).not.toContain(r.hintKey);
+    }
   });
 });
 
@@ -49,6 +102,45 @@ describe('validateBeforeSubmit', () => {
       creditCard: { number: '4111111111111111', expiryMonth: '12', expiryYear: '2030', ccv: '123', holderName: 'Maria Silva' },
     });
     expect(errs).toEqual([]);
+  });
+
+  // --- P20 characterization: remaining rails + edges ---
+
+  it('passes each non-card rail with otherwise-valid input', () => {
+    for (const rail of ['pix', 'boleto', 'debito']) {
+      expect(validateBeforeSubmit({ ...valid, rail })).toEqual([]);
+    }
+  });
+
+  it('rejects an unknown rail with the choose-a-method message', () => {
+    expect(validateBeforeSubmit({ ...valid, rail: 'crypto' })).toContain('Escolha uma forma de pagamento.');
+    expect(validateBeforeSubmit({ ...valid, rail: undefined })).toContain('Escolha uma forma de pagamento.');
+  });
+
+  it('accepts a CNPJ-length document (14 digits), not just CPF', () => {
+    // length-only check on the client: 14 digits is accepted regardless of the
+    // check digit (the server is authoritative on the real check-digit math).
+    expect(validateBeforeSubmit({ ...valid, cpfCnpj: '11.222.333/0001-81' })).toEqual([]);
+  });
+
+  it('rejects a missing name', () => {
+    expect(validateBeforeSubmit({ ...valid, name: ' ' })).toContain('Informe seu nome.');
+    expect(validateBeforeSubmit({ ...valid, name: undefined })).toContain('Informe seu nome.');
+  });
+
+  it('accepts the exact R$5 floor', () => {
+    expect(validateBeforeSubmit({ ...valid, value: 5 })).toEqual([]);
+    expect(validateBeforeSubmit({ ...valid, value: '5' })).toEqual([]); // numeric string coerced
+  });
+
+  it('returns multiple errors at once for a fully-bad input', () => {
+    const errs = validateBeforeSubmit({ rail: 'crypto', value: 1, name: '', email: 'no', cpfCnpj: '1' });
+    expect(errs.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('handles undefined optional fields without throwing', () => {
+    // cpfCnpj/email/creditCard omitted entirely — the guards null-coalesce.
+    expect(() => validateBeforeSubmit({ rail: 'pix', value: 25, name: 'Maria' })).not.toThrow();
   });
 });
 
@@ -97,5 +189,108 @@ describe('createSubscription (injected fetch — no network)', () => {
     );
     expect(res.ok).toBe(false);
     expect(res.messages[0]).toMatch(/servidor de pagamentos/i);
+  });
+
+  // --- P20 characterization: response-mapping branches ---
+
+  const input = { rail: 'pix', value: 25, name: 'Maria', email: 'm@e.com', cpfCnpj: '52998224725' };
+
+  it('maps the full success shape including idempotent + value/cycle/rail', async () => {
+    const fetchImpl = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, subscriptionId: 's9', rail: 'pix', status: 'ACTIVE', value: 25, cycle: 'MONTHLY', invoiceUrl: 'https://pay/x', idempotent: true }),
+    });
+    const res = await createSubscription(input, { fetchImpl, baseUrl: 'https://b.test' });
+    expect(res).toEqual({
+      ok: true, subscriptionId: 's9', rail: 'pix', status: 'ACTIVE',
+      value: 25, cycle: 'MONTHLY', invoiceUrl: 'https://pay/x', idempotent: true,
+    });
+  });
+
+  it('defaults invoiceUrl to null and idempotent to false when absent', async () => {
+    const fetchImpl = async () => ({ ok: true, status: 200, json: async () => ({ ok: true, subscriptionId: 's10' }) });
+    const res = await createSubscription(input, { fetchImpl, baseUrl: 'https://b.test' });
+    expect(res.ok).toBe(true);
+    expect(res.invoiceUrl).toBe(null);
+    expect(res.idempotent).toBe(false);
+  });
+
+  it('treats HTTP 200 with {ok:false} as a failure (envelope flag overrides status)', async () => {
+    const fetchImpl = async () => ({ ok: true, status: 200, json: async () => ({ ok: false, message: 'upstream rejected' }) });
+    const res = await createSubscription(input, { fetchImpl, baseUrl: 'https://b.test' });
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(200);
+    expect(res.messages).toEqual(['upstream rejected']);
+  });
+
+  it('falls back to data.message when no messages array is present', async () => {
+    const fetchImpl = async () => ({ ok: false, status: 422, json: async () => ({ message: 'single message' }) });
+    const res = await createSubscription(input, { fetchImpl, baseUrl: 'https://b.test' });
+    expect(res.ok).toBe(false);
+    expect(res.messages).toEqual(['single message']);
+  });
+
+  it('uses the default pt-BR message when the error body has no message/messages', async () => {
+    const fetchImpl = async () => ({ ok: false, status: 500, json: async () => ({}) });
+    const res = await createSubscription(input, { fetchImpl, baseUrl: 'https://b.test' });
+    expect(res.ok).toBe(false);
+    expect(res.messages[0]).toMatch(/Não foi possível criar a assinatura/i);
+  });
+
+  it('handles a non-JSON body on an ok response (json() throws -> default message)', async () => {
+    const fetchImpl = async () => ({ ok: true, status: 200, json: async () => { throw new Error('not json'); } });
+    const res = await createSubscription(input, { fetchImpl, baseUrl: 'https://b.test' });
+    // data === null, so data?.ok is falsy -> failure branch with the default copy.
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(200);
+    expect(res.messages[0]).toMatch(/Não foi possível criar a assinatura/i);
+  });
+
+  it('handles a non-JSON body on an error response', async () => {
+    const fetchImpl = async () => ({ ok: false, status: 502, json: async () => { throw new Error('html error page'); } });
+    const res = await createSubscription(input, { fetchImpl, baseUrl: 'https://b.test' });
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(502);
+    expect(res.messages[0]).toMatch(/Não foi possível criar a assinatura/i);
+  });
+
+  it('throws a clear error when no fetch impl is available and none is global', async () => {
+    const savedFetch = globalThis.fetch;
+    // Force the "no fetch" path: no opts.fetchImpl and no global fetch.
+    delete globalThis.fetch;
+    try {
+      await expect(createSubscription(input, { baseUrl: 'https://b.test' })).rejects.toThrow(/fetch indisponível/i);
+    } finally {
+      if (savedFetch !== undefined) globalThis.fetch = savedFetch;
+    }
+  });
+});
+
+describe('backendUrl', () => {
+  const saved = process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL;
+  afterEach(() => {
+    if (saved === undefined) delete process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL;
+    else process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = saved;
+  });
+
+  it('returns the configured URL with any trailing slash stripped', () => {
+    process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = 'https://api.test/';
+    expect(backendUrl()).toBe('https://api.test');
+    process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = 'https://api.test';
+    expect(backendUrl()).toBe('https://api.test');
+  });
+
+  it('throws a pt-BR config error when the env var is unset', () => {
+    delete process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL;
+    expect(() => backendUrl()).toThrow(/NEXT_PUBLIC_ASAAS_BACKEND_URL/);
+  });
+
+  it('createSubscription falls back to backendUrl() when no baseUrl is given', async () => {
+    process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = 'https://env.test/';
+    let capturedUrl = null;
+    const fetchImpl = async (u) => { capturedUrl = u; return { ok: true, json: async () => ({ ok: true, subscriptionId: 's' }) }; };
+    await createSubscription({ rail: 'pix', value: 25, name: 'M', email: 'm@e.com', cpfCnpj: '52998224725' }, { fetchImpl });
+    expect(capturedUrl).toBe('https://env.test/api/asaas/create-subscription');
   });
 });
