@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import './ContextBar.css';
 import envVariables from '../variaveisAmbiente';
 import { URGENCY, urgencyOf, isArchived } from './mdfMarkers';
+import { t, useLocale } from './strings';
 
 // M2 context bar — live counts for the reporter/donor map surface.
 // "X pontos em Y km · N aguardando há mais de 6h"
@@ -35,6 +36,7 @@ function isReporterPin(row) {
 }
 
 export default function ContextBar({ dataMaps, userCoords, radiusKm = RADIUS_KM, onOpenList }) {
+  useLocale(); // re-render on locale change so t() re-reads
   const { nearby, waitingOver6h } = useMemo(() => {
     if (!Array.isArray(dataMaps) || dataMaps.length === 0) {
       return { nearby: 0, waitingOver6h: 0 };
@@ -78,7 +80,7 @@ export default function ContextBar({ dataMaps, userCoords, radiusKm = RADIUS_KM,
           className="mdf-context-bar__list"
           onClick={onOpenList}
         >
-          Lista
+          {t('cta.list')}
         </button>
       )}
     </div>

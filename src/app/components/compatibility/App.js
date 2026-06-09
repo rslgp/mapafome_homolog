@@ -18,6 +18,7 @@ import ContextBar from './components/ux/ContextBar';
 import PinDetailSheet from './components/ux/PinDetailSheet';
 import OfflineToast from './components/ux/OfflineToast';
 import ListView from './components/ux/ListView';
+import { t } from './components/ux/strings';
 import LiveAnnouncer from './components/ux/LiveAnnouncer';
 import PinReadout from './components/PinReadout';
 import VersionFooter from './components/VersionFooter';
@@ -566,7 +567,7 @@ class App extends Component {
     setTimeout(() => {
       this.setState({
         pinSheetOpen: false,
-        offlineToast: 'Obrigado. O ponto foi arquivado.',
+        offlineToast: t('pin.after_attended'),
       });
     }, 500);
     try {

@@ -4,9 +4,11 @@ import React from 'react';
 import './ux/Header.css';
 import mapaFomeMark from '../images/MapaFome_Icons_Blue.svg';
 import useInstallPrompt from './ux/useInstallPrompt';
+import { t, useLocale } from './ux/strings';
 
 export default function Header({ rowCountProp, onStartTour, onStartReport }) {
   const { isInstalled, promptInstall } = useInstallPrompt();
+  useLocale(); // re-render on locale change so t() re-reads
 
   const handleInstallClick = async () => {
     const result = await promptInstall();
@@ -65,7 +67,7 @@ export default function Header({ rowCountProp, onStartTour, onStartReport }) {
               onClick={onStartReport}
               aria-label="Relatar um ponto no mapa"
             >
-              Relatar
+              {t('cta.report')}
             </button>
           )}
           {onStartTour && (
@@ -75,7 +77,7 @@ export default function Header({ rowCountProp, onStartTour, onStartReport }) {
               onClick={onStartTour}
               aria-label="Ver tutorial dos três passos"
             >
-              <span className="mdf-header__tour-label">Como funciona</span>
+              <span className="mdf-header__tour-label">{t('cta.help')}</span>
               <span className="mdf-header__tour-icon" aria-hidden="true">?</span>
             </button>
           )}

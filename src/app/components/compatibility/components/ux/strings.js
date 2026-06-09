@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useReducer } from 'react';
+
 // M9 — i18n scaffolding. Portuguese remains the primary language per the
 // brief. Locale is not auto-detected: we never machine-translate dignity-
 // sensitive copy, so switching locales is an explicit user decision.
@@ -87,4 +89,22 @@ export function setLocale(locale) {
 export function t(key) {
   const dict = DICT[currentLocale] || DICT[DEFAULT_LOCALE];
   return (dict && dict[key]) || key;
+}
+
+// React subscription hook. t() reads the module-level currentLocale at call
+// time, so a component that calls t() during render will NOT re-render when
+// setLocale fires. A consumer calls useLocale() to subscribe to the
+// 'mdf-locale-change' CustomEvent (dispatched by setLocale) and force a
+// re-render — then its t() calls re-read the new locale. The returned value is
+// the active locale, so it can also key memo/effect deps. SSR-safe: the effect
+// only runs in the browser, and getLocale() returns the default on the server.
+export function useLocale() {
+  const [, force] = useReducer((c) => c + 1, 0);
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handler = () => force();
+    window.addEventListener('mdf-locale-change', handler);
+    return () => window.removeEventListener('mdf-locale-change', handler);
+  }, []);
+  return getLocale();
 }

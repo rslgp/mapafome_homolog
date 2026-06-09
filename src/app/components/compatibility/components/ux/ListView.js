@@ -4,6 +4,7 @@ import React, { useEffect, useMemo } from 'react';
 import './ListView.css';
 import envVariables from '../variaveisAmbiente';
 import { urgencyOf, isArchived } from './mdfMarkers';
+import { t, useLocale } from './strings';
 
 // M4 — accessible list alternative to the Leaflet map. Ranking:
 //   rank = (distance_norm × 0.6) + (age_norm × 0.4)
@@ -54,10 +55,14 @@ function truncate(str, max) {
   return str.length > max ? `${str.slice(0, max - 1)}…` : str;
 }
 
-const STATUS_COPY = {
-  waiting:       'Aguardando',
-  someone_going: 'Alguém a caminho',
-  done:          'Atendido',
+// waiting/someone_going come from the i18n dictionary (resolved via t() at
+// render). 'done' here is the short 'Atendido' label, which has no dictionary
+// key (the dict's pin.attended_today is the longer 'Atendido hoje'), so it
+// stays a literal and is not localized.
+const STATUS_LABEL = {
+  waiting:       () => t('pin.waiting'),
+  someone_going: () => t('pin.someone_going'),
+  done:          () => 'Atendido',
 };
 
 function statusOf(row) {
@@ -72,6 +77,7 @@ function statusOf(row) {
 }
 
 export default function ListView({ open, dataMaps, userCoords, onSelectPin, onClose }) {
+  useLocale(); // re-render on locale change so t() re-reads
   const rows = useMemo(() => {
     if (!open) return [];
     if (!Array.isArray(dataMaps)) return [];
@@ -148,7 +154,7 @@ export default function ListView({ open, dataMaps, userCoords, onSelectPin, onCl
                       <span className="mdf-list__time">{formatRelative(row.DateISO)}</span>
                     </span>
                     <span className={`mdf-list__status mdf-list__status--${status}`}>
-                      {STATUS_COPY[status]}
+                      {(STATUS_LABEL[status] || STATUS_LABEL.waiting)()}
                     </span>
                     {row.Detalhe && (
                       <span className="mdf-list__detail">{truncate(row.Detalhe, 80)}</span>

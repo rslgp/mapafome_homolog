@@ -5,6 +5,7 @@ import './PinDetailSheet.css';
 import { urgencyOf } from './mdfMarkers';
 import { resolveContact } from './contactLink';
 import { track } from './analytics';
+import { t, useLocale } from './strings';
 import envVariables from '../variaveisAmbiente';
 
 // M3 — donor response surface: status, distance, time-since, soft claim,
@@ -75,10 +76,12 @@ function statusOf(row) {
   return u === 'done' ? 'done' : 'waiting';
 }
 
+// Label resolved via t() at render so it follows a locale switch; only the
+// css class is static per status.
 const STATUS_COPY = {
-  waiting:       { label: 'Aguardando',      cls: 'mdf-pin-sheet__status--waiting' },
-  someone_going: { label: 'Alguém a caminho', cls: 'mdf-pin-sheet__status--going' },
-  done:          { label: 'Atendido hoje',    cls: 'mdf-pin-sheet__status--done' },
+  waiting:       { key: 'pin.waiting',        cls: 'mdf-pin-sheet__status--waiting' },
+  someone_going: { key: 'pin.someone_going',  cls: 'mdf-pin-sheet__status--going' },
+  done:          { key: 'pin.attended_today', cls: 'mdf-pin-sheet__status--done' },
 };
 
 function directionsUrl(coords) {
@@ -90,6 +93,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
   const triggerRef = useRef(null);
   const closeRef = useRef(null);
   const [busy, setBusy] = useState(null); // 'claim' | 'attended' | null
+  useLocale(); // re-render on locale change so t() re-reads
 
   useEffect(() => {
     if (!open) return;
@@ -196,7 +200,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
         <div className="mdf-pin-sheet__handle" aria-hidden="true" />
 
         <div className={`mdf-pin-sheet__status ${status.cls}`}>
-          {status.label}{derived.status === 'someone_going' ? ` (${claimCount})` : ''}
+          {t(status.key)}{derived.status === 'someone_going' ? ` (${claimCount})` : ''}
         </div>
 
         <h2 id="mdf-pin-title" className="mdf-pin-sheet__title">
@@ -257,7 +261,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
               target="_blank"
               rel="noreferrer"
             >
-              Como chegar
+              {t('pin.directions')}
             </a>
           )}
 
@@ -268,7 +272,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
               onClick={handleClaim}
               disabled={busy === 'claim'}
             >
-              {busy === 'claim' ? 'Marcando…' : 'Estou indo agora'}
+              {busy === 'claim' ? 'Marcando…' : t('pin.going_button')}
             </button>
           )}
 
@@ -279,7 +283,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
               onClick={handleMarkAttended}
               disabled={busy === 'attended'}
             >
-              {busy === 'attended' ? 'Registrando…' : 'Marcar como atendido'}
+              {busy === 'attended' ? 'Registrando…' : t('pin.mark_attended')}
             </button>
           )}
         </div>

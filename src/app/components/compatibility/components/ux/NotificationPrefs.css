@@ -140,7 +140,8 @@
 }
 
 .mdf-locale-switch__btn {
-  min-height: 32px;
+  min-height: var(--mdf-touch-target);
+  min-width: var(--mdf-touch-target);
   padding: 0 var(--mdf-space-3);
   background: transparent;
   border: none;

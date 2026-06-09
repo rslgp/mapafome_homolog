@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './ReportSheet.css';
 import { track } from './analytics';
+import { t, useLocale } from './strings';
 
 // M1 — three-step reporter flow (design_brief § three_step_promise).
 // Step 1 (map click) happens outside; this sheet hosts Steps 2 and 3.
@@ -15,11 +16,6 @@ const CATEGORIES = [
   { id: 'abrigo',  label: 'Abrigo',  icon: '🏠' },
 ];
 
-const ERRORS = {
-  at_least_one_category: 'Escolha pelo menos uma necessidade.',
-  publish_failed: 'Não foi possível publicar. Verifique sua conexão e tente de novo.',
-};
-
 export default function ReportSheet({ open, coords, onClose, onPublish }) {
   const [selected, setSelected] = useState(new Set());
   const [detail, setDetail] = useState('');
@@ -27,7 +23,10 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [status, setStatus] = useState('idle'); // idle | publishing | success | error
-  const [errorMsg, setErrorMsg] = useState(null);
+  // Holds an error KEY ('at_least_one_category' | 'publish_failed' | null), not a
+  // resolved string, so the inline-error copy follows a locale switch.
+  const [errorKey, setErrorKey] = useState(null);
+  useLocale(); // re-render this client component on locale change so t() re-reads
   const startedAtRef = useRef(null);
   const sheetRef = useRef(null);
   const firstFocusRef = useRef(null);
@@ -49,7 +48,7 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
     setDetailOpen(false);
     setContactOpen(false);
     setStatus('idle');
-    setErrorMsg(null);
+    setErrorKey(null);
     setSheetHeightVh(null);
 
     // Focus first actionable control on open.
@@ -112,16 +111,16 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
       else next.add(id);
       return next;
     });
-    if (errorMsg === ERRORS.at_least_one_category) setErrorMsg(null);
+    if (errorKey === 'at_least_one_category') setErrorKey(null);
   }
 
   async function handlePublish() {
     if (selected.size === 0) {
-      setErrorMsg(ERRORS.at_least_one_category);
+      setErrorKey('at_least_one_category');
       return;
     }
     setStatus('publishing');
-    setErrorMsg(null);
+    setErrorKey(null);
 
     const categories = Array.from(selected);
     const timeFromStartMs = Date.now() - (startedAtRef.current || Date.now());
@@ -155,15 +154,15 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
     } catch (err) {
       track('pin_report_failed', { reason: err?.message || 'unknown' });
       setStatus('error');
-      setErrorMsg(ERRORS.publish_failed);
+      setErrorKey('publish_failed');
     }
   }
 
   const buttonLabel =
-    status === 'publishing' ? 'Publicando…'
-    : status === 'success' ? 'Publicado ✓'
-    : status === 'error' ? 'Tentar de novo'
-    : 'Publicar ponto';
+    status === 'publishing' ? t('report.publishing')
+    : status === 'success' ? t('report.success')
+    : status === 'error' ? t('report.retry')
+    : t('report.button');
 
   const locationLabel = coords
     ? `Ponto em: ${coords[0].toFixed(5)}, ${coords[1].toFixed(5)}`
@@ -196,15 +195,15 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
 
         <header className="mdf-sheet__header">
           <h2 id="mdf-sheet-title" className="mdf-sheet__title">
-            O que a pessoa precisa agora?
+            {t('report.title')}
           </h2>
-          <p className="mdf-sheet__subtitle">Você pode escolher mais de uma.</p>
+          <p className="mdf-sheet__subtitle">{t('report.subtitle')}</p>
           <p className="mdf-sheet__location">{locationLabel}</p>
         </header>
 
-        {errorMsg === ERRORS.at_least_one_category && (
+        {errorKey === 'at_least_one_category' && (
           <p className="mdf-sheet__inline-error" role="alert">
-            {errorMsg}
+            {t('errors.at_least_one_category')}
           </p>
         )}
 
@@ -276,9 +275,9 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
           </p>
         </details>
 
-        {errorMsg === ERRORS.publish_failed && (
+        {errorKey === 'publish_failed' && (
           <p className="mdf-sheet__inline-error" role="alert">
-            {errorMsg}
+            {t('errors.publish_failed')}
           </p>
         )}
 
