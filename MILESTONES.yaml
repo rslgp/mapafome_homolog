@@ -56,7 +56,8 @@ milestones:
     owner: softwareengineer
     scope: "Include: DRY/testability — extract ux/csv.js (csvEsc), ux/downloadBlob.js, and a fetchSheetRows()/useSheetReport(buildFn) wrapper; retire the byte-identical esc()/downloadBlob()/load() dups across reports.js, marketingReports.js, and the two relatorio* pages. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
     gate: ["npm run test", "npm run lint", "npm run build"]
-    status: next
+    status: shipped
+    commit: "646f4e6 refactor(reports): extract shared csvEsc and downloadBlob (csv.js + downloadBlob.js; fetchSheetRows/useSheetReport seam deferred — page-state-entangled, not a byte-identical dup)"
 
   - id: P13
     title: "Route appPinActions writes through sheetsClient.ensureReady (kill 3 raw auth sites)"
@@ -124,6 +125,14 @@ milestones:
     status: shipped
     commit: "8d3dea4 test(assinar): pin asaasSubscriptionClient behavior; 86b37f7 test(asaas): pin validate and webhookAuth behavior (rail contract closed by 7513c10 fix(asaas)!: drop debito)"
 
+  - id: P21
+    title: "Route the cartão rail to the Asaas HOSTED checkout — remove inline PAN/CVV collection (PCI scope)"
+    owner: softwareengineer
+    scope: "Include: security/payment-flow — for rail=cartao, STOP collecting card number/name/expiry/CVV inline on /assinar; create the CREDIT_CARD subscription with NO card data so Asaas returns its hosted-checkout invoiceUrl, and let the existing PaymentArtifacts/CardPayment ('Pagar no Asaas' link) open it. Removes the inline card fieldset + buildInput creditCard block (page.js), the cartao card-required check + assinar.card.* registry keys (asaasSubscriptionClient.js), the server-side accept/forward of creditCard (validate.js), the assinar.card.* i18n keys in pt-BR+es (strings.js), and the orphaned .mdf-card* CSS — so no PAN/CVV exists anywhere in our code (no PCI scope). asaasClient.js unchanged (its CREDIT_CARD && creditCard guard already no-ops when card is absent). BREAKING: create-subscription no longer requires/accepts creditCard for cartao; validateBeforeSubmit drops its creditCard param. Exclude: SOLONE Lua execution memory — LBRs, msg.post, balance.yaml SOT, smoke200."
+    gate: ["npm run test", "cd asaas-backend && npm test", "npm run lint", "npm run build", "npm run a11y", "npm run smoke200"]
+    status: shipped
+    commit: "7c620ba feat(asaas)!: route card rail to hosted checkout, drop inline PAN"
+
   # ---------- Out of scope: zero-overlap SOLONE game consultants ----------
   - id: P90
     title: "competitive-balance — no game balance/leaderboard surface exists in this web app"
@@ -156,11 +165,16 @@ notes: |
     have zero overlap and appear only as out_of_scope.
   - PHASE/order: independent slices (P11, P12, P15, P17, P18) run in parallel; dependent ones are
     sequential — P13 precedes P14 (the secret cutover); P19/P20 jointly harden the asaas-backend.
-  - STATUS (as of 2026-06-09): SHIPPED = P1-P6, P11, P13, P15, P16, P17, P18, P19, P20 (commit shas
-    recorded per-milestone above). REMAINING: P12 (next — extract the csvEsc/downloadBlob/fetch seam;
-    the byte-identical dups still live in reports.js + marketingReports.js + the two relatorio* pages)
-    and P14 (later — the NEXT_PUBLIC_GOOGLE_PRIVATE_KEY client-bundle secret; a bug-bounty /
-    secret-architecture handoff, NOT autonomous softwareengineer scope; its P13 groundwork is done).
+  - STATUS (as of 2026-06-09): SHIPPED = P1-P6, P11, P12, P13, P15, P16, P17, P18, P19, P20, P21
+    (commit shas recorded per-milestone above). REMAINING: only P14 (later — the
+    NEXT_PUBLIC_GOOGLE_PRIVATE_KEY client-bundle secret; a bug-bounty / secret-architecture handoff,
+    NOT autonomous softwareengineer scope; its P13 groundwork is done). The P12 fetchSheetRows/
+    useSheetReport seam was deferred (not a byte-identical dup; entangled with page React state) — a
+    candidate for a future P-id if it recurs, not a blocker.
   - RAIL CONTRACT: the recurring rails are pix | cartao | boleto only. The earlier "débito automático"
     rail was removed (7513c10) — Asaas's subscription billingType enum has no bank-debit value, so it
     produced a runtime 400; P20's committed tests assert the 3-rail contract.
+  - CARD FLOW (P21): the cartão rail uses the Asaas HOSTED checkout (invoiceUrl). The /assinar form
+    no longer collects card number/CVV inline and the backend no longer accepts/forwards card data —
+    no PAN/CVV touches our code (no PCI scope). asaasClient.js is unchanged (its CREDIT_CARD &&
+    creditCard guard no-ops when card is absent). Do NOT re-add an inline card form.
