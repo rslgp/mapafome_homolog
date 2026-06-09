@@ -76,41 +76,25 @@ audited pages.
 
 ---
 
-## Phase 3 — Next (prioritized)
+## Phase 3 — Shipped (this pass)
 
-What this pass deliberately left open, with the owner and acceptance criterion.
+All four Phase-3 items implemented, each routed to its owner agent, gated, and committed
+atomically through `git-commit-specialist`. Suite grew 105 → 131; gate green throughout.
 
-### 🔜 P7 — reconcile the `errors.offline` i18n copy (small, blocks an i18n gap)
-- **Owner:** `uiux-defold` (copy/parity) + `softwareengineer` (wire)
-- **Problem:** P1 left `errors.offline` **unwired** because the live UI copy in `App.js`
-  (`"O ponto foi salvo e será enviado quando a conexão voltar"`) differs from the dictionary value
-  (`"Tente de novo quando a conexão voltar"`). Wiring it as-is would regress pt-BR.
-- **Acceptance:** a single agreed pt-BR string (and its es pair) in `strings.js`, wired via `t()`;
-  pt-BR copy intentionally chosen (not silently changed); test + build green.
+| Item | Owner agent(s) | Commit | Change | Result |
+|---|---|---|---|---|
+| **P7** reconcile + wire `errors.offline` | `uiux-defold` | `fix(i18n)` | Read the real offline path — it enqueues to IndexedDB and auto-drains on the `online` event, so a point is **saved and auto-retried**. The live copy was correct; the dictionary was wrong. Corrected `errors.offline` (pt-BR + es) and routed it through `t()`. pt-BR user-visible meaning unchanged. | ✅ renders via `t()`; parity held |
+| **P8** resolve two dead dictionary keys | `uiux-defold` | `fix(i18n)` | Wired `errors.server_slow` to the real 10s `network_slow` timeout branch (slow-server ≠ offline); **removed** `empty.no_pins_anywhere` (no UI surface; `no_pins_in_view` already serves the one empty state). | ✅ zero dead keys; parity test added |
+| **P9** a11y-audit in-app overlays | `uiux-defold` (+ `coloring-ict6` n/a) | `test(a11y)` | Added a `vitest-axe` harness rendering List/Report/Info overlays in their **open** state (the state axe-on-URL can't reach), asserting 0 serious/critical. **0 violations** — overlays were already aria-sound; harness pins it against regression. | ✅ +6 tests; locked in |
+| **P10** further `App.js` decomposition | `softwareengineer` | `refactor(pins)` + `refactor(app)` | Adopted shared `domain/pinCoords.js` in 4 consumers (retired 4 duplicated coord helpers; made it null-safe = strict superset). Extracted a pure `normalizeTelefoneInput` from `handleChangeTelefone`. | ✅ +14 tests; behavior preserved |
 
-### 🔜 P8 — resolve the two dead dictionary keys
-- **Owner:** `softwareengineer` (+ `uiux` copy call)
-- **Problem:** `errors.server_slow` and `empty.no_pins_anywhere` exist in `strings.js` (both locales)
-  but have **no UI call site**. Either wire them to the real surface that should show them, or remove
-  them so the dictionary has no dead entries.
-- **Acceptance:** every dictionary key has a call site OR is removed; parity preserved; tests green.
-
-### 🗓️ P9 — a11y-audit the in-app overlays (list / report / info)
-- **Owner:** `uiux-defold` + `coloring-ict6`
-- **Note:** `npm run a11y` audits **URLs**; the list, report, and info surfaces are in-app overlays
-  on `/`, not separate routes, so axe-on-URL never reaches their open state. They were verified
-  statically (Phase 1 chip fixes) but not live.
-- **Acceptance:** each overlay audited in its open state (axe-devtools manual pass, or a test
-  harness/Playwright step that opens the overlay then runs axe) → 0 serious/critical violations.
-
-### 🗓️ P10 — further `App.js` extraction (continue P3)
-- **Owner:** `softwareengineer`
-- **Note:** P3 took the one provably-safe extraction. The remaining surface (`handleChangeTelefone`
-  normalization vs `domain/Telefone.js`; `setTipoAlimento`; `writePinToSheets` row shaping) is
-  `this`-/side-effect-bound — extract only with a behavior-preserving plan + tests, not mechanically.
-  The new `domain/pinCoords.js` is also positioned for the 4 other files with near-identical
-  coord logic to adopt in a separate reviewed pass.
-- **Acceptance:** extracted modules, behavior unchanged, fitness green, suite still green.
+### 🗓️ Deferred (judged unsafe to extract without risk — documented, not churned)
+- `App.js` `setTipoAlimento` (DOM-ref + `setState` + analytics side effects) and `writePinToSheets`
+  (idempotency cache + network + bounds, interleaved with `envVariables.criarRow`) have **no
+  self-contained pure core** worth extracting — lifting them would couple a domain module to side
+  effects and not improve coverage. Left in place with reasons (P10 report).
+- `reports.js` / `marketingReports.js` coord helpers use a **different contract** (parse a `Dados`
+  blob, extra validation) — not equivalent to `coordsFromPin`, intentionally not consolidated.
 
 ### ⛔ Out of scope (skipped agents)
 `competitive-balance` and `game-designer` have no surface on this web app and are not part of
@@ -124,11 +108,11 @@ A change ships only when all of these pass (blocking):
 
 | Check | Command | Current |
 |---|---|---|
-| Unit tests | `npm run test` | ✅ 105/105 |
+| Unit tests | `npm run test` | ✅ 131/131 |
 | Build | `npm run build` | ✅ 9/9 pages, 0 metadata advisories |
 | Fitness functions | `npm run fitness` | ✅ pass |
 | Lint | `npm run lint` | ✅ 0 errors, **0 warnings** |
-| Accessibility | `npm run a11y` (served build) | ✅ 0 violations on `/`, `/imprensa`, `/parceiros`, `/relatorios` (overlays pending P9) |
+| Accessibility | `npm run a11y` (served build) | ✅ 0 violations on `/`, `/imprensa`, `/parceiros`, `/relatorios`; in-app overlays covered by the P9 `vitest-axe` open-state harness in `npm run test` |
 
 ## Running the next phase
 
