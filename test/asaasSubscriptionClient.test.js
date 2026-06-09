@@ -4,6 +4,7 @@ import {
   ASSINAR_I18N_KEYS,
   backendUrl,
   createSubscription,
+  fetchSubscriptionPayment,
   validateBeforeSubmit,
 } from '../src/app/components/compatibility/components/payments/asaasSubscriptionClient.js';
 
@@ -294,5 +295,62 @@ describe('backendUrl', () => {
     const fetchImpl = async (u) => { capturedUrl = u; return { ok: true, json: async () => ({ ok: true, subscriptionId: 's' }) }; };
     await createSubscription({ rail: 'pix', value: 25, name: 'M', email: 'm@e.com', cpfCnpj: '52998224725' }, { fetchImpl });
     expect(capturedUrl).toBe('https://env.test/api/asaas/create-subscription');
+  });
+});
+
+describe('fetchSubscriptionPayment', () => {
+  const baseUrl = 'https://b.test';
+
+  it('GETs the subscription-payment endpoint with the id in the query', async () => {
+    let capturedUrl = null;
+    let capturedMethod = null;
+    const fetchImpl = async (u, init) => {
+      capturedUrl = u;
+      capturedMethod = init?.method;
+      return { ok: true, json: async () => ({ ok: true, rail: 'pix', status: 'ACTIVE', pix: { payload: 'p', qrImage: 'data:image/png;base64,x' } }) };
+    };
+    const res = await fetchSubscriptionPayment('sub_abc123', { fetchImpl, baseUrl });
+    expect(capturedMethod).toBe('GET');
+    expect(capturedUrl).toBe('https://b.test/api/asaas/subscription-payment?subscriptionId=sub_abc123');
+    expect(res.ok).toBe(true);
+    expect(res.rail).toBe('pix');
+    expect(res.pix.payload).toBe('p');
+  });
+
+  it('url-encodes the subscription id', async () => {
+    let capturedUrl = null;
+    const fetchImpl = async (u) => { capturedUrl = u; return { ok: true, json: async () => ({ ok: true }) }; };
+    await fetchSubscriptionPayment('sub_a b', { fetchImpl, baseUrl });
+    expect(capturedUrl).toContain('subscriptionId=sub_a%20b');
+  });
+
+  it('surfaces a pending subscription (no invoice issued yet)', async () => {
+    const fetchImpl = async () => ({ ok: true, json: async () => ({ ok: true, rail: 'pix', status: 'ACTIVE', pending: true }) });
+    const res = await fetchSubscriptionPayment('sub_x', { fetchImpl, baseUrl });
+    expect(res.ok).toBe(true);
+    expect(res.pending).toBe(true);
+  });
+
+  it('maps boleto artifacts through (line + bankSlipUrl)', async () => {
+    const fetchImpl = async () => ({ ok: true, json: async () => ({ ok: true, rail: 'boleto', status: 'ACTIVE', boleto: { line: '4619...', bankSlipUrl: 'https://x/pdf', barCode: '4619' }, invoiceUrl: 'https://x/i' }) });
+    const res = await fetchSubscriptionPayment('sub_b', { fetchImpl, baseUrl });
+    expect(res.boleto.line).toBe('4619...');
+    expect(res.boleto.bankSlipUrl).toBe('https://x/pdf');
+    expect(res.invoiceUrl).toBe('https://x/i');
+  });
+
+  it('returns ok:false with server messages on a non-2xx', async () => {
+    const fetchImpl = async () => ({ ok: false, status: 404, json: async () => ({ error: 'asaas_error', messages: ['assinatura não encontrada'] }) });
+    const res = await fetchSubscriptionPayment('sub_missing', { fetchImpl, baseUrl });
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(404);
+    expect(res.messages[0]).toMatch(/não encontrada/i);
+  });
+
+  it('returns a friendly message when the backend is unreachable', async () => {
+    const fetchImpl = async () => { throw new TypeError('network'); };
+    const res = await fetchSubscriptionPayment('sub_x', { fetchImpl, baseUrl });
+    expect(res.ok).toBe(false);
+    expect(res.messages[0]).toMatch(/buscar os dados de pagamento/i);
   });
 });

@@ -42,6 +42,7 @@ loadEnv(join(__dir, '..', '.env.local'));
 
 // Mount the REAL handlers, unchanged. Same modules the deploy runs.
 const createSubscription = require('../api/asaas/create-subscription.js');
+const subscriptionPayment = require('../api/asaas/subscription-payment.js');
 const webhook = require('../api/asaas/webhook.js');
 
 const PORT = Number(process.env.PORT || 3001);
@@ -50,6 +51,7 @@ const PORT = Number(process.env.PORT || 3001);
 // derives from api/asaas/*.js, so the URLs match production 1:1.
 const ROUTES = {
   '/api/asaas/create-subscription': createSubscription,
+  '/api/asaas/subscription-payment': subscriptionPayment,
   '/api/asaas/webhook': webhook,
 };
 
@@ -122,6 +124,7 @@ server.listen(PORT, () => {
   console.log(`[dev-server] Asaas backend on http://localhost:${PORT}`);
   console.log(`[dev-server]   ASAAS_ENV=${env}  ASAAS_API_KEY=${keySet}`);
   console.log(`[dev-server]   POST /api/asaas/create-subscription`);
+  console.log(`[dev-server]   GET  /api/asaas/subscription-payment?subscriptionId=...`);
   console.log(`[dev-server]   POST /api/asaas/webhook`);
   if (!process.env.ASAAS_API_KEY) {
     console.warn('[dev-server]   ⚠  ASAAS_API_KEY missing — fill asaas-backend/.env.local');

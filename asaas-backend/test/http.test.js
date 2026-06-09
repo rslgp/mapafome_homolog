@@ -63,7 +63,7 @@ test('applyCors — echoes ACAO + Vary for an allowed origin', () => {
   applyCors(fakeReq('POST', 'http://localhost:3002'), res);
   assert.equal(res.headers['Access-Control-Allow-Origin'], 'http://localhost:3002');
   assert.equal(res.headers['Vary'], 'Origin');
-  assert.equal(res.headers['Access-Control-Allow-Methods'], 'POST, OPTIONS');
+  assert.equal(res.headers['Access-Control-Allow-Methods'], 'GET, POST, OPTIONS');
   assert.equal(res.headers['Access-Control-Allow-Headers'], 'Content-Type');
 });
 
@@ -74,7 +74,7 @@ test('applyCors — does NOT set ACAO for a disallowed origin (still sets method
   // but without ACAO they are inert (this is the secure default).
   assert.equal(res.headers['Access-Control-Allow-Origin'], undefined);
   assert.equal(res.headers['Vary'], undefined);
-  assert.equal(res.headers['Access-Control-Allow-Methods'], 'POST, OPTIONS');
+  assert.equal(res.headers['Access-Control-Allow-Methods'], 'GET, POST, OPTIONS');
 });
 
 test('applyCors — no Origin header (same-origin / curl) sets no ACAO', () => {

@@ -154,8 +154,25 @@ async function getSubscription(id) {
   return asaasFetch(`/subscriptions/${encodeURIComponent(id)}`);
 }
 
+// Payments under a subscription, newest first — the first DUE charge is the one
+// the donor pays now. `order=desc` matches the dashboard; we pick the earliest
+// still-payable one in the endpoint.
 async function listSubscriptionPayments(id) {
   return asaasFetch(`/subscriptions/${encodeURIComponent(id)}/payments`);
+}
+
+// Pix payable artifacts for a single payment: { success, encodedImage (base64
+// PNG of the QR), payload (the copy-and-paste "Pix copia e cola" string),
+// expirationDate }. Asaas generates these per payment, not per subscription.
+async function getPixQrCode(paymentId) {
+  return asaasFetch(`/payments/${encodeURIComponent(paymentId)}/pixQrCode`);
+}
+
+// Boleto "linha digitável" + bank barcode for a single payment:
+// { identificationField, nossoNumero, barCode }. The PDF itself is the
+// payment's bankSlipUrl (no extra call needed for that).
+async function getIdentificationField(paymentId) {
+  return asaasFetch(`/payments/${encodeURIComponent(paymentId)}/identificationField`);
 }
 
 module.exports = {
@@ -166,6 +183,8 @@ module.exports = {
   createSubscription,
   getSubscription,
   listSubscriptionPayments,
+  getPixQrCode,
+  getIdentificationField,
   mapRail,
   RAIL_TO_BILLING_TYPE,
   baseUrl,

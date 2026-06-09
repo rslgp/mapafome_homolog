@@ -48,10 +48,27 @@ export const ASSINAR_I18N_KEYS = [
   'assinar.error.fallback',
   'assinar.success.title',
   'assinar.success.sub',
-  'assinar.success.cta.pix',
-  'assinar.success.cta.boleto',
-  'assinar.success.cta.other',
   'assinar.success.active',
+  // Inline payment screen (Pix QR / boleto / card redirect) shown after the
+  // subscription is created. page.js renders each via t().
+  'assinar.pay.loading',
+  'assinar.pay.error',
+  'assinar.pay.retry',
+  'assinar.pay.pix.title',
+  'assinar.pay.pix.help',
+  'assinar.pay.pix.copy',
+  'assinar.pay.pix.copied',
+  'assinar.pay.pix.qrAlt',
+  'assinar.pay.boleto.title',
+  'assinar.pay.boleto.help',
+  'assinar.pay.boleto.line',
+  'assinar.pay.boleto.copy',
+  'assinar.pay.boleto.copied',
+  'assinar.pay.boleto.open',
+  'assinar.pay.card.title',
+  'assinar.pay.card.help',
+  'assinar.pay.card.cta',
+  'assinar.pay.pending',
 ];
 
 export function backendUrl() {
@@ -110,6 +127,57 @@ export async function createSubscription(input, opts = {}) {
     cycle: data.cycle,
     invoiceUrl: data.invoiceUrl || null,
     idempotent: Boolean(data.idempotent),
+  };
+}
+
+/**
+ * Fetch the payable artifacts for a created subscription's current charge, so
+ * the page can render its own Pix QR / boleto / card-redirect screen.
+ *
+ * @param {string} subscriptionId  the id returned by createSubscription
+ * @param {object} [opts] { fetchImpl?, baseUrl? }
+ * @returns {Promise<{ok:boolean, rail?, status?, pending?, invoiceUrl?, pix?, boleto?, messages?}>}
+ *   pix    → { payload, qrImage (data: URL), expiresAt }
+ *   boleto → { bankSlipUrl, line, barCode }
+ *   pending:true → the subscription exists but Asaas hasn't issued the first
+ *                  invoice yet (caller may retry).
+ */
+export async function fetchSubscriptionPayment(subscriptionId, opts = {}) {
+  const fetchImpl = opts.fetchImpl || (typeof fetch !== 'undefined' ? fetch : null);
+  if (!fetchImpl) throw new Error('fetch indisponível neste ambiente');
+  const base = opts.baseUrl || backendUrl();
+  const url = `${base}/api/asaas/subscription-payment?subscriptionId=${encodeURIComponent(subscriptionId)}`;
+
+  let res;
+  try {
+    res = await fetchImpl(url, { method: 'GET', headers: { Accept: 'application/json' } });
+  } catch {
+    return { ok: false, messages: ['Não foi possível buscar os dados de pagamento. Tente novamente.'] };
+  }
+
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+
+  if (!res.ok || !data?.ok) {
+    const messages = data?.messages || [data?.message || 'Não foi possível obter o pagamento.'];
+    return { ok: false, status: res.status, messages };
+  }
+
+  return {
+    ok: true,
+    rail: data.rail,
+    status: data.status,
+    pending: Boolean(data.pending),
+    paymentStatus: data.paymentStatus,
+    value: data.value,
+    dueDate: data.dueDate || null,
+    invoiceUrl: data.invoiceUrl || null,
+    pix: data.pix || null,
+    boleto: data.boleto || null,
   };
 }
 
