@@ -18,6 +18,10 @@ export default function ViewMoreCue({ label = 'Veja mais abaixo' }) {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     // If the user is already mid-page on first mount (e.g. back-nav), hide.
+    // Reads window.scrollY (external state) post-mount on purpose: a lazy
+    // useState initializer would touch window during render and risk an SSR
+    // hydration mismatch in this 'use client' component.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads window.scrollY (external state) post-mount to avoid hydration mismatch
     if (window.scrollY > 32) setDismissed(true);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import './register.css';
 
 // M6 — initiatives registration. Ongoing groups (soup kitchens, neighborhood
@@ -77,14 +78,14 @@ export default function InitiativeRegisterPage() {
       <main className="mdf-initiative-ok">
         <h1>Iniciativa registrada</h1>
         <p>Obrigado. O ponto aparecerá no mapa em breve, após a revisão da comunidade.</p>
-        <a href="/">Voltar para o mapa</a>
+        <Link href="/">Voltar para o mapa</Link>
       </main>
     );
   }
 
   return (
     <main className="mdf-initiative">
-      <a href="/" className="mdf-initiative__back">← Mapa</a>
+      <Link href="/" className="mdf-initiative__back">← Mapa</Link>
       <h1>Cadastrar iniciativa</h1>
       <p className="mdf-initiative__sub">
         Para grupos, ONGs ou coletivos que já distribuem ajuda em um local fixo.

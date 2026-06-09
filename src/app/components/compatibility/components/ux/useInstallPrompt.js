@@ -26,6 +26,10 @@ export default function useInstallPrompt() {
       window.navigator.standalone === true ||
       window.__mdf_app_installed === true;
     if (standalone) {
+      // Reads matchMedia / navigator.standalone (external/browser install
+      // state) post-mount on purpose: deriving it during render would touch
+      // window and risk an SSR hydration mismatch in this client hook.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reads browser install state (matchMedia/navigator) post-mount to avoid hydration mismatch
       setIsInstalled(true);
       return undefined;
     }

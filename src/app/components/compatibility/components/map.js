@@ -13,7 +13,7 @@
 //   addGroup helper  → V2 pattern, cleaner than renderSwitch class methods
 //   RedeSocial msg   → inline formatter in addGroup (V2 pattern)
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useCallback, useRef, useMemo } from 'react';
 import { MapContainer, Marker, AttributionControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -129,13 +129,15 @@ const CoffeeMap = ({
     onReporterPinClick,
     nowTick,
 }) => {
-    const [center, setCenter]   = useState(location);
-    const [filter, setFilter]   = useState(filtro);
+    // `center` and `filter` are pure mirrors of the `location` / `filtro` props
+    // with no independent writers, so they are derived directly instead of being
+    // copied into state via an effect (you-might-not-need-an-effect). This drops
+    // the cascading set-state-in-effect plus its exhaustive-deps warning, and
+    // the rendered values stay identical to the props on every render.
+    const center = location;
+    const filter = filtro;
     const lastMarkedRef          = useRef(null);
     const mapRef                 = useRef(null);
-
-    useEffect(() => { if (filtro !== filter) setFilter(filtro); }, [filtro]);
-    useEffect(() => { setCenter(location); }, [location]);
 
     // Encapsulated map click: was anonymous arrow in whenReady in both V1 and V2.
     // V2 stored to lastMarkedRef but still inline; now a proper named callback

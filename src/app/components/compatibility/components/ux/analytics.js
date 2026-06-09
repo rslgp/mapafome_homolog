@@ -91,7 +91,6 @@ export function trackError(category, error, props = {}) {
   });
   // Mirror to console.error so debug builds still see it; dashboards aggregate.
   if (typeof console !== 'undefined' && console.error) {
-    // eslint-disable-next-line no-console
     console.error(`[${category}]`, error, props);
   }
 }

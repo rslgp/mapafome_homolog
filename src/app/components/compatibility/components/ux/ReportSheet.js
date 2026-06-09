@@ -39,7 +39,10 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
     if (!open) return;
     triggerRef.current = document.activeElement;
     startedAtRef.current = Date.now();
-    // Reset per-open state.
+    // Reset per-open state. This effect also owns focus capture/restore, the
+    // drag lifecycle and Escape handling for the sheet, so keying the component
+    // to remount would disrupt the open/close animation without benefit.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional per-open reset; effect also owns focus/drag/Escape lifecycle
     setSelected(new Set());
     setDetail('');
     setContact('');

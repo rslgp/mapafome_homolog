@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import './parceiros.css';
 
 // Inbound surface for companies that want to sponsor MAPA FOME. No backend —
@@ -74,7 +75,11 @@ export default function ParceirosPage() {
   const [showFallback, setShowFallback] = useState(false);
   const [copyState, setCopyState] = useState('idle'); // idle | copied | failed
   const blurredRef = useRef(false);
-  const composedBodyRef = useRef('');
+  // The composed mail body snapshotted at CTA-click time. Held in state (not a
+  // ref) because it is read during render for the fallback <textarea>; reading a
+  // ref's .current during render is not tracked by React and the textarea would
+  // not reliably reflect the latest value (react-hooks/refs).
+  const [composedBody, setComposedBody] = useState('');
 
   const composed = useMemo(() => {
     const subject = `Interesse em patrocínio — ${empresa || '[empresa]'} (${tier})`;
@@ -105,7 +110,7 @@ export default function ParceirosPage() {
     blurredRef.current = false;
     setShowFallback(false);
     setCopyState('idle');
-    composedBodyRef.current = `Para: ${RECIPIENT}\nAssunto: ${composed.subject}\n\n${composed.body}`;
+    setComposedBody(`Para: ${RECIPIENT}\nAssunto: ${composed.subject}\n\n${composed.body}`);
     const onBlur = () => { blurredRef.current = true; };
     const onVisChange = () => { if (document.hidden) blurredRef.current = true; };
     window.addEventListener('blur', onBlur);
@@ -120,7 +125,7 @@ export default function ParceirosPage() {
 
   async function copyComposed() {
     try {
-      await navigator.clipboard.writeText(composedBodyRef.current || '');
+      await navigator.clipboard.writeText(composedBody || '');
       setCopyState('copied');
       setTimeout(() => setCopyState('idle'), 3000);
     } catch (_e) {
@@ -130,7 +135,7 @@ export default function ParceirosPage() {
 
   return (
     <main className="mdf-parc">
-      <a href="/" className="mdf-parc__back">← Mapa</a>
+      <Link href="/" className="mdf-parc__back">← Mapa</Link>
       <h1>Seja parceiro do MAPA FOME</h1>
       <p className="mdf-parc__lead">
         O MAPA FOME é uma plataforma pública, gratuita e anônima que permite a
@@ -251,7 +256,7 @@ export default function ParceirosPage() {
               readOnly
               rows={8}
               className="mdf-parc__fallback-text"
-              value={composedBodyRef.current}
+              value={composedBody}
             />
             <button type="button" onClick={copyComposed} className="mdf-parc__fallback-copy">
               {copyState === 'copied' ? 'Copiado ✓' : copyState === 'failed' ? 'Falhou — selecione manualmente' : 'Copiar mensagem'}

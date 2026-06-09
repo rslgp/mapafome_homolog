@@ -33,6 +33,11 @@ export default function LiveAnnouncer({ dataMaps }) {
     const parts = [];
     if (newPins > 0) parts.push(newPins === 1 ? 'Novo ponto publicado.' : `${newPins} pontos publicados.`);
     if (newlyAttended > 0) parts.push(newlyAttended === 1 ? 'Um ponto foi atendido.' : `${newlyAttended} pontos atendidos.`);
+    // Announces the delta between the current and previous dataMaps snapshot to
+    // the aria-live region — an intentional change-driven update (synchronizing
+    // an external system: assistive tech). It is not a render-derivable value:
+    // it depends on the cross-render diff held in seenRef.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- change-diff announcement to aria-live region; depends on cross-render prev snapshot
     if (parts.length > 0) setMsg(parts.join(' '));
   }, [dataMaps]);
 

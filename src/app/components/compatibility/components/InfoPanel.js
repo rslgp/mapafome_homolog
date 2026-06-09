@@ -98,7 +98,11 @@ const InfoPanel = ({ rowCount }) => {
     };
 
     // Adota um evento que disparou ANTES deste componente montar — capturado
-    // cedo pelo bridge em layout.js (window.__mdf_install_prompt).
+    // cedo pelo bridge em layout.js (window.__mdf_install_prompt). Estes
+    // setState leem estado de navegador (window.*/matchMedia) após a montagem
+    // de propósito; derivar no render tocaria window e arriscaria hydration
+    // mismatch neste componente client.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads window install-prompt bridge / matchMedia (external state) post-mount to avoid hydration mismatch
     if (window.__mdf_install_prompt) setDeferredPrompt(window.__mdf_install_prompt);
     if (window.__mdf_app_installed) setIsInstalled(true);
 

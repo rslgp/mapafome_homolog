@@ -103,6 +103,10 @@ export default function GuidedTutorial({ open, onClose }) {
   useEffect(() => {
     if (!open) return;
     if (isChooser) {
+      // Part of the DOM-measurement effect: the chooser step has no spotlight
+      // target, so clear the measured rect. The rect is derived from live DOM
+      // geometry (getRect), which is only available post-mount.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears DOM-measured spotlight rect; geometry is only available post-mount
       setRect(null);
       return;
     }
@@ -158,9 +162,13 @@ export default function GuidedTutorial({ open, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, flow, index]);
 
-  // Reset to chooser whenever the tutorial is reopened.
+  // Reset to chooser whenever the tutorial is reopened. Intentional state reset
+  // driven by the `open` prop transition; a key-based remount would be the
+  // alternative but requires the parent to manage the key and would disturb the
+  // focus/scroll effects above without a behavior gain.
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset of internal flow/index on the open-prop transition
       setFlow(null);
       setIndex(0);
     }

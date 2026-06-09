@@ -46,6 +46,9 @@ export default function NotificationPrefs({ open, onClose }) {
 
   useEffect(() => {
     if (!open) return undefined;
+    // On open, load persisted prefs (localStorage) and the live browser
+    // Notification permission — both external state, read post-mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loads persisted prefs + browser permission (external state) on open
     setPrefs(loadPrefs());
     if (typeof Notification !== 'undefined') setPerm(Notification.permission);
     // Escape closes the dialog — matches the dismissal contract of the other

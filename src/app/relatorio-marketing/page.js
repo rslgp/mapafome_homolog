@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import './relatorio-marketing.css';
 import {
   buildMarketingReport,
@@ -56,6 +57,11 @@ export default function RelatorioMarketingPage() {
     }
   }, []);
 
+  // Fetch-on-mount of external data (Google Sheet) — the React-sanctioned use of
+  // an effect (synchronizing with an external system). `load` is reused by the
+  // retry button, so its internal status resets must stay; the setState here is
+  // intentional, not a derivable value.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- external data fetch on mount; load() is also the retry handler
   useEffect(() => { load(); }, [load]);
 
   function exportJson() {
@@ -78,7 +84,7 @@ export default function RelatorioMarketingPage() {
 
   return (
     <main className="mdf-mkt">
-      <a href="/" className="mdf-mkt__back">← Mapa</a>
+      <Link href="/" className="mdf-mkt__back">← Mapa</Link>
       <h1>Relatório de marketing</h1>
       <p className="mdf-mkt__lead">
         Relatório de campanha para empresas que patrocinam o espaço do MAPA FOME.
@@ -201,7 +207,7 @@ export default function RelatorioMarketingPage() {
             <h2>Como citar / atribuição</h2>
             <p>
               Empresa patrocinadora pode divulgar o apoio citando:
-              "<b>Apoiador do MAPA FOME — {new Date(report.meta.gerado_em).toLocaleDateString('pt-BR')}</b>".
+              &quot;<b>Apoiador do MAPA FOME — {new Date(report.meta.gerado_em).toLocaleDateString('pt-BR')}</b>&quot;.
               Logomarca conjunta e kit de divulgação disponíveis sob solicitação.
             </p>
           </section>

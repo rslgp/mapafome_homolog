@@ -94,6 +94,10 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
   useEffect(() => {
     if (!open) return;
     triggerRef.current = document.activeElement;
+    // Reset transient busy state on open. This effect also owns focus
+    // capture/restore and Escape handling for the sheet, so keying the
+    // component to remount would disrupt that without benefit.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional per-open reset; effect also owns focus/Escape lifecycle
     setBusy(null);
     const id = requestAnimationFrame(() => closeRef.current?.focus());
 

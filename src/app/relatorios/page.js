@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import './relatorios.css';
 import {
   buildReport,
@@ -65,6 +66,11 @@ export default function RelatoriosPage() {
     }
   }, []);
 
+  // Fetch-on-mount of external data (Google Sheet) — the React-sanctioned use of
+  // an effect (synchronizing with an external system). `load` is reused by the
+  // retry button, so its internal status resets must stay; the setState here is
+  // intentional, not a derivable value.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- external data fetch on mount; load() is also the retry handler
   useEffect(() => { load(); }, [load]);
 
   function exportJson() {
@@ -98,7 +104,7 @@ export default function RelatoriosPage() {
 
   return (
     <main className="mdf-reports">
-      <a href="/" className="mdf-reports__back">← Mapa</a>
+      <Link href="/" className="mdf-reports__back">← Mapa</Link>
       <h1>Relatórios agregados</h1>
       <p className="mdf-reports__lead">
         Dados agregados do MAPA FOME para uso de órgãos públicos

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import './imprensa.css';
 
 // Press kit (kit de imprensa) for MAPA FOME. A self-serve page so journalists,
@@ -222,7 +223,7 @@ export default function ImprensaPage() {
 
   return (
     <main className="mdf-press">
-      <a href="/" className="mdf-press__back">← Mapa</a>
+      <Link href="/" className="mdf-press__back">← Mapa</Link>
       <h1>Kit de imprensa do MAPA FOME</h1>
       <p className="mdf-press__lead">
         Esta página reúne tudo o que jornalistas, criadores de conteúdo e parceiros

@@ -52,7 +52,6 @@ export default function SponsorSlot({
       : null;
     const slug = resolveRegion(coords);
     return { region: slug, pool: eligibleSponsors(placement, slug, coords, nowTick) };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placement, nowTick]);
 
   // B11: schedule a precise tick at the next sponsor expiresAt boundary so
@@ -74,22 +73,24 @@ export default function SponsorSlot({
     return () => clearTimeout(t);
   }, [pool]);
 
-  // Keep index in bounds if the pool shrinks (e.g. a sponsor just expired).
-  useEffect(() => {
-    if (pool.length === 0) return;
-    if (index >= pool.length) setIndex(0);
-  }, [pool, index]);
+  // Keep index in bounds if the pool shrinks (e.g. a sponsor just expired) by
+  // CLAMPING during render instead of correcting it in an effect. The previous
+  // effect (setIndex(0) when out of range) cost an extra render and left one
+  // frame where pool[index] was undefined. The stored `index` may briefly be
+  // stale; it is never read raw — every read below uses `safeIndex`, and the
+  // auto-advance modulo keeps it in range going forward.
+  const safeIndex = index < pool.length ? index : 0;
 
   // Fire an impression for whatever sponsor the carousel is currently on,
   // deduped per session so repeat views of the same sponsor don't inflate.
   useEffect(() => {
-    const current = pool[index];
+    const current = pool[safeIndex];
     if (!current) return;
     const key = `${current.id}|${placement}`;
     if (impressionsFiredRef.current.has(key)) return;
     impressionsFiredRef.current.add(key);
     trackSponsorImpression({ id: current.id, region, placement });
-  }, [pool, index, region, placement]);
+  }, [pool, safeIndex, region, placement]);
 
   // Auto-advance. Disabled for single-entry pools and reduced-motion users.
   useEffect(() => {
@@ -103,7 +104,7 @@ export default function SponsorSlot({
   }, [pool.length, rotateMs, paused]);
 
   if (pool.length === 0) return null;
-  const sponsor = pool[index];
+  const sponsor = pool[safeIndex];
   if (!sponsor) return null;
 
   const external = /^https?:\/\//i.test(sponsor.href);
@@ -128,7 +129,7 @@ export default function SponsorSlot({
         <span className="mdf-sponsor__label">Parceiro local</span>
         {pool.length > 1 && (
           <span className="mdf-sponsor__counter" aria-live="off">
-            {index + 1} / {pool.length}
+            {safeIndex + 1} / {pool.length}
           </span>
         )}
       </header>
@@ -160,9 +161,9 @@ export default function SponsorSlot({
               key={s.id}
               type="button"
               role="tab"
-              aria-selected={i === index}
+              aria-selected={i === safeIndex}
               aria-label={`Mostrar ${s.label || s.id}`}
-              className={`mdf-sponsor__dot${i === index ? ' mdf-sponsor__dot--on' : ''}`}
+              className={`mdf-sponsor__dot${i === safeIndex ? ' mdf-sponsor__dot--on' : ''}`}
               onClick={() => setIndex(i)}
             />
           ))}
