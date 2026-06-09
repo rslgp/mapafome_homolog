@@ -16,6 +16,7 @@ import {
   toCsvVulnerability,
   toCsvGrowthMapaFome,
 } from '../components/compatibility/components/ux/reports';
+import { downloadBlob } from '../components/compatibility/components/ux/downloadBlob';
 
 // Public-interest aggregate reports surface. Intended for:
 //   • Ministério Público (SAN / direitos humanos)
@@ -25,19 +26,6 @@ import {
 // Fetches the Google Sheet client-side using the same NEXT_PUBLIC_* creds
 // the rest of the app already uses. All data shown here is aggregated —
 // no PII, no raw coordinates, k-anonymized at k=5. See reports.js.
-
-function downloadBlob(filename, content, mime) {
-  if (typeof window === 'undefined') return;
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-}
 
 export default function RelatoriosPage() {
   const [status, setStatus] = useState('loading'); // loading | ready | error

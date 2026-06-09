@@ -14,6 +14,7 @@
 // Output: plain JS objects. Serialize to JSON or CSV via the helpers below.
 
 import { resolveRegion } from './regionResolver';
+import { csvEsc } from './csv';
 
 const K_ANON = 5;
 
@@ -375,12 +376,10 @@ export function buildReport(rows, { now = Date.now() } = {}) {
 }
 
 // ────────────────────────────────────────────────────────────
-// CSV serializers — one per section.
+// CSV serializers — one per section. Field escape lives in ./csv (csvEsc);
+// aliased so the per-row `r.map(esc)` call sites stay byte-for-byte unchanged.
 
-function esc(v) {
-  const s = String(v ?? '');
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
+const esc = csvEsc;
 
 export function toCsvCategoryMonth(report) {
   const rows = [['categoria', 'mes', 'pontos']];

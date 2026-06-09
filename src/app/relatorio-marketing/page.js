@@ -7,22 +7,10 @@ import {
   buildMarketingReport,
   toCsvCampanhas,
 } from '../components/compatibility/components/ux/marketingReports';
+import { downloadBlob } from '../components/compatibility/components/ux/downloadBlob';
 
 // Marketing report — destined for sponsor/advertiser companies. Separate
 // from /relatorios (public-policy) because the audience and framing differ.
-
-function downloadBlob(filename, content, mime) {
-  if (typeof window === 'undefined') return;
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-}
 
 const STATUS_LABEL = {
   ativo: 'Ativo',

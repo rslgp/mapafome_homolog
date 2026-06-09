@@ -13,6 +13,7 @@
 
 import { SPONSORS, parseDate, isActiveNow } from './sponsors';
 import { Coordinates } from '../../domain/Coordinates';
+import { csvEsc } from './csv';
 
 // Haversine, km — delegated to Coordinates.distanceKmTo (VM10), the single
 // home of the formula. Thin wrapper keeps the tuple-in / Infinity-on-bad-input
@@ -153,10 +154,9 @@ export function buildMarketingReport(rows, { now = Date.now() } = {}) {
   };
 }
 
-function esc(v) {
-  const s = String(v ?? '');
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
+// Field escape lives in ./csv (csvEsc); aliased so the `r.map(esc)` call site
+// below stays byte-for-byte unchanged.
+const esc = csvEsc;
 
 export function toCsvCampanhas(report) {
   const rows = [[
