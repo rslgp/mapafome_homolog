@@ -14,8 +14,9 @@ const {
 const VALID_CPF = '52998224725';
 const VALID_CNPJ = '11222333000181';
 
-test('RAILS are the four BR rails', () => {
-  assert.deepEqual(RAILS, ['pix', 'cartao', 'boleto', 'debito']);
+test('RAILS are the BR rails Asaas supports for subscriptions', () => {
+  // No bank-debit: Asaas subscription billingType is PIX | CREDIT_CARD | BOLETO.
+  assert.deepEqual(RAILS, ['pix', 'cartao', 'boleto']);
 });
 
 test('CPF check digits', () => {
@@ -299,7 +300,7 @@ test('validateSubscriptionInput — non-cartão rails do not carry card fields o
     creditCard: { number: '4111', expiryMonth: '12', expiryYear: '2030', ccv: '123', holderName: 'M' },
   });
   assert.equal(r.ok, true);
-  // A card sent on a pix/boleto/debito request is discarded — not forwarded.
+  // A card sent on a pix/boleto request is discarded — not forwarded.
   assert.equal(r.clean.creditCard, undefined);
   assert.equal(r.clean.creditCardHolderInfo, undefined);
 });

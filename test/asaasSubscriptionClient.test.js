@@ -8,9 +8,11 @@ import {
 } from '../src/app/components/compatibility/components/payments/asaasSubscriptionClient.js';
 
 describe('asaasSubscriptionClient — RAILS', () => {
-  it('exposes the four BR rails familiar to brasileiros', () => {
+  it('exposes the BR rails Asaas supports for subscriptions', () => {
+    // No "débito automático": Asaas's subscription billingType enum has no
+    // bank-debit value (DEBIT/BANK_DEBIT rejected, DEBIT_CARD not allowed).
     const ids = RAILS.map((r) => r.id);
-    expect(ids).toEqual(['pix', 'cartao', 'boleto', 'debito']);
+    expect(ids).toEqual(['pix', 'cartao', 'boleto']);
   });
 
   // Robust to the concurrent i18n pass: a rail MUST carry an id + display label +
@@ -107,7 +109,7 @@ describe('validateBeforeSubmit', () => {
   // --- P20 characterization: remaining rails + edges ---
 
   it('passes each non-card rail with otherwise-valid input', () => {
-    for (const rail of ['pix', 'boleto', 'debito']) {
+    for (const rail of ['pix', 'boleto']) {
       expect(validateBeforeSubmit({ ...valid, rail })).toEqual([]);
     }
   });

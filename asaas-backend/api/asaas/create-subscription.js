@@ -2,7 +2,7 @@
 //
 // First-party endpoint the static site calls to start a recurring "assinatura
 // de apoio". It validates the (untrusted) body, ensures an Asaas customer, and
-// creates a subscription on the chosen BR rail (Pix / cartão / boleto / débito).
+// creates a subscription on the chosen BR rail (Pix / cartão / boleto).
 //
 // The Asaas key never leaves this server. Card data, when present, is forwarded
 // straight to Asaas over HTTPS and never logged or stored here.

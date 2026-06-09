@@ -70,8 +70,6 @@ const DICT = {
     'assinar.rail.cartao.hint':   'Assinatura no cartão, renovação automática',
     'assinar.rail.boleto.label':  'Boleto',
     'assinar.rail.boleto.hint':   'Um boleto por mês — você paga cada um',
-    'assinar.rail.debito.label':  'Débito automático',
-    'assinar.rail.debito.hint':   'Débito direto na sua conta',
   },
   'es': {
     'report.title':      '¿Qué necesita la persona ahora?',
@@ -130,8 +128,6 @@ const DICT = {
     'assinar.rail.cartao.hint':   'Suscripción con tarjeta, renovación automática',
     'assinar.rail.boleto.label':  'Boleto',
     'assinar.rail.boleto.hint':   'Un boleto por mes — pagas cada uno',
-    'assinar.rail.debito.label':  'Débito automático',
-    'assinar.rail.debito.hint':   'Débito directo en tu cuenta',
   },
 };
 

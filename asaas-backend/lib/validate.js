@@ -2,7 +2,9 @@
 // The serverless endpoints treat the request body as untrusted DATA: every
 // field is validated here before it reaches the Asaas client.
 
-const RAILS = ['pix', 'cartao', 'boleto', 'debito'];
+// Asaas subscriptions only support these billingTypes (no bank-debit rail —
+// DEBIT/BANK_DEBIT are rejected and DEBIT_CARD is not allowed for subscriptions).
+const RAILS = ['pix', 'cartao', 'boleto'];
 
 // Strip non-digits from a CPF/CNPJ and validate length + check digits (CPF).
 function onlyDigits(s) {

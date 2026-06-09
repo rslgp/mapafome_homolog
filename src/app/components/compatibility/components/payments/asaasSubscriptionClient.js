@@ -15,7 +15,10 @@ export const RAILS = [
   { id: 'pix', labelKey: 'assinar.rail.pix.label', hintKey: 'assinar.rail.pix.hint', label: 'Pix', hint: 'Pix Automático — débito recorrente, sem taxa de cartão' },
   { id: 'cartao', labelKey: 'assinar.rail.cartao.label', hintKey: 'assinar.rail.cartao.hint', label: 'Cartão de crédito', hint: 'Assinatura no cartão, renovação automática' },
   { id: 'boleto', labelKey: 'assinar.rail.boleto.label', hintKey: 'assinar.rail.boleto.hint', label: 'Boleto', hint: 'Um boleto por mês — você paga cada um' },
-  { id: 'debito', labelKey: 'assinar.rail.debito.label', hintKey: 'assinar.rail.debito.hint', label: 'Débito automático', hint: 'Débito direto na sua conta' },
+  // NOTE: there is no "débito automático" rail — Asaas's subscription billingType
+  // enum is only PIX | CREDIT_CARD | BOLETO | UNDEFINED; DEBIT/BANK_DEBIT are
+  // rejected ("billingType deve ser informado") and DEBIT_CARD is "not permitted
+  // for subscriptions". So bank-debit cannot be a recurring rail here.
 ];
 
 // i18n key registry for the /assinar page. Co-located with the payments feature

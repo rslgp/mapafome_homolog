@@ -98,13 +98,13 @@ function check(label, ok, detail) {
   check('boleto create', boleto.status === 200 && boleto.data?.ok,
     `id ${boleto.data?.subscriptionId} status ${boleto.data?.status} invoiceUrl ${boleto.data?.invoiceUrl ? 'yes' : 'no'}`);
 
-  // DÉBITO automático
+  // (No "débito automático" rail: Asaas subscriptions have no bank-debit
+  // billingType. A debito POST is expected to be REJECTED at validation now.)
   const debito = await post(body('debito'));
-  check('debito create', debito.status === 200 && debito.data?.ok,
-    `id ${debito.data?.subscriptionId} status ${debito.data?.status}` +
-    (debito.data?.ok ? '' : ` :: ${JSON.stringify(debito.data?.messages)}`));
+  check('debito rejected (no such rail)', debito.status === 400,
+    `status ${debito.status} :: ${JSON.stringify(debito.data?.messages || debito.data)}`);
 
-  console.log(`\nRESULT: ${failed ? 'FAIL — see above' : 'PASS — all four rails created via the running backend'}`);
+  console.log(`\nRESULT: ${failed ? 'FAIL — see above' : 'PASS — all three supported rails created via the running backend'}`);
   process.exit(failed ? 1 : 0);
 })().catch((e) => {
   console.error('FAIL (driver threw):', e.message);

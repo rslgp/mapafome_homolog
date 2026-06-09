@@ -42,11 +42,12 @@ test('isAuthentic accepts matching token, rejects mismatch + missing', () => {
   assert.equal(isAuthentic({ headers: {} }).ok, false);
 });
 
-test('mapRail maps the four rails to Asaas billingType', () => {
+test('mapRail maps the supported rails to Asaas billingType', () => {
   assert.equal(mapRail('pix'), 'PIX');
   assert.equal(mapRail('cartao'), 'CREDIT_CARD');
   assert.equal(mapRail('boleto'), 'BOLETO');
-  assert.equal(mapRail('debito'), 'DEBIT');
+  // 'debito' is NOT a rail — Asaas subscriptions have no bank-debit billingType.
+  assert.throws(() => mapRail('debito'), /unknown rail/);
   assert.throws(() => mapRail('crypto'), /unknown rail/);
 });
 

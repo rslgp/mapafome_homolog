@@ -81,20 +81,22 @@ async function ensureCustomer(input) {
 }
 
 // ── Subscriptions (the recurring rail) ─────────────────────────────────────
-// billingType: PIX | CREDIT_CARD | BOLETO | DEBIT (débito automático).
+// billingType: PIX | CREDIT_CARD | BOLETO. (Asaas's subscription billingType
+// enum also allows UNDEFINED, but NOT a bank-debit value — DEBIT/BANK_DEBIT are
+// rejected as "billingType deve ser informado" and DEBIT_CARD is "not permitted
+// for subscriptions" — so there is no "débito automático" recurring rail.)
 // cycle: MONTHLY | WEEKLY | YEARLY ... We default to MONTHLY.
 
 const RAIL_TO_BILLING_TYPE = {
   pix: 'PIX',
   cartao: 'CREDIT_CARD',
   boleto: 'BOLETO',
-  debito: 'DEBIT',
 };
 
 function mapRail(rail) {
   const billingType = RAIL_TO_BILLING_TYPE[rail];
   if (!billingType) {
-    const err = new Error(`unknown rail '${rail}' (expected pix|cartao|boleto|debito)`);
+    const err = new Error(`unknown rail '${rail}' (expected pix|cartao|boleto)`);
     err.status = 400;
     throw err;
   }

@@ -15,15 +15,18 @@ talk to Asaas.
 
 | File | Role |
 |---|---|
-| `api/asaas/create-subscription.js` | POST — validates input, ensures an Asaas customer, creates a recurring subscription on the chosen rail (Pix / cartão / boleto / débito). |
+| `api/asaas/create-subscription.js` | POST — validates input, ensures an Asaas customer, creates a recurring subscription on the chosen rail (Pix / cartão / boleto). |
 | `api/asaas/webhook.js` | POST — receives Asaas payment events; **authenticated** (`asaas-access-token`) + **idempotent** (dedupes retries). |
 | `lib/asaasClient.js` | Server-only Asaas REST client (reads `ASAAS_API_KEY`). |
 | `lib/validate.js` | Pure input validation + CPF/CNPJ check (untrusted body → clean). |
 | `lib/webhookAuth.js` | Constant-time webhook token check (fails closed). |
 | `lib/http.js` | CORS + JSON helpers. |
 
-The four supported rails map to Asaas `billingType`:
-`pix → PIX`, `cartao → CREDIT_CARD`, `boleto → BOLETO`, `debito → DEBIT`.
+The supported rails map to Asaas `billingType`:
+`pix → PIX`, `cartao → CREDIT_CARD`, `boleto → BOLETO`.
+(There is **no** bank-debit rail: Asaas's subscription `billingType` enum is
+`PIX | CREDIT_CARD | BOLETO | UNDEFINED` — `DEBIT`/`BANK_DEBIT` are rejected and
+`DEBIT_CARD` is "not permitted for subscriptions".)
 
 ## Local dev
 

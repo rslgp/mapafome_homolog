@@ -36,7 +36,7 @@
   margin: 0 0 var(--mdf-space-6) 0;
 }
 
-/* ── Rails (Pix / cartão / boleto / débito) ─────────────────────────────── */
+/* ── Rails (Pix / cartão / boleto) ──────────────────────────────────────── */
 .mdf-rails {
   display: grid;
   grid-template-columns: 1fr;

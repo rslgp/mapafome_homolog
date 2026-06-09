@@ -17,8 +17,9 @@ function withValue(key, value) {
   return t(key).replace('{value}', value);
 }
 
-// Assinatura de apoio recorrente (Asaas). Brazilians recognize these four rails:
-// Pix Automático, cartão (assinatura), boleto, débito automático. The secret
+// Assinatura de apoio recorrente (Asaas). Brazilians recognize these rails:
+// Pix Automático, cartão (assinatura), boleto. (Asaas subscriptions have no
+// bank-debit billingType, so there is no "débito automático" rail.) The secret
 // Asaas key lives in a separate serverless backend — this page only talks to
 // that backend over NEXT_PUBLIC_ASAAS_BACKEND_URL, never to Asaas directly.
 
