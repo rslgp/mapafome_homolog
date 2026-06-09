@@ -1,5 +1,8 @@
 // Monetization data module — first-party sponsor entries.
 //
+// Distance math is delegated to the domain value object Coordinates
+// (VM10) — the Haversine formula has ONE home now, not a re-typed copy here.
+//
 // Shape:
 //   {
 //     id:          unique slug, also used for /go/{id}/ redirector paths
@@ -46,6 +49,8 @@
 //   'initiatives-footer' — below the initiatives registration page
 //
 // Banner assets live in /public/sponsors/ (see /public/sponsors/README.md).
+
+import { Coordinates } from '../../domain/Coordinates';
 
 export const PLACEMENTS = {
   INFO_PANEL_FOOTER: 'info-panel-footer',
@@ -157,21 +162,15 @@ export function isActiveNow(sponsor, now = Date.now()) {
   return true;
 }
 
-// Haversine, km. Inlined here so this module has no runtime dependency on
-// variaveisAmbiente (mirrors envVariables.distanceInKmBetweenEarthCoordinates).
+// Haversine, km — delegated to Coordinates.distanceKmTo (VM10), the single
+// home of the formula. This thin wrapper keeps the tuple-in / Infinity-on-bad-
+// input contract that isInsideReach relies on (Coordinates throws on a non-
+// finite pair, so guard the tuples here and fail open to Infinity).
 function distanceKm(a, b) {
   if (!Array.isArray(a) || !Array.isArray(b)) return Infinity;
   if (a.length !== 2 || b.length !== 2) return Infinity;
-  const [lat1, lon1] = a;
-  const [lat2, lon2] = b;
-  if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return Infinity;
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const la1 = (lat1 * Math.PI) / 180;
-  const la2 = (lat2 * Math.PI) / 180;
-  const h = Math.sin(dLat / 2) ** 2 + Math.sin(dLon / 2) ** 2 * Math.cos(la1) * Math.cos(la2);
-  return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  if (![a[0], a[1], b[0], b[1]].every(Number.isFinite)) return Infinity;
+  return Coordinates.fromTuple(a).distanceKmTo(Coordinates.fromTuple(b));
 }
 
 // True when the sponsor defines a paid geo reach AND the user is inside it.

@@ -12,22 +12,17 @@
 // is an aggregate "audiência potencial" number, not per-device impressions.
 
 import { SPONSORS, parseDate, isActiveNow } from './sponsors';
+import { Coordinates } from '../../domain/Coordinates';
 
-const R_EARTH_KM = 6371;
-
+// Haversine, km — delegated to Coordinates.distanceKmTo (VM10), the single
+// home of the formula. Thin wrapper keeps the tuple-in / Infinity-on-bad-input
+// contract the geo gate relies on (Coordinates throws on a non-finite pair, so
+// guard the tuples here and fail open to Infinity).
 function distanceKm(a, b) {
   if (!Array.isArray(a) || !Array.isArray(b)) return Infinity;
   if (a.length !== 2 || b.length !== 2) return Infinity;
-  const [lat1, lon1] = a;
-  const [lat2, lon2] = b;
-  if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return Infinity;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const la1 = (lat1 * Math.PI) / 180;
-  const la2 = (lat2 * Math.PI) / 180;
-  const h = Math.sin(dLat / 2) ** 2
-    + Math.sin(dLon / 2) ** 2 * Math.cos(la1) * Math.cos(la2);
-  return 2 * R_EARTH_KM * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  if (![a[0], a[1], b[0], b[1]].every(Number.isFinite)) return Infinity;
+  return Coordinates.fromTuple(a).distanceKmTo(Coordinates.fromTuple(b));
 }
 
 function coordsOfRow(row) {
