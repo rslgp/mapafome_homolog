@@ -7,25 +7,17 @@ import Header from './components/header';
 
 import Sugestao from './components/googlesheets/sugestao';
 
-import MainMap from './components/MainMap';
-import MainControls from './components/MainControls';
-import InfoPanel from './components/InfoPanel';
 import StepsHint from './components/ux/StepsHint';
-import GuidedTutorial, { hasSeenTour } from './components/ux/GuidedTutorial';
+// GuidedTutorial / NotificationPrefs / the presentational components (MainMap,
+// MainControls, InfoPanel, ReportSheet, ContextBar, PinDetailSheet, OfflineToast,
+// ListView, LiveAnnouncer, PinReadout, VersionFooter, TapDebugOverlay,
+// EmptyViewportOverlay, ViewMoreCue) + MUI Grid are now imported by the extracted
+// view components (AppMain / AppMapGrid / AppOverlays). App.js keeps only the
+// NON-component named exports it still calls directly.
+import { hasSeenTour } from './components/ux/GuidedTutorial';
 import { trackReportStarted, trackError } from './components/ux/analytics';
-import ReportSheet from './components/ux/ReportSheet';
-import ContextBar from './components/ux/ContextBar';
-import PinDetailSheet from './components/ux/PinDetailSheet';
-import OfflineToast from './components/ux/OfflineToast';
-import ListView from './components/ux/ListView';
 import { t } from './components/ux/strings';
-import LiveAnnouncer from './components/ux/LiveAnnouncer';
-import PinReadout from './components/PinReadout';
-import VersionFooter from './components/VersionFooter';
-import TapDebugOverlay from './components/_debug/TapDebugOverlay';
-import EmptyViewportOverlay from './components/ux/EmptyViewportOverlay';
-import ViewMoreCue from './components/ux/ViewMoreCue';
-import NotificationPrefs, { hasActedOnPin, markActedOnPin } from './components/ux/NotificationPrefs';
+import { hasActedOnPin, markActedOnPin } from './components/ux/NotificationPrefs';
 import IosKeyboardInset from './components/ux/IosKeyboardInset';
 import { registerOnce as registerServiceWorker } from './components/ux/swRegister';
 import InstallToast from './components/ux/InstallToast';
@@ -42,7 +34,7 @@ import qr from './images/qr.svg';
 
 // Material-UI
 import Paper from '@mui/material/Paper';
-import Grid from '@mui/material/Grid';
+// Grid moved to AppMapGrid.js (the only consumer of the 2-column layout).
 
 import CleanOld from './components/googlesheets/cleanold';
 import { appendRow as sheetsAppendRow, updatePinDadosByCoords, getSheet as sheetsGetSheet } from './components/googlesheets/sheetsClient';
@@ -57,6 +49,10 @@ import { getCookie, setCookie } from './components/cookies';
 import { runMain, installDebugHelpers } from './appMainBootstrap';
 import { coordsFromPin } from './domain/pinCoords';
 import { normalizeTelefoneInput } from './domain/telefoneInput';
+import { alimentoFieldVisibility } from './domain/alimentoFieldVisibility';
+import * as pinActions from './appPinActions';
+import AppMain from './AppMain';
+import AppOverlays from './AppOverlays';
 
 const EXPIRE_DAY = 7;
 const aes = new AesEncryption();
@@ -162,6 +158,21 @@ class App extends Component {
     this.telefoneFilterChange = this.telefoneFilterChange.bind(this);
     this.ultimoAnoFilterChange = this.ultimoAnoFilterChange.bind(this);
     this.handleChangeRedeSocial = this.handleChangeRedeSocial.bind(this);
+
+    this.verificarPonto = this.verificarPonto.bind(this);
+    this.contabilizarClicado = this.contabilizarClicado.bind(this);
+    this.clicouTelefone = this.clicouTelefone.bind(this);
+    this.entregarAlimento = this.entregarAlimento.bind(this);
+
+    // Collaborators passed into the extracted pin sheets-service layer
+    // (appPinActions.js) so that module stays a pure function of its inputs —
+    // same precedent as appMainBootstrap's bootstrapDeps. Built once; the thin
+    // wrapper methods below forward `this` + this object.
+    this._pinDeps = {
+      doc, envVariables, EXPIRE_DAY,
+      sheetsAppendRow, updatePinDadosByCoords, trackError,
+      getCookie, setCookie, coordsFromPin,
+    };
   }
 
   telefoneFilterChange(event) {
@@ -178,83 +189,31 @@ class App extends Component {
     });
   }
 
+  // Thin wrappers over the extracted pin sheets-service layer (appPinActions.js).
+  // Each forwards `this` + the shared deps; the bodies live in that module so
+  // App.js stays under the FF1 LOC budget. No behavior change.
   removerPonto(coords, categoriaPonto) {
-    const motivo = prompt("por qual motivo (em resumo) gostaria de deletar esse ponto?");
-    if (motivo === null) return;
-    const row = { Motivo: motivo, Ponto: JSON.stringify(coords), DateISO: new Date().toISOString(), CategoriaPonto: categoriaPonto };
-    sheetsAppendRow(4, row)
-      .then(() => alert("pedido de deletar enviado com sucesso"))
-      .catch(() => alert("ERRO, tente novamente"));
+    pinActions.removerPonto(this, this._pinDeps, coords, categoriaPonto);
   }
 
   verificarPonto(coords, categoriaPonto) {
-    const motivo = prompt("Insira o CNPJ da entidade, nome da entidade, nome do responsável, email, telefone e se é credenciada para receber recurso do governo");
-    if (motivo === null) return;
-    const row = { Motivo: motivo, Ponto: JSON.stringify(coords), DateISO: new Date().toISOString(), CategoriaPonto: categoriaPonto };
-    sheetsAppendRow(3, row)
-      .then(() => alert("pedido de cnpj enviado com sucesso"))
-      .catch(() => alert("ERRO, tente novamente"));
+    pinActions.verificarPonto(this, this._pinDeps, coords, categoriaPonto);
   }
 
   contabilizarClicado(coords) {
-    const coordsStr = JSON.stringify(coords);
-    updatePinDadosByCoords(envVariables, coordsStr, (dados) => {
-      dados.clicado = (dados.clicado || 0) + 1;
-    }).catch((e) => trackError('pin_update', e, { op: 'click_count' }));
+    pinActions.contabilizarClicado(this, this._pinDeps, coords);
   }
 
   clicouTelefone(coords) {
-    const coordsStr = JSON.stringify(coords);
-    updatePinDadosByCoords(envVariables, coordsStr, (dados) => {
-      dados.clickTel = (dados.clickTel || 0) + 1;
-    }).catch((e) => trackError('pin_update', e, { op: 'tel_click_count' }));
+    pinActions.clicouTelefone(this, this._pinDeps, coords);
   }
 
   entregarAlimento(coords) {
-    const coordsStr = JSON.stringify(coords);
-    updatePinDadosByCoords(envVariables, coordsStr, (dados) => {
-      dados.AlimentoEntregue = (dados.AlimentoEntregue || 0) + 1;
-    })
-      .then((row) => { if (row) window.location.reload(); })
-      .catch((e) => trackError('pin_update', e, { op: 'mark_delivered' }));
+    pinActions.entregarAlimento(this, this._pinDeps, coords);
   }
 
   avaliar(coords, avaliacao) {
-    const coordsStr = JSON.stringify(coords);
-    const coordsKey = Array.isArray(coords) ? coords.join(',') : String(coords);
-    const cookieName = 'pontosAvaliados';
-    const pontos = getCookie(cookieName) || '';
-
-    // Cookie gate runs FIRST so a repeat click on an already-rated point
-    // gives the user an honest "já avaliou" message instead of a silent
-    // no-op that looks like the stars are broken.
-    if (pontos.includes(coordsKey)) {
-      this.setState({ offlineToast: 'Você já avaliou este ponto. Obrigado!' });
-      return;
-    }
-
-    const rating = avaliacao == null ? 5 : avaliacao;
-    updatePinDadosByCoords(envVariables, coordsStr, (dados) => {
-      if (!dados.Avaliacao) dados.Avaliacao = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
-      dados.Avaliacao[rating] = (dados.Avaliacao[rating] || 0) + 1;
-    })
-      .then((row) => {
-        if (!row) {
-          this.setState({ offlineToast: 'Ponto não encontrado. Recarregue a página e tente novamente.' });
-          return;
-        }
-        const cookieExpireDate = new Date();
-        cookieExpireDate.setDate(cookieExpireDate.getDate() + EXPIRE_DAY);
-        setCookie(cookieName, pontos + coordsKey, { path: '/', expires: cookieExpireDate });
-        // No full page reload — reload() wiped in-progress tour state and made
-        // the interaction feel violent. Toast is enough; next natural fetch
-        // will pick up the refreshed count.
-        this.setState({ offlineToast: 'Avaliação registrada. Obrigado!' });
-      })
-      .catch((e) => {
-        console.error('[avaliar] failed:', e);
-        this.setState({ offlineToast: 'Não foi possível enviar sua avaliação. Tente de novo em alguns segundos.' });
-      });
+    pinActions.avaliar(this, this._pinDeps, coords, avaliacao);
   }
 
   setFiltro(event) {
@@ -271,9 +230,11 @@ class App extends Component {
       alimento: event.target.value
     });
 
-    let isPrecisandoBuscar = event.target.value === 'PrecisandoBuscar',
-      isEntregaAlimentoPronto = event.target.value === 'EntregaAlimentoPronto',
-      isDoador = event.target.value === 'Doador';
+    // Pure field-visibility branching lives in domain/alimentoFieldVisibility.js;
+    // the DOM side effects (ref show/hide + seeding diaSemana/horario/mes from the
+    // shown refs' current values) stay here as a thin applier. Same precedent as
+    // handleChangeTelefone delegating to domain/telefoneInput.js.
+    const vis = alimentoFieldVisibility(event.target.value);
 
     this.dropDownMenuSemanaPrecisandoBuscar.current.style.display = "none";
     this.dropDownMenuHorarioPrecisandoBuscar.current.style.display = "none";
@@ -282,7 +243,7 @@ class App extends Component {
     this.dropDownMenuHorarioEntregaAlimentoPronto.current.style.display = "none";
     this.dropDownMenuMesEntregaAlimentoPronto.current.style.display = "none";
 
-    if (isPrecisandoBuscar) {
+    if (vis.precisandoBuscar) {
       this.dropDownMenuSemanaPrecisandoBuscar.current.style.display = "";
       this.dropDownMenuHorarioPrecisandoBuscar.current.style.display = "";
       this.dropDownMenuMesPrecisandoBuscar.current.style.display = "";
@@ -293,7 +254,7 @@ class App extends Component {
       });
 
     } else
-      if (isEntregaAlimentoPronto) {
+      if (vis.entregaAlimentoPronto) {
         this.dropDownMenuSemanaEntregaAlimentoPronto.current.style.display = "";
         this.dropDownMenuHorarioEntregaAlimentoPronto.current.style.display = "";
         this.dropDownMenuMesEntregaAlimentoPronto.current.style.display = "";
@@ -314,7 +275,7 @@ class App extends Component {
 
       }
 
-    if (isPrecisandoBuscar || isEntregaAlimentoPronto || isDoador) {
+    if (vis.showRedeSocial) {
       this.redesocialRef.current.style.display = "";
       this.dropDownMenuRedeSocial.current.style.display = "";
     } else {
@@ -412,70 +373,10 @@ class App extends Component {
     }
 
     this.setState({ isLoading: true });
-    (async function main(self) {
-      await doc.useServiceAccountAuth({
-        client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-      });
-
-      await doc.loadInfo(); // Loads document properties and worksheets
-      const regiao = 0;
-      const sheet = doc.sheetsByIndex[regiao];
-      // const rows = await sheet.getRows();
-      // Total row count
-
-      // if(this.state.numero !== ''){
-      //   this.state.numero = ", nº"+this.state.numero;
-      // }
-
-      // const row = { 
-      //   Roaster: self.state.alimento, 
-      //   URL:self.state.numero, 
-      //   City: "", 
-      //   Coordinates:JSON.stringify([self.props.location[0], self.props.location[1]]), 
-      //   DateISO: new Date().toISOString(), 
-      //   Telefone: self.props.telefone, 
-      //   DiaSemana:self.props.diaSemana,
-      //   Horario:self.props.horario,
-      //   AlimentoEntregue:0,
-      // };
-
-      let dadosRow = {};
-      dadosRow.alimento = self.state.alimento;
-      dadosRow.numero = "";
-      dadosRow.endereco = "";
-      dadosRow.coords = latlng;
-      dadosRow.telefone = self.state.telefoneEncryptado;
-      dadosRow.diaSemana = self.state.diaSemana;
-      dadosRow.horario = self.state.horario;
-      dadosRow.mes = self.state.mes;
-      dadosRow.redesocial = self.state.redesocial;
-
-      let row = envVariables.criarRow(dadosRow);
-      // if(self.state.numero !== ''){
-      //   self.state.numero = ", nº"+self.state.numero;
-      // }
-      // let dadosJSON = {
-      //   "Roaster": self.state.alimento, 
-      //   "Coordinates":JSON.stringify(envVariables.lastMarked.latlng), 
-      //   "DateISO": new Date().toISOString(), 
-      //   "Telefone": self.state.telefoneEncryptado, 
-      //   "AlimentoEntregue":0,
-      //   "URL":self.state.numero
-      // };
-
-      // if(self.state.alimento==='EntregaAlimentoPronto' || self.state.alimento==='PrecisandoBuscar')
-      // {
-      //   dadosJSON.DiaSemana=self.state.diaSemana;
-      //   dadosJSON.Horario=self.state.horario;
-
-      // }
-      // row = { Dados: JSON.stringify(dadosJSON) };
-
-      const result = await sheet.addRow(row);
-      // console.log(result);
-      window.location.reload();
-    })(this);
+    // The async Sheets write lives in appPinActions.publishPinFromMap (deps-
+    // injected like appMainBootstrap). The synchronous coordinate resolution +
+    // bounds check above stays here because it reads DOM/env + component state.
+    pinActions.publishPinFromMap(this, this._pinDeps, latlng);
   }
 
   handleStartTour() {
@@ -571,98 +472,17 @@ class App extends Component {
     }
   }
 
-  // Shared low-level helper: locate the row by DateISO + Coordinates and
-  // apply a mutator function to the parsed Dados JSON, then save.
+  // Thin wrappers over the extracted pin sheets-service layer (appPinActions.js).
+  // The bodies — locate-row-and-mutate (persistPinPatch) and the timeout +
+  // idempotency-guarded low-level write (writePinToSheets) — live in that module
+  // so App.js stays under the FF1 LOC budget. No behavior change; same call sites
+  // (handleClaimPin / handleMarkAttended / handlePublishFromSheet / the M7 flush).
   async persistPinPatch(pin, mutate) {
-    const coords = coordsFromPin(pin);
-    if (!coords) return;
-
-    await doc.useServiceAccountAuth({
-      client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-    });
-    await doc.loadInfo();
-    const sheet = doc.sheetsByIndex[0];
-    if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
-
-    const coordStr = JSON.stringify(coords);
-    const target = envVariables.rows.find((r) => {
-      try {
-        const d = JSON.parse(r.Dados);
-        return d.Coordinates === coordStr && d.DateISO === pin.DateISO;
-      } catch (_e) { return false; }
-    });
-    if (!target) return;
-
-    const dados = JSON.parse(target.Dados);
-    mutate(dados);
-    target.Dados = JSON.stringify(dados);
-    await target.save();
+    return pinActions.persistPinPatch(this, this._pinDeps, pin, mutate);
   }
 
-  // Low-level write: no UI assumptions, throws on any failure. Used both by
-  // the interactive publish path and the offline queue flush (M7).
-  //
-  // M5 additions:
-  //   • 10s timeout on any single network step, surfaced as 'network_slow'
-  //     so the caller can distinguish from generic failures.
-  //   • idempotency guard: if the payload carries an idempotency_key and the
-  //     client-side idempotency cache already has it, skip the write.
-  async writePinToSheets({ coords, categories, detail, contact, idempotency_key }) {
-    if (!coords || !envVariables.dentroLimites(coords)) {
-      throw new Error('out_of_bounds');
-    }
-    if (idempotency_key && this._idempotencyCache && this._idempotencyCache.has(idempotency_key)) {
-      return;
-    }
-    const withTimeout = (p, ms) => new Promise((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error('network_slow')), ms);
-      p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
-    });
-    await withTimeout(doc.useServiceAccountAuth({
-      client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-    }), 10000);
-    await withTimeout(doc.loadInfo(), 10000);
-    const sheet = doc.sheetsByIndex[0];
-
-    // Primary category string used by existing filters; full M1 array goes
-    // into the JSON blob under "Categorias" so future milestones can read it
-    // without breaking the current filter UI.
-    const dadosRow = {
-      alimento: 'MoradorRua',
-      numero: '',
-      endereco: '',
-      coords,
-      telefone: '',
-      diaSemana: '',
-      horario: '',
-      mes: '',
-      redesocial: contact || '',
-    };
-    const row = envVariables.criarRow(dadosRow);
-    const dadosJSON = JSON.parse(row.Dados);
-    dadosJSON.Categorias = categories;
-    if (detail) dadosJSON.Detalhe = detail;
-    row.Dados = JSON.stringify(dadosJSON);
-
-    await withTimeout(sheet.addRow(row), 10000);
-    if (idempotency_key) {
-      if (!this._idempotencyCache) this._idempotencyCache = new Set();
-      this._idempotencyCache.add(idempotency_key);
-    }
-
-    // Stamp the document's last-modified timestamp onto the first row (cell B1).
-    // Lets clients cheaply check freshness without scanning all rows.
-    try {
-      await sheet.loadCells('A1:B1');
-      const stampCell = sheet.getCell(0, 1);
-      stampCell.value = new Date().toISOString();
-      await sheet.saveUpdatedCells();
-    } catch (e) {
-      // Do not fail the user's publish on a metadata write error.
-      console.warn('[lastModified] write failed:', e && e.message);
-    }
+  async writePinToSheets(payload) {
+    return pinActions.writePinToSheets(this, this._pinDeps, payload);
   }
 
   // M1 publish path — writes through writePinToSheets and handles the UX-side
@@ -784,184 +604,65 @@ class App extends Component {
 
 
 
-  // The 2-column map + controls row. Extracted from render() verbatim to keep
-  // render() within the fitness per-function LOC budget — same JSX/bindings.
-  renderMapGrid() {
-    return (
-      <Grid container spacing={2}>
-        <MainMap
-          dataMaps={this.state.dataMaps}
-          center={this.state.center}
-          tileMapOption={this.state.tileMapOption}
-          filtro={this.state.filtro}
-          telefoneFilterActive={this.state.telefoneFilterLocal}
-          ultimoAnoFilterActive={this.state.ultimoAnoFilterLocal}
-          onRemoverPonto={this.removerPonto}
-          onVerificarPonto={this.verificarPonto}
-          onEntregarAlimento={this.entregarAlimento}
-          onAvaliar={this.avaliar}
-          onContabilizarClicado={this.contabilizarClicado}
-          onClicouTelefone={this.clicouTelefone}
-          onPinDropped={this.handlePinDroppedOnMap}
-          pingCoords={this.state.pingCoords}
-          onReporterPinClick={this.handleReporterPinClick}
-          nowTick={this.state.nowTick}
-        />
-        <MainControls
-          isLoading={this.state.isLoading}
-          alimento={this.state.alimento}
-          telefoneEncryptado={this.state.telefoneEncryptado}
-          diaSemana={this.state.diaSemana}
-          horario={this.state.horario}
-          mes={this.state.mes}
-          center={this.state.center}
-          numero={this.state.numero}
-          redesocial={this.state.redesocial}
-          telefoneFilterLocal={this.state.telefoneFilterLocal}
-          ultimoAnoFilterLocal={this.state.ultimoAnoFilterLocal}
-          onFiltroChange={this.setFiltro}
-          onTipoAlimentoChange={this.setTipoAlimento}
-          onDiaSemanaChange={this.setDiaSemana}
-          onHorarioChange={this.setHorario}
-          onMesChange={this.setMes}
-          onTelefoneChange={this.handleChangeTelefone}
-          onNumeroChange={this.handleChangeNumero}
-          onRedeSocialChange={this.handleChangeRedeSocial}
-          onClickMap={this.handleClickMap}
-          onTelefoneFilterChange={this.telefoneFilterChange}
-          onUltimoAnoFilterChange={this.ultimoAnoFilterChange}
-          dropDownMenuSemanaEntregaAlimentoPronto={this.dropDownMenuSemanaEntregaAlimentoPronto}
-          dropDownMenuHorarioEntregaAlimentoPronto={this.dropDownMenuHorarioEntregaAlimentoPronto}
-          dropDownMenuSemanaPrecisandoBuscar={this.dropDownMenuSemanaPrecisandoBuscar}
-          dropDownMenuHorarioPrecisandoBuscar={this.dropDownMenuHorarioPrecisandoBuscar}
-          dropDownMenuFiltro={this.dropDownMenuFiltro}
-          redesocialRef={this.redesocialRef}
-          dropDownMenuRedeSocial={this.dropDownMenuRedeSocial}
-          dropDownMenuMesPrecisandoBuscar={this.dropDownMenuMesPrecisandoBuscar}
-          dropDownMenuMesEntregaAlimentoPronto={this.dropDownMenuMesEntregaAlimentoPronto}
-        />
-      </Grid>
-    );
-  }
-
-  // The in-flow page content (<main>): the ordered column of sections.
-  // Extracted from render() verbatim — same JSX, ordering, and comments.
-  renderMain() {
-    return (
-      <main id="mdf-main" className="mdf-main">
-        {/* TV-3 + TV-6 + TV-7 — pin readout pill (hoisted above ContextBar
-            on user request 2026-04-30): shows resolved coords of the
-            dropped marker and the Limpar reset button. Renders null
-            when no marker is placed, so it costs zero vertical space
-            until the user taps. Placing it ABOVE the ContextBar makes
-            the user's top-priority signal — "this is where Confirmar
-            ponto will publish" — the most prominent piece of UI as
-            soon as a tap registers. */}
-        {/* ─── Page layout (SRP, v5 § solid_quick.SRP + refactoring_patterns.move_function) ───
-            Each numbered section below is a sibling at this single level;
-            reorder by moving its block within this scope (no other file to
-            edit). The Grid owns ONE responsibility (the 2-column map+controls
-            row); every other section is independently positioned. */}
-
-        {/* 1. Tap-coord readout — only renders after a tap. */}
-        <PinReadout />
-
-        {/* 2. Screen-reader status region. */}
-        <LiveAnnouncer dataMaps={this.state.dataMaps} />
-
-        {/* 3. Map + controls — the only Grid in this layout. SRP:
-              owns the responsive 2-column map/controls row, nothing else. */}
-        {this.renderMapGrid()}
-
-        {/* 4. Scroll affordance — signals there's content below the map. */}
-        <ViewMoreCue />
-
-        {/* 5. Diagnostic overlay — opt-in via ?debug=tap. */}
-        <TapDebugOverlay />
-
-        {/* 6. Ambient context — point counts + Lista button. */}
-        <ContextBar
-          key={`ctx-${this.state.nowTick}`}
-          dataMaps={this.state.dataMaps}
-          userCoords={this.state.center}
-          onOpenList={() => this.setState({ listOpen: true })}
-        />
-
-        {/* 7. Legend / info surface (#MoreInfo). */}
-        <InfoPanel rowCount={this.state.rowCount} />
-
-        {/* 8. Version footer — last child of <main>. Renders nothing
-              until /version.json resolves. SRP: shows ONLY the build
-              identifier (no other footer concerns). */}
-        <VersionFooter />
-      </main>
-    );
-  }
-
-  // Floating overlays + sheets rendered as siblings of <main>: tour, FAB,
-  // report/pin sheets, toasts, list, empty-state, notifications. Extracted
-  // from render() verbatim. Wrapped in a fragment (no DOM node) so the
-  // overlays stay direct children of .App in the same render order.
-  renderOverlays() {
-    return (
-      <>
-        <GuidedTutorial
-          open={this.state.tourOpen}
-          onClose={this.handleCloseTour}
-        />
-
-        <button
-          type="button"
-          className="mdf-fab"
-          aria-label="Relatar ponto"
-          onClick={this.handleOpenReportSheet}
-        >
-          +
-        </button>
-
-        <ReportSheet
-          open={this.state.reportSheetOpen}
-          coords={this.state.reportSheetCoords}
-          onClose={this.handleCloseReportSheet}
-          onPublish={this.handlePublishFromSheet}
-        />
-
-        <PinDetailSheet
-          open={this.state.pinSheetOpen}
-          pin={this.state.selectedPin}
-          userCoords={this.state.center}
-          onClose={this.handleClosePinSheet}
-          onClaim={this.handleClaimPin}
-          onMarkAttended={this.handleMarkAttended}
-        />
-
-        <OfflineToast
-          message={this.state.offlineToast}
-          onDismiss={() => this.setState({ offlineToast: null })}
-        />
-
-        <ListView
-          open={this.state.listOpen}
-          dataMaps={this.state.dataMaps}
-          userCoords={this.state.center}
-          onSelectPin={(pin) => this.setState({ listOpen: false, selectedPin: pin, pinSheetOpen: true })}
-          onClose={() => this.setState({ listOpen: false })}
-        />
-
-        <EmptyViewportOverlay
-          visible={!this.state.isLoading && Array.isArray(this.state.dataMaps) && this.state.dataMaps.length === 0}
-          onStartReport={this.handleOpenReportSheet}
-        />
-
-        <NotificationPrefs
-          open={this.state.notifOpen}
-          onClose={() => this.setState({ notifOpen: false })}
-        />
-      </>
-    );
-  }
-
   render() {
+    // Compose the extracted presentational components (AppMain / AppOverlays,
+    // which itself renders AppMapGrid). They are pure of `this`: the state, the
+    // bound handlers, and the dropdown refs are passed in. The inline arrows
+    // below preserve the exact setState bodies that previously lived inline in
+    // renderMain()/renderOverlays() (onOpenList / onDismiss / onSelectPin /
+    // onClose / onClose-notif), so behavior is unchanged — only the render-tree
+    // location of the JSX moved out of this class.
+    const handlers = {
+      // pin map callbacks
+      removerPonto: this.removerPonto,
+      verificarPonto: this.verificarPonto,
+      entregarAlimento: this.entregarAlimento,
+      avaliar: this.avaliar,
+      contabilizarClicado: this.contabilizarClicado,
+      clicouTelefone: this.clicouTelefone,
+      handlePinDroppedOnMap: this.handlePinDroppedOnMap,
+      handleReporterPinClick: this.handleReporterPinClick,
+      // controls callbacks
+      setFiltro: this.setFiltro,
+      setTipoAlimento: this.setTipoAlimento,
+      setDiaSemana: this.setDiaSemana,
+      setHorario: this.setHorario,
+      setMes: this.setMes,
+      handleChangeTelefone: this.handleChangeTelefone,
+      handleChangeNumero: this.handleChangeNumero,
+      handleChangeRedeSocial: this.handleChangeRedeSocial,
+      handleClickMap: this.handleClickMap,
+      telefoneFilterChange: this.telefoneFilterChange,
+      ultimoAnoFilterChange: this.ultimoAnoFilterChange,
+      // <main> inline handler (was inline in renderMain)
+      onOpenList: () => this.setState({ listOpen: true }),
+      // overlay callbacks
+      handleCloseTour: this.handleCloseTour,
+      handleOpenReportSheet: this.handleOpenReportSheet,
+      handleCloseReportSheet: this.handleCloseReportSheet,
+      handlePublishFromSheet: this.handlePublishFromSheet,
+      handleClosePinSheet: this.handleClosePinSheet,
+      handleClaimPin: this.handleClaimPin,
+      handleMarkAttended: this.handleMarkAttended,
+      // overlay inline handlers (were inline in renderOverlays)
+      onDismissOfflineToast: () => this.setState({ offlineToast: null }),
+      onSelectPinFromList: (pin) => this.setState({ listOpen: false, selectedPin: pin, pinSheetOpen: true }),
+      onCloseList: () => this.setState({ listOpen: false }),
+      onCloseNotif: () => this.setState({ notifOpen: false }),
+    };
+
+    const refs = {
+      dropDownMenuSemanaEntregaAlimentoPronto: this.dropDownMenuSemanaEntregaAlimentoPronto,
+      dropDownMenuHorarioEntregaAlimentoPronto: this.dropDownMenuHorarioEntregaAlimentoPronto,
+      dropDownMenuSemanaPrecisandoBuscar: this.dropDownMenuSemanaPrecisandoBuscar,
+      dropDownMenuHorarioPrecisandoBuscar: this.dropDownMenuHorarioPrecisandoBuscar,
+      dropDownMenuFiltro: this.dropDownMenuFiltro,
+      redesocialRef: this.redesocialRef,
+      dropDownMenuRedeSocial: this.dropDownMenuRedeSocial,
+      dropDownMenuMesPrecisandoBuscar: this.dropDownMenuMesPrecisandoBuscar,
+      dropDownMenuMesEntregaAlimentoPronto: this.dropDownMenuMesEntregaAlimentoPronto,
+    };
+
     return (
       <div className="App">
         <IosKeyboardInset />
@@ -974,8 +675,8 @@ class App extends Component {
         <StepsHint
           activeStep={this.state.activeStep}
         />
-        {this.renderMain()}
-        {this.renderOverlays()}
+        <AppMain state={this.state} handlers={handlers} refs={refs} />
+        <AppOverlays state={this.state} handlers={handlers} />
       </div >
     );
   }
