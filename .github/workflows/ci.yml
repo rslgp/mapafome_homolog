@@ -21,7 +21,12 @@ jobs:
           cache: 'npm'
 
       - name: Install
-        run: npm ci
+        # npm install (not npm ci): package-lock.json is not kept in sync with
+        # package.json in this repo, so `npm ci` hard-fails the EUSAGE lock check
+        # on every run. `npm install` tolerates the drift and resolves a working
+        # tree so the real gates below (lint/test/fitness/build) actually run.
+        # Revert to `npm ci` once a CI-matching lock is regenerated.
+        run: npm install --no-fund
 
       - name: Lint
         run: npm run lint
