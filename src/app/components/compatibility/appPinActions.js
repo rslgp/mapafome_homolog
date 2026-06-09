@@ -9,14 +9,25 @@
 //
 // NO behavior change: each body below is the original method body, copied
 // line-for-line, with the only edit being that module-scope references
-// (sheetsAppendRow, updatePinDadosByCoords, trackError, envVariables, doc,
+// (sheetsAppendRow, updatePinDadosByCoords, trackError, envVariables,
 // getCookie, setCookie, EXPIRE_DAY, coordsFromPin) now resolve from `deps`
 // instead of App.js's module scope, and `this` → `self`. The App methods become
 // one-line wrappers that pass `this` + the shared deps.
 //
+// SOT note (P13): the three write paths (persistPinPatch / writePinToSheets /
+// publishPinFromMap) used to carry their OWN raw `doc.useServiceAccountAuth +
+// loadInfo` boilerplate via an injected `doc`. They now route through
+// sheetsClient.getSheet(0) — the same single auth/loadInfo entry point their
+// siblings contabilizarClicado/avaliar already use via updatePinDadosByCoords.
+// This kills the 3 raw auth sites and the injected `doc` dep, collapsing the
+// secret-key surface from 4 sites in this file to 0 (sheetsClient is the one
+// home). The 10s withTimeout on the interactive write in writePinToSheets is
+// preserved verbatim. [v5 single_source_of_truth; Agile-PPP P2 needless_repetition]
+//
 // deps shape:
-//   { doc, envVariables, EXPIRE_DAY, sheetsAppendRow, updatePinDadosByCoords,
+//   { envVariables, EXPIRE_DAY, sheetsAppendRow, updatePinDadosByCoords,
 //     trackError, getCookie, setCookie, coordsFromPin }
+import { getSheet } from './components/googlesheets/sheetsClient';
 
 export function removerPonto(self, deps, coords, categoriaPonto) {
     const { sheetsAppendRow } = deps;
@@ -106,16 +117,11 @@ export function avaliar(self, deps, coords, avaliacao) {
 // Shared low-level helper: locate the row by DateISO + Coordinates and
 // apply a mutator function to the parsed Dados JSON, then save.
 export async function persistPinPatch(self, deps, pin, mutate) {
-    const { doc, envVariables, coordsFromPin } = deps;
+    const { envVariables, coordsFromPin } = deps;
     const coords = coordsFromPin(pin);
     if (!coords) return;
 
-    await doc.useServiceAccountAuth({
-        client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-    });
-    await doc.loadInfo();
-    const sheet = doc.sheetsByIndex[0];
+    const sheet = await getSheet(0);
     if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
 
     const coordStr = JSON.stringify(coords);
@@ -142,7 +148,7 @@ export async function persistPinPatch(self, deps, pin, mutate) {
 //   • idempotency guard: if the payload carries an idempotency_key and the
 //     client-side idempotency cache already has it, skip the write.
 export async function writePinToSheets(self, deps, { coords, categories, detail, contact, idempotency_key }) {
-    const { doc, envVariables } = deps;
+    const { envVariables } = deps;
     if (!coords || !envVariables.dentroLimites(coords)) {
         throw new Error('out_of_bounds');
     }
@@ -153,12 +159,12 @@ export async function writePinToSheets(self, deps, { coords, categories, detail,
         const t = setTimeout(() => reject(new Error('network_slow')), ms);
         p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
     });
-    await withTimeout(doc.useServiceAccountAuth({
-        client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-    }), 10000);
-    await withTimeout(doc.loadInfo(), 10000);
-    const sheet = doc.sheetsByIndex[0];
+    // Auth + loadInfo now happen once inside sheetsClient.getSheet(0) (shared
+    // initPromise). The 10s 'network_slow' guard stays on the actual WRITE
+    // (sheet.addRow / saveUpdatedCells below) — that is the user-facing latency
+    // the M5 timeout was added for; getSheet is wrapped so a slow auth can't
+    // hang the publish either.
+    const sheet = await withTimeout(getSheet(0), 10000);
 
     // Primary category string used by existing filters; full M1 array goes
     // into the JSON blob under "Categorias" so future milestones can read it
@@ -206,15 +212,10 @@ export async function writePinToSheets(self, deps, { coords, categories, detail,
 // `(async function main(self){ ... })(this)`. `latlng` is passed in because it
 // was a closure variable computed by the synchronous prelude.
 export async function publishPinFromMap(self, deps, latlng) {
-    const { doc, envVariables } = deps;
-    await doc.useServiceAccountAuth({
-        client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-    });
-
-    await doc.loadInfo(); // Loads document properties and worksheets
-    const regiao = 0;
-    const sheet = doc.sheetsByIndex[regiao];
+    const { envVariables } = deps;
+    // Auth + loadInfo + worksheet handle now come from sheetsClient.getSheet(0)
+    // (the single auth/loadInfo entry point); regiao 0 preserved as sheet idx 0.
+    const sheet = await getSheet(0);
     // const rows = await sheet.getRows();
     // Total row count
 

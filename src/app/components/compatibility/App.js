@@ -169,7 +169,7 @@ class App extends Component {
     // same precedent as appMainBootstrap's bootstrapDeps. Built once; the thin
     // wrapper methods below forward `this` + this object.
     this._pinDeps = {
-      doc, envVariables, EXPIRE_DAY,
+      envVariables, EXPIRE_DAY,
       sheetsAppendRow, updatePinDadosByCoords, trackError,
       getCookie, setCookie, coordsFromPin,
     };
