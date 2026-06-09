@@ -34,6 +34,9 @@ React 19 web app — so this is a **partial-fit** routing problem. Deduped roste
 | `competitive-balance` | game balance.yaml / leaderboard | ❌ skip | No game mechanics, balance, or leaderboard exist |
 | `game-designer` | is-this-mechanic-fun advisor | ❌ skip | Not a game; no mechanics/interest-curve to evaluate |
 
+(`git-commit-specialist` is also detected and routed — it owns the versioning + Conventional-Commit
+message for every slice below, per `CLAUDE.md`.)
+
 ## Status legend
 ✅ Shipped · 🔜 Next · 🗓️ Later · ⛔ Out of scope (skipped agents)
 
@@ -55,49 +58,59 @@ All routed agents completed their slice; all four gates green.
 
 ---
 
-## Phase 2 — Next (prioritized)
+## Phase 2 — Shipped (this pass)
 
-Each item names the **owner agent(s)**, effort, risk, and the **acceptance criterion** (its
-definition of done under the verification gate).
+All six prioritized Phase-2 items implemented, each routed to its owner agent, gated, and
+committed atomically through `git-commit-specialist`. Gate green after every slice (lint 0,
+test, fitness, build 9/9) — and the live a11y audit (P5) now runs and is **0 violations** on the
+audited pages.
 
-### 🔜 P1 — i18n wiring: make the `es` locale actually render (highest value)
-- **Owner:** `softwareengineer` (refactor) + `uiux-defold` (string review)
-- **Problem:** `strings.js` has perfect pt-BR/es parity, but only `LocaleSwitch` imports it —
-  every component hardcodes pt-BR, so the `es` translations **never render**.
-- **Effort:** medium-large (multi-file) · **Risk:** medium (touches many components)
-- **Acceptance:** switching locale to `es` renders translated strings across the user-facing
-  components; pt-BR/es key parity maintained; no missing/orphaned keys; test + build green.
+| Item | Owner agent(s) | Commit | Change | Result |
+|---|---|---|---|---|
+| **P1** i18n: render the `es` locale | `softwareengineer` + `uiux-defold` | `feat(i18n)` | The i18n system was **dead code** (full pt-BR+es dict, but no component called `t()`). Added a `useLocale()` re-render hook (subscribes to `mdf-locale-change`) and wired ~18 dictionary keys across `ReportSheet`/`PinDetailSheet`/`ListView`/`EmptyViewportOverlay`/`ContextBar`/`header`/`App`. `uiux` review raised the LocaleSwitch to the 44px touch floor. | ✅ es renders live; pt-BR pass-through unchanged; new `test/i18n.test.js` proves it; suite 89→95 |
+| **P2** `no-img-element` warnings | `softwareengineer` (+ `uiux` n/a) | `chore(lint)` | The app is `output:'export'` + `images.unoptimized:true`, so `next/image` gives **zero** optimization and real layout risk; all 25 `<img>` exempt for the same reason (remote CDN, Leaflet popup, data-URI, deliberate static imgs). Disabled the rule once with a justification + REVISIT trigger rather than 24 drifting inline disables. | ✅ lint 25 warnings → **0**; zero DOM/visual change |
+| **P3** `App.js` decomposition | `softwareengineer` | `refactor(app)` | Extracted the byte-for-byte-duplicated `coordsFromPin` transform to `domain/pinCoords.js` (DRY retired + testable). Behavior-preserving (value + reference identity); risky `this`-bound candidates deliberately deferred. | ✅ `App.js` 990→983; +10 unit tests (suite 95→105) |
+| **P4** marker-ring non-text contrast (SC 1.4.11) | `coloring-ict6` | `fix(a11y)` | The amber "waiting" map-marker ring (`--mdf-urgency-waiting` `#D4A017`) was 2.07–2.38:1 (FAIL 3:1). Darkened to `#A07410` (≥3.66:1) holding the hue; the 2/3/5px thickness encoding (primary signal) left untouched. | ✅ ring meets 3:1 on all adjacencies; thickness encoding intact |
+| **P5** live a11y audit (`npm run a11y`) | `coloring-ict6` (+ `uiux`) | `fix(a11y)` | Served the build and ran axe-core (WCAG 2.2 AA). Home/map = **0**. Audit **surfaced 10 real color-contrast fails** on `/imprensa` (4) and `/parceiros` (6) — brand red `#D64545` at 4.38:1. Fixed page-scoped via `--mdf-brand-hover` (5.70:1); no global token mutated (home/map not regressed). | ✅ re-audit: `/`, `/imprensa`, `/parceiros` all **0 violations** |
+| **P6** Next metadata advisories | `softwareengineer` | `chore(metadata)` | Moved `themeColor` out of the root `metadata` export (Next 16 reads it only from `viewport`, where it already lived) and set `metadataBase`. One root-layout edit clears all 7 inheriting routes. | ✅ build emits **0** metadata advisories |
 
-### 🔜 P2 — `next/image` migration (clear the 24 `no-img-element` warnings)
-- **Owner:** `uiux-defold` (UX) + `softwareengineer` (impl)
-- **Effort:** medium · **Risk:** medium for data-URI / Leaflet-popup / static-export images
-- **Acceptance:** `no-img-element` warnings reduced to 0 where safe (each remaining one
-  documented with why); build green; no visual regression on the affected views.
+---
 
-### 🗓️ P3 — Further `App.js` decomposition
+## Phase 3 — Next (prioritized)
+
+What this pass deliberately left open, with the owner and acceptance criterion.
+
+### 🔜 P7 — reconcile the `errors.offline` i18n copy (small, blocks an i18n gap)
+- **Owner:** `uiux-defold` (copy/parity) + `softwareengineer` (wire)
+- **Problem:** P1 left `errors.offline` **unwired** because the live UI copy in `App.js`
+  (`"O ponto foi salvo e será enviado quando a conexão voltar"`) differs from the dictionary value
+  (`"Tente de novo quando a conexão voltar"`). Wiring it as-is would regress pt-BR.
+- **Acceptance:** a single agreed pt-BR string (and its es pair) in `strings.js`, wired via `t()`;
+  pt-BR copy intentionally chosen (not silently changed); test + build green.
+
+### 🔜 P8 — resolve the two dead dictionary keys
+- **Owner:** `softwareengineer` (+ `uiux` copy call)
+- **Problem:** `errors.server_slow` and `empty.no_pins_anywhere` exist in `strings.js` (both locales)
+  but have **no UI call site**. Either wire them to the real surface that should show them, or remove
+  them so the dictionary has no dead entries.
+- **Acceptance:** every dictionary key has a call site OR is removed; parity preserved; tests green.
+
+### 🗓️ P9 — a11y-audit the in-app overlays (list / report / info)
+- **Owner:** `uiux-defold` + `coloring-ict6`
+- **Note:** `npm run a11y` audits **URLs**; the list, report, and info surfaces are in-app overlays
+  on `/`, not separate routes, so axe-on-URL never reaches their open state. They were verified
+  statically (Phase 1 chip fixes) but not live.
+- **Acceptance:** each overlay audited in its open state (axe-devtools manual pass, or a test
+  harness/Playwright step that opens the overlay then runs axe) → 0 serious/critical violations.
+
+### 🗓️ P10 — further `App.js` extraction (continue P3)
 - **Owner:** `softwareengineer`
-- **Note:** under fitness limits now (989 LOC), but `componentDidMount`/`render` remain large;
-  extract cohesive feature modules to improve testability.
-- **Effort:** medium · **Risk:** medium (behavior-preserving extraction only)
-- **Acceptance:** extracted modules, behavior unchanged, fitness still green, test 89/89.
-
-### 🗓️ P4 — Marker-ring non-text contrast (WCAG 1.4.11)
-- **Owner:** `coloring-ict6` (+ UI/game-feel for the thickness encoding)
-- **Note:** `coloring-ict6` deferred this — urgency is encoded primarily by ring thickness
-  (2/3/5px), color as reinforcement; re-tuning the hue must not break that two-axis encoding.
-- **Effort:** small · **Risk:** low-medium · **Acceptance:** marker rings meet 3:1 non-text
-  contrast without weakening the thickness encoding; visual review.
-
-### 🗓️ P5 — Live a11y audit (`npm run a11y`)
-- **Owner:** `coloring-ict6` + `uiux-defold`
-- **Note:** the contrast fixes were verified statically; run axe against the served build.
-- **Effort:** small · **Acceptance:** `npm run a11y` reports 0 wcag2aa/wcag22aa violations on
-  the key pages (home/map, list, report, info).
-
-### 🗓️ P6 — Resolve Next metadata advisories
-- **Owner:** `softwareengineer`
-- **Note:** pre-existing build advisories (`metadataBase` not set; `themeColor` → `viewport`
-  export). **Effort:** trivial · **Acceptance:** build emits no metadata advisories.
+- **Note:** P3 took the one provably-safe extraction. The remaining surface (`handleChangeTelefone`
+  normalization vs `domain/Telefone.js`; `setTipoAlimento`; `writePinToSheets` row shaping) is
+  `this`-/side-effect-bound — extract only with a behavior-preserving plan + tests, not mechanically.
+  The new `domain/pinCoords.js` is also positioned for the 4 other files with near-identical
+  coord logic to adopt in a separate reviewed pass.
+- **Acceptance:** extracted modules, behavior unchanged, fitness green, suite still green.
 
 ### ⛔ Out of scope (skipped agents)
 `competitive-balance` and `game-designer` have no surface on this web app and are not part of
@@ -111,11 +124,11 @@ A change ships only when all of these pass (blocking):
 
 | Check | Command | Current |
 |---|---|---|
-| Unit tests | `npm run test` | ✅ 89/89 |
-| Build | `npm run build` | ✅ 9/9 pages |
+| Unit tests | `npm run test` | ✅ 105/105 |
+| Build | `npm run build` | ✅ 9/9 pages, 0 metadata advisories |
 | Fitness functions | `npm run fitness` | ✅ pass |
-| Lint | `npm run lint` | ✅ 0 errors (24 img warnings) |
-| Accessibility | `npm run a11y` (served build) | 🔜 run in P5 |
+| Lint | `npm run lint` | ✅ 0 errors, **0 warnings** |
+| Accessibility | `npm run a11y` (served build) | ✅ 0 violations on `/`, `/imprensa`, `/parceiros`, `/relatorios` (overlays pending P9) |
 
 ## Running the next phase
 
