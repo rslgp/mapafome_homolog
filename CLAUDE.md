@@ -16,3 +16,28 @@ After ANY set of code/file changes, ALWAYS end the response with a summary that 
 
 **Why:** review happens by scanning a what/why table, not prose — it makes the diff and its
 rationale legible at a glance before deciding to commit or discard.
+
+## Commits & releases: use the git-commit-specialist agent
+
+At the **end of every task** and at **every milestone** (a shippable, gates-green state — a
+feature done, a release/version bump, a roadmap phase complete), use the
+[`agent_git-commit-specialist`](.claude/agents/agent_git-commit-specialist.md) agent to handle
+the versioning and commits. Do not hand-write commit messages or stage a grab-bag working tree
+ad hoc — route it through that agent so it:
+
+- classifies the working tree and emits a **SPLIT_PLAN** when there is more than one logical
+  change (one atomic commit per concern, with the staging commands);
+- drafts **Conventional Commits** messages (`type(scope): subject`) whose body carries the
+  **WHY**, with correct footers (`BREAKING CHANGE:`, issue refs, the repo's `Co-Authored-By:`
+  trailer for AI-assisted work);
+- recommends the **semver bump type** for release commits (`chore(release): X.Y.Z`) — the human
+  maintainer sets the actual number;
+- self-checks each message against its acceptance checklist before returning.
+
+Run it before committing; apply its `COMMIT_MESSAGE` / `SPLIT_PLAN` verbatim. Code correctness
+and multi-file refactors stay with the software-engineer agent — the commit specialist commits
+the change, it does not author the code.
+
+**Why:** commit history is a first-class, reviewable artifact (read during a 2am `git bisect`);
+centralizing commit/versioning craft in one specialist keeps `git log` atomic, conventional,
+and honest about WHY instead of drifting per-session.
