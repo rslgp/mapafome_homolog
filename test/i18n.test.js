@@ -12,13 +12,19 @@
 // forever. setLocale() dispatches 'mdf-locale-change'; useLocale() listens.
 
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import React from 'react';
 import { render, act, cleanup } from '@testing-library/react';
 
-import { t, getLocale, setLocale, useLocale } from
+import { t, getLocale, setLocale, useLocale, localeKeys, SUPPORTED_LOCALES } from
   '../src/app/components/compatibility/components/ux/strings.js';
 import EmptyViewportOverlay from
   '../src/app/components/compatibility/components/ux/EmptyViewportOverlay.js';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const COMPAT = join(HERE, '..', 'src', 'app', 'components', 'compatibility');
 
 // pt-BR is the default; reset to it after each test so order is irrelevant and
 // no test leaks a locale into the next (module-level currentLocale is shared).
@@ -86,5 +92,77 @@ describe('useLocale() — re-render on locale change (the crux)', () => {
     expect(getByTestId('probe').textContent).toBe('Publicar ponto');
     act(() => setLocale('es'));
     expect(getByTestId('probe').textContent).toBe('Publicar punto');
+  });
+});
+
+// ── ROADMAP P7 — errors.offline is wired and says the truth ────────────────
+// The offline publish path (App.handlePublishFromSheet) enqueues to IndexedDB
+// (publishQueue.enqueue) and drains on the 'online' event (bindOnlineFlush), so
+// the user's point is SAVED and AUTO-RETRIED — not lost. The copy must reflect
+// "saved, will send when back online", NOT "try again later". This guards both
+// the resolved copy and that App.js renders it via t() (no hardcoded string).
+describe('errors.offline — P7: queue-and-retry copy, wired via t()', () => {
+  it('pt-BR resolves to the save-and-send copy (not "try again later")', () => {
+    expect(t('errors.offline')).toBe(
+      'Você está sem internet. O ponto foi salvo e será enviado quando a conexão voltar.',
+    );
+    expect(t('errors.offline')).toContain('foi salvo');
+    expect(t('errors.offline')).not.toContain('Tente de novo'); // the old, wrong copy
+  });
+
+  it('es resolves to the parallel save-and-send copy', () => {
+    act(() => setLocale('es'));
+    expect(t('errors.offline')).toBe(
+      'Estás sin conexión. El punto fue guardado y se enviará cuando vuelva la conexión.',
+    );
+    expect(t('errors.offline')).toContain('fue guardado');
+  });
+
+  it('App.js renders errors.offline via t(), with no hardcoded offline string', () => {
+    const app = readFileSync(join(COMPAT, 'App.js'), 'utf8');
+    expect(app).toContain("t('errors.offline')");
+    expect(app).toContain("t('errors.server_slow')");
+    // The previously-hardcoded offline copy must no longer live in the source.
+    expect(app).not.toContain('será enviado quando a conexão voltar.');
+  });
+});
+
+// ── ROADMAP P8 — no dead keys, parity holds ────────────────────────────────
+describe('dictionary — P8: parity + zero dead keys', () => {
+  it('pt-BR and es expose the exact same key set (no orphans either side)', () => {
+    const pt = localeKeys('pt-BR');
+    const es = localeKeys('es');
+    expect(es).toEqual(pt); // both are sorted; deep-equal proves 1:1 parity
+  });
+
+  it('the retired empty.no_pins_anywhere key is gone from both locales', () => {
+    expect(localeKeys('pt-BR')).not.toContain('empty.no_pins_anywhere');
+    expect(localeKeys('es')).not.toContain('empty.no_pins_anywhere');
+  });
+
+  it('every dictionary key is referenced in compat source (no dead keys)', () => {
+    // Recursively collect compat source EXCEPT the dictionary itself (strings.js
+    // — where every key appears as a DICT property and would self-satisfy) and
+    // test files. A key counts as live if it appears as a quoted string literal
+    // anywhere: most via t('key'), but a few are resolved dynamically (e.g.
+    // PinDetailSheet's STATUS_COPY maps a status to { key: 'pin.attended_today' }
+    // and later calls t(entry.key)). Matching the quoted literal covers both.
+    const files = [];
+    (function walk(dir) {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) { walk(full); continue; }
+        if (!/\.(js|jsx)$/.test(entry.name)) continue;
+        if (entry.name.endsWith('.test.js')) continue;
+        if (entry.name === 'strings.js') continue; // the dictionary itself
+        files.push(full);
+      }
+    })(COMPAT);
+    const corpus = files.map((f) => readFileSync(f, 'utf8')).join('\n');
+
+    const dead = localeKeys('pt-BR').filter(
+      (key) => !corpus.includes(`'${key}'`) && !corpus.includes(`"${key}"`),
+    );
+    expect(dead).toEqual([]);
   });
 });

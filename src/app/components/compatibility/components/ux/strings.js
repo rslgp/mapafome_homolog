@@ -22,7 +22,7 @@ const DICT = {
     'report.retry':      'Tentar de novo',
     'errors.at_least_one_category': 'Escolha pelo menos uma necessidade.',
     'errors.publish_failed':        'Não foi possível publicar. Verifique sua conexão e tente de novo.',
-    'errors.offline':               'Você está sem internet. Tente de novo quando a conexão voltar.',
+    'errors.offline':               'Você está sem internet. O ponto foi salvo e será enviado quando a conexão voltar.',
     'errors.server_slow':           'O servidor demorou a responder. Seu ponto pode ter sido salvo, espere 30s e recarregue antes de tentar de novo.',
     'pin.waiting':        'Aguardando',
     'pin.someone_going':  'Alguém a caminho',
@@ -32,7 +32,6 @@ const DICT = {
     'pin.mark_attended':  'Marcar como atendido',
     'pin.after_attended': 'Obrigado. O ponto foi arquivado.',
     'empty.no_pins_in_view':  'Ninguém foi mapeado nesta área ainda. Se você viu alguém precisando, toque em Relatar.',
-    'empty.no_pins_anywhere': 'Ainda não há pontos mapeados. Seja a primeira pessoa a mapear alguém.',
     'cta.report': 'Relatar',
     'cta.list':   'Lista',
     'cta.help':   'Como funciona',
@@ -46,7 +45,7 @@ const DICT = {
     'report.retry':      'Reintentar',
     'errors.at_least_one_category': 'Elige al menos una necesidad.',
     'errors.publish_failed':        'No se pudo publicar. Verifica tu conexión y vuelve a intentarlo.',
-    'errors.offline':               'Estás sin conexión. Intenta de nuevo cuando vuelvas a conectarte.',
+    'errors.offline':               'Estás sin conexión. El punto fue guardado y se enviará cuando vuelva la conexión.',
     'errors.server_slow':           'El servidor tardó en responder. Tu punto puede haberse guardado, espera 30s y recarga antes de reintentar.',
     'pin.waiting':        'Esperando',
     'pin.someone_going':  'Alguien en camino',
@@ -56,7 +55,6 @@ const DICT = {
     'pin.mark_attended':  'Marcar como atendido',
     'pin.after_attended': 'Gracias. El punto fue archivado.',
     'empty.no_pins_in_view':  'Nadie ha sido mapeado en esta área aún. Si viste a alguien en necesidad, toca Reportar.',
-    'empty.no_pins_anywhere': 'Aún no hay puntos mapeados. Sé la primera persona en mapear a alguien.',
     'cta.report': 'Reportar',
     'cta.list':   'Lista',
     'cta.help':   'Cómo funciona',
@@ -74,6 +72,14 @@ if (typeof window !== 'undefined') {
 
 export function getLocale() {
   return currentLocale;
+}
+
+// Sorted key list for a locale (defaults to the active one). Read-only view of
+// the dictionary intended for parity/dead-key tests; returns [] for an unknown
+// locale so callers don't have to guard.
+export function localeKeys(locale = currentLocale) {
+  const dict = DICT[locale];
+  return dict ? Object.keys(dict).sort() : [];
 }
 
 export function setLocale(locale) {

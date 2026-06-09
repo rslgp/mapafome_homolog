@@ -677,9 +677,7 @@ class App extends Component {
     const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
     if (offline) {
       await enqueuePublish(payload);
-      this.setState({
-        offlineToast: 'Você está sem internet. O ponto foi salvo e será enviado quando a conexão voltar.',
-      });
+      this.setState({ offlineToast: t('errors.offline') });
       return;
     }
 
@@ -689,12 +687,22 @@ class App extends Component {
       // Any network-shaped failure goes to the queue so the user does not
       // lose their input. Non-network failures re-throw for the sheet UI.
       const msg = (err && err.message) || '';
-      const looksLikeNetwork = /network|failed to fetch|offline|timeout/i.test(msg);
+      // A slow server (writePinToSheets surfaces 'network_slow' on its 10s
+      // timeout) is distinct from a hard offline/network failure: the write
+      // may have actually landed server-side. We still queue (the idempotency
+      // key dedupes a later flush), but the user-facing copy must say
+      // "may have been saved, wait and reload" — errors.server_slow — not the
+      // generic offline message, which would misdescribe what happened.
+      const isSlow = /network_slow|timeout/i.test(msg);
+      const looksLikeNetwork = /network|failed to fetch|offline/i.test(msg);
+      if (isSlow) {
+        await enqueuePublish(payload);
+        this.setState({ offlineToast: t('errors.server_slow') });
+        return;
+      }
       if (looksLikeNetwork) {
         await enqueuePublish(payload);
-        this.setState({
-          offlineToast: 'Conexão instável. Ponto salvo localmente e enviaremos em breve.',
-        });
+        this.setState({ offlineToast: t('errors.offline') });
         return;
       }
       throw err;
