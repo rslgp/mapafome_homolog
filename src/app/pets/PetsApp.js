@@ -87,6 +87,14 @@ export default function PetsApp() {
           Juntos a gente reúne mais bichinhos com suas famílias.{' '}
           <span aria-hidden="true">🐾</span>
         </p>
+        <Link
+          href="/assinar"
+          className="mdf-pets__support"
+          aria-label="Apoie o projeto — assinatura mensal via Pix, cartão ou boleto"
+          title="Apoie o projeto — assinatura mensal via Pix, cartão ou boleto"
+        >
+          <span aria-hidden="true">💛</span> Apoie o projeto
+        </Link>
       </header>
 
       {loadError && (

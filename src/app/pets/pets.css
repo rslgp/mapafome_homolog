@@ -80,6 +80,36 @@
   max-width: 60ch;
 }
 
+/* "Apoie o projeto" — a quiet, outlined support CTA in the header. Kept
+ * secondary so it never competes with the primary "Relatar um pet" FAB:
+ * outlined pill, ink text (not the brand fill), full touch target. */
+.mdf-pets__support {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target);
+  margin-top: var(--mdf-space-3);
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  color: var(--mdf-ink);
+  text-decoration: none;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  transition: border-color var(--mdf-dur-fast) var(--mdf-ease-out),
+              background var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-pets__support:hover {
+  border-color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+}
+
+.mdf-pets__support:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
 /* ── Primary "Relatar um pet" action — bottom FAB ─────────── */
 
 .mdf-pets__report-btn {
