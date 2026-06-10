@@ -14,9 +14,10 @@
 !.yarn/releases
 !.yarn/versions
 
-# LLM brain (local knowledge base)
+# LLM brain (local knowledge base) + multi-agent ideation boards — local only, not history
 /LLM_BRAIN
 /LLM_BRAIN*
+/brainstorm/
 
 # testing
 /coverage
