@@ -16,8 +16,14 @@
 .mdf-tour__spotlight {
   position: fixed;
   border-radius: var(--mdf-radius-card);
+  /* SC 1.4.11: the ring is the only thing separating the highlighted target
+     from the 55%-black scrim. --mdf-brand #D64545 directly on that scrim
+     (composite ≈ #7F7F7D) is ~1.09:1 — invisible. A bright --mdf-surface-0
+     inner hairline (≈5:1 on the scrim) carries the edge; the brand ring sits
+     just outside it. */
   box-shadow: 0 0 0 9999px rgba(26, 26, 26, 0.55),
-              0 0 0 3px var(--mdf-brand);
+              0 0 0 2px var(--mdf-surface-0),
+              0 0 0 5px var(--mdf-brand);
   background: transparent;
   transition: top var(--mdf-dur-base) var(--mdf-ease-out),
               left var(--mdf-dur-base) var(--mdf-ease-out),

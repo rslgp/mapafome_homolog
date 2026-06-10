@@ -126,7 +126,11 @@
   min-height: var(--mdf-touch-target);
   padding: var(--mdf-space-2) var(--mdf-space-3);
   background: var(--mdf-surface-1);
-  border: 1px solid var(--mdf-border);
+  /* SC 1.4.11: the resting outline is this chip's only boundary on the white
+     sheet. --mdf-border #E5E2DC is 1.29:1 (a hairline, invisible as a control
+     edge); --mdf-ink-subtle #8A8A8A clears the 3:1 UI floor. Same idiom as
+     .mdf-btn--secondary / .mdf-context-bar__list. */
+  border: 1px solid var(--mdf-ink-subtle);
   border-radius: var(--mdf-radius-card);
   font-family: inherit;
   font-size: var(--mdf-fs-small);
@@ -194,7 +198,9 @@
   width: 100%;
   min-height: var(--mdf-touch-target);
   padding: var(--mdf-space-2) var(--mdf-space-3);
-  border: 1px solid var(--mdf-border);
+  /* SC 1.4.11: text-input boundary must be perceptible. --mdf-border 1.29:1
+     is a hairline; --mdf-ink-subtle #8A8A8A clears 3:1. */
+  border: 1px solid var(--mdf-ink-subtle);
   border-radius: var(--mdf-radius-card);
   font-family: inherit;
   font-size: var(--mdf-fs-body);
@@ -235,7 +241,12 @@
 
 .mdf-sheet__inline-error {
   font-size: var(--mdf-fs-small);
-  color: var(--mdf-urgency-stale);
+  /* WCAG 2.2 SC 1.4.3: this validation message is body text and must clear
+     4.5:1. --mdf-urgency-stale #B84A3D on --mdf-risk-high-bg #FBCDC6 was only
+     3.59:1 — a FAIL — and pulled a reserved urgency-ring hue into the report
+     flow. --mdf-risk-high-ink #7A2A1F is the dark companion purpose-built for
+     this exact background (6.72:1). */
+  color: var(--mdf-risk-high-ink);
   background: var(--mdf-risk-high-bg);
   border-radius: var(--mdf-radius-chip);
   padding: var(--mdf-space-2) var(--mdf-space-3);

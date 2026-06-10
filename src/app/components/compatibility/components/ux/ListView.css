@@ -133,7 +133,9 @@
 }
 
 .mdf-list__sep {
-  color: var(--mdf-ink-subtle);
+  /* SC 1.4.3: ink-subtle #8A8A8A is 3.45:1 (white) / 3.00:1 (hover surface-2)
+     — fails as a text glyph. ink-muted #5C5C5C clears it (6.69 / 5.82). */
+  color: var(--mdf-ink-muted);
 }
 
 .mdf-list__status {
@@ -162,7 +164,10 @@
 }
 
 .mdf-list__chev {
-  color: var(--mdf-ink-subtle);
+  /* SC 1.4.3: the "›" affordance at 20px is not large text (needs ≥24px), so
+     it must clear 4.5:1. ink-subtle #8A8A8A (3.45:1 / 3.00:1 on hover) fails;
+     ink-muted #5C5C5C clears it (6.69 / 5.82). */
+  color: var(--mdf-ink-muted);
   font-size: var(--mdf-fs-h2);
   line-height: 1;
 }

@@ -39,10 +39,14 @@
   animation: mdf-viewmore-bounce 1.8s var(--mdf-ease-out) 6;
 }
 
+/* SC 1.4.11: the chevron is the scroll affordance. --mdf-ink-muted #5C5C5C at
+   opacity 0.5 composites to ~2.22:1 — below the 3:1 non-text floor for ~half
+   the cycle. Floor the trough at 0.8 (≈4.1:1, matching the reduced-motion
+   branch) so the glyph never drops below 3:1; peak stays at 1.0. */
 @keyframes mdf-viewmore-bounce {
-  0%   { transform: translateY(0); opacity: 0.5; }
+  0%   { transform: translateY(0); opacity: 0.8; }
   50%  { transform: translateY(6px); opacity: 1; }
-  100% { transform: translateY(0); opacity: 0.5; }
+  100% { transform: translateY(0); opacity: 0.8; }
 }
 
 @media (prefers-reduced-motion: reduce) {
