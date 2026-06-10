@@ -37,11 +37,16 @@ jobs:
       - name: Fitness functions (file-LOC, function-LOC, TODO ceiling)
         run: npm run fitness
 
-      - name: Dependency audit (block on HIGH+)
-        run: npm audit --audit-level=high
-        # `continue-on-error: false` keeps this gating; relax temporarily by
-        # bumping --audit-level if a known transitive CVE has no fix yet, and
-        # file an entry in bugfixes.yaml documenting why.
+      - name: Dependency audit (block on CRITICAL)
+        # Temporarily gated at CRITICAL (was HIGH). The current HIGH findings are
+        # all transitive and have no non-breaking fix: axios (<=1.x CVEs) is
+        # pulled by google-spreadsheet@3.x (the Sheets client) — `npm audit fix
+        # --force` wants google-spreadsheet@3.3.0, outside our stated range and a
+        # breaking change to the sheetsClient/appPinActions auth path; `flatted`
+        # is dev-tooling only. Tracked as debt: bump back to --audit-level=high
+        # once google-spreadsheet is upgraded (its own PR; ties into the P14
+        # secret-architecture work). CRITICAL still blocks.
+        run: npm audit --audit-level=critical
 
       - name: Build
         run: npm run build
