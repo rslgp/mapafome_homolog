@@ -30,6 +30,17 @@ jobs:
           chrome-version: '149.0.7827.55'
           install-chromedriver: true
 
+      # @axe-core/cli (via selenium) launches the SYSTEM chrome at
+      # /opt/google/chrome/chrome and ignores CHROME_PATH — so the matched CfT
+      # ChromeDriver 149 was driving the runner's preinstalled chrome 148
+      # ("ChromeDriver only supports Chrome 149; current browser is 148").
+      # Repoint the system path at the matched CfT 149 binary so the launched
+      # browser and the driver are the same build.
+      - name: Point the launched chrome at the matched CfT build
+        run: |
+          sudo ln -sf "${{ steps.setup-chrome.outputs.chrome-path }}" /opt/google/chrome/chrome
+          /opt/google/chrome/chrome --version
+
       # npm install (not npm ci): the lockfile is not kept in sync here, so
       # `npm ci` hard-fails the EUSAGE lock check. Revert once a CI-matching
       # lock is regenerated.
