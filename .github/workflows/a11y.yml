@@ -16,6 +16,17 @@ jobs:
           node-version: 20
           cache: npm
 
+      # Pin a MATCHING Chrome + ChromeDriver pair. The runner's preinstalled
+      # Chrome drifts and @axe-core/cli auto-fetches the LATEST chromedriver,
+      # so the two mismatch ("session not created: ChromeDriver only supports
+      # Chrome N; current browser is N-1"). setup-chrome installs a synced pair
+      # we then point axe at via --chromedriver-path + CHROME_PATH.
+      - uses: browser-actions/setup-chrome@v1
+        id: setup-chrome
+        with:
+          chrome-version: stable
+          install-chromedriver: true
+
       # npm install (not npm ci): the lockfile is not kept in sync here, so
       # `npm ci` hard-fails the EUSAGE lock check. Revert once a CI-matching
       # lock is regenerated.
@@ -36,9 +47,14 @@ jobs:
           npx --yes wait-on http://localhost:3000 --timeout 60000
 
       # Fail on serious + critical violations. WCAG 2.2 AA tags per M0 exit criteria.
+      # Use the synced ChromeDriver from setup-chrome; CHROME_PATH points it at
+      # the matching Chrome so it never falls back to the drifting system one.
       - name: Run axe-core
+        env:
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
         run: |
           npx --yes @axe-core/cli http://localhost:3000 \
             --exit \
+            --chromedriver-path "${{ steps.setup-chrome.outputs.chromedriver-path }}" \
             --tags wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa \
             --show-errors
