@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import './petPalette.css';
 import './pets.css';
+import Header from '../components/compatibility/components/header';
 import PetMap from './PetMap';
 import PetReportSheet from './PetReportSheet';
 import PetDetailSheet from './PetDetailSheet';
@@ -78,8 +79,14 @@ export default function PetsApp() {
   }, []);
 
   return (
-    <main className="mdf-pets">
-      <Link href="/" className="mdf-pets__back">← Mapa</Link>
+    <>
+      {/* Same shared brand header as the hunger map: carries the "Doar" (Pix)
+          donate button + PWA install. No onStartReport/onStartTour passed, so the
+          hunger-only Relatar / Como-funciona actions stay off; /pets keeps its
+          own "Relatar um pet" CTA below. */}
+      <Header />
+      <main className="mdf-pets">
+        <Link href="/" className="mdf-pets__back">← Mapa</Link>
       <header className="mdf-pets__header">
         <h1 className="mdf-pets__title">Mapa Pet — achados e perdidos</h1>
         <p className="mdf-pets__lead">
@@ -121,6 +128,7 @@ export default function PetsApp() {
         pet={selectedPet}
         onClose={handleCloseDetail}
       />
-    </main>
+      </main>
+    </>
   );
 }
