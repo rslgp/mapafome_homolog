@@ -8,7 +8,10 @@
   padding: var(--mdf-space-3) var(--mdf-space-2);
   /* Keep clear of the iOS home indicator. */
   padding-bottom: calc(var(--mdf-space-3) + env(safe-area-inset-bottom, 0px));
-  color: var(--mdf-ink-subtle, #888);
+  /* WCAG 2.2 AA (SC 1.4.3): ink-subtle (#8A8A8A) on the page surface
+     (--mdf-surface-0 #FAFAF7) is only 3.30:1 — fails for this 11px label.
+     ink-muted (#5C5C5C) clears it at 6.40:1 and stays a quiet footer tone. */
+  color: var(--mdf-ink-muted, #5C5C5C);
 }
 
 .mdf-version-footer__label {
