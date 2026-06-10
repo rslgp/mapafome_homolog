@@ -114,7 +114,7 @@ class NameForm extends Component {
     render() {
       return (
         this.state.isLoading ?
-        <div><CircularProgress /></div>
+        <div><CircularProgress aria-label="Enviando endereço" /></div>
         :
         <form onSubmit={this.handleSubmit}>
           <label>

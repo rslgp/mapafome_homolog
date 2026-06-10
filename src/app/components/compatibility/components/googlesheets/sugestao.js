@@ -62,7 +62,7 @@ class Sugestoes extends Component {
     render() {
       return (
         this.state.isLoading ?
-        <div><CircularProgress /></div>
+        <div><CircularProgress aria-label="Enviando sugestão" /></div>
         :
         <form onSubmit={this.handleSubmit}>
           <label>

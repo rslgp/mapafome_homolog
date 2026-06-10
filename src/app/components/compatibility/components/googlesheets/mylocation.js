@@ -184,7 +184,7 @@ class NameForm extends Component {
     render() {
       return (
           this.state.isLoading ?
-          <div><CircularProgress /></div>
+          <div><CircularProgress aria-label="Salvando seu ponto" /></div>
           : 
             <button className="hidden SubmitButton marcar-local" onClick={this.handleSubmit}>
               Atual
