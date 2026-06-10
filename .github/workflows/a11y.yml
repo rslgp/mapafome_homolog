@@ -67,8 +67,13 @@ jobs:
         env:
           CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
         run: |
+          # --chrome-options no-sandbox/disable-dev-shm-usage: the CfT chrome
+          # binary, launched as root on the runner, exits immediately without a
+          # sandbox ("Chrome instance exited") — unlike the distro google-chrome
+          # it replaced. These flags are standard for headless Chrome in CI.
           npx --yes @axe-core/cli http://localhost:3000 \
             --exit \
             --chromedriver-path "${{ steps.setup-chrome.outputs.chromedriver-path }}" \
+            --chrome-options="no-sandbox,disable-dev-shm-usage" \
             --tags wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa \
             --show-errors
