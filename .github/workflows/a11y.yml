@@ -16,15 +16,18 @@ jobs:
           node-version: 20
           cache: npm
 
-      # Pin a MATCHING Chrome + ChromeDriver pair. The runner's preinstalled
-      # Chrome drifts and @axe-core/cli auto-fetches the LATEST chromedriver,
-      # so the two mismatch ("session not created: ChromeDriver only supports
-      # Chrome N; current browser is N-1"). setup-chrome installs a synced pair
-      # we then point axe at via --chromedriver-path + CHROME_PATH.
+      # Pin a MATCHING Chrome + ChromeDriver pair from Chrome for Testing (CfT).
+      # At `chrome-version: stable`, setup-chrome pulls Chrome from dl.google.com
+      # (latest patch, e.g. .102) but ChromeDriver from CfT (which lags, e.g.
+      # .55) — two SOURCES that desync whenever google-chrome's patch runs ahead
+      # of CfT, giving "session not created: ChromeDriver only supports Chrome
+      # 149" even though both are major 149. Pinning an explicit CfT version
+      # makes BOTH the chrome binary and the driver come from the SAME CfT
+      # snapshot, so they can never mismatch. Bump when CfT retires this build.
       - uses: browser-actions/setup-chrome@v1
         id: setup-chrome
         with:
-          chrome-version: stable
+          chrome-version: '149.0.7827.55'
           install-chromedriver: true
 
       # npm install (not npm ci): the lockfile is not kept in sync here, so
