@@ -1,6 +1,6 @@
 {
   "name": "mapafome-asaas-backend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Server-side Asaas recurring-payment backend for MAPA FOME. Deploys as serverless functions (Vercel/Netlify). The Asaas secret key lives here as a server env var, never in the static site bundle.",
   "type": "commonjs",
