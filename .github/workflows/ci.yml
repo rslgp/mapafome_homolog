@@ -55,3 +55,12 @@ jobs:
           NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL: stub@example.com
           NEXT_PUBLIC_GOOGLE_PRIVATE_KEY: stub
           NEXT_PUBLIC_CRYPTSEED: stub
+
+      - name: Render smoke (serve out/, assert every route is HTTP 200 + real render)
+        # CLAUDE.md mandates smoke200 as a permanent gate step, but CI was
+        # skipping it. `next build` exiting 0 proves the BUILD ran, not that
+        # every page actually serves and renders — a route can return 200 with
+        # an error shell (or a blank body) while lint/test/fitness/build all stay
+        # green. smoke200 serves the static out/ and asserts each discovered
+        # route returns 200 + a real render (not the Next error shell).
+        run: npm run smoke200
