@@ -87,6 +87,59 @@
   flex-wrap: wrap;
 }
 
+/* "Esse ano" filter: label + origin caption (2024 RS floods) + (i) disclosure. */
+.parte.filtro-ano {
+  align-items: flex-start;
+}
+
+.filtro-ano__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filtro-ano__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-1);
+}
+
+.filtro-ano__caption {
+  font-size: var(--mdf-fs-caption);
+  line-height: 1.2;
+  color: var(--mdf-ink-muted); /* #5C5C5C — AA on the white tool panel */
+}
+
+.filtro-ano__info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;  /* WCAG 2.2 SC 2.5.8 — min 24×24 target */
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--mdf-radius-pill);
+  background: transparent;
+  color: var(--mdf-accent-water); /* #2E6E9E — AA on white */
+  font-size: var(--mdf-fs-small);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.filtro-ano__info:hover {
+  color: var(--mdf-brand-hover);
+}
+
+.filtro-ano__note {
+  margin: var(--mdf-space-1) 0 0 0;
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border-radius: var(--mdf-radius-card);
+  font-size: var(--mdf-fs-caption);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+}
+
 .list-cat {
   width: 100%;
   list-style: none;
@@ -529,6 +582,16 @@ a.tgme_widget_share_btn {
 .leaflet-container .leaflet-control-attribution {
   opacity: 0.75;
   font-size: 11px;
+}
+
+/* WCAG 2.2 AA (SC 1.4.3): Leaflet's default attribution link (#0078A8) over its
+   translucent-white panel only reaches ~4.7:1 statically, and the 0.75 control
+   opacity above blends text+panel toward the map tile, dropping it to ~3.0:1 —
+   a fail on every tile. --mdf-ink (#1A1A1A) clears AA even through that opacity
+   blend (>=7.4:1 worst-case tile); the panel's own translucency keeps the credit
+   de-emphasized without an under-contrast hue. */
+.leaflet-container .leaflet-control-attribution > a {
+  color: var(--mdf-ink);
 }
 
 .leaflet-touch .leaflet-control-layers-toggle {

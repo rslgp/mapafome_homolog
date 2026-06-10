@@ -15,17 +15,19 @@
 
 import { resolveRegion } from './regionResolver';
 import { csvEsc } from './csv';
+import { NEED_CATEGORIES } from './needCategories';
 
 const K_ANON = 5;
 
+// Legend for the public aggregate. The reporter-need labels come from the
+// needCategories SOT (so disaster needs added there — remédios/animais/carregar
+// — are documented in the report too). The two legacy food SUBTYPES below are
+// report-only buckets derived from legacy Roaster rows; they have no reporter
+// chip, so they are spelled out here.
 const CATEGORY_LABELS = {
-  comida: 'Comida (genérico)',
+  ...Object.fromEntries(NEED_CATEGORIES.map((c) => [c.id, c.reportLabel])),
   alimento_pronto: 'Alimento pronto (refeição imediata)',
   cesta_basica: 'Cesta básica (suprimento semanal)',
-  agua: 'Água',
-  roupa: 'Roupa',
-  higiene: 'Higiene',
-  abrigo: 'Abrigo',
 };
 
 // Legacy Roaster values mapped to reporter-pin semantics. Donor/initiative

@@ -412,9 +412,11 @@ const CoffeeMap = ({
 
                 {renderMarkerGroups()}
 
-                {/* M2 — reporter pins with urgency-age encoding */}
+                {/* M2 — reporter pins with urgency-age encoding. `filtro` lets a
+                    need filter (need:agua, need:abrigo, …) narrow this layer. */}
                 <ReporterMarkers
                     dataMaps={dataMapsProp}
+                    filtro={filtro}
                     onPinClick={onReporterPinClick}
                     nowTick={nowTick}
                 />

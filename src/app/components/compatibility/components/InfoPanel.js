@@ -412,7 +412,7 @@ const InfoPanel = ({ rowCount }) => {
             <li>mapear iniciativas que recebem recursos para fazer doação</li>
             <li>mostrar no mapa onde e quando tem alimento sendo distribuído</li>
             <li>mostrar lugares comerciais ou residenciais que precisam de voluntários para buscar alimentos não consumidos</li>
-            <li>mapear e ajudar vítimas de desastres naturais, como nas enchentes do Sul em 2024, quando atingidos entraram em contato e pediram o filtro <em>Esse ano</em></li>
+            <li>mapear e ajudar vítimas de desastres naturais, como na enchente do Rio Grande do Sul em 2024, quando atingidos entraram em contato e pediram o filtro <em>Esse ano</em>. Hoje também dá para filtrar o mapa por necessidades além de comida — água, abrigo, roupa, higiene, remédios, animais e carregar o celular — porque uma catástrofe desabriga pessoas independente de renda</li>
           </ul>
           <p className="ip-uses__note">
             É possível traçar uma rota ao destino: clique em <em>Ir para o destino</em> para abrir no Google Maps.

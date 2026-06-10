@@ -4,17 +4,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import './ReportSheet.css';
 import { track } from './analytics';
 import { t, useLocale } from './strings';
+import { NEED_CATEGORIES } from './needCategories';
 
 // M1 — three-step reporter flow (design_brief § three_step_promise).
 // Step 1 (map click) happens outside; this sheet hosts Steps 2 and 3.
-
-const CATEGORIES = [
-  { id: 'comida',  label: 'Comida',  icon: '🍞' },
-  { id: 'agua',    label: 'Água',    icon: '💧' },
-  { id: 'roupa',   label: 'Roupa',   icon: '👕' },
-  { id: 'higiene', label: 'Higiene', icon: '🧼' },
-  { id: 'abrigo',  label: 'Abrigo',  icon: '🏠' },
-];
+//
+// Categories come from the needCategories SOT so the disaster needs added for
+// the 2024 RS floods (remédios/animais/carregar) show up here automatically.
+const CATEGORIES = NEED_CATEGORIES;
 
 export default function ReportSheet({ open, coords, onClose, onPublish }) {
   const [selected, setSelected] = useState(new Set());

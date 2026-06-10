@@ -8,18 +8,15 @@ import { track } from './analytics';
 import { t, useLocale } from './strings';
 import envVariables from '../variaveisAmbiente';
 import { coordsFromPin } from '../../domain/pinCoords';
+import { NEED_CATEGORY_MAP } from './needCategories';
 
 // M3 — donor response surface: status, distance, time-since, soft claim,
 // mark-as-attended. Reporter contact is only ever exposed as a tap-to-act
 // button (never as displayable PII text) per § dignity_constraints.
 
-const CATEGORY_LABELS = {
-  comida:  { label: 'Comida',  icon: '🍞' },
-  agua:    { label: 'Água',    icon: '💧' },
-  roupa:   { label: 'Roupa',   icon: '👕' },
-  higiene: { label: 'Higiene', icon: '🧼' },
-  abrigo:  { label: 'Abrigo',  icon: '🏠' },
-};
+// id → { label, icon } from the needCategories SOT (covers the disaster needs:
+// remédios/animais/carregar). Unknown ids fall back to a generic dot below.
+const CATEGORY_LABELS = NEED_CATEGORY_MAP;
 
 const CLAIM_TTL_MS = 30 * 60 * 1000; // 30 minutes — soft claim window.
 const WALK_KMH = 5;                  // Rough walking speed for ETA math.

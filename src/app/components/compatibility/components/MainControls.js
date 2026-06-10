@@ -11,6 +11,7 @@ import { MARKER_PLACED_EVENT, MARKER_CLEARED_EVENT } from './mapComponents';
 // import green from '../images/green.svg';
 // import red from '../images/red.svg';
 import { bean as coffeeBean, hub, green, red } from './image/svgHandler';
+import { NEED_CATEGORIES } from './ux/needCategories';
 
 const MainControls = ({
   isLoading,
@@ -52,6 +53,8 @@ const MainControls = ({
   // GPS-fallback path in App.js handleClickMap remains usable for users
   // who never tap the map.
   const [hasMarker, setHasMarker] = useState(false);
+  // Disclosure for the "Esse ano" filter's origin note (2024 RS floods).
+  const [anoInfoOpen, setAnoInfoOpen] = useState(false);
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
     const onPlaced = () => setHasMarker(true);
@@ -68,12 +71,12 @@ const MainControls = ({
     <Grid size={{ xs: 12, sm: 4 }} >
       <Paper id="CoffeeTable" style={{ height: '100%' }} className="toolPanel2">
         <div className='relativePosition'>
-          {isLoading ? <div>Carregando... <CircularProgress /></div> : <div />}
+          {isLoading ? <div>Carregando... <CircularProgress aria-label="Carregando" /></div> : <div />}
 
           <article className='filtro-tel'>
             <article className='parte filtro'>
-              <span>filtro atual:</span>
-              <select ref={dropDownMenuFiltro} id="filtro" onChange={onFiltroChange}>
+              <label htmlFor="filtro">filtro atual:</label>
+              <select ref={dropDownMenuFiltro} id="filtro" aria-label="Filtrar por categoria" onChange={onFiltroChange}>
                 <option value="Todos">Todos</option>
                 <option value="Doadores">Doadores</option>
                 <option value="CestaBasica">Cesta básica</option>
@@ -82,6 +85,16 @@ const MainControls = ({
                 <option value="RedeSocial">Rede Social</option>
                 <option value="Verificados">possui CNPJ</option>
                 <option value="Nenhum">Nenhum</option>
+                {/* Disaster / non-food needs — driven by the needCategories SOT
+                    so água/abrigo/roupa/higiene/remédios/animais/carregar stay
+                    in sync with the report flow. `need:*` shows everyone asking
+                    for help (only people in need, no donor/initiative pins). */}
+                <optgroup label="Necessidades no desastre">
+                  <option value="need:*">Todas as necessidades</option>
+                  {NEED_CATEGORIES.map((c) => (
+                    <option key={c.id} value={`need:${c.id}`}>{c.icon} {c.label}</option>
+                  ))}
+                </optgroup>
               </select>
             </article>
 
@@ -94,14 +107,37 @@ const MainControls = ({
               <span>Telefone</span>
             </article>
 
-            <article className='parte'>
+            <article className='parte filtro-ano'>
               <Checkbox
                 checked={ultimoAnoFilterLocal}
                 onChange={onUltimoAnoFilterChange}
                 slotProps={{ input: { 'aria-label': 'Filtrar pelo último ano' } }}
               />
-              <span>Esse ano</span>
+              <span className='filtro-ano__text'>
+                <span className='filtro-ano__title'>
+                  Esse ano
+                  <button
+                    type='button'
+                    className='filtro-ano__info'
+                    aria-expanded={anoInfoOpen}
+                    aria-controls='filtro-ano-note'
+                    aria-label='Por que existe o filtro Esse ano?'
+                    onClick={() => setAnoInfoOpen((o) => !o)}
+                  >
+                    ⓘ
+                  </button>
+                </span>
+                <span className='filtro-ano__caption'>pedido na enchente do RS · 2024</span>
+              </span>
             </article>
+
+            {anoInfoOpen && (
+              <p id='filtro-ano-note' className='filtro-ano__note'>
+                Filtro pedido por pessoas atingidas pela enchente do Rio Grande do Sul,
+                em 2024, para ver só os pedidos recentes do desastre. Mostra apenas as
+                marcações deste ano.
+              </p>
+            )}
           </article>
 
           {/* RADIO BUTTON */}
@@ -258,7 +294,7 @@ const MainControls = ({
                 mes={mes}
               />
               {false ? (
-                <CircularProgress />
+                <CircularProgress aria-label="Confirmando ponto" />
               ) : (
                 <button
                   type="button"
