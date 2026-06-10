@@ -144,7 +144,12 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
       setPhase('success');
       // 'Publicado ✓' for ~1.2s, then close.
       setTimeout(() => onClose?.('published'), 1200);
-    } catch (_err) {
+    } catch (err) {
+      // Surface the real reason (missing config, out-of-bounds coords, network)
+      // to the console — the inline copy stays calm/generic, but a swallowed
+      // error makes a failed publish undiagnosable. Mirrors the hunger flow's
+      // need to distinguish causes (see PETS_MILESTONES: richer error + offline queue).
+      console.error('[pets] publish failed:', err && err.message ? err.message : err);
       setPhase('error');
       setErrorMsg(ERRORS.publish_failed);
     }
