@@ -231,7 +231,7 @@ const InfoPanel = ({ rowCount }) => {
           >
             <ImagemInstagram />
           </a>
-          <a
+          {/* <a
             className="mdf-btn mdf-btn--primary mdf-btn--lg"
             target="_blank"
             rel="noreferrer"
@@ -246,7 +246,7 @@ const InfoPanel = ({ rowCount }) => {
               />
             </span>
             <span>Doar agora</span>
-          </a>
+          </a> */}
         </div>
         {installHint && (
           <p className="ip-apps__hint" role="status">{installHint}</p>
