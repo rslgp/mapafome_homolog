@@ -3,6 +3,7 @@ import {
   RAILS,
   ASSINAR_I18N_KEYS,
   backendUrl,
+  backendUrls,
   createSubscription,
   fetchSubscriptionPayment,
   validateBeforeSubmit,
@@ -296,31 +297,79 @@ describe('createSubscription (injected fetch — no network)', () => {
   });
 });
 
-describe('backendUrl', () => {
+describe('backendUrl / backendUrls (internal-first resolution)', () => {
   const saved = process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL;
+  const savedInternal = process.env.NEXT_PUBLIC_ASAAS_INTERNAL_URL;
   afterEach(() => {
     if (saved === undefined) delete process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL;
     else process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = saved;
+    if (savedInternal === undefined) delete process.env.NEXT_PUBLIC_ASAAS_INTERNAL_URL;
+    else process.env.NEXT_PUBLIC_ASAAS_INTERNAL_URL = savedInternal;
   });
 
-  it('returns the configured URL with any trailing slash stripped', () => {
+  it('returns the configured public URL with any trailing slash stripped', () => {
     process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = 'https://api.test/';
     expect(backendUrl()).toBe('https://api.test');
     process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = 'https://api.test';
     expect(backendUrl()).toBe('https://api.test');
   });
 
-  it('throws a pt-BR config error when the env var is unset', () => {
+  it('throws a pt-BR config error when the public env var is unset', () => {
     delete process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL;
     expect(() => backendUrl()).toThrow(/NEXT_PUBLIC_ASAAS_BACKEND_URL/);
   });
 
-  it('createSubscription falls back to backendUrl() when no baseUrl is given', async () => {
+  it('backendUrls() lists the internal candidate (localhost:3005) first, then the public URL', () => {
+    delete process.env.NEXT_PUBLIC_ASAAS_INTERNAL_URL; // use the http://localhost:3005 default
+    process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = 'https://env.test';
+    expect(backendUrls()).toEqual(['http://localhost:3005', 'https://env.test']);
+  });
+
+  it('createSubscription tries the INTERNAL backend (localhost:3005) first when no baseUrl', async () => {
+    // Internal-first: with no opts.baseUrl and no NEXT_PUBLIC_ASAAS_INTERNAL_URL
+    // override, the first attempt targets the default internal http://localhost:3005.
+    delete process.env.NEXT_PUBLIC_ASAAS_INTERNAL_URL;
+    process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = 'https://env.test/';
+    let capturedUrl = null;
+    const fetchImpl = async (u) => { capturedUrl = u; return { ok: true, json: async () => ({ ok: true, subscriptionId: 's' }) }; };
+    await createSubscription({ rail: 'pix', value: 25, name: 'M', email: 'm@e.com', cpfCnpj: '52998224725' }, { fetchImpl });
+    expect(capturedUrl).toBe('http://localhost:3005/api/asaas/create-subscription');
+  });
+
+  it('falls back to the public URL when the internal hop is unreachable (network throw only)', async () => {
+    // Internal localhost throws (not running) -> fall through to the public URL and
+    // succeed there. Only a fetch THROW triggers fallback, never an HTTP error.
+    delete process.env.NEXT_PUBLIC_ASAAS_INTERNAL_URL;
+    process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = 'https://env.test';
+    const seen = [];
+    const fetchImpl = async (u) => {
+      seen.push(u);
+      if (u.startsWith('http://localhost:3005')) throw new TypeError('Failed to fetch');
+      return { ok: true, json: async () => ({ ok: true, subscriptionId: 's2' }) };
+    };
+    const res = await createSubscription({ rail: 'pix', value: 25, name: 'M', email: 'm@e.com', cpfCnpj: '52998224725' }, { fetchImpl });
+    expect(seen[0]).toBe('http://localhost:3005/api/asaas/create-subscription');
+    expect(seen[1]).toBe('https://env.test/api/asaas/create-subscription');
+    expect(res.ok).toBe(true);
+    expect(res.subscriptionId).toBe('s2');
+  });
+
+  it('NEXT_PUBLIC_ASAAS_INTERNAL_URL="" disables the internal hop (resolves straight to the public URL)', async () => {
+    process.env.NEXT_PUBLIC_ASAAS_INTERNAL_URL = '';
     process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = 'https://env.test/';
     let capturedUrl = null;
     const fetchImpl = async (u) => { capturedUrl = u; return { ok: true, json: async () => ({ ok: true, subscriptionId: 's' }) }; };
     await createSubscription({ rail: 'pix', value: 25, name: 'M', email: 'm@e.com', cpfCnpj: '52998224725' }, { fetchImpl });
     expect(capturedUrl).toBe('https://env.test/api/asaas/create-subscription');
+  });
+
+  it('an explicit opts.baseUrl pins the target and skips the internal-first fallback', async () => {
+    delete process.env.NEXT_PUBLIC_ASAAS_INTERNAL_URL;
+    process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL = 'https://env.test';
+    let capturedUrl = null;
+    const fetchImpl = async (u) => { capturedUrl = u; return { ok: true, json: async () => ({ ok: true, subscriptionId: 's' }) }; };
+    await createSubscription({ rail: 'pix', value: 25, name: 'M', email: 'm@e.com', cpfCnpj: '52998224725' }, { fetchImpl, baseUrl: 'https://pinned.test' });
+    expect(capturedUrl).toBe('https://pinned.test/api/asaas/create-subscription');
   });
 });
 

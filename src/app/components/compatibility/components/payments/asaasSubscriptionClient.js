@@ -66,6 +66,25 @@ export const ASSINAR_I18N_KEYS = [
   'assinar.pay.pending',
 ];
 
+// Backend resolution is INTERNAL-FIRST: on a local/kiosk device the Asaas backend
+// runs on localhost, so we try it FIRST (fast, no public round-trip) and fall back
+// to the public deploy URL only when localhost is unreachable (e.g. the page is
+// opened from a remote browser). See backendUrls() + requestWithFallback().
+//
+//   internal (tried first): NEXT_PUBLIC_ASAAS_INTERNAL_URL, default http://localhost:3005
+//                           (set it to empty to disable the internal hop)
+//   public   (fallback):    NEXT_PUBLIC_ASAAS_BACKEND_URL   e.g. https://055190.xyz:3006
+//
+// Modern browsers treat http://localhost as a secure context, so an https page may
+// still call it without a mixed-content block.
+const DEFAULT_INTERNAL_BACKEND_URL = 'http://localhost:3005';
+
+function trimUrl(u) {
+  return String(u || '').replace(/\/$/, '');
+}
+
+// The PUBLIC backend URL (the documented, ship-safe config). Kept as the named
+// export callers may rely on; it is the fallback candidate in backendUrls().
 export function backendUrl() {
   const url = process.env.NEXT_PUBLIC_ASAAS_BACKEND_URL;
   if (!url) {
@@ -73,7 +92,85 @@ export function backendUrl() {
       'NEXT_PUBLIC_ASAAS_BACKEND_URL não está configurado — defina a URL do backend de pagamentos.'
     );
   }
-  return url.replace(/\/$/, '');
+  return trimUrl(url);
+}
+
+// Ordered base URLs to try for a request: internal (localhost) FIRST, then the
+// public URL. Empties dropped, duplicates collapsed. Pass opts.baseUrl to a
+// request helper to bypass this entirely (tests/SSR).
+export function backendUrls() {
+  const internalRaw = process.env.NEXT_PUBLIC_ASAAS_INTERNAL_URL;
+  const internal = trimUrl(internalRaw === undefined ? DEFAULT_INTERNAL_BACKEND_URL : internalRaw);
+  let publicUrl = '';
+  try {
+    publicUrl = backendUrl();
+  } catch {
+    publicUrl = ''; // public not configured — the internal candidate may still carry it
+  }
+  return [...new Set([internal, publicUrl].filter(Boolean))];
+}
+
+// --- Connection diagnostics --------------------------------------------------
+// A failed fetch to the backend surfaces as an opaque "TypeError: Failed to
+// fetch" with zero detail — which URL? backend down? CORS? wrong origin? mixed
+// content? These helpers annotate the attempt + failure in the browser console
+// so a connection error is actually debuggable from DevTools. On by default in
+// the browser/dev; silence with NEXT_PUBLIC_ASAAS_DEBUG=off. Quiet under the
+// test runner (NODE_ENV=test) so the unreachable-backend characterization tests
+// don't spam output. Logs URLs only — never the request body (it carries PII:
+// name/email/CPF).
+const ASAAS_DEBUG =
+  process.env.NEXT_PUBLIC_ASAAS_DEBUG !== 'off' && process.env.NODE_ENV !== 'test';
+
+function asaasLog(...args) {
+  if (ASAAS_DEBUG && typeof console !== 'undefined') console.log('[asaas]', ...args);
+}
+
+function logConnectionFailure(url, err) {
+  if (!ASAAS_DEBUG || typeof console === 'undefined') return;
+  console.error(
+    `[asaas] connection FAILED → ${url}\n` +
+      `  ${err?.name || 'Error'}: ${err?.message ?? err}\n` +
+      '  likely cause: backend not running on that host/port, a wrong ' +
+      'NEXT_PUBLIC_ASAAS_BACKEND_URL, the page origin not in the backend ' +
+      'ALLOWED_ORIGINS (CORS preflight blocked), or http→https mixed content.'
+  );
+}
+
+// Run a request against the ordered backend candidates (internal first, then
+// public), falling to the next ONLY when the fetch itself fails (network / CORS /
+// mixed-content) — never when the backend returns an HTTP error, which is a real
+// answer. Returns { res, url } for the first Response obtained. Throws an Error
+// with .connectionFailed=true when EVERY candidate is unreachable, or a plain
+// Error for misconfig / no global fetch (same throw contract as before).
+async function requestWithFallback(method, path, init, opts, logLabel = '') {
+  const fetchImpl = opts.fetchImpl || (typeof fetch !== 'undefined' ? fetch : null);
+  if (!fetchImpl) throw new Error('fetch indisponível neste ambiente');
+
+  // A pinned baseUrl (tests/SSR) bypasses the internal-first fallback entirely.
+  const bases = opts.baseUrl ? [trimUrl(opts.baseUrl)] : backendUrls();
+  if (!bases.length) {
+    throw new Error(
+      'NEXT_PUBLIC_ASAAS_BACKEND_URL não está configurado — defina a URL do backend de pagamentos.'
+    );
+  }
+
+  let lastErr = null;
+  for (let i = 0; i < bases.length; i++) {
+    const url = `${bases[i]}${path}`;
+    asaasLog(method, url, logLabel);
+    try {
+      return { res: await fetchImpl(url, init), url };
+    } catch (err) {
+      lastErr = err;
+      logConnectionFailure(url, err);
+      if (i < bases.length - 1) asaasLog(`backend unreachable — trying fallback ${bases[i + 1]}`);
+    }
+  }
+  const e = new Error('all_backends_unreachable');
+  e.connectionFailed = true;
+  e.cause = lastErr;
+  throw e;
 }
 
 /**
@@ -84,20 +181,25 @@ export function backendUrl() {
  * @returns {Promise<{ok:boolean, subscriptionId?, status?, invoiceUrl?, messages?}>}
  */
 export async function createSubscription(input, opts = {}) {
-  const fetchImpl = opts.fetchImpl || (typeof fetch !== 'undefined' ? fetch : null);
-  if (!fetchImpl) throw new Error('fetch indisponível neste ambiente');
-  const base = opts.baseUrl || backendUrl();
-
   let res;
   try {
-    res = await fetchImpl(`${base}/api/asaas/create-subscription`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    });
-  } catch {
-    // Network/CORS failure — backend unreachable.
-    return { ok: false, messages: ['Não foi possível falar com o servidor de pagamentos. Tente novamente.'] };
+    ({ res } = await requestWithFallback(
+      'POST',
+      '/api/asaas/create-subscription',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      },
+      opts,
+      `(rail=${input?.rail ?? '?'})`
+    ));
+  } catch (err) {
+    if (err?.connectionFailed) {
+      // Every backend (internal localhost + public) was unreachable.
+      return { ok: false, messages: ['Não foi possível falar com o servidor de pagamentos. Tente novamente.'] };
+    }
+    throw err; // misconfig / fetch indisponível — unchanged throw contract
   }
 
   let data = null;
@@ -138,16 +240,20 @@ export async function createSubscription(input, opts = {}) {
  *                  invoice yet (caller may retry).
  */
 export async function fetchSubscriptionPayment(subscriptionId, opts = {}) {
-  const fetchImpl = opts.fetchImpl || (typeof fetch !== 'undefined' ? fetch : null);
-  if (!fetchImpl) throw new Error('fetch indisponível neste ambiente');
-  const base = opts.baseUrl || backendUrl();
-  const url = `${base}/api/asaas/subscription-payment?subscriptionId=${encodeURIComponent(subscriptionId)}`;
-
+  const path = `/api/asaas/subscription-payment?subscriptionId=${encodeURIComponent(subscriptionId)}`;
   let res;
   try {
-    res = await fetchImpl(url, { method: 'GET', headers: { Accept: 'application/json' } });
-  } catch {
-    return { ok: false, messages: ['Não foi possível buscar os dados de pagamento. Tente novamente.'] };
+    ({ res } = await requestWithFallback(
+      'GET',
+      path,
+      { method: 'GET', headers: { Accept: 'application/json' } },
+      opts
+    ));
+  } catch (err) {
+    if (err?.connectionFailed) {
+      return { ok: false, messages: ['Não foi possível buscar os dados de pagamento. Tente novamente.'] };
+    }
+    throw err;
   }
 
   let data = null;
