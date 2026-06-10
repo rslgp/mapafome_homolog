@@ -1,0 +1,285 @@
+/*
+ * pets.css — page chrome + pet-specific styles for the /pets (lost-pets) page.
+ *
+ * SCOPE (intentionally narrow):
+ *   • Page chrome: .mdf-pets wrapper, back-link, header, and the primary
+ *     "Relatar um pet" action (a thumb-reachable bottom FAB that clears the
+ *     home-indicator safe area).
+ *   • Pet status chips (.pet-chip…) for the single-select status radio-group in
+ *     PetReportSheet, tinted from the --pet-* palette tokens.
+ *   • Detail-sheet status badge accents (.pet-detail__status…).
+ *   • Pet marker hygiene (.pet-marker…) so the Leaflet divIcon shows no default
+ *     marker background; the SVG itself carries the status stroke inline.
+ *
+ * It REUSES the proven sheet machinery instead of redefining it:
+ *   - mdf-sheet* / mdf-chip*  from ux/ReportSheet.css   (imported by PetReportSheet)
+ *   - mdf-pin-sheet*          from ux/PinDetailSheet.css (imported by PetDetailSheet)
+ * Surfaces/ink come from --mdf-* tokens; status accents from --pet-* tokens.
+ * No raw hex is introduced here, and the hunger sheets are NOT restyled.
+ *
+ * Calm-tone / dignity governor: a lost pet is anxious-but-hopeful. Spacing is
+ * comfortable, line-height generous, focus rings always visible, and no pure
+ * #FFFFFF surface (page sits on --mdf-surface-0, the eye-comfort near-white).
+ */
+
+/* ── Page wrapper ─────────────────────────────────────────── */
+
+.mdf-pets {
+  position: relative;
+  min-height: 100dvh;
+  background: var(--mdf-surface-0);
+  color: var(--mdf-ink);
+}
+
+.mdf-pets__chrome {
+  max-width: 860px;
+  margin: 0 auto;
+  /* Bottom padding clears the fixed report FAB + the safe area below it. */
+  padding: var(--mdf-space-6) var(--mdf-space-6)
+    calc(var(--mdf-space-16) + var(--mdf-fab-size) + env(safe-area-inset-bottom, 0px));
+}
+
+.mdf-pets__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mdf-touch-target);
+  padding: var(--mdf-space-2) 0;
+  color: var(--mdf-ink-muted);
+  text-decoration: none;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+}
+
+.mdf-pets__back:hover {
+  color: var(--mdf-ink);
+}
+
+.mdf-pets__back:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-radius: var(--mdf-radius-chip);
+}
+
+.mdf-pets__header {
+  margin: var(--mdf-space-3) 0 var(--mdf-space-4) 0;
+}
+
+.mdf-pets__title {
+  font-size: var(--mdf-fs-h1);
+  line-height: var(--mdf-lh-heading);
+  font-weight: 700;
+  margin: 0 0 var(--mdf-space-2) 0;
+  color: var(--mdf-ink);
+}
+
+.mdf-pets__lead {
+  font-size: var(--mdf-fs-body);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+  margin: 0;
+  max-width: 60ch;
+}
+
+/* ── Primary "Relatar um pet" action — bottom FAB ─────────── */
+
+.mdf-pets__report-btn {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--mdf-space-5) + env(safe-area-inset-bottom, 0px));
+  z-index: 1200;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-fab-size);
+  min-width: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-6);
+  background: var(--mdf-brand-hover);
+  color: var(--mdf-brand-ink);
+  border: none;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--mdf-elev-3);
+  transition: transform var(--mdf-dur-fast) var(--mdf-ease-out),
+              background var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-pets__report-btn:active {
+  transform: translateX(-50%) scale(0.97);
+}
+
+.mdf-pets__report-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring), var(--mdf-elev-3);
+}
+
+.mdf-pets__report-btn-icon {
+  font-size: var(--mdf-fs-h2);
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mdf-pets__report-btn {
+    transition: none;
+  }
+}
+
+/* ── Pet status chips — single-select radio-group ─────────── *
+ * Built on .mdf-chip geometry but stacks a label row above a hint line and
+ * paints the selected state from the per-status --pet-* palette tokens.       */
+
+.pet-fieldset {
+  border: none;
+  margin: 0 0 var(--mdf-space-4) 0;
+  padding: 0;
+}
+
+.pet-legend {
+  padding: 0;
+  margin: 0 0 var(--mdf-space-2) 0;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  color: var(--mdf-ink);
+}
+
+.pet-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--mdf-space-1);
+  min-height: var(--mdf-touch-target);
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  color: var(--mdf-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-chip__top {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+}
+
+.pet-chip__hint {
+  font-size: var(--mdf-fs-caption);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+}
+
+.pet-chip__check {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.pet-chip:hover:not(:disabled) {
+  border-color: var(--mdf-ink-subtle);
+}
+
+.pet-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.pet-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Selected state — per status: tint surface + status ink + status border.
+ * The hint line and check inherit the status ink so the whole chip reads as
+ * one colored object (still AA: ink-on-tint ratios are proven in petPalette). */
+.pet-chip--perdido.pet-chip--on {
+  background: var(--pet-perdido-tint);
+  border-color: var(--pet-perdido);
+  color: var(--pet-perdido-ink);
+}
+.pet-chip--encontrado.pet-chip--on {
+  background: var(--pet-encontrado-tint);
+  border-color: var(--pet-encontrado);
+  color: var(--pet-encontrado-ink);
+}
+.pet-chip--avistado.pet-chip--on {
+  background: var(--pet-avistado-tint);
+  border-color: var(--pet-avistado);
+  color: var(--pet-avistado-ink);
+}
+
+.pet-chip--on .pet-chip__hint,
+.pet-chip--on .pet-chip__check {
+  color: inherit;
+}
+
+/* ── Optional inputs — keep a comfortable rhythm in the expanders ── */
+
+.pet-input {
+  margin-bottom: var(--mdf-space-2);
+}
+
+.pet-input:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-color: transparent;
+}
+
+/* ── Detail-sheet status badge accents ────────────────────── *
+ * Overrides the inherited .mdf-pin-sheet__status colors with the --pet-*
+ * solid accent + its proven on-accent text, so the badge matches the marker. */
+
+.pet-detail__status {
+  gap: var(--mdf-space-2);
+}
+
+.pet-detail__status::before {
+  /* The base badge draws a currentColor dot; the icon glyph already carries the
+   * status meaning here, so suppress the dot to avoid a doubled marker. */
+  display: none;
+}
+
+.pet-detail__status-icon {
+  font-size: var(--mdf-fs-body);
+  line-height: 1;
+}
+
+.pet-detail__status--perdido {
+  background: var(--pet-perdido);
+  color: var(--pet-perdido-on);
+}
+.pet-detail__status--encontrado {
+  background: var(--pet-encontrado);
+  color: var(--pet-encontrado-on);
+}
+.pet-detail__status--avistado {
+  background: var(--pet-avistado);
+  color: var(--pet-avistado-on);
+}
+
+.pet-detail__descline {
+  font-size: var(--mdf-fs-small);
+  color: var(--mdf-ink-muted);
+  margin: 0 0 var(--mdf-space-3) 0;
+}
+
+/* ── Pet map marker hygiene ───────────────────────────────── *
+ * The divIcon className is `pet-marker pet-marker--<status>`; the SVG inside
+ * carries the status stroke via inline `stroke="var(--pet-<status>)"`. CSS here
+ * just strips Leaflet's default marker chrome so no white/box bleeds behind. */
+
+.pet-marker {
+  background: transparent;
+  border: none;
+}
+
+.pet-marker svg {
+  display: block;
+}

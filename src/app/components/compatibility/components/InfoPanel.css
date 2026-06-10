@@ -258,6 +258,9 @@
 
 /* Icon / media sizing inside buttons */
 .mdf-btn__ico { width: 22px; height: 22px; display: block; }
+/* Emoji glyph inside a button — sized by font (a fixed box would clip it),
+   scaled to read at the same visual weight as a 22px __ico image. */
+.mdf-btn__emoji { font-size: 1.25rem; line-height: 1; flex-shrink: 0; }
 .mdf-btn__media {
   width: 44px;
   height: 44px;

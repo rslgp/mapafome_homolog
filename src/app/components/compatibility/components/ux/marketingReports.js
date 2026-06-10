@@ -29,6 +29,10 @@ function distanceKm(a, b) {
 function coordsOfRow(row) {
   try {
     const d = JSON.parse(row.Dados);
+    // pet rows (/pets fork) carry Coordinates + DateISO too, but they are a
+    // different domain — never count them in a sponsor's "audiência potencial"
+    // reach. Returning the null shape makes the caller's loop skip the row.
+    if (d && d.kind === 'pet') return { coords: null, dateIso: null, attended: false };
     if (!d || !d.Coordinates) return { coords: null, dateIso: null, attended: false };
     const c = JSON.parse(d.Coordinates);
     return {
