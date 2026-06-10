@@ -4,12 +4,16 @@
 // de apoio". It validates the (untrusted) body, ensures an Asaas customer, and
 // creates a subscription on the chosen BR rail (Pix / cartão / boleto).
 //
-// The Asaas key never leaves this server. Card data, when present, is forwarded
-// straight to Asaas over HTTPS and never logged or stored here.
+// The Asaas key never leaves this server. No card data is ever collected,
+// forwarded, logged, or stored here: the cartão rail uses Asaas's hosted
+// checkout, so no PAN/CVV crosses this server (no PCI scope).
 
 const { handlePreflight, applyCors, sendJson, readJsonBody } = require('../../lib/http');
 const { validateSubscriptionInput } = require('../../lib/validate');
-const { ensureCustomer, createSubscription } = require('../../lib/asaasClient');
+const {
+  ensureCustomer: defaultEnsureCustomer,
+  createSubscription: defaultCreateSubscription,
+} = require('../../lib/asaasClient');
 
 // A stable external reference makes the whole flow idempotent: the same person
 // + rail maps to the same customer/subscription, so a double-submit doesn't
@@ -23,7 +27,18 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-module.exports = async function handler(req, res) {
+// The Asaas collaborators are injectable seams (Dependency Inversion), exactly
+// like webhook.js's processEvent/store: the handler depends on the
+// { ensureCustomer, createSubscription } INTERFACE, not on the concrete client.
+// Defaults wire the real implementations, so production behavior is unchanged;
+// tests inject fakes to exercise the handler with no live Asaas call.
+module.exports = async function handler(
+  req,
+  res,
+  deps = { ensureCustomer: defaultEnsureCustomer, createSubscription: defaultCreateSubscription }
+) {
+  const { ensureCustomer, createSubscription } = deps;
+
   if (handlePreflight(req, res)) return;
   applyCors(req, res);
 
@@ -48,10 +63,6 @@ module.exports = async function handler(req, res) {
       externalReference: ref,
     });
 
-    const remoteIp =
-      (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
-      req.socket?.remoteAddress;
-
     const sub = await createSubscription({
       customerId: customer.id,
       rail: clean.rail,
@@ -60,9 +71,6 @@ module.exports = async function handler(req, res) {
       cycle: clean.cycle,
       description: clean.description,
       externalReference: ref,
-      creditCard: clean.creditCard,
-      creditCardHolderInfo: clean.creditCardHolderInfo,
-      remoteIp,
     });
 
     // Return only what the client needs to render the next step. For Pix/boleto

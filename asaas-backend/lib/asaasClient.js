@@ -116,9 +116,6 @@ async function createSubscription({
   cycle = 'MONTHLY',
   description,
   externalReference,
-  creditCard,
-  creditCardHolderInfo,
-  remoteIp,
 }) {
   const billingType = mapRail(rail);
 
@@ -129,6 +126,11 @@ async function createSubscription({
     return { ...existing.data[0], _idempotent: true };
   }
 
+  // No card path here, by design. The cartão rail creates a CREDIT_CARD
+  // subscription WITHOUT any PAN/CVV: Asaas issues a hosted invoice and the donor
+  // enters their card on Asaas's own checkout. So this client NEVER accepts or
+  // forwards creditCard/creditCardHolderInfo — no card data crosses our server
+  // (no PCI scope). The body below is identical for every rail.
   const body = {
     customer: customerId,
     billingType,
@@ -138,14 +140,6 @@ async function createSubscription({
     description,
     externalReference,
   };
-
-  // Card rail: Asaas tokenizes on first charge. We forward the card data the
-  // browser collected over HTTPS straight to Asaas and never persist it.
-  if (billingType === 'CREDIT_CARD' && creditCard) {
-    body.creditCard = creditCard;
-    body.creditCardHolderInfo = creditCardHolderInfo;
-    if (remoteIp) body.remoteIp = remoteIp;
-  }
 
   return asaasFetch('/subscriptions', { method: 'POST', body });
 }
