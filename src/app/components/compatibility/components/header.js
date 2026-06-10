@@ -104,7 +104,7 @@ export default function Header({ rowCountProp, onStartTour, onStartReport }) {
           )}
           <a
             className="mdf-header__donate"
-            href="https://nubank.com.br/pagar/2i6kb/zRE5wsvEe2"
+            href="./assinar"
             target="_blank"
             rel="noreferrer"
             aria-label="Doar via Pix"

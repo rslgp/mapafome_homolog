@@ -276,7 +276,7 @@ const InfoPanel = ({ rowCount }) => {
               </span>
               Assinar apoio mensal
             </a>
-            <a
+            {/* <a
               className="mdf-btn mdf-btn--secondary mdf-btn--channel-patreon mdf-btn--lg"
               target="_blank"
               rel="noreferrer"
@@ -286,7 +286,7 @@ const InfoPanel = ({ rowCount }) => {
             >
               <span aria-hidden="true">★</span>
               Apoio mensal no Patreon
-            </a>
+            </a> */}
           </div>
         </section>
 
