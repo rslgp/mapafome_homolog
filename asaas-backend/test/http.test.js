@@ -2,12 +2,11 @@ const { test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { applyCors, handlePreflight, allowedOrigins } = require('../lib/http');
 
-// CORS characterization for lib/http.js. This is the contract a browser relies
-// on: the actual POST is only allowed if the PREFLIGHT echoed an
-// Access-Control-Allow-Origin matching the caller's Origin. The original dev
-// default listed only :3000, so a site on :3002 (next dev's common fallback when
-// :3000/:3001 are busy) got NO ACAO header and the browser blocked the POST with
-// ERR_FAILED — exactly the failure these tests now guard against.
+// CORS characterization for lib/http.js. CORS is currently WILDCARD: applyCors
+// sends Access-Control-Allow-Origin: * for every caller regardless of Origin, so
+// any site (and Origin-less curl) is allowed. Safe only because no endpoint uses
+// cookies/Authorization (credentialed CORS forbids `*`). allowedOrigins() is kept
+// as a utility for re-locking later and is still characterized below.
 
 // Minimal fake req/res. res records headers + status the way the handlers set them.
 function fakeReq(method, origin) {
@@ -58,41 +57,40 @@ test('allowedOrigins — env list is trimmed and blank entries dropped', () => {
 
 // ── applyCors() ───────────────────────────────────────────────────────────
 
-test('applyCors — echoes ACAO + Vary for an allowed origin', () => {
+test('applyCors — sets wildcard ACAO (no Vary) for any origin', () => {
   const res = fakeRes();
   applyCors(fakeReq('POST', 'http://localhost:3002'), res);
-  assert.equal(res.headers['Access-Control-Allow-Origin'], 'http://localhost:3002');
-  assert.equal(res.headers['Vary'], 'Origin');
+  assert.equal(res.headers['Access-Control-Allow-Origin'], '*');
+  // Wildcard does not vary by Origin, so no Vary header is set.
+  assert.equal(res.headers['Vary'], undefined);
   assert.equal(res.headers['Access-Control-Allow-Methods'], 'GET, POST, OPTIONS');
   assert.equal(res.headers['Access-Control-Allow-Headers'], 'Content-Type');
 });
 
-test('applyCors — does NOT set ACAO for a disallowed origin (still sets method/header)', () => {
+test('applyCors — wildcard ACAO is sent even for a previously-disallowed origin', () => {
   const res = fakeRes();
   applyCors(fakeReq('POST', 'http://evil.example'), res);
-  // No ACAO -> the browser blocks the response. Methods/headers are still set,
-  // but without ACAO they are inert (this is the secure default).
-  assert.equal(res.headers['Access-Control-Allow-Origin'], undefined);
-  assert.equal(res.headers['Vary'], undefined);
+  // Wildcard: every origin is now allowed.
+  assert.equal(res.headers['Access-Control-Allow-Origin'], '*');
   assert.equal(res.headers['Access-Control-Allow-Methods'], 'GET, POST, OPTIONS');
 });
 
-test('applyCors — no Origin header (same-origin / curl) sets no ACAO', () => {
+test('applyCors — wildcard ACAO is sent even with no Origin header (curl)', () => {
   const res = fakeRes();
   applyCors(fakeReq('POST', undefined), res);
-  assert.equal(res.headers['Access-Control-Allow-Origin'], undefined);
+  assert.equal(res.headers['Access-Control-Allow-Origin'], '*');
 });
 
 // ── handlePreflight() ─────────────────────────────────────────────────────
 
-test('handlePreflight — OPTIONS from an allowed origin answers 204 WITH ACAO', () => {
+test('handlePreflight — OPTIONS answers 204 WITH wildcard ACAO', () => {
   const res = fakeRes();
   const handled = handlePreflight(fakeReq('OPTIONS', 'http://localhost:3002'), res);
   assert.equal(handled, true);
   assert.equal(res.statusCode, 204);
   assert.equal(res.ended, true);
-  // The header that was missing in the bug report — its presence is the fix.
-  assert.equal(res.headers['Access-Control-Allow-Origin'], 'http://localhost:3002');
+  // Preflight must echo the CORS headers so the browser permits the real request.
+  assert.equal(res.headers['Access-Control-Allow-Origin'], '*');
 });
 
 test('handlePreflight — returns false for a non-OPTIONS request (handler continues)', () => {

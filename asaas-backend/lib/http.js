@@ -1,7 +1,11 @@
 // http.js — small request/response helpers shared by the serverless functions.
 // Keeps each endpoint focused on Asaas logic, not boilerplate.
 
-// Origins allowed to call this backend from the browser. The static site is the
+// NOTE: CORS is currently WILDCARD (applyCors sends Access-Control-Allow-Origin: *),
+// so the allowlist below no longer gates browser access. allowedOrigins() is kept
+// as a utility (and to re-lock CORS later by switching applyCors back to it).
+//
+// Origins that WOULD be allowed if CORS were re-locked. The static site is the
 // only first-party caller; localhost is for dev. Set ALLOWED_ORIGINS (comma-sep)
 // in the server env to override — in production this is ALWAYS set, so the
 // localhost fallbacks below never apply there.
@@ -26,12 +30,11 @@ function allowedOrigins() {
   return fromEnv.length ? fromEnv : DEV_FALLBACK_ORIGINS;
 }
 
-function applyCors(req, res) {
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins().includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-  }
+function applyCors(_req, res) {
+  // Wildcard: any origin may call this backend from the browser. Safe here only
+  // because no endpoint uses cookies/Authorization (credentialed CORS forbids
+  // `*`); auth is via request-body fields, not ambient credentials.
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
