@@ -795,8 +795,9 @@ class App extends Component {
       const sheet = doc.sheetsByIndex[regiao];
       if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
       const rows = envVariables.rows;
-      // Total row count
-      self.setState({ rowCount: rows.length });
+      // rowCount is set further down from the PET-FILTERED dataMaps (not raw
+      // rows), so a lost-pet pin never inflates the public "pontos mapeados"
+      // headline or its aria-live announcement. See the kind!=='pet' filter.
 
       // rows.filter( (x) => { return !x.Data}).map( (x) => {
       //   x.Dados = JSON.stringify(
@@ -846,7 +847,17 @@ class App extends Component {
         }
 
       });
-      self.setState({ dataMaps: rows });
+      // Pet rows (/pets fork, Dados.kind === 'pet') share this same sheet but
+      // are a different domain. Drop them from the hunger dataMaps at this one
+      // chokepoint so NO hunger surface — markers, ListView, ContextBar, and
+      // crucially the LiveAnnouncer aria-live count (which keys on DateISO, not
+      // Categorias) — ever shows, counts, or announces a lost-pet pin.
+      // See src/app/pets/* and the kind:'pet' guard in reports.js.
+      const dataMaps = rows.filter((x) => x.kind !== 'pet');
+      // rowCount mirrors what hunger surfaces actually show — count the
+      // pet-filtered set, not raw rows, so lost-pet pins never inflate the
+      // public "pontos mapeados" headline or its aria-live announcement.
+      self.setState({ dataMaps, rowCount: dataMaps.length });
 
       // var needsUpdates = rows.filter((x) => { x = JSON.parse(x); return !x.Coordinates; });
       // if(needsUpdates.length === 0) console.log("nao precisa atualizar");

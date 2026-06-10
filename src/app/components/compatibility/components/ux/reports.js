@@ -38,6 +38,8 @@ function parseRow(row) {
 
 function isReporterPin(d) {
   if (!d) return false;
+  // pet rows (/pets fork) are a different domain — never count them in the hunger aggregate
+  if (d && d.kind === 'pet') return false;
   if (Array.isArray(d.Categorias) && d.Categorias.length > 0) return true;
   return LEGACY_NEED_ROASTERS.has(d.Roaster);
 }
