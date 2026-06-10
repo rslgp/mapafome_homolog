@@ -44,8 +44,16 @@ loadEnv(join(__dir, '..', '.env.local'));
 const createSubscription = require('../api/asaas/create-subscription.js');
 const subscriptionPayment = require('../api/asaas/subscription-payment.js');
 const webhook = require('../api/asaas/webhook.js');
+const health = require('../api/asaas/health.js');
 
-const PORT = Number(process.env.PORT || 3001);
+// allowedOrigins() is the SAME CORS source-of-truth the handlers use. We read it
+// here only to LOG whether an incoming request's Origin is allowed — a blocked
+// origin is the #1 silent cause of a browser "connection error": the browser's
+// CORS check rejects the response, so the client only sees an opaque
+// "TypeError: Failed to fetch" with no hint that it was CORS.
+const { allowedOrigins } = require('../lib/http.js');
+
+const PORT = Number(process.env.PORT || 3006);
 
 // Map a request path to its handler. Mirrors the file-system routing Vercel
 // derives from api/asaas/*.js, so the URLs match production 1:1.
@@ -53,6 +61,7 @@ const ROUTES = {
   '/api/asaas/create-subscription': createSubscription,
   '/api/asaas/subscription-payment': subscriptionPayment,
   '/api/asaas/webhook': webhook,
+  '/api/asaas/health': health,
 };
 
 // Read the raw request body and parse it as JSON into req.body — the one piece
@@ -91,8 +100,25 @@ function decorateRes(res) {
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://localhost:${PORT}`);
+  const start = Date.now();
+const url = new URL(req.url, `http://localhost:${PORT}`);
   const handler = ROUTES[url.pathname];
+
+  // Per-request access log. URLs/method/origin/status/timing only — NEVER the
+  // body (it carries PII: name/email/CPF). The Origin annotation makes a CORS
+  // rejection visible from the server side: a "(origin NOT allowed)" line means
+  // the browser will block the response and the client will report a generic
+  // connection failure even though the request reached us with a 2xx.
+  const origin = req.headers.origin || null;
+  const corsNote = !origin
+    ? '' // non-browser caller (curl/script) — no CORS check applies
+    : allowedOrigins().includes(origin)
+      ? ` origin=${origin} (allowed)`
+      : ` origin=${origin} (NOT allowed → browser will block; add it to ALLOWED_ORIGINS)`;
+  console.log(`[dev-server] → ${req.method} ${url.pathname}${corsNote}`);
+  res.on('finish', () => {
+    console.log(`[dev-server] ← ${res.statusCode} ${req.method} ${url.pathname} (${Date.now() - start}ms)`);
+  });
 
   decorateRes(res);
 
@@ -118,14 +144,32 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// A failed bind (almost always the port already being in use) otherwise dumps a
+// raw stack trace — turn it into a one-line, actionable diagnosis. This is a
+// frequent cause of "I can't connect to localhost:<port>": the server never came
+// up because a previous dev-server (or another process) already holds the port.
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `[dev-server] ✖ port ${PORT} is already in use — another dev-server is ` +
+        `running, or pick a free port:  PORT=<n> npm run dev`
+    );
+  } else {
+    console.error('[dev-server] ✖ server failed to start:', err?.message || err);
+  }
+  process.exit(1);
+});
+
 server.listen(PORT, () => {
   const env = process.env.ASAAS_ENV || 'sandbox';
   const keySet = process.env.ASAAS_API_KEY ? 'set' : 'MISSING';
   console.log(`[dev-server] Asaas backend on http://localhost:${PORT}`);
   console.log(`[dev-server]   ASAAS_ENV=${env}  ASAAS_API_KEY=${keySet}`);
+  console.log(`[dev-server]   allowed CORS origins: ${allowedOrigins().join(', ')}`);
   console.log(`[dev-server]   POST /api/asaas/create-subscription`);
   console.log(`[dev-server]   GET  /api/asaas/subscription-payment?subscriptionId=...`);
   console.log(`[dev-server]   POST /api/asaas/webhook`);
+  console.log(`[dev-server]   GET  /api/asaas/health`);
   if (!process.env.ASAAS_API_KEY) {
     console.warn('[dev-server]   ⚠  ASAAS_API_KEY missing — fill asaas-backend/.env.local');
   }
