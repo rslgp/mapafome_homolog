@@ -1,6 +1,9 @@
 
-# Claude Code local state
-#/.claude/
+# Claude Code local state — per-machine, never committed
+/.claude/
+
+# Vercel deploy driver — local Playwright Chrome profile + built export artifacts
+/export/
 
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
