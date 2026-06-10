@@ -34,6 +34,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
   const [color, setColor] = useState('');
   const [contact, setContact] = useState('');
   const [detail, setDetail] = useState('');
+  const [photos, setPhotos] = useState('');         // link do Google Drive com fotos (opcional)
   const [moreOpen, setMoreOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [phase, setPhase] = useState('idle');       // idle | publishing | success | error
@@ -59,6 +60,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
     setColor('');
     setContact('');
     setDetail('');
+    setPhotos('');
     setMoreOpen(false);
     setContactOpen(false);
     setPhase('idle');
@@ -139,6 +141,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
         name: name.trim(),
         contact: contact.trim(),
         detail: detail.trim(),
+        photos: photos.trim(),
         idempotency_key: newIdempotencyKey(),
       });
       setPhase('success');
@@ -282,6 +285,32 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
             })}
           </div>
         </fieldset>
+
+        {/* Album — the single biggest recognition aid (PET-M13). Promoted out of
+            the optional expander into an always-visible, emphasized field so a
+            reporter actually sees it. Still optional: publishing works with no link. */}
+        <div className="pet-album-field">
+          <label className="pet-album-field__label" htmlFor="pet-photos">
+            <span className="pet-album-field__icon" aria-hidden="true">📷</span>
+            Fotos do pet — o que mais ajuda a reconhecer
+          </label>
+          <input
+            id="pet-photos"
+            type="url"
+            inputMode="url"
+            className="mdf-sheet__input pet-input pet-album-field__input"
+            placeholder="Cole aqui o link da pasta do Google Drive"
+            maxLength={500}
+            value={photos}
+            onChange={(e) => setPhotos(e.target.value)}
+            disabled={busy}
+          />
+          <p className="mdf-sheet__helper pet-album-field__helper">
+            Uma foto é o que mais ajuda no reencontro. Cole o link de uma pasta do
+            Google Drive e deixe-a como “qualquer pessoa com o link pode ver”. Sem
+            foto também publica — mas com foto, muito mais gente reconhece.
+          </p>
+        </div>
 
         <details
           className="mdf-sheet__expander"

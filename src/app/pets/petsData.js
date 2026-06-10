@@ -37,13 +37,13 @@ export async function fetchPets() {
 // Publica um pet. Retorna o objeto de pet NORMALIZADO para o chamador adicionar
 // otimisticamente ao mapa sem refetch. Em republicação idempotente, retorna o
 // objeto montado sem gravar de novo.
-export async function publishPet({ coords, status, species, size, color, name, contact, detail, idempotency_key }) {
+export async function publishPet({ coords, status, species, size, color, name, contact, detail, photos, idempotency_key }) {
   // 1. Barricada: lança (SheetsValidationError) se fora do bbox Brasil / não-finito.
   validateCoordinatePair(coords);
 
   // 3. Monta o blob (data carimbada AQUI — runtime real; petDomain fica puro).
   const dateIso = new Date().toISOString();
-  const dados = buildPetDados({ coords, status, species, size, color, name, contact, detail, dateIso });
+  const dados = buildPetDados({ coords, status, species, size, color, name, contact, detail, photos, dateIso });
   const normalized = {
     coords,
     status,
@@ -53,6 +53,7 @@ export async function publishPet({ coords, status, species, size, color, name, c
     name: dados.name,
     contact: dados.contact,
     detail: dados.Detalhe,
+    photos: dados.photos,
     dateIso,
   };
 
