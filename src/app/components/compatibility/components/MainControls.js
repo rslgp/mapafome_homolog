@@ -237,7 +237,11 @@ const MainControls = ({
                     checked={alimento === "PrecisandoBuscar"}
                     onChange={onTipoAlimentoChange}
                   />
-                  <span className='greenHub'> Tenho alimento perto de se perder <a target='_blank' rel="noreferrer" href="https://www.camara.leg.br/noticias/670937-nova-lei-incentiva-empresas-a-doarem-alimentos-e-refeicoes-para-pessoas-vulneraveis/">(lei)</a>  <img width="30px" height="30px" src={green} alt="green"></img></span>
+                  <span className='greenHub'> Tenho alimento perto de se perder 
+                    <a target='_blank' rel="noreferrer" href="https://www.camara.leg.br/noticias/670937-nova-lei-incentiva-empresas-a-doarem-alimentos-e-refeicoes-para-pessoas-vulneraveis/">lei-2020</a>  
+                    <a target='_blank' rel="noreferrer" href="https://www2.camara.leg.br/legin/fed/lei/2025/lei-15224-30-setembro-2025-798048-publicacaooriginal-176570-pl.html">lei-2025</a>  
+                    
+                    <img width="30px" height="30px" src={green} alt="green"></img></span>
                   <br></br>
                   <select ref={dropDownMenuSemanaPrecisandoBuscar} style={{ "display": "none" }} id="dia2" onChange={onDiaSemanaChange}>
                     <option value="Hoje">Hoje</option>
