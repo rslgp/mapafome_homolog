@@ -23,6 +23,7 @@ const MainMap = ({
   return (
     <Grid size={{ xs: 12, sm: 8 }} >
       <Paper
+        className="mdf-map-paper"
         elevation={3}
         style={{
           textAlign: 'center',

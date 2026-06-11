@@ -798,6 +798,31 @@ a.tgme_widget_share_btn {
   animation: mdf-fade-in var(--mdf-dur-slow) var(--mdf-ease-out);
 }
 
+/* ── Non-mobile: map height tracks the controls column ──
+ * On desktop the map + controls sit side by side in one MUI Grid row, which
+ * stretches both columns to the height of the TALLER one (the controls form).
+ * The map's Paper and the Leaflet container both carry an inline `height:70vh`
+ * (the Paper in MainMap.js, and MAP_CONTAINER_STYLE in map.js — the latter is
+ * kept fixed in JS on purpose so a react-leaflet remount can't wipe the
+ * imperative L.markers). We override those inline heights to 100% ONLY at the
+ * desktop breakpoint so the map fills its stretched column and ends up exactly
+ * as tall as the controls. `!important` is required to beat the inline styles —
+ * the same idiom the mobile block below already uses on .leaflet-container.
+ * Mobile keeps the fixed-vh sizing from the @media (max-width: 600px) block. */
+@media (min-width: 601px) {
+  .mdf-map-paper {
+    height: 100% !important;
+  }
+  /* The plain <div> map.js wraps around <MapContainer>, then the Leaflet
+   * root, both fill the Paper so the map surface matches the controls. */
+  .mdf-map-paper > div {
+    height: 100%;
+  }
+  .mdf-map-paper .leaflet-container {
+    height: 100% !important;
+  }
+}
+
 /* ── Mobile (single consolidated breakpoint) ───────── */
 
 @media (max-width: 600px) {
