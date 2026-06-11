@@ -216,11 +216,11 @@ const InfoPanel = ({ rowCount }) => {
           <a
             className="mdf-btn mdf-btn--secondary mdf-btn--lg"
             href="/pets"
-            aria-label="MAPA PET — mapa de animais perdidos"
-            title="MAPA PET — mapa de animais perdidos"
+            aria-label="MapaPets — mapa de animais perdidos"
+            title="MapaPets — mapa de animais perdidos"
           >
             <span className="mdf-btn__emoji" aria-hidden="true">🐾</span>
-            <span>MAPA PET</span>
+            <span>MapaPets</span>
           </a>
           <a
             className="mdf-btn mdf-btn--badge mdf-btn--framed ip-apps__globo"
