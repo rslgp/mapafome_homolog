@@ -377,6 +377,17 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
             onChange={(e) => setDetail(e.target.value)}
             disabled={busy}
           />
+          {/* PET-M3 — aviso de higiene de texto livre. Tom CALMO/informativo
+              (não repreensão): orienta a não publicar dado de terceiro, placa ou
+              endereço exato, porque o campo é PÚBLICO. Reforça também o primitivo
+              de credibilidade (PET_CURVE §5): o "detalhe que só o dono sabe"
+              GUARDA-SE, não se publica. */}
+          <p className="mdf-sheet__helper pet-freetext-warning">
+            Esse texto fica visível para todo mundo. Para a segurança de todos,
+            não inclua dados de terceiros, placa de carro nem endereço exato. Se
+            houver um detalhe que só o dono sabe (uma marca, uma manha), guarde-o
+            para confirmar com calma depois — não escreva aqui.
+          </p>
         </details>
 
         <details
@@ -402,7 +413,9 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
           <p className="mdf-sheet__consent">
             Ao informar um contato, você concorda com os{' '}
             <a href="/privacy.html" target="_blank" rel="noreferrer">Termos de Privacidade</a>
-            . Seu contato só aparece para quem abrir este pet, para ajudar no reencontro.
+            . Seu contato nunca aparece no mapa nem na lista: ele fica escondido e
+            só é mostrado quando alguém abre este pet e toca em “Mostrar contato”,
+            para ajudar no reencontro.
           </p>
         </details>
 

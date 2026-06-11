@@ -305,6 +305,20 @@
   margin-bottom: 0;
 }
 
+/* ── PET-M3: aviso de higiene de texto livre ───────────────── *
+ * Calmo e informativo, NUNCA alarme: surface-2 neutra + ink-muted, com uma
+ * borda lateral sutil em --mdf-ink-subtle (o token de boundary visível — NÃO os
+ * tokens de risco vermelho, tonalmente errados num público em estresse). Só
+ * tokens, sem hex cru. */
+.pet-freetext-warning {
+  margin: var(--mdf-space-2) 0 0 0;
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border-left: 3px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-chip);
+  color: var(--mdf-ink-muted);
+}
+
 /* ── PET-M1: queued-publish notice (offline / servidor lento) ──────────────
  * A causa offline/lento NÃO é um erro vermelho: o relato foi guardado e volta
  * sozinho. A base .mdf-sheet__inline-error usa os tokens de risco vermelho
@@ -382,6 +396,59 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pet-detail__album {
+    transition: none;
+  }
+}
+
+/* ── Detail sheet: contact reveal-on-tap gate (PET-M3) ─────── *
+ * O contato fica escondido até um tap explícito (barricada de PII — não
+ * auto-expõe o contato de um estranho). O botão é um alvo >=44px, operável por
+ * teclado, com foco visível; usa surface neutra (--mdf-surface-1 + --mdf-ink),
+ * nunca os tokens de risco/alarme (--mdf-risk-*), porque o público está em
+ * estresse e a nota é informativa, não punitiva (governador de tom calmo). */
+
+.pet-detail__contact-gate {
+  margin: 0 0 var(--mdf-space-3) 0;
+}
+
+.pet-detail__reveal-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  width: 100%;
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque */
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__reveal-btn:hover {
+  background: var(--mdf-surface-2);
+  border-color: var(--mdf-ink);
+}
+
+.pet-detail__reveal-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.pet-detail__privacy-note {
+  margin: var(--mdf-space-2) 0 0 0;
+  font-size: var(--mdf-fs-caption);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-detail__reveal-btn {
     transition: none;
   }
 }

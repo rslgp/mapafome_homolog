@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import '../components/compatibility/components/ux/PinDetailSheet.css';
 import './pets.css';
 import { createDirectionUrl, formatRelativeTime } from '../components/compatibility/components/mapUtils';
@@ -30,6 +30,28 @@ function describePet(pet) {
 export default function PetDetailSheet({ open, pet, onClose }) {
   const triggerRef = useRef(null);
   const closeRef = useRef(null);
+  const revealRef = useRef(null);
+
+  // PET-M3 — REVEAL-ON-TAP. O contato de quem reportou NÃO é exposto ao abrir o
+  // detalhe: um estranho que só passa o olho na listagem não leva o contato de
+  // graça (curva §D — momento de maior vulnerabilidade do dono; ver PET_CURVE §5,
+  // golpe do falso achador). O href de contato só é RESOLVIDO depois deste tap
+  // explícito — antes disso, `resolveContact` nem roda sobre o dado bruto.
+  const [revealed, setRevealed] = useState(false);
+
+  // Reseta a revelação quando ABRE ou TROCA de pet, SEM um effect (que dispararia
+  // o aviso react-hooks/set-state-in-effect e um render em cascata). Padrão
+  // oficial do React "ajustar estado durante o render quando uma prop muda":
+  // guardamos a última identidade num ref e, se ela mudou, zeramos a revelação
+  // no corpo do render. Garante que a revelação de um pet jamais "vaza" para o
+  // próximo aberto (forcing-function contra estado preso entre dois detalhes).
+  const petKey = pet ? `${JSON.stringify(pet.coords)}|${pet.dateIso || ''}` : null;
+  const lastKeyRef = useRef(null);
+  const openKey = open ? petKey : null;
+  if (lastKeyRef.current !== openKey) {
+    lastKeyRef.current = openKey;
+    if (revealed) setRevealed(false);
+  }
 
   useEffect(() => {
     if (!open) return undefined;
@@ -51,6 +73,10 @@ export default function PetDetailSheet({ open, pet, onClose }) {
     if (!pet) return null;
     const statusMeta = PET_STATUS_MAP[pet.status] || null;
     const coords = Array.isArray(pet.coords) && pet.coords.length === 2 ? pet.coords : null;
+    // Há um contato BRUTO no relato? (apenas presença — NÃO resolvemos o href
+    // aqui; isso só acontece após o reveal, abaixo.) `hasContact` decide se o
+    // botão "Mostrar contato" deve sequer aparecer, sem expor o dado.
+    const hasContact = Boolean((pet.contact || '').trim());
     return {
       statusMeta,
       coords,
@@ -60,9 +86,27 @@ export default function PetDetailSheet({ open, pet, onClose }) {
       detail: (pet.detail || '').trim(),
       photos: (pet.photos || '').trim(),
       timeSince: formatRelativeTime(pet.dateIso),
-      contact: resolveContact(pet.contact),
+      hasContact,
     };
   }, [pet]);
+
+  // O href só é construído DEPOIS do tap (revealed) — a barricada de PII é
+  // temporal, não só visual: enquanto não revelado, o contato bruto nunca vira
+  // um link clicável no DOM. Memoizado por pet+revealed para não re-resolver a
+  // cada render.
+  const revealedContact = useMemo(() => {
+    if (!pet || !revealed) return null;
+    return resolveContact(pet.contact);
+  }, [pet, revealed]);
+
+  // Após revelar, leva o foco para o contato revelado (leitor de tela e teclado
+  // não ficam presos no botão que acabou de sumir). rAF: espera o DOM pintar o
+  // novo nó antes de focar.
+  useEffect(() => {
+    if (!revealed) return undefined;
+    const id = requestAnimationFrame(() => revealRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [revealed]);
 
   if (!open || !pet || !derived) return null;
 
@@ -126,20 +170,44 @@ export default function PetDetailSheet({ open, pet, onClose }) {
 
         {derived.detail && <p className="mdf-pin-sheet__detail">{derived.detail}</p>}
 
-        {derived.contact && derived.contact.href && (
+        {/* PET-M3 — contato sob reveal-on-tap. Enquanto NÃO revelado, mostramos
+            só um botão calmo + a nota de privacidade /pets-específica. O dado de
+            contato não está no DOM como link clicável até o tap. */}
+        {derived.hasContact && !revealed && (
+          <div className="pet-detail__contact-gate">
+            <button
+              type="button"
+              className="pet-detail__reveal-btn"
+              onClick={() => setRevealed(true)}
+            >
+              <span aria-hidden="true">🔒</span>
+              <span>Mostrar contato de quem reportou</span>
+            </button>
+            <p className="pet-detail__privacy-note">
+              O contato fica escondido até você tocar — para proteger quem
+              reportou. Combine com calma e, se puder, confirme um detalhe que só
+              o dono saberia antes de qualquer acerto.
+            </p>
+          </div>
+        )}
+
+        {revealed && revealedContact && revealedContact.href && (
           <a
+            ref={revealRef}
             className="mdf-pin-sheet__contact"
-            href={derived.contact.href}
+            href={revealedContact.href}
             target="_blank"
             rel="noreferrer"
           >
-            <span aria-hidden="true">{derived.contact.icon}</span>
-            <span>{derived.contact.label} de quem reportou</span>
+            <span aria-hidden="true">{revealedContact.icon}</span>
+            <span>{revealedContact.label} de quem reportou</span>
           </a>
         )}
 
-        {derived.contact && !derived.contact.href && (
-          <p className="mdf-pin-sheet__stub">{derived.contact.label}</p>
+        {revealed && revealedContact && !revealedContact.href && (
+          <p ref={revealRef} tabIndex={-1} className="mdf-pin-sheet__stub">
+            {revealedContact.label}
+          </p>
         )}
 
         <div className="mdf-pin-sheet__actions">

@@ -94,6 +94,57 @@ export function sanitizePhotosUrl(raw) {
   return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? v : '';
 }
 
+// ─── PET-M3 — higiene de TEXTO LIVRE (sanitizer puro e determinístico) ───────
+// SOT dos limites de comprimento de cada campo de texto livre que vai para o
+// blob `Dados` PÚBLICO. Antes, name/color/detail entravam crus com só `|| ''`:
+// um achador podia colar uma placa, um endereço exato, dados de terceiros ou
+// caracteres de controle (que quebram o JSON renderizado / abrem espaço para
+// truques de exibição). Estes limites espelham os maxLength dos inputs do
+// PetReportSheet — manter os DOIS em sincronia é a regra; este módulo é a verdade
+// que de fato BARRA no momento da montagem (o maxLength do input é só conforto de
+// digitação e é contornável colando texto/automação).
+export const PET_FREETEXT_MAXLEN = {
+  name: 40,
+  color: 40,
+  detail: 140,
+};
+
+// Sanitiza UM campo de texto livre. PURA + DETERMINÍSTICA (sem Date.now()):
+//   1. coage para string e apara as pontas;
+//   2. REMOVE apenas caracteres de CONTROLE — C0 (\x00–\x1F: inclui \t \n \r),
+//      DEL (\x7F) e C1 (\x80–\x9F). NUNCA toca em Unicode imprimível: acentos,
+//      ç, ã, emoji e pontuação sobrevivem (a barricada é contra controle, não
+//      contra idioma — corromper pt-BR seria um bug, não uma defesa);
+//   3. colapsa espaços em branco repetidos (resíduo de uma quebra de linha
+//      removida vira um espaço só, não cola duas palavras);
+//   4. corta no limite do campo (cap de comprimento) e apara de novo.
+// É a forcing-function que substitui o antigo caminho cru `valor || ''` — um
+// teste fixa que controle some e que o acento permanece.
+//
+// Implementação Unicode-safe: itera por code points (spread de string) para não
+// partir um par substituto (emoji) ao aplicar o cap; o filtro de controle usa um
+// teste por code point, não um regex de classe \p (compat ampla de runtime).
+export function sanitizeFreeText(raw, maxLen) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return '';
+  const cap = Number.isFinite(maxLen) && maxLen > 0 ? maxLen : Infinity;
+  const out = [];
+  for (const ch of s) {
+    const code = ch.codePointAt(0);
+    // C0 + DEL + C1: faixas de controle. Tudo o mais (incl. acentos/ç/ã/emoji) passa.
+    const isControl = code <= 0x1f || (code >= 0x7f && code <= 0x9f);
+    if (isControl) {
+      out.push(' '); // vira espaço; o colapso abaixo limpa o excedente
+    } else {
+      out.push(ch);
+    }
+    if (out.length >= cap) break;
+  }
+  // Colapsa espaços repetidos (inclui os criados ao trocar controle por espaço)
+  // e apara — entrada determinística → saída determinística.
+  return out.join('').replace(/\s{2,}/g, ' ').trim();
+}
+
 // Chave ESTÁVEL do campo de ciclo-de-vida "reunido" dentro do blob Dados (SOT).
 // PET-M2. Ninguém fora deste módulo escreve a string literal 'resolvedAt' — o
 // writer (petsData.updatePetByCoords) e o parser leem por esta constante, então
@@ -117,15 +168,21 @@ export function buildPetDados({ coords, status, species, size, color, name, cont
   if (!isFiniteCoordPair(coords)) {
     throw new Error('buildPetDados: coords deve ser um par [lat,lng] finito');
   }
+  // PET-M3 — texto livre passa pela barricada de higiene (cap + strip de
+  // controle), nunca mais cru. `species`/`size` são ids validados contra um Set
+  // (não texto livre), então só caem para ''. `contact` NÃO é higienizado aqui
+  // de propósito: o resolveContact já o trata como ação (nunca como texto cru
+  // renderizado) e o cap dele vive no input; aplicar strip de controle a um
+  // identificador/telefone poderia mexer em formatação legítima.
   const dados = {
     kind: PET_KIND,
     status,
     species: species || '',
     size: size || '',
-    color: color || '',
-    name: name || '',
+    color: sanitizeFreeText(color, PET_FREETEXT_MAXLEN.color),
+    name: sanitizeFreeText(name, PET_FREETEXT_MAXLEN.name),
     contact: contact || '',
-    Detalhe: detail || '',
+    Detalhe: sanitizeFreeText(detail, PET_FREETEXT_MAXLEN.detail),
     photos: sanitizePhotosUrl(photos),
     Coordinates: JSON.stringify(coords),
     DateISO: dateIso,
