@@ -13,23 +13,43 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import detectPlatform from './detectPlatform';
 
 export default function useInstallPrompt() {
   const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  // Platform info, derived from the single pure classifier (detectPlatform —
+  // LBR-D one-source-of-truth). Defaults are the SSR-safe "desktop, nothing
+  // detected" result; the real values are read post-mount in the effect below.
+  const [platform, setPlatform] = useState('desktop');
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
+    // Classify the platform ONCE, post-mount, from the injected navigator. This
+    // is the only UA sniff in the install flow; every surface consumes these
+    // flags (LBR-D). Reads navigator/matchMedia post-mount on purpose to avoid
+    // an SSR hydration mismatch (LBR-C).
+    const det = detectPlatform(window.navigator);
     const standalone =
+      det.isStandalone ||
       window.matchMedia?.('(display-mode: standalone)').matches ||
       window.navigator.standalone === true ||
       window.__mdf_app_installed === true;
+    // These setState calls all read browser-only state (navigator via
+    // detectPlatform, matchMedia) post-mount on purpose: deriving any of them
+    // during render would touch window and risk an SSR hydration mismatch in
+    // this client hook (LBR-C). One disable suffices for the block.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads navigator/matchMedia (detectPlatform + install state) post-mount to avoid hydration mismatch
+    setPlatform(det.platform);
+    setIsIOS(det.isIOS);
+    setIsStandalone(Boolean(standalone));
+    setIsInAppBrowser(det.isInAppBrowser);
+
     if (standalone) {
-      // Reads matchMedia / navigator.standalone (external/browser install
-      // state) post-mount on purpose: deriving it during render would touch
-      // window and risk an SSR hydration mismatch in this client hook.
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reads browser install state (matchMedia/navigator) post-mount to avoid hydration mismatch
       setIsInstalled(true);
       return undefined;
     }
@@ -83,5 +103,13 @@ export default function useInstallPrompt() {
     return 'unavailable';
   }, []);
 
-  return { canInstall, isInstalled, promptInstall };
+  return {
+    canInstall,
+    isInstalled,
+    promptInstall,
+    platform,
+    isIOS,
+    isStandalone,
+    isInAppBrowser,
+  };
 }

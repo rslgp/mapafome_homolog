@@ -7,6 +7,7 @@ import ImagemInstagram from './home/ImagemInstagram';
 import Apoiadores from './home/Apoiadores';
 import SponsorSlot from './ux/SponsorSlot';
 import { PLACEMENTS } from './ux/sponsors';
+import useInstallPrompt from './ux/useInstallPrompt';
 import './InfoPanel.css';
 
 /* Legend layout (per design_brief.yaml § visual_system.markers + Foundation 4):
@@ -85,6 +86,12 @@ const InfoPanel = ({ rowCount }) => {
   const [isInstalled, setIsInstalled] = useState(false);
   const [installHint, setInstallHint] = useState('');
 
+  // Platform flags from the shared single-source classifier (LBR-D). InfoPanel
+  // keeps its OWN beforeinstallprompt wiring + store badges intact (LBR-A:
+  // non-regression beats DRY here); it only consumes isIOS/isInAppBrowser to
+  // pick the right manual-install hint instead of re-sniffing the UA.
+  const { isIOS, isInAppBrowser } = useInstallPrompt();
+
   // Captura o evento de instalação do PWA (Chrome/Edge/Android) para oferecer
   // a instalação da versão lite direto no botão, sem passar pela loja.
   useEffect(() => {
@@ -134,10 +141,14 @@ const InfoPanel = ({ rowCount }) => {
       return;
     }
     // Sem prompt nativo (Safari/iOS, ou navegador que ainda não atingiu o
-    // critério de instalabilidade): orienta a instalação manual.
-    const ua = navigator.userAgent || '';
-    if (/iphone|ipad|ipod/i.test(ua) || (/safari/i.test(ua) && !/chrome|crios|android/i.test(ua))) {
-      setInstallHint('No iPhone/iPad (Safari): toque em Compartilhar e escolha "Adicionar à Tela de Início".');
+    // critério de instalabilidade): orienta a instalação manual usando a
+    // classificação central (isIOS/isInAppBrowser), não um novo sniff de UA.
+    if (isIOS && isInAppBrowser) {
+      // Webview do Instagram/Facebook/WhatsApp não tem "Adicionar à Tela de
+      // Início" (D3): orienta a abrir no Safari primeiro.
+      setInstallHint('Abra no Safari para instalar: toque em ⋯ (ou aA) e escolha "Abrir no Safari", depois instale por lá.');
+    } else if (isIOS) {
+      setInstallHint('No iPhone/iPad (Safari): toque em Compartilhar (⎙) e escolha "Adicionar à Tela de Início" (Add to Home Screen).');
     } else {
       setInstallHint('Abra o menu do navegador (⋮) e escolha "Instalar app" ou "Adicionar à tela inicial".');
     }

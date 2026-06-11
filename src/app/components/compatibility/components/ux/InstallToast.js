@@ -16,6 +16,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import useInstallPrompt from './useInstallPrompt';
 import './InstallToast.css';
 
 const DISMISS_KEY = 'mdf_install_dismissed_until';
@@ -46,9 +47,39 @@ function rememberDismiss() {
 const InstallToast = () => {
   const [promptEvent, setPromptEvent] = useState(null);
   const [visible, setVisible] = useState(false);
+  // iOS variant: 'add' = Safari Share -> Adicionar à Tela de Início (D1);
+  // 'safari' = in-app webview, instruct to open in Safari first (D3). Empty
+  // string = no iOS invite. Set post-mount from the shared platform info.
+  const [iosMode, setIosMode] = useState('');
   const timerRef = useRef(null);
+  const iosTimerRef = useRef(null);
   const toastRef = useRef(null);
   const dragRef = useRef({ x: 0, y: 0, dragging: false });
+
+  // Single source of platform truth (LBR-D). The native-prompt branch below is
+  // unchanged (LBR-A); these flags only gate the NEW iOS branch.
+  const { isIOS, isStandalone, isInAppBrowser } = useInstallPrompt();
+
+  // iOS branch — runs only when the pure classifier says real iOS, not already
+  // standalone, and not within the recent 14-day dismiss back-off. iOS Safari
+  // never fires beforeinstallprompt (D1), so we surface manual guidance on the
+  // SAME calm-tone settle delay + back-off as the native toast. In-app webviews
+  // (D3) get the "open in Safari" variant instead of unworkable Share steps.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    if (!isIOS || isStandalone) return undefined;
+    if (dismissedRecently()) return undefined;
+
+    const mode = isInAppBrowser ? 'safari' : 'add';
+    clearTimeout(iosTimerRef.current);
+    iosTimerRef.current = setTimeout(() => {
+      // setState inside a timer callback (not during render) — no hydration risk.
+      setIosMode(mode);
+      setVisible(true);
+    }, SHOW_DELAY_MS);
+
+    return () => clearTimeout(iosTimerRef.current);
+  }, [isIOS, isStandalone, isInAppBrowser]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -181,16 +212,63 @@ const InstallToast = () => {
 
   if (!visible) return null;
 
+  // A native install event takes precedence: when one exists we render the
+  // ORIGINAL Android/Chromium toast unchanged (LBR-A). The iOS variant is only
+  // rendered when there is NO native event and the iOS branch revealed a mode.
+  const hasNativeEvent =
+    Boolean(promptEvent) ||
+    (typeof window !== 'undefined' && Boolean(window.__mdf_install_prompt));
+  const showIOS = !hasNativeEvent && iosMode !== '';
+
+  const wrapperProps = {
+    ref: toastRef,
+    className: `mdf-install-toast${SWIPE_DISMISS_ENABLED ? ' mdf-install-toast--swipeable' : ''}`,
+    role: 'dialog',
+    'aria-live': 'polite',
+    onTouchStart: SWIPE_DISMISS_ENABLED ? onTouchStart : undefined,
+    onTouchMove: SWIPE_DISMISS_ENABLED ? onTouchMove : undefined,
+    onTouchEnd: SWIPE_DISMISS_ENABLED ? onTouchEnd : undefined,
+  };
+
+  if (showIOS) {
+    // iOS has NO programmatic install API (D1), so there is no "Instalar"
+    // button — only manual guidance. 'safari' = in-app webview that can't add to
+    // home screen (D3): tell the user to open in Safari first. 'add' = Safari →
+    // Share → Adicionar à Tela de Início.
+    const isSafariHint = iosMode === 'safari';
+    const title = isSafariHint
+      ? 'Abra no Safari para instalar'
+      : 'Adicionar à Tela de Início';
+    const sub = isSafariHint
+      ? 'Este app não instala dentro do Instagram/Facebook/WhatsApp. Toque em ⋯ (ou aA) e escolha “Abrir no Safari”, depois instale por lá.'
+      : 'Toque em Compartilhar (⎙) na barra do Safari e escolha “Adicionar à Tela de Início” (Add to Home Screen).';
+    return (
+      <div
+        {...wrapperProps}
+        aria-label="Como instalar o MAPA FOME no iPhone ou iPad"
+      >
+        <img className="mdf-install-toast__icon" src="/logo192.png" alt="" width="40" height="40" />
+        <div className="mdf-install-toast__body">
+          <strong className="mdf-install-toast__title">{title}</strong>
+          <span className="mdf-install-toast__sub">{sub}</span>
+        </div>
+        <div className="mdf-install-toast__actions">
+          <button
+            type="button"
+            className="mdf-install-toast__btn mdf-install-toast__btn--later"
+            onClick={handleDismiss}
+          >
+            Entendi
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      ref={toastRef}
-      className={`mdf-install-toast${SWIPE_DISMISS_ENABLED ? ' mdf-install-toast--swipeable' : ''}`}
-      role="dialog"
-      aria-live="polite"
+      {...wrapperProps}
       aria-label="Instalar o aplicativo MAPA FOME"
-      onTouchStart={SWIPE_DISMISS_ENABLED ? onTouchStart : undefined}
-      onTouchMove={SWIPE_DISMISS_ENABLED ? onTouchMove : undefined}
-      onTouchEnd={SWIPE_DISMISS_ENABLED ? onTouchEnd : undefined}
     >
       <img className="mdf-install-toast__icon" src="/logo192.png" alt="" width="40" height="40" />
       <div className="mdf-install-toast__body">
