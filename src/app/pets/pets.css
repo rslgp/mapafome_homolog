@@ -1879,3 +1879,223 @@
     transform: none;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * PET-M15 — PHOTO CAPTURE (report sheet) + PHOTO DISPLAY (detail sheet)
+ * ════════════════════════════════════════════════════════════════════════════
+ * Calm-tone governor: a panicked owner attaching a photo. No alarm tokens; the
+ * capture button is encouraged (brand-pair), the preview is a quiet figure, the
+ * detail photo degrades to a calm placeholder (never a broken-image glyph). Only
+ * --mdf-* / --pet-* tokens — no raw hex. The FINAL placeholder/skeleton COLOR
+ * treatment is PET-M16's job; here we ship the functional base (the three states
+ * exist + degrade). prefers-reduced-motion kills the skeleton pulse. */
+
+/* ── Report sheet: capture / choose-from-library affordance ── */
+
+.pet-photo-capture {
+  margin: var(--mdf-space-2) 0;
+}
+
+/* O <label> dispara o <input type=file> escondido (sr-only) — é a afordância
+ * acessível e o alvo de toque >=44px. Par de marca provado AA (branco ≈ 6.4:1
+ * sobre --mdf-brand-hover) para CONVIDAR sem alarme. */
+.pet-photo-capture__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  width: 100%;
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque (Fitts) */
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-brand-hover);
+  color: var(--mdf-brand-ink);
+  border: 1px solid transparent;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  font-weight: 700;
+  line-height: var(--mdf-lh-body);
+  text-align: center;
+  cursor: pointer;
+  transition: box-shadow var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-photo-capture__btn:hover {
+  box-shadow: var(--mdf-elev-1);
+}
+
+/* O foco visível vem do <input> sr-only (que recebe o foco de teclado); espelha
+ * o estado no label via :focus-within para o anel aparecer ao redor do botão. */
+.pet-photo-capture:focus-within .pet-photo-capture__btn {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.pet-photo-capture__btn[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* Aviso de erro de preparo — calmo, neutro (NÃO os tokens de risco vermelho): a
+ * foto falhou mas o publicar segue possível, então o tom reassegura. */
+.pet-photo-capture__error {
+  margin: var(--mdf-space-2) 0 0 0;
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-2 (par neutro provado) */
+}
+
+.pet-photo-capture__privacy {
+  margin: var(--mdf-space-2) 0;
+}
+
+/* A PRÉVIA da foto reduzida no cliente: uma figure discreta. A imagem é contida
+ * (object-fit) num cartão neutro; a legenda é honesta sobre o que persiste. */
+.pet-photo-preview {
+  margin: var(--mdf-space-2) 0 0 0;
+  padding: var(--mdf-space-2);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+}
+
+.pet-photo-preview__img {
+  display: block;
+  width: 100%;
+  max-height: 14rem;
+  object-fit: contain;
+  border-radius: var(--mdf-radius-chip);
+  background: var(--mdf-surface-1);
+}
+
+.pet-photo-preview__cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mdf-space-2);
+  margin: var(--mdf-space-2) 0 0 0;
+  font-size: var(--mdf-fs-caption);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-2 (proven token) */
+}
+
+/* "Remover prévia" — alvo >=44px, ink legível, foco visível. */
+.pet-photo-preview__remove {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  padding: var(--mdf-space-1) var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pet-photo-preview__remove:hover {
+  border-color: var(--mdf-ink);
+}
+
+.pet-photo-preview__remove:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* Rótulo do campo de link (o que de fato publica) — ink cheio, ênfase secundária. */
+.pet-album-field__url-label {
+  display: block;
+  margin: var(--mdf-space-2) 0 var(--mdf-space-1) 0;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-2 (proven token) */
+}
+
+/* ── Detail sheet: photo display (direct image) + skeleton + placeholder ── */
+
+/* Moldura da imagem direta: position-relative para o skeleton sobrepor enquanto
+ * a imagem carrega. Cartão neutro contido, elevado acima do bloco de meta. */
+.pet-detail__photo {
+  position: relative;
+  margin: 0 0 var(--mdf-space-4) 0;
+  border-radius: var(--mdf-radius-card);
+  overflow: hidden;
+  background: var(--mdf-surface-2);
+}
+
+.pet-detail__photo-img {
+  display: block;
+  width: 100%;
+  max-height: 18rem;
+  object-fit: cover;
+  /* Aparece só quando carregada (a classe --ready) — evita o flash de alt/0x0.
+   * Sem a classe, fica invisível e o skeleton mostra o estado de carga. */
+  opacity: 0;
+  transition: opacity var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__photo-img--ready {
+  opacity: 1;
+}
+
+/* Skeleton sobreposto enquanto a imagem direta baixa (PET-M16 refina a cor). Um
+ * pulso suave de carga; removido sob prefers-reduced-motion (bloco no fim). */
+.pet-detail__photo-skeleton {
+  position: absolute;
+  inset: 0;
+  min-height: 10rem;
+  background: linear-gradient(
+    90deg,
+    var(--mdf-surface-2) 0%,
+    var(--mdf-surface-1) 50%,
+    var(--mdf-surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: pet-skeleton-shimmer var(--mdf-dur-slow) var(--mdf-ease-out) infinite;
+}
+
+/* Placeholder calmo de "sem foto" (ou imagem direta que falhou): glifo da espécie
+ * sobre superfície neutra. NUNCA um ícone de imagem quebrada. PET-M16 dá a cor/
+ * tratamento final; aqui é a base funcional. */
+.pet-detail__photo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-1);
+  min-height: 8rem;
+  margin: 0 0 var(--mdf-space-4) 0;
+  padding: var(--mdf-space-5) var(--mdf-space-4);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+  text-align: center;
+}
+
+.pet-detail__photo-placeholder-glyph {
+  font-size: var(--mdf-fs-h1);
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.pet-detail__photo-placeholder-text {
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-2 (proven token) */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-photo-capture__btn {
+    transition: none;
+  }
+  .pet-detail__photo-img {
+    transition: none;
+  }
+  .pet-detail__photo-skeleton {
+    animation: none;
+    background: var(--mdf-surface-2);
+  }
+}

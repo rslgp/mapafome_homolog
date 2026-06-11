@@ -6,6 +6,7 @@ import './pets.css';
 import { createDirectionUrl, formatRelativeTime } from '../components/compatibility/components/mapUtils';
 import { resolveContact } from '../components/compatibility/components/ux/contactLink';
 import { PET_STATUS_MAP, PET_SPECIES, PET_SIZES, petCoordsKey, PET_DEEPLINK_PARAM, PET_CLOSURE_REASON } from './petDomain';
+import { looksLikeDirectImageUrl } from './petPhoto';
 import { flagPet, resolvePet } from './petsData';
 
 // PET-M4 — estados do fluxo de denúncia (flag) na própria sheet (máquina de
@@ -96,6 +97,16 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
   // ao reveal/flag) para a dispensa de um detalhe não vazar para o próximo aberto.
   const [matchDismissed, setMatchDismissed] = useState(false);
 
+  // PET-M15 — estado de carga da FOTO (quando a URL é uma imagem direta):
+  //   'loading' → mostra o skeleton enquanto o <img> baixa;
+  //   'loaded'  → a imagem pintou; esconde o skeleton;
+  //   'error'   → a URL quebrou/sumiu (takedown, link morto) → degrada para o
+  //               placeholder calmo, NUNCA um <img> quebrado (PET-M14 §4.5).
+  // Reseta ao trocar de pet (mesma forcing-function do reveal/flag) — o estado de
+  // uma foto não vaza para o próximo pet aberto. Começa em 'loading' a cada novo
+  // pet com imagem direta; o onLoad/onError do <img> avança a máquina.
+  const [photoLoadState, setPhotoLoadState] = useState('loading');
+
   // Reseta a revelação quando ABRE ou TROCA de pet, SEM um effect (que dispararia
   // o aviso react-hooks/set-state-in-effect e um render em cascata). Padrão
   // oficial do React "ajustar estado durante o render quando uma prop muda":
@@ -114,6 +125,9 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
     if (lifecycleState !== LC_IDLE) setLifecycleState(LC_IDLE);
     // PET-M9b — a dispensa do hint também não vaza para o próximo pet aberto.
     if (matchDismissed) setMatchDismissed(false);
+    // PET-M15 — a carga da foto reinicia a cada pet (volta a 'loading') para o
+    // skeleton aparecer de novo e um erro de uma URL anterior não vazar.
+    if (photoLoadState !== 'loading') setPhotoLoadState('loading');
   }
 
   useEffect(() => {
@@ -140,6 +154,13 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
     // aqui; isso só acontece após o reveal, abaixo.) `hasContact` decide se o
     // botão "Mostrar contato" deve sequer aparecer, sem expor o dado.
     const hasContact = Boolean((pet.contact || '').trim());
+    const photos = (pet.photos || '').trim();
+    // PET-M15 — a URL é uma IMAGEM DIRETA (renderável como <img>) ou um álbum/pasta
+    // (mantém o link "Ver as fotos do pet")? looksLikeDirectImageUrl é conservador:
+    // só true para um caminho que termina em extensão de imagem conhecida — um
+    // "true" errado viraria um <img> quebrado, exatamente o que o PET-M15 proíbe.
+    // O species glyph (da SOT) alimenta o placeholder calmo quando não há imagem.
+    const speciesMeta = SPECIES_MAP[pet.species] || null;
     return {
       statusMeta,
       coords,
@@ -147,7 +168,10 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
       descline: describePet(pet),
       name: (pet.name || '').trim(),
       detail: (pet.detail || '').trim(),
-      photos: (pet.photos || '').trim(),
+      photos,
+      isDirectImage: looksLikeDirectImageUrl(photos),
+      speciesGlyph: speciesMeta ? speciesMeta.icon : '🐾',
+      speciesLabel: speciesMeta ? speciesMeta.label : 'pet',
       timeSince: formatRelativeTime(pet.dateIso),
       hasContact,
     };
@@ -286,10 +310,40 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
           <p className="pet-detail__descline">{derived.descline}</p>
         )}
 
-        {/* Album — primary recognition aid (PET-M13). Elevated above the meta
-            block and styled as a solid brand CTA so it reads as the first thing
-            to do, clearly distinct from the secondary neutral contact pill. */}
-        {derived.photos && (
+        {/* PET-M15 — exibição da FOTO (o que mais ajuda a reconhecer). Três casos,
+            decididos pela forma da URL (já passada por sanitizePhotosUrl no parse):
+              1. IMAGEM DIRETA (looksLikeDirectImageUrl) → renderiza um <img> de
+                 verdade com alt acessível + estado de carga (skeleton). Se a URL
+                 quebrar/sumir (takedown, link morto), o onError degrada para o
+                 placeholder calmo — NUNCA um <img> quebrado (PET-M14 §4.5).
+              2. ÁLBUM/PASTA (URL não-direta, ex.: pasta do Drive) → mantém o link
+                 "Ver as fotos do pet" (um <img> ali seria quebrado).
+              3. SEM FOTO → um placeholder discreto com o glifo da espécie (o
+                 tratamento de COR/skeleton final é do PET-M16; aqui é a base
+                 funcional, nunca um ícone de imagem quebrada).
+            O placeholder/skeleton visual fino é escopo do PET-M16 — aqui entregamos
+            o COMPORTAMENTO (os três estados existem e degradam com elegância). */}
+        {derived.isDirectImage && photoLoadState !== 'error' ? (
+          <div className="pet-detail__photo">
+            {photoLoadState === 'loading' && (
+              <div
+                className="pet-detail__photo-skeleton"
+                aria-hidden="true"
+                data-testid="pet-photo-skeleton"
+              />
+            )}
+            {/* foto remota de host externo (PET-M14); next/image exigiria config
+                de domínio e esta rota é ssr:false — um <img> nativo é o correto. */}
+            <img
+              className={`pet-detail__photo-img${photoLoadState === 'loaded' ? ' pet-detail__photo-img--ready' : ''}`}
+              src={derived.photos}
+              alt={`Foto do pet (${derived.speciesLabel}${derived.name ? `, ${derived.name}` : ''})`}
+              loading="lazy"
+              onLoad={() => setPhotoLoadState('loaded')}
+              onError={() => setPhotoLoadState('error')}
+            />
+          </div>
+        ) : derived.photos && !derived.isDirectImage ? (
           <a
             className="pet-detail__album"
             href={derived.photos}
@@ -302,6 +356,16 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
               <span className="pet-detail__album-sub">o que mais ajuda a reconhecer</span>
             </span>
           </a>
+        ) : (
+          /* SEM foto (ou imagem direta que falhou ao carregar): placeholder calmo
+             com o glifo da espécie. NUNCA um <img> quebrado. role/alt textual para
+             o leitor de tela entender que não há foto, sem soar como erro. */
+          <div className="pet-detail__photo-placeholder" role="img" aria-label="Este relato está sem foto">
+            <span className="pet-detail__photo-placeholder-glyph" aria-hidden="true">
+              {derived.speciesGlyph}
+            </span>
+            <span className="pet-detail__photo-placeholder-text">Sem foto neste relato</span>
+          </div>
         )}
 
         <dl className="mdf-pin-sheet__meta">

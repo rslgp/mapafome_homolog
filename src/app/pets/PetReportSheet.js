@@ -10,6 +10,7 @@ import {
   PET_PUBLISH_FAILURE,
   PET_PUBLISH_FAILURE_COPY,
 } from './petDomain';
+import { resizeImageFile, maxPhotoMb } from './petPhoto';
 
 // /pets — reporter bottom-sheet, forked from the hunger ReportSheet.
 // Key difference from the hunger flow: STATUS is a SINGLE-SELECT, REQUIRED
@@ -46,7 +47,15 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
   const [color, setColor] = useState('');
   const [contact, setContact] = useState('');
   const [detail, setDetail] = useState('');
-  const [photos, setPhotos] = useState('');         // link do Google Drive com fotos (opcional)
+  const [photos, setPhotos] = useState('');         // link https que PERSISTE (cole-uma-URL — caminho durável, PET-M14 §5)
+  // PET-M15 — captura/biblioteca: o arquivo escolhido é redimensionado/comprimido
+  // no cliente (petPhoto.resizeImageFile) e mostrado como PRÉVIA LOCAL. HONESTIDADE
+  // (PET-M14 §4.4 #5): NÃO há endpoint de upload sem segredo neste repo, então a
+  // prévia NÃO publica sozinha — o link colado acima é o que vai pro Dados. A prévia
+  // guia o dono a obter um link hospedado. NUNCA gravamos base64 no Dados (§4.1).
+  const [photoPreview, setPhotoPreview] = useState(null); // { previewUrl, width, height } | null
+  const [photoState, setPhotoState] = useState('idle');   // idle | processing | error
+  const photoInputRef = useRef(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [phase, setPhase] = useState('idle');       // idle | publishing | success | error
@@ -74,6 +83,16 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
     setContact('');
     setDetail('');
     setPhotos('');
+    // PET-M15 — limpa a prévia de foto ao reabrir (e revoga o objectURL anterior,
+    // se houver, para não vazar — classe BUG-115). O setter funcional lê o valor
+    // atual sem precisar dele nas deps deste effect (que é keyed em `open`).
+    setPhotoPreview((prev) => {
+      if (prev && prev.previewUrl && typeof URL !== 'undefined') {
+        URL.revokeObjectURL(prev.previewUrl);
+      }
+      return null;
+    });
+    setPhotoState('idle');
     setMoreOpen(false);
     setContactOpen(false);
     setPhase('idle');
@@ -96,6 +115,23 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // PET-M15 — revoga o objectURL da prévia ao DESMONTAR (a fechada normal já
+  // revoga no reset por-open acima; este effect cobre o unmount direto). Mantém
+  // um ref espelhando o state — sincronizado DENTRO de um effect (nunca durante o
+  // render) — e o cleanup do mount lê esse ref para revogar a última prévia viva.
+  const photoPreviewRef = useRef(null);
+  useEffect(() => {
+    photoPreviewRef.current = photoPreview;
+  }, [photoPreview]);
+  useEffect(() => {
+    return () => {
+      const p = photoPreviewRef.current;
+      if (p && p.previewUrl && typeof URL !== 'undefined') {
+        URL.revokeObjectURL(p.previewUrl);
+      }
+    };
+  }, []);
 
   function onHandlePointerDown(e) {
     // Drag-resize only on coarse pointers below the desktop breakpoint.
@@ -135,6 +171,45 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
   function chooseStatus(id) {
     setStatus(id);
     if (errorMsg === ERRORS.status_required) setErrorMsg(null);
+  }
+
+  // PET-M15 — o dono escolheu/capturou um arquivo. Redimensiona/comprime no
+  // CLIENTE (petPhoto.resizeImageFile: downscale ≤1600px, re-encode JPEG que
+  // descarta EXIF/GPS — §6) e mostra como PRÉVIA LOCAL. NÃO publica e NÃO grava
+  // base64 no Dados (PET-M14 §4.1). O <input> é resetado para permitir reescolher
+  // o MESMO arquivo. Degrada com calma para 'error' (sem alarme) se o decode falhar.
+  async function onPhotoChosen(e) {
+    const file = e.target.files && e.target.files[0];
+    // Permite reescolher o mesmo arquivo depois (o evento change não dispara de
+    // novo para um value idêntico se não limparmos).
+    e.target.value = '';
+    if (!file) return;
+    setPhotoState('processing');
+    try {
+      const result = await resizeImageFile(file);
+      setPhotoPreview((prev) => {
+        // Revoga a prévia anterior antes de trocar (não vaza objectURL).
+        if (prev && prev.previewUrl && typeof URL !== 'undefined') {
+          URL.revokeObjectURL(prev.previewUrl);
+        }
+        return { previewUrl: result.previewUrl, width: result.width, height: result.height };
+      });
+      setPhotoState('idle');
+    } catch (_err) {
+      // Sem detalhe técnico na UI: só um aviso calmo (o publicar continua possível
+      // sem foto — a prévia é um complemento, nunca um bloqueio).
+      setPhotoState('error');
+    }
+  }
+
+  function clearPhotoPreview() {
+    setPhotoPreview((prev) => {
+      if (prev && prev.previewUrl && typeof URL !== 'undefined') {
+        URL.revokeObjectURL(prev.previewUrl);
+      }
+      return null;
+    });
+    setPhotoState('idle');
   }
 
   async function handlePublish() {
@@ -309,29 +384,121 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
           </div>
         </fieldset>
 
-        {/* Album — the single biggest recognition aid (PET-M13). Promoted out of
-            the optional expander into an always-visible, emphasized field so a
-            reporter actually sees it. Still optional: publishing works with no link. */}
+        {/* Album — the single biggest recognition aid (PET-M13/PET-M15). Promoted
+            out of the optional expander into an always-visible, emphasized field so
+            a reporter actually sees it. Still optional: publishing works with no
+            photo and no link.
+
+            PET-M15 — DUAS origens convergindo na MESMA string que persiste:
+              • CAPTURA/BIBLIOTECA (abaixo): redimensiona/comprime no cliente e
+                mostra uma PRÉVIA local. HONESTIDADE (PET-M14 §4.4 #5): NÃO há
+                endpoint de upload sem segredo neste repo, então a prévia NÃO
+                publica sozinha e NÃO vira base64 no Dados (§4.1) — ela orienta o
+                dono a obter um link hospedado.
+              • COLE-UMA-URL (o input https): é o caminho que de fato VAI pro
+                Dados.photos (barreira sanitizePhotosUrl http/https). É o fallback
+                durável do PET-M14 §5.
+            Quando o proxy de upload do handoff (§7) existir, a prévia alimenta-o e
+            o campo https é preenchido automaticamente — a forma do Dados não muda. */}
         <div className="pet-album-field">
-          <label className="pet-album-field__label" htmlFor="pet-photos">
+          <span className="pet-album-field__label">
             <span className="pet-album-field__icon" aria-hidden="true">📷</span>
             Fotos do pet — o que mais ajuda a reconhecer
+          </span>
+
+          {/* Captura no celular / escolher da galeria. O input nativo é a
+              afordância acessível (rotulado pelo botão-label >=44px); resize +
+              prévia acontecem no cliente. */}
+          <div className="pet-photo-capture">
+            <input
+              ref={photoInputRef}
+              id="pet-photo-file"
+              className="mdf-sr-only"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={onPhotoChosen}
+              disabled={busy || photoState === 'processing'}
+            />
+            <label
+              htmlFor="pet-photo-file"
+              className="pet-photo-capture__btn"
+              aria-disabled={busy || photoState === 'processing'}
+            >
+              <span aria-hidden="true">📸</span>
+              <span>
+                {photoState === 'processing'
+                  ? 'Preparando a foto…'
+                  : photoPreview
+                    ? 'Trocar a foto'
+                    : 'Tirar foto ou escolher da galeria'}
+              </span>
+            </label>
+
+            {photoState === 'error' && (
+              <p className="mdf-sheet__helper pet-photo-capture__error" role="alert">
+                Não deu para preparar essa imagem. Tente outra foto, ou cole um link
+                no campo abaixo.
+              </p>
+            )}
+
+            {photoPreview && (
+              <figure className="pet-photo-preview">
+                {/* objectURL local de prévia (não é um asset estático otimizável;
+                    revogado no cleanup). next/image não se aplica a um blob local. */}
+                <img
+                  className="pet-photo-preview__img"
+                  src={photoPreview.previewUrl}
+                  alt="Prévia da foto do pet que você escolheu"
+                  width={photoPreview.width}
+                  height={photoPreview.height}
+                />
+                <figcaption className="pet-photo-preview__cap">
+                  <span>
+                    Prévia pronta (reduzida no seu aparelho). Para ela aparecer no
+                    relato, hospede a foto e cole o link abaixo — por enquanto, é o
+                    link que publica.
+                  </span>
+                  <button
+                    type="button"
+                    className="pet-photo-preview__remove"
+                    onClick={clearPhotoPreview}
+                    disabled={busy}
+                  >
+                    Remover prévia
+                  </button>
+                </figcaption>
+              </figure>
+            )}
+          </div>
+
+          {/* PII calmo (PET-M14 §6): orienta a evitar terceiros na foto. Tom de
+              cuidado, sem alarme. */}
+          <p className="mdf-sheet__helper pet-photo-capture__privacy">
+            Evite fotos que mostrem pessoas, placas ou o número da casa — foque no
+            pet. A foto é reduzida no seu aparelho antes de qualquer coisa (até
+            ~{maxPhotoMb()} MB).
+          </p>
+
+          <label className="pet-album-field__url-label" htmlFor="pet-photos">
+            Link da foto (o que publica)
           </label>
           <input
             id="pet-photos"
             type="url"
             inputMode="url"
             className="mdf-sheet__input pet-input pet-album-field__input"
-            placeholder="Cole aqui o link da pasta do Google Drive"
+            placeholder="Cole aqui o link da foto ou da pasta do Google Drive"
             maxLength={500}
             value={photos}
             onChange={(e) => setPhotos(e.target.value)}
             disabled={busy}
           />
           <p className="mdf-sheet__helper pet-album-field__helper">
-            Uma foto é o que mais ajuda no reencontro. Cole o link de uma pasta do
-            Google Drive e deixe-a como “qualquer pessoa com o link pode ver”. Sem
-            foto também publica — mas com foto, muito mais gente reconhece.
+            Uma foto é o que mais ajuda no reencontro. Cole o link de uma foto direta
+            ou de uma pasta do Google Drive (deixe como “qualquer pessoa com o link
+            pode ver”). Sem foto também publica — mas com foto, muito mais gente
+            reconhece.
           </p>
         </div>
 
