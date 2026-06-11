@@ -665,6 +665,208 @@
   }
 }
 
+/* ════════════════════════════════════════════════════════════════════════════
+ * PET-M11 — CROSS-SURFACE STATUS-BADGE SOT (the single documented spec)
+ * ════════════════════════════════════════════════════════════════════════════
+ * One place that maps every {status x variant} to its --pet-* token combo with
+ * its PROVEN WCAG 2.2 AA ratio, so PET-M7 (filter chips) / PET-M8 (list rows) and
+ * any later surface REUSE these classes instead of re-deriving color. Ratios are
+ * the ones measured inline in petPalette.css; restated here at the point of use.
+ *
+ * THREE VARIANTS (each surface picks the one that fits its geometry):
+ *   • STROKE  — outline only (the marker ring + the on-map legend swatch). The
+ *               accent is a GRAPHICAL object on the white disc / page, floor >=3:1.
+ *   • TINT+INK — soft tinted fill + deep status ink (the selected chip / legend
+ *               row label). ink-on-tint is TEXT, floor >=4.5:1.
+ *   • SOLID+ON — solid accent fill + on-accent text (the detail badge / list-row
+ *               pill). text-on-accent is TEXT, floor >=4.5:1.
+ *
+ * MEASURED AA RATIOS PER {status x variant} (all PASS):
+ *   status      STROKE on #FFF / #FAFAF7    TINT+INK (ink-on-tint)   SOLID+ON (text-on-accent)
+ *   perdido     3.51:1 / 3.35:1             7.86:1                   4.83:1  ← see EXCEPTION
+ *   encontrado  5.36:1 / 5.12:1             8.78:1                   5.22:1
+ *   avistado    7.76:1 / 7.42:1             10.06:1                  7.55:1
+ *   reunido     5.02:1 / 4.80:1             9.07:1                   4.89:1
+ *
+ * THE perdido SOLID+ON EXCEPTION (encoded inline, never lost):
+ *   perdido #CE7106 is too LIGHT to host near-white text at AA. So --pet-perdido-on
+ *   is a DARK ink (#2E1700 -> 4.83:1), NOT the shared near-white --pet-on-accent.
+ *   NEVER put white/near-white text on the burnt-amber accent. The other three are
+ *   dark enough to host the near-white --pet-on-accent (#FCFCFA). This is wired in
+ *   the tokens (--pet-perdido-on overrides) so a class user cannot get it wrong.
+ *
+ * USAGE: add the base class + a status modifier:
+ *   <span class="pet-badge pet-badge--stroke   pet-badge--perdido">…</span>
+ *   <span class="pet-badge pet-badge--tint     pet-badge--encontrado">…</span>
+ *   <span class="pet-badge pet-badge--solid    pet-badge--reunido">…</span>
+ * Only tokens are referenced — no raw hex enters here.
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+.pet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-1);
+  padding: 2px var(--mdf-space-2);
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-caption);
+  font-weight: 700;
+  line-height: var(--mdf-lh-body);
+  white-space: nowrap;
+}
+
+/* STROKE variant — outline + status ink text on a neutral surface. The accent is
+ * graphical (>=3:1); the ink is the deep -ink token (well above text AA). */
+.pet-badge--stroke {
+  background: transparent;
+  border: 2px solid currentColor;
+}
+.pet-badge--stroke.pet-badge--perdido    { color: var(--pet-perdido-ink); border-color: var(--pet-perdido); }
+.pet-badge--stroke.pet-badge--encontrado { color: var(--pet-encontrado-ink); border-color: var(--pet-encontrado); }
+.pet-badge--stroke.pet-badge--avistado   { color: var(--pet-avistado-ink); border-color: var(--pet-avistado); }
+.pet-badge--stroke.pet-badge--reunido    { color: var(--pet-reunido-ink); border-color: var(--pet-reunido); }
+
+/* TINT+INK variant — soft tint fill + deep status ink (ink-on-tint >=4.5:1). The
+ * status border keeps the object legible against a light page. */
+.pet-badge--tint {
+  border: 1px solid currentColor;
+}
+.pet-badge--tint.pet-badge--perdido    { background: var(--pet-perdido-tint);    color: var(--pet-perdido-ink);    border-color: var(--pet-perdido); }
+.pet-badge--tint.pet-badge--encontrado { background: var(--pet-encontrado-tint); color: var(--pet-encontrado-ink); border-color: var(--pet-encontrado); }
+.pet-badge--tint.pet-badge--avistado   { background: var(--pet-avistado-tint);   color: var(--pet-avistado-ink);   border-color: var(--pet-avistado); }
+.pet-badge--tint.pet-badge--reunido    { background: var(--pet-reunido-tint);    color: var(--pet-reunido-ink);    border-color: var(--pet-reunido); }
+
+/* SOLID+ON variant — solid accent + on-accent text (text-on-accent >=4.5:1).
+ * perdido uses its DARK on-ink (the exception above); the rest use near-white. */
+.pet-badge--solid {
+  border: 1px solid transparent;
+}
+.pet-badge--solid.pet-badge--perdido    { background: var(--pet-perdido);    color: var(--pet-perdido-on); }
+.pet-badge--solid.pet-badge--encontrado { background: var(--pet-encontrado); color: var(--pet-encontrado-on); }
+.pet-badge--solid.pet-badge--avistado   { background: var(--pet-avistado);   color: var(--pet-avistado-on); }
+.pet-badge--solid.pet-badge--reunido    { background: var(--pet-reunido);    color: var(--pet-reunido-on); }
+
+/* ── On-map legend (PET-M11) ──────────────────────────────── *
+ * A compact, DISMISSIBLE legend mounted as a Leaflet control (bottom-right).
+ * It maps each status hue + glyph SHAPE to a pt-BR label (labels come from the
+ * petDomain SOT; the swatch is the REAL marker mini-icon from petMarkerIcon).
+ * Calm-tone: a quiet card on --mdf-surface-1, soft elevation, a real >=44px close
+ * button. Tokens only — no raw hex; the swatch SVG carries its --pet-* stroke. */
+
+.mdf-pets .pet-legend-control {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  margin: var(--mdf-space-3);
+}
+
+.mdf-pets .pet-legend-card {
+  max-width: 15rem;
+  padding: var(--mdf-space-2) var(--mdf-space-3) var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+  box-shadow: var(--mdf-elev-2);
+}
+
+.mdf-pets .pet-legend-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mdf-space-2);
+  margin-bottom: var(--mdf-space-2);
+}
+
+.mdf-pets .pet-legend-card__title {
+  margin: 0;
+  font-size: var(--mdf-fs-caption);
+  font-weight: 700;
+  color: var(--mdf-ink);
+}
+
+/* Botão fechar/dispensar — alvo >=44px, ink legível, foco visível. */
+.mdf-pets .pet-legend-card__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--mdf-touch-target);
+  min-height: var(--mdf-touch-target);
+  margin: calc(var(--mdf-space-2) * -1) calc(var(--mdf-space-2) * -1) 0 0;
+  padding: 0;
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: none;
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-body);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mdf-pets .pet-legend-card__close:hover {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-2);
+}
+
+.mdf-pets .pet-legend-card__close:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.mdf-pets .pet-legend-card__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mdf-pets .pet-legend-card__row {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  font-size: var(--mdf-fs-caption);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+/* O swatch é o mini-ícone REAL do marcador (mesmo SVG de petMarkerIcon), 22x22. */
+.mdf-pets .pet-legend-card__swatch {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+/* "Mostrar legenda" — afordância calma para reabrir após dispensar. */
+.mdf-pets .pet-legend-reopen {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-1);
+  min-height: var(--mdf-touch-target);
+  min-width: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  box-shadow: var(--mdf-elev-2);
+  font-family: inherit;
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mdf-pets .pet-legend-reopen:hover {
+  background: var(--mdf-surface-2);
+  border-color: var(--mdf-ink);
+}
+
+.mdf-pets .pet-legend-reopen:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring), var(--mdf-elev-2);
+}
+
 /* ── Detail-sheet status badge accents ────────────────────── *
  * Overrides the inherited .mdf-pin-sheet__status colors with the --pet-*
  * solid accent + its proven on-accent text, so the badge matches the marker. */
@@ -695,6 +897,10 @@
 .pet-detail__status--avistado {
   background: var(--pet-avistado);
   color: var(--pet-avistado-on);
+}
+.pet-detail__status--reunido {
+  background: var(--pet-reunido);
+  color: var(--pet-reunido-on);
 }
 
 .pet-detail__descline {

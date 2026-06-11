@@ -27,19 +27,31 @@
  *                muted forest #4A7C59 hunger green and NOT the bright #00CFFF cyan
  *                nor the #54A9EB/#2E6E9E hunger blues (it is teal, lower-luminance).
  *   - avistado   #5B3FA6 is a muted violet/indigo — a hue the hunger map never uses.
+ *   - reunido    #BC3F84 is a warm rose/orchid (the gratitude/reunion hue) — NOT
+ *                the hunger success-green #4A7C59 (the reserved confirmation axis;
+ *                reunido never reuses success-green), NOT the #D64545/#B84A3D reds,
+ *                NOT the #5B3FA6 avistado violet (rose is pink/magenta-leaning, not
+ *                indigo). It is a hue NO reserved or active token occupies.
  * No --pet-* value equals any reserved hex.
  *
  * COLOR-BLIND SAFETY (deuteranopia / protanopia)
  * ----------------------------------------------
- * The three accents form a deliberate LIGHTNESS STAIRCASE so they separate by
- * lightness even when hue collapses under CVD:
- *     perdido (lightest, Y .19) > encontrado (mid, Y .15) > avistado (darkest, Y .09)
- * Simulated (Vienot 1999) mutual lightness contrast stays >=1.37:1 for every pair
- * under deuteranopia and >=1.16:1 under protanopia. The single tightest pair —
- * perdido vs encontrado under protanopia (1.16:1) — additionally separates on the
- * blue/yellow axis that protans retain (perdido reads yellow-ish, encontrado
- * blue-ish), and the marker system already carries a distinct glyph SHAPE per
- * status. So distinction never relies on red-vs-green alone.
+ * The four accents form a deliberate LIGHTNESS STAIRCASE so they separate by
+ * lightness even when hue collapses under CVD (sRGB relative luminance Y):
+ *     perdido (lightest, Y .25) > reunido (Y .16) > encontrado (Y .15) > avistado (darkest, Y .09)
+ * Simulated (Vienot 1999) mutual lightness contrast for the three ACTIVE accents
+ * stays >=1.37:1 for every pair under deuteranopia and >=1.16:1 under protanopia.
+ * The single tightest pair — perdido vs encontrado under protanopia (1.16:1) —
+ * additionally separates on the blue/yellow axis that protans retain (perdido
+ * reads yellow-ish, encontrado blue-ish), and the marker system already carries a
+ * distinct glyph SHAPE per status. So distinction never relies on red-vs-green alone.
+ *
+ * reunido under CVD: its tightest neighbour is encontrado (deuteranopia 1.29:1,
+ * protanopia 1.27:1) — both ABOVE the system worst case (the perdido/encontrado
+ * 1.16:1 protan pair), so reunido does NOT degrade the staircase. Decisively,
+ * reunido is the only LIFECYCLE state and carries a wholly distinct GLYPH (a heart,
+ * shared by no active status), so in pure grayscale it is mono-distinguishable from
+ * perdido(!)/encontrado(check)/avistado(eye) by SHAPE — never hue alone.
  *
  * CONTRAST FLOORS (WCAG 2.2 AA)
  * -----------------------------
@@ -69,9 +81,21 @@
   --pet-avistado-ink: #3A2570;    /* on --pet-avistado-tint: 10.06:1 (AA >=4.5) */
   --pet-avistado-on: var(--pet-on-accent);  /* white on solid --pet-avistado #5B3FA6: 7.76:1 (AA >=4.5) */
 
+  /* ---- reunido (LIFECYCLE: pet back home) — warm rose/orchid, the gratitude hue ----
+   * Not a 4th STATUS but a resolved-lifecycle overlay (PET-M2 resolvedAt). Rose is
+   * off every reserved axis: NOT the reserved success-green #4A7C59 (reunido never
+   * reuses the confirmation hue), NOT a red, NOT the avistado violet. Calm-tone:
+   * warm-and-gentle, not a celebratory spike. Carries its own HEART glyph, so it is
+   * grayscale-distinct from the 3 active statuses by SHAPE, not hue alone. */
+  --pet-reunido: #BC3F84;        /* stroke on --mdf-surface-1 #FFF: 5.02:1 (AA graphical >=3) | on --mdf-surface-0: 4.80:1 (AA >=3) */
+  --pet-reunido-tint: #FBE9F2;   /* soft rose chip background (low chroma) */
+  --pet-reunido-ink: #702048;    /* on --pet-reunido-tint: 9.07:1 (AA normal-text >=4.5) */
+  --pet-reunido-on: var(--pet-on-accent);  /* near-white #FCFCFA on solid --pet-reunido #BC3F84: 4.89:1 (AA text >=4.5) — rose is dark enough to host near-white ink at AA, unlike the lighter perdido amber */
+
   /* ---- shared text-on-solid-accent ----
-   * Works for the two dark accents (encontrado, avistado). perdido is too light
-   * for white text at AA, so it overrides with --pet-perdido-on (dark ink) above.
-   * #FCFCFA is the eye-comfort near-white (matches --mdf-surface tone, never pure #FFFFFF). */
-  --pet-on-accent: #FCFCFA;       /* on --pet-encontrado: 5.22:1 | on --pet-avistado: 7.55:1 (both AA >=4.5) */
+   * Works for the three dark accents (encontrado, avistado, reunido). perdido is
+   * too light for white text at AA, so it overrides with --pet-perdido-on (dark
+   * ink) above. #FCFCFA is the eye-comfort near-white (matches --mdf-surface tone,
+   * never pure #FFFFFF). */
+  --pet-on-accent: #FCFCFA;       /* on --pet-encontrado: 5.22:1 | on --pet-avistado: 7.55:1 | on --pet-reunido: 4.89:1 (all AA >=4.5) */
 }

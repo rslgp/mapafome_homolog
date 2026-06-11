@@ -27,6 +27,7 @@ import PropTypes from 'prop-types';
 import PetMarkers from './PetMarkers';
 import PetSearchField from './PetSearchField';
 import PetLocateControl from './PetLocateControl';
+import PetLegendControl from './PetLegendControl';
 import { ICONS, MAP_CONFIG } from '../components/compatibility/components/mapConstants';
 import { isMobileDevice } from '../components/compatibility/components/mapUtils';
 import {
@@ -114,6 +115,10 @@ const PetMap = ({ center, pets, onPinDropped, onPetClick }) => {
             Ambos são autocontidos e operam o mapa via useMap() — sem prop nova. */}
         <PetSearchField />
         <PetLocateControl />
+
+        {/* PET-M11(a): legenda compacta e dispensável (status hue + forma do glifo
+            + variações de ciclo de vida) com os mini-ícones REAIS do marcador. */}
+        <PetLegendControl />
 
         <MapViewUpdater center={center} />
 

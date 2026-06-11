@@ -12,7 +12,7 @@ import React, { useMemo } from 'react';
 import { Marker } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-markercluster';
 import PropTypes from 'prop-types';
-import { buildPetMarkerIcon } from './petMarkerIcon';
+import { buildPetMarkerIcon, lifecycleForPet } from './petMarkerIcon';
 import { markerClusterOptionsPrecisando } from '../components/compatibility/components/mapUtils';
 import { MAP_CONFIG } from '../components/compatibility/components/mapConstants';
 
@@ -38,7 +38,11 @@ const PetMarkers = ({ pets, onPetClick }) => {
         <Marker
           key={`pet-${i}-${pet.dateIso || ''}`}
           position={pet.coords}
-          icon={buildPetMarkerIcon({ status: pet.status, species: pet.species })}
+          icon={buildPetMarkerIcon({
+            status: pet.status,
+            species: pet.species,
+            lifecycle: lifecycleForPet(pet),
+          })}
           eventHandlers={{
             click: () => onPetClick?.(pet),
           }}
