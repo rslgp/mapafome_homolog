@@ -490,8 +490,8 @@
 
 /* ── Detail sheet: album affordance — PRIMARY recognition aid ─ *
  * Elevated above the meta block and rendered as a SOLID brand CTA (the proven
- * app-wide --mdf-brand-hover bg + --mdf-brand-ink text pairing, white on
- * #B93838 ≈ 6.4:1, AA pass). This deliberately outweighs the secondary neutral
+ * app-wide --mdf-brand-hover bg + --mdf-brand-ink text pairing, white #FFF on
+ * #B93838 = 5.70:1 (AA text >=4.5 pass)). This deliberately outweighs the secondary neutral
  * .mdf-pin-sheet__contact pill so the album reads as the first thing to do. */
 
 .pet-detail__album {
@@ -755,7 +755,7 @@
 }
 
 /* "Marcar como reunido" — ação primária esperançosa. Mesmo par de marca provado
- * em AA do álbum/FAB (branco ≈ 6.4:1 sobre --mdf-brand-hover #B93838). NÃO é um
+ * em AA do álbum/FAB (branco #FFF = 5.70:1 sobre --mdf-brand-hover #B93838, AA texto >=4.5). NÃO é um
  * pico celebratório — só pesa como a decisão de primeira importância da curva. */
 .pet-detail__lifecycle-btn--reunido {
   background: var(--mdf-brand-hover);
@@ -1627,8 +1627,8 @@
 }
 
 /* ERROR — "Tentar de novo": alvo >=44px, operável por teclado, foco visível.
- * Par de marca provado AA (branco ≈ 6.4:1 sobre --mdf-brand-hover) para pesar
- * como a ação de recuperação, sem virar vermelho de alarme. */
+ * Par de marca provado AA (branco #FFF = 5.70:1 sobre --mdf-brand-hover, AA texto >=4.5)
+ * para pesar como a ação de recuperação, sem virar vermelho de alarme. */
 .mdf-pets .pet-mapstate__retry {
   display: inline-flex;
   align-items: center;
@@ -1897,8 +1897,8 @@
 }
 
 /* O <label> dispara o <input type=file> escondido (sr-only) — é a afordância
- * acessível e o alvo de toque >=44px. Par de marca provado AA (branco ≈ 6.4:1
- * sobre --mdf-brand-hover) para CONVIDAR sem alarme. */
+ * acessível e o alvo de toque >=44px. Par de marca provado AA (branco #FFF = 5.70:1
+ * sobre --mdf-brand-hover, AA texto >=4.5) para CONVIDAR sem alarme. */
 .pet-photo-capture__btn {
   display: inline-flex;
   align-items: center;
@@ -2106,10 +2106,16 @@
 
 /* O glifo da espécie ganha um DISCO suave (não dulled-por-opacity: opacity-alone
  * num glifo significativo é exatamente o que evitamos). O disco é --mdf-surface-1
- * com aro --mdf-ink-subtle (2.96:1 sobre o leito — limite gráfico discreto,
- * intencional), assentando o emoji como elemento deliberado e calmo. O emoji traz
- * cor intrínseca; o SIGNIFICADO acessível vem do texto AA abaixo + o aria-label do
- * JSX. Sem opacity para escurecer. */
+ * com aro --mdf-ink-subtle sobre o leito --pet-placeholder-tint.
+ * PET-M24 AUDIT — este aro mede 2.96:1, ABAIXO do piso gráfico 3:1, e isso é
+ * INTENCIONAL e ACEITÁVEL: o disco é DECORAÇÃO PURA (WCAG 2.2 SC 1.4.11 isenta
+ * "pure decoration") — ele não codifica nenhum estado nem é um componente de UI
+ * operável; é só uma moldura calma sob o emoji. Nada de informação depende de
+ * enxergar o aro: o SIGNIFICADO acessível vem 100% do texto AA abaixo (inkMuted
+ * 5.74:1 sobre o leito) + o aria-label do JSX. Subir o aro para >=3:1 (ex.
+ * --mdf-ink-muted) endureceria a moldura e brigaria com o tom calmo do estado
+ * vazio sem ganho de acessibilidade. Mantido de propósito; jamais usar como
+ * fronteira que carrega estado. Sem opacity para escurecer. */
 .pet-detail__photo-placeholder-glyph {
   display: inline-flex;
   align-items: center;
@@ -2119,7 +2125,7 @@
   font-size: var(--mdf-fs-h1);
   line-height: 1;
   background: var(--mdf-surface-1);
-  border: 1px solid var(--mdf-ink-subtle); /* aro discreto: 2.96:1 sobre o leito */
+  border: 1px solid var(--mdf-ink-subtle); /* aro DECORATIVO: 2.96:1 sobre o leito — sub-3:1 intencional, decoração pura (SC 1.4.11 isenta); nenhum estado depende dele */
   border-radius: var(--mdf-radius-pill);
 }
 

@@ -60,6 +60,16 @@
  *   text-on-accent (solid filled pill)                                            >= 4.5:1
  *   ink-on-tint (selected chip)                                                   >= 4.5:1
  * Measured ratios are stated inline next to each token.
+ *
+ * PET-M24 RE-AUDIT (coloring-ict6, served-a11y gated) — every ratio below was
+ * RE-MEASURED with the WCAG 2.2 relative-luminance formula and reproduces
+ * exactly; the four-step lightness staircase (perdido Y .2495 > reunido .1591 >
+ * encontrado .1460 > avistado .0853) is strictly monotonic and HOLDS; every
+ * status+reunido pair is mono-distinguishable under simulated deuteranopia AND
+ * protanopia (Viénot 1999), tightest pair perdido/encontrado 1.16:1 protan —
+ * which also separates on the blue/yellow axis protans retain and by glyph
+ * SHAPE, so never red-vs-green alone. Full pairing table: src/app/pets/
+ * PET_CONTRAST_AUDIT.md. No token needed a contrast FIX (all >= floor).
  */
 
 :root {
