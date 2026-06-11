@@ -12,6 +12,58 @@
 
 let registered = false;
 
+/*
+ * Archive/mirror guard. When this build is served from a web archive
+ * (Wayback Machine, archive.today) or any host that is NOT mapafome.com.br,
+ * registering `/sw.js` is both pointless and harmful:
+ *
+ *   • register('/sw.js', {scope:'/'}) resolves against the ARCHIVE origin
+ *     (e.g. web.archive.org), whose scope/origin policy rejects it — the
+ *     registration throws.
+ *   • Worse, a returning visitor who already opened the LIVE site carries an
+ *     installed SW whose cache-first shell handler can serve stale, wrongly
+ *     hashed assets over the archived snapshot, breaking the page.
+ *
+ * So on an archive host we do NOT register, and we proactively tear down any
+ * pre-existing registration + its caches so the archived view renders clean.
+ * This is purely additive and host-gated — on mapafome.com.br it is a no-op.
+ */
+// Pure host classifier (exported for unit tests). Returns true when `host`
+// is a known web-archive / cache / memento gateway origin. Kept as a plain
+// string predicate — no `window` access — so it is deterministic to test.
+export function isArchiveHostname(host) {
+  if (!host) return false;
+  if (/(^|\.)web\.archive\.org$/.test(host)) return true;
+  if (/(^|\.)archive\.org$/.test(host)) return true;
+  if (/(^|\.)archive\.(today|ph|is|li|md|vn|fo)$/.test(host)) return true;
+  if (/(^|\.)webcache\.googleusercontent\.com$/.test(host)) return true;
+  // Wayback also serves under timetravel / memento gateways.
+  if (/(^|\.)timetravel\.mementoweb\.org$/.test(host)) return true;
+  return false;
+}
+
+function isArchivedHost() {
+  if (typeof window === 'undefined') return false;
+  return isArchiveHostname(window.location.hostname || '');
+}
+
+function teardownExistingSW() {
+  // Best-effort: unregister every SW under this scope and purge its caches so
+  // a SW installed from the live origin cannot intercept the archived page.
+  try {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((reg) => { try { reg.unregister(); } catch (e) { /* ignore */ } });
+    }).catch(() => { /* ignore */ });
+  } catch (e) { /* ignore */ }
+  try {
+    if (typeof caches !== 'undefined' && caches.keys) {
+      caches.keys().then((keys) => {
+        keys.forEach((k) => { try { caches.delete(k); } catch (e) { /* ignore */ } });
+      }).catch(() => { /* ignore */ });
+    }
+  } catch (e) { /* ignore */ }
+}
+
 function showUpdateToast(reg) {
   if (typeof document === 'undefined') return;
   // Idempotent: don't stack toasts if updatefound fires twice.
@@ -70,6 +122,16 @@ export function registerOnce() {
   if (registered) return;
   if (typeof window === 'undefined') return;
   if (!('serviceWorker' in navigator)) return;
+  // Archive/mirror guard (Wayback Machine et al): never register, and tear
+  // down any SW a returning visitor carries from the live origin so the
+  // archived snapshot renders clean. Must precede the NODE_ENV check below —
+  // archived bundles ARE production builds, so the dev-only skip won't catch
+  // this case.
+  if (isArchivedHost()) {
+    registered = true; // latch so we don't re-run teardown every mount
+    teardownExistingSW();
+    return;
+  }
   // Skip registration ONLY under the Next.js dev server, where the HMR runtime
   // conflicts with a cache-first shell (stale bundles). Any PRODUCTION-built
   // bundle registers — whether deployed (HTTPS) or served locally via
