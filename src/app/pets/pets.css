@@ -453,6 +453,112 @@
   }
 }
 
+/* ── Detail sheet: denunciar (flag) affordance — PET-M4 ────── *
+ * Afordância CALMA e secundária para sinalizar um relato suspeito. NUNCA usa os
+ * tokens de risco/alarme vermelho (--mdf-risk-*): o público está em estresse e a
+ * denúncia é um ato de cuidado, não punitivo (governador de tom). Botão discreto
+ * de texto em ink-muted sobre surface neutra; alvo >=44px; foco sempre visível.
+ * O tratamento visual RICO de um relato JÁ sinalizado fica para coloring (escopo
+ * PET-M4 exclui isso). Só tokens, sem hex cru.
+ * HANDOFF coloring-ict6: se um tom dedicado de "sinalizado/em revisão" for
+ * desejado, re-derivar com a razão AA medida anotada inline — aqui fica o par
+ * neutro seguro como base. */
+
+.pet-detail__flag {
+  margin: var(--mdf-space-2) 0 var(--mdf-space-1) 0;
+}
+
+.pet-detail__flag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque */
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: 1px solid transparent;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--mdf-dur-fast) var(--mdf-ease-out),
+              background var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__flag-btn:hover {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+}
+
+.pet-detail__flag-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* Passo de confirmação — card neutro calmo (surface-2 + boundary sutil), nunca
+ * alarme. Os dois botões herdam a geometria >=44px de .pet-detail__flag-btn. */
+.pet-detail__flag-confirm {
+  padding: var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-card);
+}
+
+.pet-detail__flag-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+  margin-top: var(--mdf-space-2);
+}
+
+/* "Sim, sinalizar" pesa um pouco mais (boundary visível + ink cheio) sem virar
+ * vermelho de alarme; "Cancelar" fica discreto (a saída calma é a default). */
+.pet-detail__flag-btn--confirm {
+  color: var(--mdf-ink);
+  border-color: var(--mdf-ink-subtle);
+  background: var(--mdf-surface-1);
+}
+
+.pet-detail__flag-btn--confirm:hover {
+  border-color: var(--mdf-ink);
+}
+
+.pet-detail__flag-note {
+  margin: 0;
+  font-size: var(--mdf-fs-caption);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+}
+
+.pet-detail__flag-note--done {
+  color: var(--mdf-ink);
+}
+
+.pet-detail__flag-retry {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--mdf-ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pet-detail__flag-retry:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-radius: var(--mdf-radius-chip);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-detail__flag-btn {
+    transition: none;
+  }
+}
+
 /* ── Detail-sheet status badge accents ────────────────────── *
  * Overrides the inherited .mdf-pin-sheet__status colors with the --pet-*
  * solid accent + its proven on-accent text, so the badge matches the marker. */

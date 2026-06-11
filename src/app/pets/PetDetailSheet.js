@@ -6,6 +6,18 @@ import './pets.css';
 import { createDirectionUrl, formatRelativeTime } from '../components/compatibility/components/mapUtils';
 import { resolveContact } from '../components/compatibility/components/ux/contactLink';
 import { PET_STATUS_MAP, PET_SPECIES, PET_SIZES } from './petDomain';
+import { flagPet } from './petsData';
+
+// PET-M4 — estados do fluxo de denúncia (flag) na própria sheet (máquina de
+// estados pequena, dois passos: ocioso → confirmar → enviando → feito/erro).
+// IDLE: mostra o link discreto "Denunciar"; CONFIRM: pergunta calma + confirmar/
+// cancelar; SENDING: gravando; DONE: agradece e some o controle; ERROR: cópia
+// calma de "não deu, tente de novo".
+const FLAG_IDLE = 'idle';
+const FLAG_CONFIRM = 'confirm';
+const FLAG_SENDING = 'sending';
+const FLAG_DONE = 'done';
+const FLAG_ERROR = 'error';
 
 // /pets — read-only detail sheet, forked from PinDetailSheet. Shows the report a
 // person published: status badge, species/size/color line, name (or fallback),
@@ -39,6 +51,10 @@ export default function PetDetailSheet({ open, pet, onClose }) {
   // explícito — antes disso, `resolveContact` nem roda sobre o dado bruto.
   const [revealed, setRevealed] = useState(false);
 
+  // PET-M4 — estado do fluxo de denúncia (dois passos). Reseta junto com o
+  // reveal quando o pet aberto muda (mesma forcing-function de não-vazamento).
+  const [flagState, setFlagState] = useState(FLAG_IDLE);
+
   // Reseta a revelação quando ABRE ou TROCA de pet, SEM um effect (que dispararia
   // o aviso react-hooks/set-state-in-effect e um render em cascata). Padrão
   // oficial do React "ajustar estado durante o render quando uma prop muda":
@@ -51,6 +67,8 @@ export default function PetDetailSheet({ open, pet, onClose }) {
   if (lastKeyRef.current !== openKey) {
     lastKeyRef.current = openKey;
     if (revealed) setRevealed(false);
+    // PET-M4 — a denúncia de um pet jamais "vaza" para o próximo aberto.
+    if (flagState !== FLAG_IDLE) setFlagState(FLAG_IDLE);
   }
 
   useEffect(() => {
@@ -107,6 +125,27 @@ export default function PetDetailSheet({ open, pet, onClose }) {
     const id = requestAnimationFrame(() => revealRef.current?.focus());
     return () => cancelAnimationFrame(id);
   }, [revealed]);
+
+  // PET-M4 — confirma e grava a denúncia. Persiste o flag no blob Dados via o
+  // writer coords-keyed do PET-M2 (flagPet → updatePetByCoords → incrementPetFlag),
+  // que reescreve SÓ a coluna Dados e só casa uma linha de pet (isolamento). A
+  // idempotency_key é DERIVADA das coords do pet, então um re-tap ou reabrir a
+  // mesma sheet não conta a denúncia duas vezes (reusa o cache de petsData).
+  // Async é aceitável aqui: NÃO é uma chamada de gesto sensível (share/clipboard);
+  // é uma escrita comum, então o await depois do clique não é descartado pelo
+  // browser. Degrada com calma para ERROR se a gravação falhar.
+  const handleFlag = async () => {
+    if (!pet) return;
+    setFlagState(FLAG_SENDING);
+    try {
+      const key = `flag:${JSON.stringify(pet.coords)}`;
+      await flagPet({ coords: pet.coords, idempotency_key: key });
+      setFlagState(FLAG_DONE);
+    } catch (_e) {
+      // Sem detalhe técnico na UI (e sem PII): só uma cópia calma de "não deu".
+      setFlagState(FLAG_ERROR);
+    }
+  };
 
   if (!open || !pet || !derived) return null;
 
@@ -209,6 +248,76 @@ export default function PetDetailSheet({ open, pet, onClose }) {
             {revealedContact.label}
           </p>
         )}
+
+        {/* PET-M4 — denunciar (flag) um relato suspeito. Afordância CALMA e
+            secundária: um botão discreto de texto que escala para um passo de
+            confirmação, nunca um alarme. Persiste o flag no blob Dados (isolamento
+            kind:'pet' preservado pelo writer do PET-M2). Não esconde o pin (isso é
+            do servidor — handoff). Alvo >=44px, operável por teclado, rotulado. */}
+        <div className="pet-detail__flag">
+          {flagState === FLAG_IDLE && (
+            <button
+              type="button"
+              className="pet-detail__flag-btn"
+              onClick={() => setFlagState(FLAG_CONFIRM)}
+            >
+              <span aria-hidden="true">⚑</span>
+              <span>Denunciar este relato</span>
+            </button>
+          )}
+
+          {flagState === FLAG_CONFIRM && (
+            <div className="pet-detail__flag-confirm" role="group" aria-label="Confirmar denúncia">
+              <p className="pet-detail__flag-note">
+                Algo parece errado com este relato? Você pode sinalizá-lo para
+                revisão. Obrigado por ajudar a manter o mapa confiável.
+              </p>
+              <div className="pet-detail__flag-actions">
+                <button
+                  type="button"
+                  className="pet-detail__flag-btn pet-detail__flag-btn--confirm"
+                  onClick={handleFlag}
+                >
+                  Sim, sinalizar
+                </button>
+                <button
+                  type="button"
+                  className="pet-detail__flag-btn pet-detail__flag-btn--cancel"
+                  onClick={() => setFlagState(FLAG_IDLE)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {flagState === FLAG_SENDING && (
+            <p className="pet-detail__flag-note" aria-live="polite">
+              Enviando sua sinalização…
+            </p>
+          )}
+
+          {flagState === FLAG_DONE && (
+            <p className="pet-detail__flag-note pet-detail__flag-note--done" role="status">
+              Recebemos sua sinalização. Vamos revisar com calma. Obrigado por
+              cuidar do mapa junto com a gente.
+            </p>
+          )}
+
+          {flagState === FLAG_ERROR && (
+            <p className="pet-detail__flag-note" role="status">
+              Não deu para enviar a sinalização agora. Você pode tentar de novo em
+              instantes.{' '}
+              <button
+                type="button"
+                className="pet-detail__flag-retry"
+                onClick={() => setFlagState(FLAG_CONFIRM)}
+              >
+                Tentar de novo
+              </button>
+            </p>
+          )}
+        </div>
 
         <div className="mdf-pin-sheet__actions">
           <button
