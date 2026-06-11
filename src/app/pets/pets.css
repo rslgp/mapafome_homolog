@@ -2144,3 +2144,42 @@
     background: var(--pet-placeholder-tint);
   }
 }
+
+/* ── Detail sheet: "Compartilhar" — PET-M19 ───────────────────────────────────
+ * Ação SECUNDÁRIA na linha de ações (ao lado de Fechar / Como chegar). Convite
+ * sereno (não um botão de urgência): boundary sutil + ink cheio, mesmo registro
+ * neutro do "Como chegar", herdando a geometria >=44px de --mdf-touch-target.
+ * Só tokens --mdf-*, nenhum hex cru. Botão NATIVO -> teclado e foco de graça. */
+.pet-detail__share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-5);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__share-btn:hover {
+  background: var(--mdf-surface-2);
+  border-color: var(--mdf-ink);
+}
+
+.pet-detail__share-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-detail__share-btn {
+    transition: none;
+  }
+}

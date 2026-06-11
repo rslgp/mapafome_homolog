@@ -7,6 +7,7 @@ import { createDirectionUrl, formatRelativeTime } from '../components/compatibil
 import { resolveContact } from '../components/compatibility/components/ux/contactLink';
 import { PET_STATUS_MAP, PET_SPECIES, PET_SIZES, petCoordsKey, PET_DEEPLINK_PARAM, PET_CLOSURE_REASON } from './petDomain';
 import { looksLikeDirectImageUrl } from './petPhoto';
+import { buildPetShareMessage, sharePet } from './petShare';
 import { flagPet, resolvePet } from './petsData';
 
 // PET-M4 — estados do fluxo de denúncia (flag) na própria sheet (máquina de
@@ -264,6 +265,20 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
     } catch (_e) {
       setLifecycleState(LC_ERROR);
     }
+  };
+
+  // PET-M19 — COMPARTILHAR (WhatsApp / native share). Handler de GESTO: tudo aqui
+  // é SÍNCRONO. A mensagem + o deep-link M18 são montados pela fn PURA
+  // (buildPetShareMessage) e sharePet dispara navigator.share / abre wa.me NO MESMO
+  // TICK do clique — SEM await antes, ou o browser mobile descarta o gesto (perde a
+  // user-activation, contrato de gesto do agente). Nenhuma escrita/IO precede a
+  // chamada de share, então não há nada para awaitar: o payload já está em mãos.
+  // SEM PII na mensagem (status + espécie + área + link; o contato é revelado só no
+  // tap do M3 no destino). Defensivo: sem pet → no-op.
+  const handleShare = () => {
+    if (!pet) return;
+    const payload = buildPetShareMessage(pet);
+    sharePet(payload);
   };
 
   // Após a transição para um estado DONE, leva o foco para a mensagem de
@@ -662,6 +677,21 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
             onClick={() => onClose?.()}
           >
             Fechar
+          </button>
+
+          {/* PET-M19 — Compartilhar. O onClick é um handler de GESTO 100% síncrono:
+              monta a mensagem + o deep-link M18 e dispara navigator.share / wa.me NO
+              MESMO TICK (sem await antes — ver handleShare). <button> nativo →
+              operável por teclado de graça; aria-label explícito para o AT; a
+              geometria >=44px vem de .pet-detail__share-btn (min-height token). */}
+          <button
+            type="button"
+            className="pet-detail__share-btn"
+            aria-label="Compartilhar este pet"
+            onClick={handleShare}
+          >
+            <span aria-hidden="true">📤</span>
+            <span>Compartilhar</span>
           </button>
 
           {derived.dirHref && (
