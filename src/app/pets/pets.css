@@ -1577,3 +1577,305 @@
   font-size: var(--mdf-fs-h2);
   line-height: 1;
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * PET-M20 — MAP-LOAD STATES (loading / empty / error+retry) + post-publish
+ * CLOSURE micro-state + first-run hint.
+ * ════════════════════════════════════════════════════════════════════════════
+ * Calm-tone governor (PET_CURVE §2): no alarm-red tokens, no urgency, no
+ * celebratory accent. The empty state is HOPEFUL (not sad); the error state
+ * REASSURES (not scolds); the closure is warm-but-not-spiked. Token-only — no
+ * raw hex. prefers-reduced-motion suppresses the skeleton shimmer (no animation
+ * when reduced). Surfaces sit on the proven --mdf-* neutral pairs (ink/ink-muted
+ * on surface-1/surface-2 are all well above AA). */
+
+/* Shared shell for the three load-state cards: a calm centered region that
+ * occupies the band the map/list would, so the page does not jump. */
+.mdf-pets .pet-mapstate {
+  max-width: 860px;
+  margin: var(--mdf-space-3) auto;
+  padding: var(--mdf-space-6) var(--mdf-space-6);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+  text-align: center;
+}
+
+.mdf-pets .pet-mapstate__lead {
+  margin: 0 0 var(--mdf-space-2) 0;
+  font-size: var(--mdf-fs-body);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+.mdf-pets .pet-mapstate__point {
+  margin: 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+.mdf-pets .pet-mapstate__icon {
+  margin-right: var(--mdf-space-1);
+}
+
+/* Seta para o FAB "Relatar": decorativa (aria-hidden no JSX), só um sinal visual. */
+.mdf-pets .pet-mapstate__arrow {
+  display: inline-block;
+  margin-left: var(--mdf-space-1);
+  font-weight: 700;
+}
+
+/* ERROR — "Tentar de novo": alvo >=44px, operável por teclado, foco visível.
+ * Par de marca provado AA (branco ≈ 6.4:1 sobre --mdf-brand-hover) para pesar
+ * como a ação de recuperação, sem virar vermelho de alarme. */
+.mdf-pets .pet-mapstate__retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque (Fitts) */
+  min-width: var(--mdf-touch-target);
+  margin-top: var(--mdf-space-3);
+  padding: var(--mdf-space-2) var(--mdf-space-5);
+  background: var(--mdf-brand-hover);
+  color: var(--mdf-brand-ink);
+  border: none;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform var(--mdf-dur-fast) var(--mdf-ease-out),
+              box-shadow var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-pets .pet-mapstate__retry:hover {
+  box-shadow: var(--mdf-elev-1);
+}
+
+.mdf-pets .pet-mapstate__retry:active {
+  transform: scale(0.98);
+}
+
+.mdf-pets .pet-mapstate__retry:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* LOADING — skeleton placeholder bars (the busy affordance, NOT spinner-only).
+ * Three soft bars on a neutral tint; a subtle shimmer hints "loading", removed
+ * entirely under prefers-reduced-motion. The words live in an sr-only line. */
+.mdf-pets .pet-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-2);
+  align-items: center;
+}
+
+.mdf-pets .pet-skeleton__bar {
+  width: 70%;
+  height: var(--mdf-space-5);
+  border-radius: var(--mdf-radius-pill);
+  background: linear-gradient(
+    90deg,
+    var(--mdf-surface-2) 0%,
+    var(--mdf-surface-1) 50%,
+    var(--mdf-surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: pet-skeleton-shimmer var(--mdf-dur-slow) var(--mdf-ease-out) infinite;
+}
+
+.mdf-pets .pet-skeleton__bar--wide { width: 90%; }
+.mdf-pets .pet-skeleton__bar--narrow { width: 50%; }
+
+@keyframes pet-skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Post-publish CLOSURE micro-state (PET_CURVE §4) ─────────── *
+ * Warm-but-not-spiked: a calm centered card, no celebratory accent. Sits over
+ * the page as a quiet panel (not a full-screen modal — it is a rest, not a trap).
+ * One primary next-decision ("Ver no mapa") weighted with the proven brand pair;
+ * "Fechar" is a discreet secondary dismissal. Tokens only. */
+.mdf-pets .pet-closure {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--mdf-space-16) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 1300; /* acima do FAB Relatar (1200) */
+  width: min(92vw, 30rem);
+}
+
+.mdf-pets .pet-closure__card {
+  padding: var(--mdf-space-5) var(--mdf-space-5) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+  box-shadow: var(--mdf-elev-3);
+  text-align: center;
+}
+
+.mdf-pets .pet-closure__icon {
+  margin: 0 0 var(--mdf-space-1) 0;
+  font-size: var(--mdf-fs-h1);
+  line-height: 1;
+}
+
+.mdf-pets .pet-closure__title {
+  margin: 0 0 var(--mdf-space-2) 0;
+  font-size: var(--mdf-fs-h2);
+  line-height: var(--mdf-lh-heading);
+  font-weight: 700;
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+.mdf-pets .pet-closure__lead {
+  margin: 0 0 var(--mdf-space-4) 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+.mdf-pets .pet-closure__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+}
+
+/* "Ver no mapa" — a ÚNICA próxima decisão (PET_CURVE §4.3). Par de marca provado
+ * AA; pesa como a ação à frente, sem ser um spike. >=44px. */
+.mdf-pets .pet-closure__primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  min-width: var(--mdf-touch-target);
+  padding: var(--mdf-space-2) var(--mdf-space-5);
+  background: var(--mdf-brand-hover);
+  color: var(--mdf-brand-ink);
+  border: none;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-pets .pet-closure__primary:active {
+  transform: scale(0.98);
+}
+
+.mdf-pets .pet-closure__primary:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* "Fechar" — dispensa discreta (saída calma como default), >=44px. */
+.mdf-pets .pet-closure__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  min-width: var(--mdf-touch-target);
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mdf-pets .pet-closure__dismiss:hover {
+  color: var(--mdf-ink);
+  border-color: var(--mdf-ink);
+}
+
+.mdf-pets .pet-closure__dismiss:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* ── First-run hint (PET-M20) ─────────────────────────────── *
+ * Uma linha calma de uma só olhada, dispensável. Card neutro suave; o botão
+ * "Entendi" é um alvo >=44px operável por teclado. */
+.mdf-pets .pet-firsthint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mdf-space-2);
+  max-width: 860px;
+  margin: var(--mdf-space-3) auto;
+  padding: var(--mdf-space-3) var(--mdf-space-4);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+}
+
+.mdf-pets .pet-firsthint__text {
+  flex: 1 1 16rem;
+  margin: 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-2 (proven token) */
+}
+
+.mdf-pets .pet-firsthint__icon {
+  margin-right: var(--mdf-space-1);
+}
+
+.mdf-pets .pet-firsthint__dismiss {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  min-width: var(--mdf-touch-target);
+  padding: var(--mdf-space-1) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mdf-pets .pet-firsthint__dismiss:hover {
+  border-color: var(--mdf-ink);
+  background: var(--mdf-surface-2);
+}
+
+.mdf-pets .pet-firsthint__dismiss:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* prefers-reduced-motion — NENHUM shimmer/animação quando reduzido (governador
+ * §8): o skeleton vira um bloco estático; os botões perdem a transição/scale. */
+@media (prefers-reduced-motion: reduce) {
+  .mdf-pets .pet-skeleton__bar {
+    animation: none;
+    background: var(--mdf-surface-2);
+  }
+  .mdf-pets .pet-mapstate__retry,
+  .mdf-pets .pet-closure__primary {
+    transition: none;
+  }
+  .mdf-pets .pet-mapstate__retry:active,
+  .mdf-pets .pet-closure__primary:active {
+    transform: none;
+  }
+}

@@ -23,7 +23,17 @@ import PetFilterBar from './PetFilterBar';
 import PetListView from './PetListView';
 import PetReportSheet from './PetReportSheet';
 import PetDetailSheet from './PetDetailSheet';
+import PetMapLoadStates from './PetMapLoadStates';
+import PetPublishClosure from './PetPublishClosure';
+import PetFirstRunHint from './PetFirstRunHint';
 import { fetchPets, publishPet } from './petsData';
+import {
+  PET_MAP_LOAD_STATE,
+  mapLoadState,
+  readFirstRunHintSeen,
+  markFirstRunHintSeen,
+  resolveClosurePin,
+} from './petMapLoadState';
 import {
   classifyPublishFailure,
   shouldQueuePublishFailure,
@@ -104,6 +114,22 @@ export default function PetsApp() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedPet, setSelectedPet] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  // PET-M20 — três estados EXPLÍCITOS de carga do mapa (loading | error | empty |
+  // ready). `loading` arranca TRUE: o 1º paint mostra a afordância calma de
+  // carregamento (skeleton aria-busy), não um mapa vazio que parece "sem pets".
+  // O effect de carga abaixo o vira false (sucesso/erro). O estado DERIVADO
+  // (mapLoadState) combina loading + loadError + a contagem visível.
+  const [loading, setLoading] = useState(true);
+  // PET-M20 — micro-estado de FECHAMENTO pós-publicação (PET_CURVE §4). Abre
+  // após um publish bem-sucedido; o pin recém-criado é identificado por
+  // resolveClosurePin (reusa petCoordsKey do M18) e o mapa é recentrado nele —
+  // a confirmação é ESPACIAL (recentro), não só um toast abstrato.
+  const [closureOpen, setClosureOpen] = useState(false);
+  // PET-M20 — dica de PRIMEIRA visita (uma vez, flag no localStorage). Inicializador
+  // LAZY (roda no mount, não num effect) lê o flag persistido — mesma disciplina do
+  // readStoredView/deepLinkKey acima (ler no boundary, sem set-state-in-effect).
+  // Mostra a dica se AINDA não foi vista; some para sempre ao dispensar.
+  const [hintOpen, setHintOpen] = useState(() => !readFirstRunHintSeen());
   // PET-M7 — estado do filtro do mapa. Mora AQUI (dono de `pets`); a barra de
   // filtro só reporta toggles e a contagem é derivada por filterPets. Estado
   // inicial = filtro vazio (defaultPetFilter) → todos os pets aparecem.
@@ -138,6 +164,64 @@ export default function PetsApp() {
   // 100% usável (degradação calma, sem crash, sem trap de erro).
   const [deepLinkMissing, setDeepLinkMissing] = useState(false);
 
+  // PET-M20 — carga (re-)executável dos pets, EXTRAÍDA do effect para um callback
+  // que o botão "Tentar de novo" do estado de erro pode RE-RODAR sem reload de
+  // página inteira (acceptance: a retry re-fetcha). Recebe um `isCancelled`
+  // opcional (o effect passa o seu guard de unmount; a retry pelo botão não
+  // precisa). Liga loading=true / limpa o erro ANTES de buscar, depois desliga
+  // loading e, em falha, carimba loadError. O deep link (M18) só é resolvido na
+  // 1ª carga (resolveDeepLink), não a cada retry — um retry não deve reabrir a
+  // sheet de um link que o usuário pode já ter fechado.
+  const loadPets = useCallback(async (isCancelled, { resolveDeepLink = false } = {}) => {
+    const cancelled = () => (typeof isCancelled === 'function' ? isCancelled() : false);
+    // TODO setState mora APÓS o primeiro `await` (callback assíncrono, nunca o
+    // corpo síncrono do effect — evita o react-hooks/set-state-in-effect). O reset
+    // loading=true/erro=null é feito pelo CHAMADOR de retry (handler de clique); na
+    // 1ª carga o estado inicial já é loading=true/erro=null.
+    try {
+      const loaded = await fetchPets();
+      if (cancelled()) return;
+      setPets(loaded);
+      // PET-M12 — carimba o relógio real AQUI (callback assíncrono): a exclusão
+      // por idade passa a valer assim que os pets chegam. Date.now() fora do
+      // render (purity); nowMs é injetado.
+      setNowMs(Date.now());
+      setLoading(false);
+
+      // PET-M18 — resolve o deep link só na PRIMEIRA carga (resolveDeepLink=true),
+      // na lista COMPLETA (`loaded`), não na podada — um link é um pedido EXPLÍCITO
+      // do usuário (honrar a intenção, não a poda de UI). Degradação calma quando o
+      // pet sumiu/arquivou/reuniu.
+      if (resolveDeepLink && deepLinkKey) {
+        const target = findPetByCoordsKey(loaded, deepLinkKey);
+        if (target) {
+          setCenter(target.coords);
+          setSelectedPet(target);
+          setDetailOpen(true);
+        } else {
+          setDeepLinkMissing(true);
+        }
+      }
+    } catch (e) {
+      if (cancelled()) return;
+      // PET-M20 — a falha vira o estado de ERRO (mapLoadState) que mostra a cópia
+      // calma + o "Tentar de novo". loading=false para sair do skeleton.
+      setLoadError((e && e.message) || 'load_failed');
+      setLoading(false);
+    }
+  }, [deepLinkKey]);
+
+  // PET-M20 — re-fetch do botão "Tentar de novo": religa loading=true / limpa o
+  // erro (volta ao skeleton) e re-roda loadPets SEM reload de página inteira
+  // (acceptance). Como é um HANDLER DE CLIQUE (não o corpo de um effect), o
+  // setState síncrono aqui é sancionado. Sem guard de unmount e sem re-resolver o
+  // deep link.
+  const handleRetryLoad = useCallback(() => {
+    setLoadError(null);
+    setLoading(true);
+    loadPets();
+  }, [loadPets]);
+
   // GPS + carga inicial dos pets — sincronização com sistemas externos
   // (geolocalização + planilha), o uso sancionado de um effect. setState mora
   // em callbacks/promessas (não no corpo síncrono), guardado por `cancelled`.
@@ -157,54 +241,16 @@ export default function PetsApp() {
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
     }
-    (async () => {
-      try {
-        const loaded = await fetchPets();
-        if (!cancelled) {
-          setPets(loaded);
-          // PET-M12 — carimba o relógio real AQUI (callback assíncrono, não o corpo
-          // síncrono do effect): a exclusão por idade passa a valer assim que os
-          // pets chegam. Date.now() fica fora do render (purity); nowMs é injetado.
-          setNowMs(Date.now());
-
-          // PET-M18 — resolve o deep link AQUI, no MESMO callback assíncrono onde os
-          // pets acabaram de chegar (setState sancionado: callback/promessa, nunca o
-          // corpo síncrono do effect — espelha o setPets/setNowMs acima e evita o
-          // react-hooks/set-state-in-effect). Roda uma vez só (este bloco roda uma
-          // vez por carga inicial).
-          //
-          // BUSCA NA LISTA COMPLETA (`loaded`), NÃO na filtrada/podada por idade: um
-          // link compartilhado é um pedido EXPLÍCITO do usuário para ver AQUELE pet.
-          // Honrá-lo mesmo que um filtro do M7 ou a janela de idade do M12 o
-          // esconderia do mapa por padrão é o comportamento menos surpreendente — o
-          // usuário clicou no link de propósito. A sheet do pet-alvo abre mesmo que o
-          // pin esteja filtrado/arquivado no mapa.
-          //
-          // DEGRADAÇÃO CALMA: param presente mas nenhum pet casa (sumiu/arquivado/
-          // reunido/nunca existiu) → deepLinkMissing → nota pt-BR serena; o mapa
-          // segue usável. Sem param (null) → nada acontece, o mapa abre normal.
-          if (deepLinkKey) {
-            const target = findPetByCoordsKey(loaded, deepLinkKey);
-            if (target) {
-              // Recentra no pet E abre o detalhe — o link "aterrissa" no pet, fechando
-              // o beco-sem-saída que esta milestone REMOVE (um link compartilhado que
-              // não conseguia focar o seu pet).
-              setCenter(target.coords);
-              setSelectedPet(target);
-              setDetailOpen(true);
-            } else {
-              setDeepLinkMissing(true);
-            }
-          }
-        }
-      } catch (e) {
-        if (!cancelled) setLoadError(e && e.message);
-      }
-    })();
+    // 1ª carga: resolve o deep link (M18) e usa o guard de unmount do effect. O
+    // IIFE assíncrono empurra a chamada (e qualquer setState DENTRO de loadPets,
+    // que já mora APÓS o await) para fora do corpo SÍNCRONO do effect — o padrão
+    // sancionado que evita o react-hooks/set-state-in-effect (mesma técnica do
+    // IIFE de carga original).
+    (async () => { await loadPets(() => cancelled, { resolveDeepLink: true }); })();
     return () => { cancelled = true; };
-    // deepLinkKey é estável (inicializador lazy, nunca muda) — o effect segue de
-    // montagem única; listá-lo documenta a dependência sem re-disparar.
-  }, [deepLinkKey]);
+    // loadPets é estável (deps = deepLinkKey, que é um inicializador lazy imutável);
+    // o effect segue de montagem única.
+  }, [loadPets]);
 
   // PET-M18 — dispensa a nota de "pet não encontrado" (o usuário leu; o mapa segue).
   const handleDismissDeepLinkNote = useCallback(() => setDeepLinkMissing(false), []);
@@ -218,14 +264,11 @@ export default function PetsApp() {
     setReportOpen(true);
   }, [center]);
 
-  const handleCloseReport = useCallback(() => setReportOpen(false), []);
-  const handlePetClick = useCallback((pet) => { setSelectedPet(pet); setDetailOpen(true); }, []);
-  const handleCloseDetail = useCallback(() => setDetailOpen(false), []);
-
   // PET-M8 — troca a visão (mapa | lista) e PERSISTE a preferência no localStorage
   // (envolto em try/catch: modo privado/quota nunca derruba a troca de visão — a
   // persistência é um conforto, não um requisito). setState no handler de clique
-  // (sancionado), nunca no corpo de um effect.
+  // (sancionado), nunca no corpo de um effect. Definido AQUI (acima dos handlers de
+  // fechamento) para o handleSeeOnMap do PET-M20 reusá-lo diretamente.
   const handleSetView = useCallback((next) => {
     setView(next);
     if (typeof window === 'undefined') return;
@@ -235,6 +278,46 @@ export default function PetsApp() {
       /* persistência indisponível: a troca de visão ainda funciona nesta sessão */
     }
   }, []);
+
+  // PET-M20 — fecha a sheet de relato. Quando o motivo é 'published' (o publish
+  // deu certo; PetReportSheet chama onClose('published')), DISPARA o micro-estado
+  // de FECHAMENTO (PET_CURVE §4): recentra/realça o pin recém-criado e mostra a
+  // confirmação calma. O pin é identificado por resolveClosurePin (reusa o
+  // petCoordsKey do M18) na lista atual de pets — onde o publish otimista já
+  // adicionou o novo pet. Coords vêm de reportCoords (o local que o relato usou);
+  // fallback para o centro, como o sheet faz. Um fechamento NÃO-publicado (cancelar/
+  // Escape/backdrop) só fecha o sheet, sem closure.
+  const handleCloseReport = useCallback((reason) => {
+    setReportOpen(false);
+    if (reason !== 'published') return;
+    const pin = resolveClosurePin(reportCoords || center, pets);
+    if (pin) {
+      setCenter(pin.coords);     // recentra no pin recém-criado (confirmação espacial)
+      setClosureOpen(true);
+    }
+  }, [reportCoords, center, pets]);
+
+  // PET-M20 — dispensa o fechamento (botão "Fechar" / Escape). Some e não volta.
+  const handleDismissClosure = useCallback(() => setClosureOpen(false), []);
+
+  // PET-M20 — a ÚNICA próxima-decisão do fechamento: "Ver no mapa". Fecha o estado
+  // de fechamento (o mapa já está recentrado no pin) e garante a visão MAPA — se o
+  // usuário estava na lista, ver-no-mapa significa olhar o pin de fato. Reusa o
+  // handleSetView (que persiste a preferência) — uma só verdade de troca de visão.
+  const handleSeeOnMap = useCallback(() => {
+    setClosureOpen(false);
+    handleSetView(PET_VIEW.MAP);
+  }, [handleSetView]);
+
+  // PET-M20 — dispensa a dica de 1ª visita: persiste o flag (localStorage) e some
+  // para sempre. A persistência é guardada (SSR/quota) dentro de markFirstRunHintSeen.
+  const handleDismissHint = useCallback(() => {
+    markFirstRunHintSeen();
+    setHintOpen(false);
+  }, []);
+
+  const handlePetClick = useCallback((pet) => { setSelectedPet(pet); setDetailOpen(true); }, []);
+  const handleCloseDetail = useCallback(() => setDetailOpen(false), []);
 
   // PET-M7b — um pet acabou de ser RESOLVIDO (reunido / encerrar busca) na sheet.
   // Atualiza o pet em `pets` no lugar (casando por coords — a identidade estável
@@ -302,6 +385,17 @@ export default function PetsApp() {
     () => activePetsByAge(filterPets(pets, filter, 0), nowMs),
     [pets, filter, nowMs],
   );
+
+  // PET-M20 — estado DERIVADO de carga do mapa (loading | error | empty | ready),
+  // computado por mapLoadState (SOT pura). A contagem é a dos pets VISÍVEIS (pós
+  // filtro M7 + poda de idade M12): o estado "vazio" compõe com esses filtros sem
+  // este módulo conhecê-los — ele só recebe o número. Em ERROR, o loadError manda;
+  // em LOADING, o skeleton; em EMPTY, a dica esperançosa; em READY, o mapa/lista.
+  const loadState = useMemo(
+    () => mapLoadState({ loading, error: loadError, count: visiblePets.length }),
+    [loading, loadError, visiblePets.length],
+  );
+  const isReady = loadState === PET_MAP_LOAD_STATE.READY;
 
   // Publica um pet, classificando a falha em uma causa CALMA distinta (PET-M1).
   // Remove a antiga string genérica única 'publish_failed' E o caminho de
@@ -374,11 +468,9 @@ export default function PetsApp() {
         
       </header>
 
-      {loadError && (
-        <p className="mdf-pets__status" role="alert">
-          Não foi possível carregar os pets agora. Você ainda pode reportar um.
-        </p>
-      )}
+      {/* PET-M20 — dica de PRIMEIRA visita (uma vez, dispensável). Ensina o fluxo
+          tocar-no-mapa → Relatar (estágio A da curva, acolhimento). role=status. */}
+      <PetFirstRunHint open={hintOpen} onDismiss={handleDismissHint} />
 
       {/* PET-M18 — degradação CALMA do deep link: o link chegou, mas o pet-alvo
           não está mais no mapa (já foi reunido, arquivado por idade, ou o relato
@@ -401,61 +493,78 @@ export default function PetsApp() {
 
       {/* PET-M7 — filtro do mapa. A contagem é DERIVADA (visiblePets.length /
           pets.length): a barra não conhece os pets, só recebe os números e os
-          toggles. Estreita os pins na hora porque é `visiblePets` que vai ao mapa. */}
-      <PetFilterBar
-        filter={filter}
-        total={pets.length}
-        matchCount={visiblePets.length}
-        onToggle={handleToggleFilter}
-        onClear={handleClearFilter}
-      />
+          toggles. Só aparece quando há pets para filtrar (estado READY) — filtrar
+          um mapa em carregamento/erro/vazio não tem sentido e só adicionaria ruído
+          de UI a um público em estresse. */}
+      {isReady && (
+        <PetFilterBar
+          filter={filter}
+          total={pets.length}
+          matchCount={visiblePets.length}
+          onToggle={handleToggleFilter}
+          onClear={handleClearFilter}
+        />
+      )}
 
-      {/* PET-M8 — alternância MAPA | LISTA. role=tablist semântico: os dois botões
-          são tabs (aria-selected reflete a visão ativa), operáveis por teclado,
-          alvo >=44px. A preferência persiste (handleSetView → localStorage). Ambas
-          as visões consomem o MESMO visiblePets (filtrado pelo M7 + podado por
-          idade pelo M12) — a lista reflete exatamente o mapa (acceptance 1). */}
-      <div className="pet-viewtoggle" role="tablist" aria-label="Como ver os pets">
-        <button
-          type="button"
-          role="tab"
-          id="pet-viewtoggle-map"
-          aria-selected={view === PET_VIEW.MAP}
-          className={`pet-viewtoggle__btn${view === PET_VIEW.MAP ? ' pet-viewtoggle__btn--on' : ''}`}
-          onClick={() => handleSetView(PET_VIEW.MAP)}
-        >
-          <span aria-hidden="true">🗺️</span> Mapa
-        </button>
-        <button
-          type="button"
-          role="tab"
-          id="pet-viewtoggle-list"
-          aria-selected={view === PET_VIEW.LIST}
-          className={`pet-viewtoggle__btn${view === PET_VIEW.LIST ? ' pet-viewtoggle__btn--on' : ''}`}
-          onClick={() => handleSetView(PET_VIEW.LIST)}
-        >
-          <span aria-hidden="true">📋</span> Lista
-        </button>
-      </div>
+      {/* PET-M20 — os três estados EXPLÍCITOS de carga do mapa (loading | erro |
+          vazio). Renderizado SÓ quando NÃO está pronto; em READY mostra o mapa/lista
+          abaixo. O estado de erro carrega o "Tentar de novo" que re-roda o fetch sem
+          reload (handleRetryLoad). Distintos por design: skeleton aria-busy ≠ vazio
+          ≠ alerta (acceptance 1). */}
+      {!isReady && (
+        <PetMapLoadStates state={loadState} onRetry={handleRetryLoad} />
+      )}
 
-      {view === PET_VIEW.LIST ? (
-        <div role="tabpanel" aria-labelledby="pet-viewtoggle-list">
-          <PetListView
-            pets={visiblePets}
-            center={hasGps ? center : null}
-            nowMs={nowMs}
-            onPetClick={handlePetClick}
-          />
-        </div>
-      ) : (
-        <div role="tabpanel" aria-labelledby="pet-viewtoggle-map">
-          <PetMap
-            center={center}
-            pets={visiblePets}
-            onPinDropped={handlePinDropped}
-            onPetClick={handlePetClick}
-          />
-        </div>
+      {isReady && (
+        <>
+          {/* PET-M8 — alternância MAPA | LISTA. role=tablist semântico: os dois
+              botões são tabs (aria-selected reflete a visão ativa), operáveis por
+              teclado, alvo >=44px. A preferência persiste (handleSetView →
+              localStorage). Ambas as visões consomem o MESMO visiblePets (filtrado
+              pelo M7 + podado por idade pelo M12) — a lista reflete o mapa. */}
+          <div className="pet-viewtoggle" role="tablist" aria-label="Como ver os pets">
+            <button
+              type="button"
+              role="tab"
+              id="pet-viewtoggle-map"
+              aria-selected={view === PET_VIEW.MAP}
+              className={`pet-viewtoggle__btn${view === PET_VIEW.MAP ? ' pet-viewtoggle__btn--on' : ''}`}
+              onClick={() => handleSetView(PET_VIEW.MAP)}
+            >
+              <span aria-hidden="true">🗺️</span> Mapa
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="pet-viewtoggle-list"
+              aria-selected={view === PET_VIEW.LIST}
+              className={`pet-viewtoggle__btn${view === PET_VIEW.LIST ? ' pet-viewtoggle__btn--on' : ''}`}
+              onClick={() => handleSetView(PET_VIEW.LIST)}
+            >
+              <span aria-hidden="true">📋</span> Lista
+            </button>
+          </div>
+
+          {view === PET_VIEW.LIST ? (
+            <div role="tabpanel" aria-labelledby="pet-viewtoggle-list">
+              <PetListView
+                pets={visiblePets}
+                center={hasGps ? center : null}
+                nowMs={nowMs}
+                onPetClick={handlePetClick}
+              />
+            </div>
+          ) : (
+            <div role="tabpanel" aria-labelledby="pet-viewtoggle-map">
+              <PetMap
+                center={center}
+                pets={visiblePets}
+                onPinDropped={handlePinDropped}
+                onPetClick={handlePetClick}
+              />
+            </div>
+          )}
+        </>
       )}
 
       <button
@@ -479,6 +588,16 @@ export default function PetsApp() {
         onOpenMatch={handleOpenMatch}
         onResolved={handlePetResolved}
         onClose={handleCloseDetail}
+      />
+
+      {/* PET-M20 — micro-estado de FECHAMENTO pós-publicação (PET_CURVE §4). Abre
+          após um publish bem-sucedido; o mapa já foi recentrado no pin recém-criado
+          (handleCloseReport). Confirmação calma + UMA próxima decisão ("Ver no
+          mapa"). Reasseguramento, NÃO nag/streak/timer. role=status (anunciado). */}
+      <PetPublishClosure
+        open={closureOpen}
+        onSeeOnMap={handleSeeOnMap}
+        onDismiss={handleDismissClosure}
       />
       </main>
     </>
