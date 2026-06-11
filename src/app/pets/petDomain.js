@@ -15,14 +15,26 @@
 // fome, distinguidas só por `kind:'pet'`. Sem `Roaster`/`Categorias`, ficam
 // invisíveis a todas as superfícies de fome (ver análise no PetMarkers/relatório).
 
+import { t } from '../components/compatibility/components/ux/strings';
+
 export const PET_KIND = 'pet';
 
-// Status do pet. id = chave estável (vai pra planilha); label/hint = texto de UI;
-// icon = glifo de fallback; colorVar = nome da CSS var (definida em petPalette.css).
+// Status do pet. id = chave estável (vai pra planilha); icon = glifo de fallback;
+// colorVar = nome da CSS var (definida em petPalette.css). PET-M23: label/hint NÃO
+// são mais strings inline — resolvem via t('pets.status.<id>.label|hint') no idioma
+// ATIVO (getters reavaliam a cada acesso). O id continua sendo a SOT; a CÓPIA mora
+// em strings.js. Quem lê s.label/s.hint (UI ou teste-fixture em pt-BR) recebe o
+// texto traduzido do idioma corrente.
+function withLabelHint(entry, labelKey, hintKey) {
+  const props = { label: { enumerable: true, get: () => t(labelKey) } };
+  if (hintKey) props.hint = { enumerable: true, get: () => t(hintKey) };
+  return Object.defineProperties({ ...entry }, props);
+}
+
 export const PET_STATUSES = [
-  { id: 'perdido',    label: 'Perdido',    hint: 'Meu pet sumiu',    icon: '😿', colorVar: '--pet-perdido' },
-  { id: 'encontrado', label: 'Encontrado', hint: 'Achei um pet',     icon: '🏠', colorVar: '--pet-encontrado' },
-  { id: 'avistado',   label: 'Avistado',   hint: 'Vi um pet na rua', icon: '👀', colorVar: '--pet-avistado' },
+  withLabelHint({ id: 'perdido',    icon: '😿', colorVar: '--pet-perdido' },    'pets.status.perdido.label',    'pets.status.perdido.hint'),
+  withLabelHint({ id: 'encontrado', icon: '🏠', colorVar: '--pet-encontrado' }, 'pets.status.encontrado.label', 'pets.status.encontrado.hint'),
+  withLabelHint({ id: 'avistado',   icon: '👀', colorVar: '--pet-avistado' },   'pets.status.avistado.label',   'pets.status.avistado.hint'),
 ];
 
 // id → entrada, para lookup O(1) (v5 § replace_conditional_with_lookup).
@@ -32,15 +44,15 @@ export const PET_STATUS_MAP = PET_STATUSES.reduce((map, s) => {
 }, {});
 
 export const PET_SPECIES = [
-  { id: 'cao',   label: 'Cão',   icon: '🐕' },
-  { id: 'gato',  label: 'Gato',  icon: '🐈' },
-  { id: 'outro', label: 'Outro', icon: '🐾' },
+  withLabelHint({ id: 'cao',   icon: '🐕' }, 'pets.species.cao.label'),
+  withLabelHint({ id: 'gato',  icon: '🐈' }, 'pets.species.gato.label'),
+  withLabelHint({ id: 'outro', icon: '🐾' }, 'pets.species.outro.label'),
 ];
 
 export const PET_SIZES = [
-  { id: 'pequeno', label: 'Pequeno' },
-  { id: 'medio',   label: 'Médio' },
-  { id: 'grande',  label: 'Grande' },
+  withLabelHint({ id: 'pequeno' }, 'pets.size.pequeno.label'),
+  withLabelHint({ id: 'medio' },   'pets.size.medio.label'),
+  withLabelHint({ id: 'grande' },  'pets.size.grande.label'),
 ];
 
 // Conjuntos de ids válidos — montados a partir das listas acima (sem duplicar a
@@ -382,18 +394,20 @@ export const PET_PUBLISH_FAILURE = {
   GENERIC: 'generic',
 };
 
-// Cópia CALMA por código (pt-BR; i18n/es entra no PET-M23). Cada linha LOWERS a
-// ansiedade do dono — reassegura, nunca cobra. Lida pela UI via role=alert.
-export const PET_PUBLISH_FAILURE_COPY = {
-  [PET_PUBLISH_FAILURE.OUT_OF_BOUNDS]:
-    'Esse ponto está fora da área que a gente atende por aqui. Toque no mapa, dentro da região, para marcar onde o pet foi visto.',
-  [PET_PUBLISH_FAILURE.OFFLINE]:
-    'Você está sem internet agora. Seu relato foi guardado com segurança e vai ser publicado sozinho assim que a conexão voltar.',
-  [PET_PUBLISH_FAILURE.SERVER_SLOW]:
-    'A conexão está lenta e seu relato pode já ter sido salvo. Aguarde um instante e recarregue antes de publicar de novo, para não duplicar.',
-  [PET_PUBLISH_FAILURE.GENERIC]:
-    'Não deu para publicar agora. Seu relato não se perdeu — confira a conexão e tente de novo com calma.',
-};
+// Cópia CALMA por código. Cada linha LOWERS a ansiedade do dono — reassegura,
+// nunca cobra. Lida pela UI via role=alert. PET-M23: a STRING não é mais inline
+// aqui — cada código RESOLVE via t('pets.publish.failed.<code>') no idioma ATIVO
+// (getters reavaliam a cada acesso). A SOT do CÓDIGO continua sendo PET_PUBLISH_
+// FAILURE; a SOT da CÓPIA é strings.js. Object.values()/spread também funcionam
+// (os getters são enumeráveis), então quem itera as cópias segue funcionando.
+export const PET_PUBLISH_FAILURE_COPY = Object.freeze(
+  Object.defineProperties({}, {
+    [PET_PUBLISH_FAILURE.OUT_OF_BOUNDS]: { enumerable: true, get: () => t('pets.publish.failed.out_of_bounds') },
+    [PET_PUBLISH_FAILURE.OFFLINE]:       { enumerable: true, get: () => t('pets.publish.failed.offline') },
+    [PET_PUBLISH_FAILURE.SERVER_SLOW]:   { enumerable: true, get: () => t('pets.publish.failed.server_slow') },
+    [PET_PUBLISH_FAILURE.GENERIC]:       { enumerable: true, get: () => t('pets.publish.failed.generic') },
+  }),
+);
 
 // Erros (mensagem ou .name) que indicam servidor LENTO / timeout. O write pode
 // ter chegado ao servidor: a fila reenvia depois e a chave de idempotência evita
@@ -768,15 +782,16 @@ export const PET_PUBLISH_THROTTLE = {
   IDENTICAL: 'identical',   // mesmíssimo relato repetido (provável duplicata)
 };
 
-// Cópia CALMA por código (pt-BR; i18n/es entra no PET-M23). NUNCA punitiva: o
-// dono em pânico não é um inimigo. Cada linha tranquiliza e dá o próximo passo —
-// "já está no mapa", "espere um instante" — em vez de acusar (governador de tom).
-export const PET_PUBLISH_THROTTLE_COPY = {
-  [PET_PUBLISH_THROTTLE.BURST]:
-    'Você publicou vários relatos em pouco tempo. Eles já estão no mapa — espere um instante antes de enviar outro, para a gente manter tudo organizado.',
-  [PET_PUBLISH_THROTTLE.IDENTICAL]:
-    'Esse relato parece igual a um que você acabou de publicar. Ele já está no mapa — não precisa enviar de novo.',
-};
+// Cópia CALMA por código. NUNCA punitiva: o dono em pânico não é um inimigo. Cada
+// linha tranquiliza e dá o próximo passo — "já está no mapa", "espere um instante"
+// — em vez de acusar (governador de tom). PET-M23: a STRING resolve via
+// t('pets.publish.throttle.<code>') no idioma ATIVO (getters), não mais inline.
+export const PET_PUBLISH_THROTTLE_COPY = Object.freeze(
+  Object.defineProperties({}, {
+    [PET_PUBLISH_THROTTLE.BURST]:     { enumerable: true, get: () => t('pets.publish.throttle.burst') },
+    [PET_PUBLISH_THROTTLE.IDENTICAL]: { enumerable: true, get: () => t('pets.publish.throttle.identical') },
+  }),
+);
 
 // Assinatura ESTÁVEL e determinística de um payload de publicação, para detectar
 // o reenvio byte-idêntico. PURA: extrai só os campos que DEFINEM o relato (não o

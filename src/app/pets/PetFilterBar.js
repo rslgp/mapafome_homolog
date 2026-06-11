@@ -33,28 +33,36 @@ import {
   PET_SIZES,
   countActivePetFilterFacets,
 } from './petDomain';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
 // Descreve as três facetas de forma declarativa (DRY): cada uma aponta para a
-// lista SOT, a chave do estado de filtro e os rótulos pt-BR do grupo. Iterar isto
-// evita repetir o markup de chips três vezes.
+// lista SOT, a chave do estado de filtro, a CHAVE i18n do rótulo (resolvida via
+// t()) e o NAMESPACE i18n das opções (pets.<optNs>.<id>.label). Iterar isto evita
+// repetir o markup de chips três vezes e mantém os rótulos fora do código.
 const FACETS = [
-  { key: 'statuses', legend: 'Situação', groupLabel: 'Filtrar por situação', options: PET_STATUSES },
-  { key: 'species', legend: 'Espécie', groupLabel: 'Filtrar por espécie', options: PET_SPECIES },
-  { key: 'sizes', legend: 'Porte', groupLabel: 'Filtrar por porte', options: PET_SIZES },
+  { key: 'statuses', legendKey: 'pets.filter.legend.status',  groupKey: 'pets.filter.group.status',  optNs: 'status',  options: PET_STATUSES },
+  { key: 'species',  legendKey: 'pets.filter.legend.species', groupKey: 'pets.filter.group.species', optNs: 'species', options: PET_SPECIES },
+  { key: 'sizes',    legendKey: 'pets.filter.legend.size',    groupKey: 'pets.filter.group.size',    optNs: 'size',    options: PET_SIZES },
 ];
 
-// Pluraliza a contagem de combinações com tom calmo (sem alarme). pt-BR.
+// Pluraliza a contagem de combinações com tom calmo (sem alarme). Resolve a cópia
+// via t() (i18n) por caso — o número é interpolado em JS para a tradução só
+// envolver as palavras ao redor.
 function matchCountLabel(count, total) {
-  if (total === 0) return 'Nenhum pet reportado por aqui ainda.';
-  if (count === 0) return 'Nenhum pet combina com o filtro. Tente afrouxar a busca.';
+  if (total === 0) return t('pets.filter.count.noneTotal');
+  if (count === 0) return t('pets.filter.count.noneMatch');
   if (count === total) {
-    return count === 1 ? '1 pet no mapa.' : `${count} pets no mapa.`;
+    return count === 1
+      ? t('pets.filter.count.allOne')
+      : t('pets.filter.count.all').replace('{count}', String(count));
   }
-  const pet = count === 1 ? 'pet' : 'pets';
-  return `${count} ${pet} no mapa (de ${total}).`;
+  const key = count === 1 ? 'pets.filter.count.someOne' : 'pets.filter.count.some';
+  return t(key).replace('{count}', String(count)).replace('{total}', String(total));
 }
 
 export default function PetFilterBar({ filter, total, matchCount, onToggle, onClear }) {
+  // PET-M23 — re-render on a locale switch so every t() re-reads.
+  useLocale();
   const activeFacets = countActivePetFilterFacets(filter);
   const hasActive = activeFacets > 0;
 
@@ -65,7 +73,7 @@ export default function PetFilterBar({ filter, total, matchCount, onToggle, onCl
     <section className="pet-filter" aria-labelledby="pet-filter-heading">
       <div className="pet-filter__head">
         <h2 id="pet-filter-heading" className="pet-filter__heading">
-          Filtrar pets no mapa
+          {t('pets.filter.heading')}
         </h2>
         {hasActive && (
           <button
@@ -73,7 +81,7 @@ export default function PetFilterBar({ filter, total, matchCount, onToggle, onCl
             className="pet-filter__clear"
             onClick={onClear}
           >
-            <span aria-hidden="true">✕</span> Limpar filtros
+            <span aria-hidden="true">✕</span> {t('pets.filter.clear')}
           </button>
         )}
       </div>
@@ -82,8 +90,8 @@ export default function PetFilterBar({ filter, total, matchCount, onToggle, onCl
         const selected = selectedFor(facet.key);
         return (
           <fieldset className="pet-filter__facet" key={facet.key}>
-            <legend className="pet-filter__legend">{facet.legend}</legend>
-            <div className="pet-filter__chips" role="group" aria-label={facet.groupLabel}>
+            <legend className="pet-filter__legend">{t(facet.legendKey)}</legend>
+            <div className="pet-filter__chips" role="group" aria-label={t(facet.groupKey)}>
               {facet.options.map((opt) => {
                 const on = selected.indexOf(opt.id) !== -1;
                 // Para a faceta de status, pinta o chip selecionado com o
@@ -106,7 +114,7 @@ export default function PetFilterBar({ filter, total, matchCount, onToggle, onCl
                     {opt.icon && (
                       <span className="mdf-chip__icon" aria-hidden="true">{opt.icon}</span>
                     )}
-                    <span className="mdf-chip__label">{opt.label}</span>
+                    <span className="mdf-chip__label">{t(`pets.${facet.optNs}.${opt.id}.label`)}</span>
                     {on && <span className="mdf-chip__check" aria-hidden="true">✓</span>}
                   </button>
                 );

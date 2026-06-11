@@ -20,11 +20,11 @@
 // (feature-detect), nunca como catch-após-await (isso já seria fora do gesto).
 
 import {
-  PET_STATUS_MAP,
   PET_SPECIES,
   petCoordsKey,
   PET_DEEPLINK_PARAM,
 } from './petDomain';
+import { t } from '../components/compatibility/components/ux/strings';
 
 // Lookup espécie→entrada (id → { label, icon }) montado da SOT — nunca um literal
 // de espécie hardcoded aqui (mesma disciplina do PetDetailSheet).
@@ -36,15 +36,18 @@ const SPECIES_MAP = PET_SPECIES.reduce((map, s) => { map[s.id] = s; return map; 
 // vier estranha.
 export const PETS_BASE_URL = 'https://mapafome.com.br/pets';
 
-// Registro de tom por status (pt-BR calmo). NÃO reusa o label cru do PET_STATUS_MAP
-// ('Perdido'/'Encontrado'/'Avistado') porque a mensagem precisa de uma frase
-// inteira serena ("Pet perdido perto daqui"), não de um rótulo de chip. A SOT
-// continua sendo o status id (validado abaixo); aqui só damos a moldura da frase.
-const STATUS_LEAD = {
-  perdido: 'Pet perdido',
-  encontrado: 'Pet encontrado',
-  avistado: 'Pet avistado',
-};
+// Registro de tom por status. NÃO reusa o label cru do status ('Perdido'/...)
+// porque a mensagem precisa de uma frase inteira serena ("Pet perdido perto
+// daqui"), não de um rótulo de chip. A SOT continua sendo o status id (validado
+// abaixo); a frase resolve via t() ('pets.share.lead.<id>') no idioma ATIVO —
+// t() lê o currentLocale no MOMENTO da chamada (o share é montado síncrono no
+// gesto), então a mensagem compartilhada sai no idioma escolhido pelo usuário.
+function statusLead(status) {
+  const key = `pets.share.lead.${status}`;
+  const resolved = t(key);
+  // t() devolve a própria chave quando não há tradução (status lixo) → fallback.
+  return resolved === key ? t('pets.share.lead.fallback') : resolved;
+}
 
 // Precisão GROSSA da "área" no TEXTO (2 casas ≈ 1 km). Deliberadamente mais grossa
 // que a chave do deep-link (6 casas, ~11 cm): o texto humano não deve estampar um
@@ -89,24 +92,25 @@ function buildDeepLinkUrl(baseUrl, coords) {
 // produz uma mensagem genérica + a URL-base (nunca lança).
 export function buildPetShareMessage(pet, baseUrl = PETS_BASE_URL) {
   const p = pet || {};
-  const lead = STATUS_LEAD[p.status] || 'Pet';
+  const lead = statusLead(p.status);
   const speciesMeta = SPECIES_MAP[p.species] || null;
-  const speciesLabel = speciesMeta ? speciesMeta.label.toLowerCase() : null;
+  // O label da espécie também vem do idioma ativo (t por id), minúsculo na frase.
+  const speciesLabel = speciesMeta ? t(`pets.species.${speciesMeta.id}.label`).toLowerCase() : null;
   const area = describeArea(p.coords);
 
-  // Frase calma: "Pet perdido (cão) na área 8.05, 34.90." — só o que é público.
+  // Frase calma: "Pet perdido (cão) perto de 8.05, 34.90." — só o que é público.
   let text = lead;
   if (speciesLabel) text += ` (${speciesLabel})`;
   if (area) {
-    text += ` perto de ${area}`;
+    text += ` ${t('pets.share.area').replace('{area}', area)}`;
   }
   text += '.';
   // Convite sereno para o destino (sem urgência, sem "URGENTE!!!" — governador de
   // tom). O link em si vem em `url` (navigator.share) e é concatenado no fallback.
-  text += ' Veja no mapa e ajude a reunir esse pet com a família:';
+  text += ` ${t('pets.share.invite')}`;
 
   const url = buildDeepLinkUrl(baseUrl, p.coords);
-  const title = 'Pet no MAPA FOME';
+  const title = t('pets.share.title');
   return { text, url, title };
 }
 

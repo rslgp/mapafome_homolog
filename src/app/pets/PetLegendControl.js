@@ -22,13 +22,7 @@ import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { PET_STATUSES } from './petDomain';
 import { petMarkerSvg, PET_LIFECYCLE_LEGEND } from './petMarkerIcon';
-
-// Cópia pt-BR calma (sem string crua espalhada). Tom: informativo, nunca alarme.
-const COPY = {
-  title: 'O que cada marcador quer dizer',
-  close: 'Fechar legenda',
-  reopen: 'Mostrar legenda',
-};
+import { t } from '../components/compatibility/components/ux/strings';
 
 // Tamanho do swatch (o mini-ícone REAL do marcador), igual ao CSS .pet-legend-card__swatch.
 const SWATCH_SIZE = 22;
@@ -47,13 +41,14 @@ function legendRow({ sampleStatus, lifecycle, label }) {
 }
 
 // Linhas da legenda, montadas a partir das SOTs (status ativos + variações de
-// ciclo de vida). Sem literal de id/label duplicado: tudo deriva das listas.
+// ciclo de vida). Os IDS vêm das listas SOT; os RÓTULOS resolvem por id via t()
+// (i18n) no idioma ativo no momento em que o controle é montado.
 function legendRowsHtml() {
   const statusRows = PET_STATUSES.map((s) =>
-    legendRow({ sampleStatus: s.id, lifecycle: 'fresh', label: s.label }),
+    legendRow({ sampleStatus: s.id, lifecycle: 'fresh', label: t(`pets.status.${s.id}.label`) }),
   );
   const lifecycleRows = PET_LIFECYCLE_LEGEND.map((e) =>
-    legendRow({ sampleStatus: e.sampleStatus, lifecycle: e.lifecycle, label: e.label }),
+    legendRow({ sampleStatus: e.sampleStatus, lifecycle: e.lifecycle, label: t(`pets.lifecycle.${e.id}.label`) }),
   );
   return statusRows.concat(lifecycleRows).join('');
 }
@@ -72,12 +67,12 @@ const PetLegendControl = () => {
         const card = L.DomUtil.create('div', 'pet-legend-card', wrap);
         const head = L.DomUtil.create('div', 'pet-legend-card__head', card);
         const title = L.DomUtil.create('p', 'pet-legend-card__title', head);
-        title.textContent = COPY.title;
+        title.textContent = t('pets.legend.title');
 
         const closeBtn = L.DomUtil.create('button', 'pet-legend-card__close', head);
         closeBtn.type = 'button';
-        closeBtn.setAttribute('aria-label', COPY.close);
-        closeBtn.title = COPY.close;
+        closeBtn.setAttribute('aria-label', t('pets.legend.close'));
+        closeBtn.title = t('pets.legend.close');
         closeBtn.innerHTML = '<span aria-hidden="true">✕</span>';
 
         const list = L.DomUtil.create('ul', 'pet-legend-card__list', card);
@@ -88,7 +83,7 @@ const PetLegendControl = () => {
         reopenBtn.type = 'button';
         reopenBtn.hidden = true;
         reopenBtn.innerHTML =
-          '<span aria-hidden="true">🛈</span> ' + COPY.reopen;
+          '<span aria-hidden="true">🛈</span> ' + t('pets.legend.reopen');
 
         const show = (open) => {
           card.hidden = !open;

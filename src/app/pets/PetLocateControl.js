@@ -19,15 +19,7 @@
 import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
-
-// Cópia pt-BR calma (sem string crua espalhada). Tom: hopeful, nunca punitivo.
-const COPY = {
-  label: 'Perto de mim',
-  title: 'Centralizar o mapa na minha localização',
-  locating: 'Procurando sua localização…',
-  denied: 'Não foi possível usar sua localização. Você pode buscar um endereço acima.',
-  unsupported: 'Seu aparelho não permite localização agora. Busque um endereço acima.',
-};
+import { t } from '../components/compatibility/components/ux/strings';
 
 // Zoom alvo ao recentrar no aparelho — bairro/quadra, não país.
 const LOCATE_ZOOM = 15;
@@ -49,12 +41,12 @@ const PetLocateControl = () => {
 
         const button = L.DomUtil.create('button', 'pet-locate__btn', wrap);
         button.type = 'button';
-        button.setAttribute('aria-label', COPY.label);
-        button.title = COPY.title;
+        button.setAttribute('aria-label', t('pets.locate.label'));
+        button.title = t('pets.locate.title');
         // Glyph (decorativo) + rótulo de texto visível → alvo grande e legível.
         button.innerHTML =
           '<span class="pet-locate__icon" aria-hidden="true">📍</span>' +
-          '<span class="pet-locate__text">' + COPY.label + '</span>';
+          '<span class="pet-locate__text">' + t('pets.locate.label') + '</span>';
 
         // Região de status pt-BR (aria-live): comunica "procurando" e a falha
         // calma a leitores de tela SEM travar o fluxo. role=status = polite.
@@ -87,11 +79,11 @@ const PetLocateControl = () => {
         const onLocate = () => {
           // Sem suporte de geolocalização: degrada calmo, mapa segue usável.
           if (typeof navigator === 'undefined' || !navigator.geolocation) {
-            showStatus(COPY.unsupported);
+            showStatus(t('pets.locate.unsupported'));
             return;
           }
           clearStatus();
-          showStatus(COPY.locating);
+          showStatus(t('pets.locate.locating'));
           setBusy(true);
           // getCurrentPosition é disparado SÍNCRONO no handler do gesto (sem await
           // antes) — alguns navegadores mobile descartam pedidos de permissão
@@ -109,7 +101,7 @@ const PetLocateControl = () => {
             () => {
               // Negado / indisponível / timeout: mensagem calma, sem dead end.
               setBusy(false);
-              showStatus(COPY.denied);
+              showStatus(t('pets.locate.denied'));
             },
             GEO_OPTIONS,
           );

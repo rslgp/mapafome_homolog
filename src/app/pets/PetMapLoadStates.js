@@ -24,6 +24,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { PET_MAP_LOAD_STATE } from './petMapLoadState';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
 // LOADING — a skeleton region, announced as busy. Three placeholder bars stand
 // in for the incoming pins/rows so the wait reads as "loading content", not a
@@ -38,7 +39,7 @@ function LoadingState() {
       aria-busy="true"
       aria-live="polite"
     >
-      <span className="mdf-sr-only">Carregando os pets do mapa…</span>
+      <span className="mdf-sr-only">{t('pets.loadstate.loading')}</span>
       <div className="pet-skeleton" aria-hidden="true">
         <span className="pet-skeleton__bar pet-skeleton__bar--wide" />
         <span className="pet-skeleton__bar" />
@@ -57,10 +58,10 @@ function EmptyState() {
     <div className="pet-mapstate pet-mapstate--empty" role="status">
       <p className="pet-mapstate__lead">
         <span className="pet-mapstate__icon" aria-hidden="true">🐾</span>
-        Nenhum pet reportado por aqui ainda — seja o primeiro a ajudar.
+        {t('pets.loadstate.empty.lead.pre')}
       </p>
       <p className="pet-mapstate__point">
-        Toque em <b>Relatar um pet</b>, logo abaixo.{' '}
+        {t('pets.loadstate.empty.point.pre')} <b>{t('pets.loadstate.empty.point.cta')}</b>{t('pets.loadstate.empty.point.post')}{' '}
         <span className="pet-mapstate__arrow" aria-hidden="true">↓</span>
       </p>
     </div>
@@ -74,15 +75,14 @@ function ErrorState({ onRetry }) {
   return (
     <div className="pet-mapstate pet-mapstate--error" role="alert">
       <p className="pet-mapstate__lead">
-        Não foi possível carregar os pets agora. Você ainda pode relatar um —
-        e pode tentar carregar de novo.
+        {t('pets.loadstate.error.lead')}
       </p>
       <button
         type="button"
         className="pet-mapstate__retry"
         onClick={onRetry}
       >
-        <span aria-hidden="true">↻</span> Tentar de novo
+        <span aria-hidden="true">↻</span> {t('pets.loadstate.error.retry')}
       </button>
     </div>
   );
@@ -91,6 +91,8 @@ function ErrorState({ onRetry }) {
 ErrorState.propTypes = { onRetry: PropTypes.func };
 
 export default function PetMapLoadStates({ state, onRetry }) {
+  // PET-M23 — re-render on a locale switch so the child states' t() re-read.
+  useLocale();
   switch (state) {
     case PET_MAP_LOAD_STATE.LOADING:
       return <LoadingState />;

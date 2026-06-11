@@ -8,9 +8,9 @@ import {
   PET_SPECIES,
   PET_SIZES,
   PET_PUBLISH_FAILURE,
-  PET_PUBLISH_FAILURE_COPY,
 } from './petDomain';
 import { resizeImageFile, maxPhotoMb } from './petPhoto';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
 // /pets — reporter bottom-sheet, forked from the hunger ReportSheet.
 // Key difference from the hunger flow: STATUS is a SINGLE-SELECT, REQUIRED
@@ -20,15 +20,18 @@ import { resizeImageFile, maxPhotoMb } from './petPhoto';
 
 const DEFAULT_SPECIES = 'outro';
 
-const ERRORS = {
-  status_required: 'Escolha uma situação: perdido, encontrado ou avistado.',
-};
+// PET-M23 — the validation error is now keyed (the petDomain ids stay the SOT;
+// the visible copy is i18n'd). A stable sentinel marks "status missing"; the
+// rendered text resolves via t() so a locale switch updates it.
+const STATUS_REQUIRED = 'status_required';
 
 // Resolve a cópia calma a partir do reasonCode classificado em PetsApp (PET-M1).
 // Fallback para 'generic' se vier um código desconhecido — nunca deixa o usuário
-// sem mensagem nem mostra "publish_failed" cru. SOT da cópia: petDomain.
+// sem mensagem nem mostra "publish_failed" cru. A cópia é i18n (pets.publish.*).
 function failureCopyFor(reasonCode) {
-  return PET_PUBLISH_FAILURE_COPY[reasonCode] || PET_PUBLISH_FAILURE_COPY[PET_PUBLISH_FAILURE.GENERIC];
+  const key = `pets.publish.failed.${reasonCode}`;
+  const resolved = t(key);
+  return resolved === key ? t(`pets.publish.failed.${PET_PUBLISH_FAILURE.GENERIC}`) : resolved;
 }
 
 function newIdempotencyKey() {
@@ -40,6 +43,8 @@ function newIdempotencyKey() {
 }
 
 export default function PetReportSheet({ open, coords, onClose, onPublish }) {
+  // PET-M23 — re-render this sheet on a locale switch so every t() re-reads.
+  useLocale();
   const [status, setStatus] = useState(null);       // 'perdido' | 'encontrado' | 'avistado'
   const [species, setSpecies] = useState(DEFAULT_SPECIES);
   const [size, setSize] = useState('');
@@ -170,7 +175,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
 
   function chooseStatus(id) {
     setStatus(id);
-    if (errorMsg === ERRORS.status_required) setErrorMsg(null);
+    if (errorMsg === STATUS_REQUIRED) setErrorMsg(null);
   }
 
   // PET-M15 — o dono escolheu/capturou um arquivo. Redimensiona/comprime no
@@ -214,7 +219,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
 
   async function handlePublish() {
     if (!status) {
-      setErrorMsg(ERRORS.status_required);
+      setErrorMsg(STATUS_REQUIRED);
       return;
     }
     setPhase('publishing');
@@ -258,15 +263,15 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
   // (out-of-bounds/genérica), "Tentar de novo" continua certo.
   const queuedFailure = phase === 'error' && publishError && publishError.queued;
   const buttonLabel =
-    phase === 'publishing' ? 'Publicando…'
-      : phase === 'success' ? 'Publicado ✓'
-        : queuedFailure ? 'Guardado ✓'
-          : phase === 'error' ? 'Tentar de novo'
-            : 'Publicar pet';
+    phase === 'publishing' ? t('pets.report.btn.publishing')
+      : phase === 'success' ? t('pets.report.btn.success')
+        : queuedFailure ? t('pets.report.btn.queued')
+          : phase === 'error' ? t('pets.report.btn.retry')
+            : t('pets.report.btn.publish');
 
   const locationLabel = coords
-    ? `Ponto em: ${coords[0].toFixed(5)}, ${coords[1].toFixed(5)}`
-    : 'Toque no mapa para escolher o local';
+    ? t('pets.report.location.set').replace('{coords}', `${coords[0].toFixed(5)}, ${coords[1].toFixed(5)}`)
+    : t('pets.report.location.none');
 
   return (
     <div className="mdf-sheet" role="dialog" aria-modal="true" aria-labelledby="pet-sheet-title">
@@ -283,7 +288,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
         <div
           className="mdf-sheet__handle"
           role="separator"
-          aria-label="Arraste para redimensionar"
+          aria-label={t('pets.report.handle.aria')}
           aria-valuemin={40}
           aria-valuemax={95}
           aria-valuenow={Math.round(sheetHeightVh ?? 70)}
@@ -295,23 +300,23 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
 
         <header className="mdf-sheet__header">
           <h2 id="pet-sheet-title" className="mdf-sheet__title">
-            Reportar um pet
+            {t('pets.report.title')}
           </h2>
           <p className="mdf-sheet__subtitle">
-            Um detalhe ajuda — mas o essencial é marcar o local e a situação.
+            {t('pets.report.subtitle')}
           </p>
           <p className="mdf-sheet__location">{locationLabel}</p>
         </header>
 
-        {errorMsg === ERRORS.status_required && (
+        {errorMsg === STATUS_REQUIRED && (
           <p className="mdf-sheet__inline-error" role="alert">
-            {errorMsg}
+            {t('pets.report.error.status')}
           </p>
         )}
 
         <fieldset className="pet-fieldset">
-          <legend className="pet-legend">Qual é a situação?</legend>
-          <div className="mdf-sheet__chips" role="radiogroup" aria-label="Situação do pet">
+          <legend className="pet-legend">{t('pets.report.legend.status')}</legend>
+          <div className="mdf-sheet__chips" role="radiogroup" aria-label={t('pets.report.aria.status')}>
             {PET_STATUSES.map((s, i) => {
               const checked = status === s.id;
               return (
@@ -327,10 +332,10 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
                 >
                   <span className="pet-chip__top">
                     <span className="mdf-chip__icon" aria-hidden="true">{s.icon}</span>
-                    <span className="mdf-chip__label">{s.label}</span>
+                    <span className="mdf-chip__label">{t(`pets.status.${s.id}.label`)}</span>
                     {checked && <span className="pet-chip__check" aria-hidden="true">✓</span>}
                   </span>
-                  <span className="pet-chip__hint">{s.hint}</span>
+                  <span className="pet-chip__hint">{t(`pets.status.${s.id}.hint`)}</span>
                 </button>
               );
             })}
@@ -338,8 +343,8 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
         </fieldset>
 
         <fieldset className="pet-fieldset">
-          <legend className="pet-legend">Espécie</legend>
-          <div className="mdf-sheet__chips" role="radiogroup" aria-label="Espécie do pet">
+          <legend className="pet-legend">{t('pets.report.legend.species')}</legend>
+          <div className="mdf-sheet__chips" role="radiogroup" aria-label={t('pets.report.aria.species')}>
             {PET_SPECIES.map((s) => {
               const checked = species === s.id;
               return (
@@ -353,7 +358,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
                   disabled={busy}
                 >
                   <span className="mdf-chip__icon" aria-hidden="true">{s.icon}</span>
-                  <span className="mdf-chip__label">{s.label}</span>
+                  <span className="mdf-chip__label">{t(`pets.species.${s.id}.label`)}</span>
                   {checked && <span className="mdf-chip__check" aria-hidden="true">✓</span>}
                 </button>
               );
@@ -362,8 +367,8 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
         </fieldset>
 
         <fieldset className="pet-fieldset">
-          <legend className="pet-legend">Porte (opcional)</legend>
-          <div className="mdf-sheet__chips" role="radiogroup" aria-label="Porte do pet">
+          <legend className="pet-legend">{t('pets.report.legend.size')}</legend>
+          <div className="mdf-sheet__chips" role="radiogroup" aria-label={t('pets.report.aria.size')}>
             {PET_SIZES.map((s) => {
               const checked = size === s.id;
               return (
@@ -376,7 +381,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
                   onClick={() => setSize(checked ? '' : s.id)}
                   disabled={busy}
                 >
-                  <span className="mdf-chip__label">{s.label}</span>
+                  <span className="mdf-chip__label">{t(`pets.size.${s.id}.label`)}</span>
                   {checked && <span className="mdf-chip__check" aria-hidden="true">✓</span>}
                 </button>
               );
@@ -403,7 +408,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
         <div className="pet-album-field">
           <span className="pet-album-field__label">
             <span className="pet-album-field__icon" aria-hidden="true">📷</span>
-            Fotos do pet — o que mais ajuda a reconhecer
+            {t('pets.report.album.label')}
           </span>
 
           {/* Captura no celular / escolher da galeria. O input nativo é a
@@ -428,17 +433,16 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
               <span aria-hidden="true">📸</span>
               <span>
                 {photoState === 'processing'
-                  ? 'Preparando a foto…'
+                  ? t('pets.report.photo.processing')
                   : photoPreview
-                    ? 'Trocar a foto'
-                    : 'Tirar foto ou escolher da galeria'}
+                    ? t('pets.report.photo.change')
+                    : t('pets.report.photo.choose')}
               </span>
             </label>
 
             {photoState === 'error' && (
               <p className="mdf-sheet__helper pet-photo-capture__error" role="alert">
-                Não deu para preparar essa imagem. Tente outra foto, ou cole um link
-                no campo abaixo.
+                {t('pets.report.photo.error')}
               </p>
             )}
 
@@ -449,15 +453,13 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
                 <img
                   className="pet-photo-preview__img"
                   src={photoPreview.previewUrl}
-                  alt="Prévia da foto do pet que você escolheu"
+                  alt={t('pets.report.photo.previewAlt')}
                   width={photoPreview.width}
                   height={photoPreview.height}
                 />
                 <figcaption className="pet-photo-preview__cap">
                   <span>
-                    Prévia pronta (reduzida no seu aparelho). Para ela aparecer no
-                    relato, hospede a foto e cole o link abaixo — por enquanto, é o
-                    link que publica.
+                    {t('pets.report.photo.previewCap')}
                   </span>
                   <button
                     type="button"
@@ -465,7 +467,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
                     onClick={clearPhotoPreview}
                     disabled={busy}
                   >
-                    Remover prévia
+                    {t('pets.report.photo.removePreview')}
                   </button>
                 </figcaption>
               </figure>
@@ -475,30 +477,25 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
           {/* PII calmo (PET-M14 §6): orienta a evitar terceiros na foto. Tom de
               cuidado, sem alarme. */}
           <p className="mdf-sheet__helper pet-photo-capture__privacy">
-            Evite fotos que mostrem pessoas, placas ou o número da casa — foque no
-            pet. A foto é reduzida no seu aparelho antes de qualquer coisa (até
-            ~{maxPhotoMb()} MB).
+            {t('pets.report.photo.privacy').replace('{mb}', String(maxPhotoMb()))}
           </p>
 
           <label className="pet-album-field__url-label" htmlFor="pet-photos">
-            Link da foto (o que publica)
+            {t('pets.report.photo.urlLabel')}
           </label>
           <input
             id="pet-photos"
             type="url"
             inputMode="url"
             className="mdf-sheet__input pet-input pet-album-field__input"
-            placeholder="Cole aqui o link da foto ou da pasta do Google Drive"
+            placeholder={t('pets.report.photo.urlPlaceholder')}
             maxLength={500}
             value={photos}
             onChange={(e) => setPhotos(e.target.value)}
             disabled={busy}
           />
           <p className="mdf-sheet__helper pet-album-field__helper">
-            Uma foto é o que mais ajuda no reencontro. Cole o link de uma foto direta
-            ou de uma pasta do Google Drive (deixe como “qualquer pessoa com o link
-            pode ver”). Sem foto também publica — mas com foto, muito mais gente
-            reconhece.
+            {t('pets.report.photo.urlHelper')}
           </p>
         </div>
 
@@ -507,38 +504,38 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
           open={moreOpen}
           onToggle={(e) => setMoreOpen(e.target.open)}
         >
-          <summary>Mais sobre o pet (opcional)</summary>
+          <summary>{t('pets.report.more.summary')}</summary>
 
-          <label className="mdf-sr-only" htmlFor="pet-name">Nome do pet (se souber)</label>
+          <label className="mdf-sr-only" htmlFor="pet-name">{t('pets.report.field.name')}</label>
           <input
             id="pet-name"
             type="text"
             className="mdf-sheet__input pet-input"
-            placeholder="Nome do pet (se souber)"
+            placeholder={t('pets.report.field.name')}
             maxLength={40}
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={busy}
           />
 
-          <label className="mdf-sr-only" htmlFor="pet-color">Cor / pelagem</label>
+          <label className="mdf-sr-only" htmlFor="pet-color">{t('pets.report.field.color')}</label>
           <input
             id="pet-color"
             type="text"
             className="mdf-sheet__input pet-input"
-            placeholder="Cor / pelagem"
+            placeholder={t('pets.report.field.color')}
             maxLength={40}
             value={color}
             onChange={(e) => setColor(e.target.value)}
             disabled={busy}
           />
 
-          <label className="mdf-sr-only" htmlFor="pet-detail">Detalhe — onde, coleira, comportamento</label>
+          <label className="mdf-sr-only" htmlFor="pet-detail">{t('pets.report.field.detail')}</label>
           <input
             id="pet-detail"
             type="text"
             className="mdf-sheet__input pet-input"
-            placeholder="Detalhe — onde, coleira, comportamento"
+            placeholder={t('pets.report.field.detail')}
             maxLength={140}
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
@@ -550,10 +547,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
               de credibilidade (PET_CURVE §5): o "detalhe que só o dono sabe"
               GUARDA-SE, não se publica. */}
           <p className="mdf-sheet__helper pet-freetext-warning">
-            Esse texto fica visível para todo mundo. Para a segurança de todos,
-            não inclua dados de terceiros, placa de carro nem endereço exato. Se
-            houver um detalhe que só o dono sabe (uma marca, uma manha), guarde-o
-            para confirmar com calma depois — não escreva aqui.
+            {t('pets.report.freetext.warning')}
           </p>
         </details>
 
@@ -562,27 +556,25 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
           open={contactOpen}
           onToggle={(e) => setContactOpen(e.target.open)}
         >
-          <summary>Seu contato (opcional)</summary>
+          <summary>{t('pets.report.contact.summary')}</summary>
           <p className="mdf-sheet__helper">
-            Quem encontrar (ou reconhecer) o pet pode falar direto com você.
+            {t('pets.report.contact.help')}
           </p>
-          <label className="mdf-sr-only" htmlFor="pet-contact">Seu contato — WhatsApp/@ (opcional)</label>
+          <label className="mdf-sr-only" htmlFor="pet-contact">{t('pets.report.field.contact')}</label>
           <input
             id="pet-contact"
             type="text"
             className="mdf-sheet__input pet-input"
-            placeholder="Seu contato — WhatsApp/@ (opcional)"
+            placeholder={t('pets.report.field.contact')}
             maxLength={60}
             value={contact}
             onChange={(e) => setContact(e.target.value)}
             disabled={busy}
           />
           <p className="mdf-sheet__consent">
-            Ao informar um contato, você concorda com os{' '}
-            <a href="/privacy.html" target="_blank" rel="noreferrer">Termos de Privacidade</a>
-            . Seu contato nunca aparece no mapa nem na lista: ele fica escondido e
-            só é mostrado quando alguém abre este pet e toca em “Mostrar contato”,
-            para ajudar no reencontro.
+            {t('pets.report.consent.pre')}{' '}
+            <a href="/privacy.html" target="_blank" rel="noreferrer">{t('pets.report.consent.privacyLink')}</a>
+            {t('pets.report.consent.post')}
           </p>
         </details>
 
@@ -606,7 +598,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
             onClick={() => onClose?.()}
             disabled={phase === 'publishing'}
           >
-            Cancelar
+            {t('pets.report.cancel')}
           </button>
           <button
             type="button"
@@ -620,10 +612,10 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
         </div>
 
         <p className="mdf-sheet__consent mdf-sheet__consent--below-cta">
-          Ao confirmar, você está de acordo com os{' '}
-          <a href="/privacy.html" target="_blank" rel="noreferrer">Termos de Privacidade</a>
-          {' '}e os{' '}
-          <a href="/terms.html" target="_blank" rel="noreferrer">Termos de Uso</a>.
+          {t('pets.report.consent.below.pre')}{' '}
+          <a href="/privacy.html" target="_blank" rel="noreferrer">{t('pets.report.consent.privacyLink')}</a>
+          {' '}{t('pets.report.consent.below.mid')}{' '}
+          <a href="/terms.html" target="_blank" rel="noreferrer">{t('pets.report.consent.below.terms')}</a>.
         </p>
       </div>
     </div>

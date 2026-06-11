@@ -54,10 +54,12 @@ const LIFECYCLE_IDS = new Set(Object.values(PET_LIFECYCLE));
 // PET_STATUSES (petDomain); estas entradas explicam as VARIAÇÕES de ciclo de vida
 // que o status sozinho não cobre — o marcador envelhecido e o reunido. Cada uma
 // nomeia o swatch a renderizar (um status de referência + o lifecycle), então a
-// legenda mostra o mini-ícone REAL, e o rótulo pt-BR mora aqui (um só lugar).
+// legenda mostra o mini-ícone REAL. PET-M23: o RÓTULO não mora mais aqui como
+// string inline — o PetLegendControl resolve via t('pets.lifecycle.<id>.label')
+// no idioma ativo. Esta lista guarda só a forma (id estável + qual swatch desenhar).
 export const PET_LIFECYCLE_LEGEND = [
-  { id: 'aged',    label: 'Relato antigo',  hint: 'Faz tempo — confirme se ainda procura', sampleStatus: 'perdido',    lifecycle: PET_LIFECYCLE.AGED },
-  { id: 'reunido', label: 'Reunido',        hint: 'Voltou para casa',                       sampleStatus: 'encontrado', lifecycle: PET_LIFECYCLE.REUNIDO },
+  { id: 'aged',    sampleStatus: 'perdido',    lifecycle: PET_LIFECYCLE.AGED },
+  { id: 'reunido', sampleStatus: 'encontrado', lifecycle: PET_LIFECYCLE.REUNIDO },
 ];
 
 // Helper puro: largura do anel para um status (default seguro se desconhecido).

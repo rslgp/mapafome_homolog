@@ -28,8 +28,11 @@
 
 import React, { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
 export default function PetPublishClosure({ open, onSeeOnMap, onDismiss }) {
+  // PET-M23 — re-render on a locale switch so every t() re-reads.
+  useLocale();
   const panelRef = useRef(null);
   const primaryRef = useRef(null);
   const triggerRef = useRef(null);
@@ -73,11 +76,10 @@ export default function PetPublishClosure({ open, onSeeOnMap, onDismiss }) {
       <div className="pet-closure__card">
         <p className="pet-closure__icon" aria-hidden="true">🐾</p>
         <h2 id="pet-closure-title" className="pet-closure__title">
-          Seu pet está no mapa
+          {t('pets.closure.title')}
         </h2>
         <p className="pet-closure__lead">
-          Pronto — qualquer pessoa por perto pode reconhecê-lo. A gente cuida
-          daqui; você não precisa ficar atualizando a tela.
+          {t('pets.closure.lead')}
         </p>
         <div className="pet-closure__actions">
           {/* EXACTLY ONE next-decision: ver no mapa (close + look at the
@@ -89,14 +91,14 @@ export default function PetPublishClosure({ open, onSeeOnMap, onDismiss }) {
             className="pet-closure__primary"
             onClick={onSeeOnMap}
           >
-            Ver no mapa
+            {t('pets.closure.seeOnMap')}
           </button>
           <button
             type="button"
             className="pet-closure__dismiss"
             onClick={onDismiss}
           >
-            Fechar
+            {t('pets.closure.dismiss')}
           </button>
         </div>
       </div>

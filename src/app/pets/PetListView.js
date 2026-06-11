@@ -35,6 +35,7 @@ import {
   sortPetsForList,
   petDistanceKm,
 } from './petDomain';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
 // Lookups O(1) das listas SOT (espelha PetDetailSheet — uma só verdade da forma
 // de espécie/porte). Nenhum label é escrito aqui; tudo vem do petDomain.
@@ -46,11 +47,12 @@ const SIZE_MAP = PET_SIZES.reduce((map, s) => { map[s.id] = s; return map; }, {}
 // uma duplicação pequena e deliberada, não vale acoplar a sheet à lista só por
 // isto; ambas leem a mesma SOT, então não há risco de divergência de verdade).
 function describePet(pet) {
+  // Species/size labels resolve by id via t() (i18n), in the ACTIVE locale.
   const parts = [];
   const sp = SPECIES_MAP[pet.species];
-  if (sp) parts.push(sp.label);
+  if (sp) parts.push(t(`pets.species.${sp.id}.label`));
   const sz = SIZE_MAP[pet.size];
-  if (sz) parts.push(sz.label);
+  if (sz) parts.push(t(`pets.size.${sz.id}.label`));
   const color = (pet.color || '').trim();
   if (color) parts.push(color);
   return parts.join(' · ');
@@ -66,6 +68,8 @@ function formatDistance(km) {
 }
 
 export default function PetListView({ pets, center, nowMs, onPetClick }) {
+  // PET-M23 — re-render on a locale switch so every t() re-reads.
+  useLocale();
   // Ordena pela regra PURA: distância (com centro GPS) senão recência. center
   // ausente/null → o helper cai na recência. Memoizado por (pets, center, nowMs).
   const ordered = useMemo(
@@ -78,10 +82,9 @@ export default function PetListView({ pets, center, nowMs, onPetClick }) {
     // pode ser "nenhum pet reportado" OU "o filtro não casou nada" — a barra de
     // filtro (PET-M7, acima) já dá a contagem precisa; aqui só uma linha serena.
     return (
-      <div className="pet-list" aria-label="Lista de pets">
+      <div className="pet-list" aria-label={t('pets.list.aria')}>
         <p className="pet-list__empty">
-          Nenhum pet para mostrar aqui agora. Tente afrouxar o filtro, ou relate um
-          pet que você viu.
+          {t('pets.list.empty')}
         </p>
       </div>
     );
@@ -93,12 +96,12 @@ export default function PetListView({ pets, center, nowMs, onPetClick }) {
         {ordered.map((pet) => {
           const statusMeta = PET_STATUS_MAP[pet.status] || null;
           const statusId = statusMeta ? statusMeta.id : null;
-          const statusLabel = statusMeta ? statusMeta.label : 'Pet';
+          const statusLabel = statusMeta ? t(`pets.status.${statusMeta.id}.label`) : t('pets.detail.status.fallback');
           const descline = describePet(pet);
           const timeSince = formatRelativeTime(pet.dateIso);
           const km = petDistanceKm(pet, center);
           const distance = formatDistance(km);
-          const name = (pet.name || '').trim() || 'Pet sem nome';
+          const name = (pet.name || '').trim() || t('pets.detail.name.fallback');
           // Identidade ESTÁVEL da linha (PET-M18 petCoordsKey, coords-keyed e
           // PII-free). Fallback ao dateIso para o caso raro de coords inválidas
           // (não acontece para um pet visível, mas a key do React precisa existir).

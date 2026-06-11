@@ -28,13 +28,7 @@ import { LatLng } from 'leaflet';
 import 'leaflet-geosearch/dist/geosearch.css';
 
 import { BRAZIL_BOUNDS, ICONS } from '../components/compatibility/components/mapConstants';
-
-// Cópia pt-BR calma — texto de UI fica aqui (sem string crua espalhada).
-const COPY = {
-  searchLabel: 'Buscar endereço, bairro ou cidade',
-  clearSearchLabel: 'Limpar busca',
-  notFoundMessage: 'Nenhum endereço encontrado. Tente outra busca.',
-};
+import { t } from '../components/compatibility/components/ux/strings';
 
 /**
  * PetSearchField — adiciona busca de endereço ao mapa de pets.
@@ -121,9 +115,9 @@ const PetSearchField = () => {
     showMarker: true,
     autoClose: true,
     keepResult: true,
-    searchLabel: COPY.searchLabel,
-    clearSearchLabel: COPY.clearSearchLabel,
-    notFoundMessage: COPY.notFoundMessage,
+    searchLabel: t('pets.search.label'),
+    clearSearchLabel: t('pets.search.clear'),
+    notFoundMessage: t('pets.search.notFound'),
   }), [provider]);
 
   useEffect(() => {
@@ -136,7 +130,7 @@ const PetSearchField = () => {
     const input = container && container.querySelector('.leaflet-control-geosearch form input');
     if (input) {
       input.setAttribute('type', 'search');
-      input.setAttribute('aria-label', COPY.searchLabel);
+      input.setAttribute('aria-label', t('pets.search.label'));
       input.setAttribute('autocomplete', 'off');
       input.setAttribute('autocapitalize', 'off');
       input.setAttribute('autocorrect', 'off');

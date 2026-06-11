@@ -18,21 +18,24 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
 export default function PetFirstRunHint({ open, onDismiss }) {
+  // PET-M23 — re-render on a locale switch so every t() re-reads.
+  useLocale();
   if (!open) return null;
   return (
-    <aside className="pet-firsthint" role="status" aria-label="Como usar o mapa de pets">
+    <aside className="pet-firsthint" role="status" aria-label={t('pets.hint.aria')}>
       <p className="pet-firsthint__text">
         <span className="pet-firsthint__icon" aria-hidden="true">👆</span>
-        Toque no mapa onde você viu o pet, depois toque em <b>Relatar um pet</b>.
+        {t('pets.hint.text.pre')} <b>{t('pets.hint.text.cta')}</b>.
       </p>
       <button
         type="button"
         className="pet-firsthint__dismiss"
         onClick={onDismiss}
       >
-        Entendi
+        {t('pets.hint.dismiss')}
       </button>
     </aside>
   );

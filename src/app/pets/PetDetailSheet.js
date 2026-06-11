@@ -9,6 +9,7 @@ import { PET_STATUS_MAP, PET_SPECIES, PET_SIZES, petCoordsKey, PET_DEEPLINK_PARA
 import { looksLikeDirectImageUrl } from './petPhoto';
 import { buildPetShareMessage, sharePet } from './petShare';
 import { flagPet, resolvePet } from './petsData';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
 // PET-M4 — estados do fluxo de denúncia (flag) na própria sheet (máquina de
 // estados pequena, dois passos: ocioso → confirmar → enviando → feito/erro).
@@ -58,17 +59,20 @@ const SIZE_MAP = PET_SIZES.reduce((map, s) => { map[s.id] = s; return map; }, {}
 
 function describePet(pet) {
   // "Cão · Médio · caramelo" — only the parts we actually have, joined by · .
+  // Species/size labels resolve by id via t() (i18n), in the ACTIVE locale.
   const parts = [];
   const sp = SPECIES_MAP[pet.species];
-  if (sp) parts.push(sp.label);
+  if (sp) parts.push(t(`pets.species.${sp.id}.label`));
   const sz = SIZE_MAP[pet.size];
-  if (sz) parts.push(sz.label);
+  if (sz) parts.push(t(`pets.size.${sz.id}.label`));
   const color = (pet.color || '').trim();
   if (color) parts.push(color);
   return parts.join(' · ');
 }
 
 export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, onResolved, onClose }) {
+  // PET-M23 — re-render the sheet on a locale switch so every t() re-reads.
+  useLocale();
   const triggerRef = useRef(null);
   const closeRef = useRef(null);
   const revealRef = useRef(null);
@@ -172,7 +176,7 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
       photos,
       isDirectImage: looksLikeDirectImageUrl(photos),
       speciesGlyph: speciesMeta ? speciesMeta.icon : '🐾',
-      speciesLabel: speciesMeta ? speciesMeta.label : 'pet',
+      speciesLabel: speciesMeta ? t(`pets.species.${speciesMeta.id}.label`) : t('pets.detail.species.fallback'),
       timeSince: formatRelativeTime(pet.dateIso),
       hasContact,
     };
@@ -207,8 +211,8 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
     // o registro "possível", calmo, sem certeza — spec §2.2/§2.4).
     const openIsLost = pet.status === 'perdido';
     const lead = openIsLost
-      ? 'Pode ser que alguém tenha visto um pet parecido por perto.'
-      : 'Pode ser que este pet tenha alguém procurando por ele por perto.';
+      ? t('pets.detail.match.lead.lost')
+      : t('pets.detail.match.lead.found');
     return { targetPet: best.pet, targetKey, lead, count: matches.length };
   }, [pet, matches]);
 
@@ -296,8 +300,8 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
 
   const { statusMeta } = derived;
   const statusClass = statusMeta ? `pet-detail__status--${statusMeta.id}` : '';
-  const statusLabel = statusMeta ? statusMeta.label : 'Pet';
-  const displayName = derived.name || 'Pet sem nome';
+  const statusLabel = statusMeta ? t(`pets.status.${statusMeta.id}.label`) : t('pets.detail.status.fallback');
+  const displayName = derived.name || t('pets.detail.name.fallback');
 
   return (
     <div
@@ -352,7 +356,7 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
             <img
               className={`pet-detail__photo-img${photoLoadState === 'loaded' ? ' pet-detail__photo-img--ready' : ''}`}
               src={derived.photos}
-              alt={`Foto do pet (${derived.speciesLabel}${derived.name ? `, ${derived.name}` : ''})`}
+              alt={t('pets.detail.photo.alt').replace('{desc}', `${derived.speciesLabel}${derived.name ? `, ${derived.name}` : ''}`)}
               loading="lazy"
               onLoad={() => setPhotoLoadState('loaded')}
               onError={() => setPhotoLoadState('error')}
@@ -367,26 +371,26 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
           >
             <span className="pet-detail__album-icon" aria-hidden="true">📷</span>
             <span className="pet-detail__album-text">
-              <span className="pet-detail__album-title">Ver as fotos do pet</span>
-              <span className="pet-detail__album-sub">o que mais ajuda a reconhecer</span>
+              <span className="pet-detail__album-title">{t('pets.detail.album.title')}</span>
+              <span className="pet-detail__album-sub">{t('pets.detail.album.sub')}</span>
             </span>
           </a>
         ) : (
           /* SEM foto (ou imagem direta que falhou ao carregar): placeholder calmo
              com o glifo da espécie. NUNCA um <img> quebrado. role/alt textual para
              o leitor de tela entender que não há foto, sem soar como erro. */
-          <div className="pet-detail__photo-placeholder" role="img" aria-label="Este relato está sem foto">
+          <div className="pet-detail__photo-placeholder" role="img" aria-label={t('pets.detail.photo.noneAria')}>
             <span className="pet-detail__photo-placeholder-glyph" aria-hidden="true">
               {derived.speciesGlyph}
             </span>
-            <span className="pet-detail__photo-placeholder-text">Sem foto neste relato</span>
+            <span className="pet-detail__photo-placeholder-text">{t('pets.detail.photo.noneText')}</span>
           </div>
         )}
 
         <dl className="mdf-pin-sheet__meta">
           {derived.timeSince && (
             <>
-              <dt>Reportado</dt>
+              <dt>{t('pets.detail.reported')}</dt>
               <dd>{derived.timeSince}</dd>
             </>
           )}
@@ -402,10 +406,10 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
             decide olhar). O link foca o candidato via a identidade M18 (petCoordsKey),
             sem prometer "verificado" (§5 — o match aproxima, não prova). */}
         {matchHint && !matchDismissed && (
-          <div className="pet-detail__match" role="note" aria-label="Possível encontro">
+          <div className="pet-detail__match" role="note" aria-label={t('pets.detail.match.aria')}>
             <p className="pet-detail__match-lead">
               <span className="pet-detail__match-icon" aria-hidden="true">💛</span>
-              {matchHint.lead} Vale olhar com calma — pode não ser, e tudo bem.
+              {matchHint.lead} {t('pets.detail.match.lead.tail')}
             </p>
             <div className="pet-detail__match-actions">
               <button
@@ -415,14 +419,14 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
                 data-match-key={matchHint.targetKey}
                 onClick={() => onOpenMatch?.(matchHint.targetPet)}
               >
-                Ver o outro relato
+                {t('pets.detail.match.open')}
               </button>
               <button
                 type="button"
                 className="pet-detail__match-dismiss"
                 onClick={() => setMatchDismissed(true)}
               >
-                Agora não
+                {t('pets.detail.match.dismiss')}
               </button>
             </div>
           </div>
@@ -439,12 +443,10 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
               onClick={() => setRevealed(true)}
             >
               <span aria-hidden="true">🔒</span>
-              <span>Mostrar contato de quem reportou</span>
+              <span>{t('pets.detail.reveal')}</span>
             </button>
             <p className="pet-detail__privacy-note">
-              O contato fica escondido até você tocar — para proteger quem
-              reportou. Combine com calma e, se puder, confirme um detalhe que só
-              o dono saberia antes de qualquer acerto.
+              {t('pets.detail.privacy.note')}
             </p>
           </div>
         )}
@@ -458,7 +460,7 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
             rel="noreferrer"
           >
             <span aria-hidden="true">{revealedContact.icon}</span>
-            <span>{revealedContact.label} de quem reportou</span>
+            <span>{revealedContact.label} {t('pets.detail.contact.suffix')}</span>
           </a>
         )}
 
@@ -480,30 +482,29 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
         {(pet.resolved && lifecycleState === LC_IDLE) ? null : (
         <div className="pet-detail__lifecycle">
           {lifecycleState === LC_IDLE && (
-            <div className="pet-detail__lifecycle-actions" role="group" aria-label="Desfecho deste relato">
+            <div className="pet-detail__lifecycle-actions" role="group" aria-label={t('pets.detail.lifecycle.aria')}>
               <button
                 type="button"
                 className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--reunido"
                 onClick={() => setLifecycleState(LC_CONFIRM_REUNIDO)}
               >
                 <span aria-hidden="true">🐾</span>
-                <span>Marcar como reunido</span>
+                <span>{t('pets.detail.lifecycle.reunido')}</span>
               </button>
               <button
                 type="button"
                 className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--encerrar"
                 onClick={() => setLifecycleState(LC_CONFIRM_ENCERRADO)}
               >
-                Encerrar busca
+                {t('pets.detail.lifecycle.encerrar')}
               </button>
             </div>
           )}
 
           {lifecycleState === LC_CONFIRM_REUNIDO && (
-            <div className="pet-detail__lifecycle-confirm" role="group" aria-label="Confirmar reencontro">
+            <div className="pet-detail__lifecycle-confirm" role="group" aria-label={t('pets.detail.lifecycle.confirmReunido.aria')}>
               <p className="pet-detail__lifecycle-note">
-                Que notícia boa. Vamos marcar este pet como reunido e tirá-lo do
-                mapa ativo — o relato continua guardado.
+                {t('pets.detail.lifecycle.confirmReunido.note')}
               </p>
               <div className="pet-detail__lifecycle-confirm-actions">
                 <button
@@ -511,25 +512,23 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
                   className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--confirm"
                   onClick={() => handleResolve(PET_CLOSURE_REASON.REUNIDO)}
                 >
-                  Sim, foi reunido
+                  {t('pets.detail.lifecycle.confirmReunido.yes')}
                 </button>
                 <button
                   type="button"
                   className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--cancel"
                   onClick={() => setLifecycleState(LC_IDLE)}
                 >
-                  Voltar
+                  {t('pets.detail.lifecycle.back')}
                 </button>
               </div>
             </div>
           )}
 
           {lifecycleState === LC_CONFIRM_ENCERRADO && (
-            <div className="pet-detail__lifecycle-confirm" role="group" aria-label="Confirmar encerramento da busca">
+            <div className="pet-detail__lifecycle-confirm" role="group" aria-label={t('pets.detail.lifecycle.confirmEncerrado.aria')}>
               <p className="pet-detail__lifecycle-note">
-                Tudo bem encerrar quando você decidir. Vamos tirar este relato do
-                mapa ativo — ele fica guardado, e você pode relatar de novo se
-                precisar.
+                {t('pets.detail.lifecycle.confirmEncerrado.note')}
               </p>
               <div className="pet-detail__lifecycle-confirm-actions">
                 <button
@@ -537,14 +536,14 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
                   className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--confirm"
                   onClick={() => handleResolve(PET_CLOSURE_REASON.ENCERRADO)}
                 >
-                  Encerrar a busca
+                  {t('pets.detail.lifecycle.confirmEncerrado.yes')}
                 </button>
                 <button
                   type="button"
                   className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--cancel"
                   onClick={() => setLifecycleState(LC_IDLE)}
                 >
-                  Voltar
+                  {t('pets.detail.lifecycle.back')}
                 </button>
               </div>
             </div>
@@ -552,7 +551,7 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
 
           {lifecycleState === LC_SENDING && (
             <p className="pet-detail__lifecycle-note" aria-live="polite">
-              Salvando…
+              {t('pets.detail.lifecycle.saving')}
             </p>
           )}
 
@@ -566,8 +565,7 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
               className="pet-detail__lifecycle-note pet-detail__lifecycle-note--done"
               role="status"
             >
-              <span aria-hidden="true">🐾</span> Que bom — bom reencontro. Este pet
-              saiu do mapa ativo, e o relato fica guardado.
+              <span aria-hidden="true">🐾</span> {t('pets.detail.lifecycle.done.reunido')}
             </p>
           )}
 
@@ -579,20 +577,19 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
               className="pet-detail__lifecycle-note pet-detail__lifecycle-note--done"
               role="status"
             >
-              Busca encerrada. Foi visto, foi tentado — e tudo bem parar. O relato
-              fica guardado, e você pode voltar quando quiser.
+              {t('pets.detail.lifecycle.done.encerrado')}
             </p>
           )}
 
           {lifecycleState === LC_ERROR && (
             <p className="pet-detail__lifecycle-note" role="status">
-              Não deu para salvar agora. Você pode tentar de novo em instantes.{' '}
+              {t('pets.detail.lifecycle.error')}{' '}
               <button
                 type="button"
                 className="pet-detail__lifecycle-retry"
                 onClick={() => setLifecycleState(LC_IDLE)}
               >
-                Tentar de novo
+                {t('pets.detail.lifecycle.retry')}
               </button>
             </p>
           )}
@@ -612,15 +609,14 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
               onClick={() => setFlagState(FLAG_CONFIRM)}
             >
               <span aria-hidden="true">⚑</span>
-              <span>Denunciar este relato</span>
+              <span>{t('pets.detail.flag.btn')}</span>
             </button>
           )}
 
           {flagState === FLAG_CONFIRM && (
-            <div className="pet-detail__flag-confirm" role="group" aria-label="Confirmar denúncia">
+            <div className="pet-detail__flag-confirm" role="group" aria-label={t('pets.detail.flag.aria')}>
               <p className="pet-detail__flag-note">
-                Algo parece errado com este relato? Você pode sinalizá-lo para
-                revisão. Obrigado por ajudar a manter o mapa confiável.
+                {t('pets.detail.flag.note')}
               </p>
               <div className="pet-detail__flag-actions">
                 <button
@@ -628,14 +624,14 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
                   className="pet-detail__flag-btn pet-detail__flag-btn--confirm"
                   onClick={handleFlag}
                 >
-                  Sim, sinalizar
+                  {t('pets.detail.flag.yes')}
                 </button>
                 <button
                   type="button"
                   className="pet-detail__flag-btn pet-detail__flag-btn--cancel"
                   onClick={() => setFlagState(FLAG_IDLE)}
                 >
-                  Cancelar
+                  {t('pets.detail.flag.cancel')}
                 </button>
               </div>
             </div>
@@ -643,27 +639,25 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
 
           {flagState === FLAG_SENDING && (
             <p className="pet-detail__flag-note" aria-live="polite">
-              Enviando sua sinalização…
+              {t('pets.detail.flag.sending')}
             </p>
           )}
 
           {flagState === FLAG_DONE && (
             <p className="pet-detail__flag-note pet-detail__flag-note--done" role="status">
-              Recebemos sua sinalização. Vamos revisar com calma. Obrigado por
-              cuidar do mapa junto com a gente.
+              {t('pets.detail.flag.done')}
             </p>
           )}
 
           {flagState === FLAG_ERROR && (
             <p className="pet-detail__flag-note" role="status">
-              Não deu para enviar a sinalização agora. Você pode tentar de novo em
-              instantes.{' '}
+              {t('pets.detail.flag.error')}{' '}
               <button
                 type="button"
                 className="pet-detail__flag-retry"
                 onClick={() => setFlagState(FLAG_CONFIRM)}
               >
-                Tentar de novo
+                {t('pets.detail.flag.retry')}
               </button>
             </p>
           )}
@@ -676,7 +670,7 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
             className="mdf-pin-sheet__close"
             onClick={() => onClose?.()}
           >
-            Fechar
+            {t('pets.detail.close')}
           </button>
 
           {/* PET-M19 — Compartilhar. O onClick é um handler de GESTO 100% síncrono:
@@ -687,11 +681,11 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
           <button
             type="button"
             className="pet-detail__share-btn"
-            aria-label="Compartilhar este pet"
+            aria-label={t('pets.detail.share.aria')}
             onClick={handleShare}
           >
             <span aria-hidden="true">📤</span>
-            <span>Compartilhar</span>
+            <span>{t('pets.detail.share')}</span>
           </button>
 
           {derived.dirHref && (
@@ -701,7 +695,7 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
               target="_blank"
               rel="noreferrer"
             >
-              Como chegar
+              {t('pets.detail.directions')}
             </a>
           )}
         </div>

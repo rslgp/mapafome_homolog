@@ -52,6 +52,7 @@ import {
   bindOnlineFlush as bindPetOnlineFlush,
 } from './petPublishQueue';
 import { trackError } from '../components/compatibility/components/ux/analytics';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 // PET-M21 — emissores do FUNIL de observabilidade (sobre o seam analytics.track
 // existente; ver petAnalytics.js). NENHUM carrega PII: cada um monta o payload por
 // allow-list de campos enumerados/codificados da SOT petDomain. Mantém os eventos
@@ -109,6 +110,9 @@ function isOfflineNow() {
 }
 
 export default function PetsApp() {
+  // PET-M23 — subscribe to locale changes so every t() call below re-reads the
+  // active locale and the whole /pets surface re-renders on a switch.
+  useLocale();
   const [center, setCenter] = useState(DEFAULT_CENTER);
   // PET-M8 — o `center` arranca no DEFAULT_CENTER (Recife) só para o mapa ter um
   // ponto inicial; isso NÃO significa que o GPS do usuário respondeu. A ordenação
@@ -504,15 +508,14 @@ export default function PetsApp() {
           own "Relatar um pet" CTA below. */}
       <Header />
       <main className="mdf-pets">
-        <Link href="/" className="mdf-pets__back">← Mapa</Link>
+        <Link href="/" className="mdf-pets__back">{t('pets.back')}</Link>
       <header className="mdf-pets__header">
-        <h1 className="mdf-pets__title">MapaPets seu pet perdido é encontrado por pessoas do bem</h1>
+        <h1 className="mdf-pets__title">{t('pets.header.title')}</h1>
         <p className="mdf-pets__lead">
-          Toque no mapa onde o pet foi visto e toque em <b>Relatar um pet</b>.
-          Juntos a gente reúne mais bichinhos com suas famílias.{' '}
+          {t('pets.header.lead.pre')} <b>{t('pets.header.lead.cta')}</b>{t('pets.header.lead.post')}{' '}
           <span aria-hidden="true">🐾</span>
         </p>
-        
+
       </header>
 
       {/* PET-M20 — dica de PRIMEIRA visita (uma vez, dispensável). Ensina o fluxo
@@ -526,14 +529,13 @@ export default function PetsApp() {
           não um erro. Dispensável num toque. */}
       {deepLinkMissing && (
         <p className="mdf-pets__status mdf-pets__status--calm" role="status">
-          Esse pet não está mais no mapa — pode já ter sido reencontrado. Veja os
-          outros pets por aqui, ou relate um novo.{' '}
+          {t('pets.deeplink.missing')}{' '}
           <button
             type="button"
             className="mdf-pets__status-dismiss"
             onClick={handleDismissDeepLinkNote}
           >
-            Entendi
+            {t('pets.deeplink.dismiss')}
           </button>
         </p>
       )}
@@ -569,7 +571,7 @@ export default function PetsApp() {
               teclado, alvo >=44px. A preferência persiste (handleSetView →
               localStorage). Ambas as visões consomem o MESMO visiblePets (filtrado
               pelo M7 + podado por idade pelo M12) — a lista reflete o mapa. */}
-          <div className="pet-viewtoggle" role="tablist" aria-label="Como ver os pets">
+          <div className="pet-viewtoggle" role="tablist" aria-label={t('pets.view.aria')}>
             <button
               type="button"
               role="tab"
@@ -578,7 +580,7 @@ export default function PetsApp() {
               className={`pet-viewtoggle__btn${view === PET_VIEW.MAP ? ' pet-viewtoggle__btn--on' : ''}`}
               onClick={() => handleSetView(PET_VIEW.MAP)}
             >
-              <span aria-hidden="true">🗺️</span> Mapa
+              <span aria-hidden="true">🗺️</span> {t('pets.view.map')}
             </button>
             <button
               type="button"
@@ -588,7 +590,7 @@ export default function PetsApp() {
               className={`pet-viewtoggle__btn${view === PET_VIEW.LIST ? ' pet-viewtoggle__btn--on' : ''}`}
               onClick={() => handleSetView(PET_VIEW.LIST)}
             >
-              <span aria-hidden="true">📋</span> Lista
+              <span aria-hidden="true">📋</span> {t('pets.view.list')}
             </button>
           </div>
 
@@ -619,7 +621,7 @@ export default function PetsApp() {
         className="mdf-pets__report-btn"
         onClick={handleOpenReport}
       >
-        <span aria-hidden="true">🐾</span> Relatar um pet
+        <span aria-hidden="true">🐾</span> {t('pets.report.fab')}
       </button>
 
       <PetReportSheet
