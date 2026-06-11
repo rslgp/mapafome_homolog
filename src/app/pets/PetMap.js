@@ -6,8 +6,13 @@
 // MapViewUpdater, MapSizeInvalidator, MapClickHandler) e a técnica de pin solto
 // via L.divIcon. Diferenças deliberadas vs CoffeeMap:
 //   • estado de pin solto fica LOCAL (useRef) — sem envVariables global.
-//   • sem SearchField, sem MarkerGroups de fome, sem ping pós-publicação.
+//   • sem MarkerGroups de fome, sem ping pós-publicação.
 //   • marcadores de pet vêm via <PetMarkers/>, não via ReporterMarkers.
+//
+// PET-M10: a busca de endereço (PetSearchField, fork do leaflet-geosearch do
+// mapa de fome) e o "perto de mim" (PetLocateControl, GPS sob demanda) voltam
+// AQUI — autocontidos no PetMap, que já é dono da instância do mapa, então o
+// PetsApp não precisa de prop nova nem levantar estado.
 //
 // Carregado só via dynamic import ssr:false (como CoffeeMap), então o
 // `import L from 'leaflet'` no topo é seguro (mesmo padrão de map.js).
@@ -20,6 +25,9 @@ import 'react-leaflet-markercluster/styles';
 import PropTypes from 'prop-types';
 
 import PetMarkers from './PetMarkers';
+import PetSearchField from './PetSearchField';
+import PetLocateControl from './PetLocateControl';
+import PetLegendControl from './PetLegendControl';
 import { ICONS, MAP_CONFIG } from '../components/compatibility/components/mapConstants';
 import { isMobileDevice } from '../components/compatibility/components/mapUtils';
 import {
@@ -102,6 +110,15 @@ const PetMap = ({ center, pets, onPinDropped, onPetClick }) => {
         tap={false}
       >
         <TileLayersControl />
+
+        {/* PET-M10: busca de endereço (pan/zoom) + "perto de mim" (GPS sob demanda).
+            Ambos são autocontidos e operam o mapa via useMap() — sem prop nova. */}
+        <PetSearchField />
+        <PetLocateControl />
+
+        {/* PET-M11(a): legenda compacta e dispensável (status hue + forma do glifo
+            + variações de ciclo de vida) com os mini-ícones REAIS do marcador. */}
+        <PetLegendControl />
 
         <MapViewUpdater center={center} />
 

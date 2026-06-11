@@ -1,253 +1,136 @@
 'use client';
 
-// PetFilterBar — barra de filtros colapsável acima do mapa de /pets (PET-M7).
+// PetFilterBar.js — PET-M7: filtro compacto que estreita os PINS do mapa por
+// status / espécie / porte. UI burra: NÃO conhece os pets nem aplica o predicado
+// — só desenha as opções (lidas da SOT petDomain), reporta toggles ao pai
+// (PetsApp, dono do estado) e ANUNCIA a contagem de combinações via aria-live.
 //
-// Ajuda um dono aflito a estreitar os pins até achar O SEU pet, pelo "conjunto
-// completo de reconhecimento": situação + espécie + porte + COR (texto livre) +
-// RECÊNCIA (reportado nos últimos N dias).
+// Por que aqui e não no PetMap: o estado de filtro mora no PetsApp (que já é dono
+// de `pets`), que deriva os pets visíveis com filterPets() e os passa ao
+// PetMarkers. Esta barra é uma superfície de CONTROLE pura — testável sem Leaflet.
 //
-// CONTRATO: componente CONTROLADO. O estado do filtro mora no PetsApp; aqui só
-// renderizamos e propagamos `onChange(próximoFiltro)`. NÃO re-derivamos nenhuma
-// regra de filtragem — toda a lógica é do petDomain (matchesPetFilter/filterPets);
-// esta camada só monta os controles e o objeto de filtro na forma canônica.
+// FONTE ÚNICA: as três facetas iteram PET_STATUSES / PET_SPECIES / PET_SIZES.
+// Nenhum label/id de status é escrito aqui — mudar a SOT muda os chips sem outra
+// edição (acceptance PET-M7). Nenhuma string 'perdido' hardcoded.
 //
-// Forma do filtro (a ÚNICA forma — ver petDomain.defaultPetFilter):
-//   { statuses: string[], species: string[], sizes: string[],
-//     color: string, recencyDays: number|null }
-// Array vazio / '' / null = "sem restrição nesta faceta".
-//
-// a11y (equivalente web do rigor de contrato das superfícies):
-//   • o expander é um <button> de verdade (aria-expanded + aria-controls);
-//   • cada chip é <button type=button aria-pressed> (faceta = multi-seleção,
-//     então aria-pressed, NÃO role=radio — distinto do single-select do
-//     PetReportSheet);
-//   • a contagem viva mora numa região aria-live="polite" (role=status) para o
-//     leitor de tela anunciar "Mostrando N de M pets" a cada mudança;
-//   • todo alvo >= 44px (var(--mdf-touch-target)); anel de foco sempre visível.
-// Cópia pt-BR, calma e digna (sem urgência, sem alarme) — PET-M23 cuida do i18n.
+// A11y (Yablonski/Fitts + WCAG):
+//   • cada faceta é um group rotulado (role implícito do <fieldset>/<legend>),
+//     com aria-label explícito no grupo de chips;
+//   • cada chip é um <button> real (operável por teclado, foco visível) com
+//     aria-pressed refletindo seleção — um toggle, não um radio (seleção MÚLTIPLA
+//     dentro da faceta = OR);
+//   • alvos >=44px (geometria herdada de .mdf-chip via --mdf-touch-target);
+//   • a contagem de combinações vai num região aria-live="polite" para o leitor
+//     de tela anunciar "N pets no mapa" a cada mudança (acceptance PET-M7);
+//   • "limpar filtros" só aparece quando há faceta ativa (Hick: não polui quando
+//     não há o que limpar) e é um alvo >=44px operável por teclado.
 
-import React, { useId } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 import {
   PET_STATUSES,
   PET_SPECIES,
   PET_SIZES,
-  PET_RECENCY_OPTIONS,
-  RECENCY_MAP,
-  defaultPetFilter,
+  countActivePetFilterFacets,
 } from './petDomain';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
-// Liga/desliga um id numa faceta de multi-seleção, devolvendo um array NOVO
-// (puro — não muta a seleção atual). Vazio = "sem restrição".
-function toggleInArray(arr, id) {
-  const list = Array.isArray(arr) ? arr : [];
-  return list.indexOf(id) === -1 ? [...list, id] : list.filter((x) => x !== id);
-}
+// Descreve as três facetas de forma declarativa (DRY): cada uma aponta para a
+// lista SOT, a chave do estado de filtro, a CHAVE i18n do rótulo (resolvida via
+// t()) e o NAMESPACE i18n das opções (pets.<optNs>.<id>.label). Iterar isto evita
+// repetir o markup de chips três vezes e mantém os rótulos fora do código.
+const FACETS = [
+  { key: 'statuses', legendKey: 'pets.filter.legend.status',  groupKey: 'pets.filter.group.status',  optNs: 'status',  options: PET_STATUSES },
+  { key: 'species',  legendKey: 'pets.filter.legend.species', groupKey: 'pets.filter.group.species', optNs: 'species', options: PET_SPECIES },
+  { key: 'sizes',    legendKey: 'pets.filter.legend.size',    groupKey: 'pets.filter.group.size',    optNs: 'size',    options: PET_SIZES },
+];
 
-// "Alguma faceta ativa?" — controla a visibilidade do "Limpar filtros" e a
-// cópia da contagem. Espelha a semântica do defaultPetFilter (tudo vazio = sem
-// restrição), sem re-derivar nenhuma regra de match.
-function isAnyFacetActive(filter) {
-  const f = filter || {};
-  return (
-    (Array.isArray(f.statuses) && f.statuses.length > 0)
-    || (Array.isArray(f.species) && f.species.length > 0)
-    || (Array.isArray(f.sizes) && f.sizes.length > 0)
-    || (typeof f.color === 'string' && f.color.trim() !== '')
-    || f.recencyDays != null
-  );
-}
-
-// Plural digno em pt-BR: "1 pet" / "N pets".
-function petCountLabel(n) {
-  return n === 1 ? '1 pet' : `${n} pets`;
-}
-
-export default function PetFilterBar({ filter, onChange, matchCount, total }) {
-  const [open, setOpen] = React.useState(false);
-  const baseId = useId();
-  const bodyId = `${baseId}-body`;
-
-  const f = filter || defaultPetFilter();
-  const anyActive = isAnyFacetActive(f);
-
-  // Cada handler monta o PRÓXIMO filtro na forma canônica e o entrega ao pai.
-  function patch(next) {
-    onChange?.({ ...f, ...next });
+// Pluraliza a contagem de combinações com tom calmo (sem alarme). Resolve a cópia
+// via t() (i18n) por caso — o número é interpolado em JS para a tradução só
+// envolver as palavras ao redor.
+function matchCountLabel(count, total) {
+  if (total === 0) return t('pets.filter.count.noneTotal');
+  if (count === 0) return t('pets.filter.count.noneMatch');
+  if (count === total) {
+    return count === 1
+      ? t('pets.filter.count.allOne')
+      : t('pets.filter.count.all').replace('{count}', String(count));
   }
+  const key = count === 1 ? 'pets.filter.count.someOne' : 'pets.filter.count.some';
+  return t(key).replace('{count}', String(count)).replace('{total}', String(total));
+}
 
-  function toggleStatus(id) { patch({ statuses: toggleInArray(f.statuses, id) }); }
-  function toggleSpecies(id) { patch({ species: toggleInArray(f.species, id) }); }
-  function toggleSize(id) { patch({ sizes: toggleInArray(f.sizes, id) }); }
-  function setColor(value) { patch({ color: value }); }
+export default function PetFilterBar({ filter, total, matchCount, onToggle, onClear }) {
+  // PET-M23 — re-render on a locale switch so every t() re-reads.
+  useLocale();
+  const activeFacets = countActivePetFilterFacets(filter);
+  const hasActive = activeFacets > 0;
 
-  // Recência é single-select (uma janela por vez): tocar a ativa de novo limpa.
-  function toggleRecency(id) {
-    const days = RECENCY_MAP[id] ? RECENCY_MAP[id].days : null;
-    patch({ recencyDays: f.recencyDays === days ? null : days });
-  }
-
-  function clearAll() { onChange?.(defaultPetFilter()); }
-
-  // Texto da contagem viva. Sem filtro ativo, anuncia o total simples; com
-  // filtro, "Mostrando N de M" (e a dica calma quando zera).
-  const countText = anyActive
-    ? `Mostrando ${petCountLabel(matchCount)} de ${total}`
-    : `${petCountLabel(total)} no mapa`;
+  // Lê o array de ids selecionados de uma faceta com defesa (faceta ausente → []).
+  const selectedFor = (key) => (filter && Array.isArray(filter[key]) ? filter[key] : []);
 
   return (
-    <section className="pet-filterbar" aria-label="Filtrar pets">
-      <div className="pet-filterbar__bar">
-        <button
-          type="button"
-          className={`pet-filterbar__toggle${open ? ' pet-filterbar__toggle--open' : ''}`}
-          aria-expanded={open}
-          aria-controls={bodyId}
-          onClick={() => setOpen((v) => !v)}
-        >
-          <span className="pet-filterbar__toggle-icon" aria-hidden="true">⚲</span>
-          <span className="pet-filterbar__toggle-label">Filtrar</span>
-          {anyActive && (
-            <span className="pet-filterbar__toggle-dot" aria-hidden="true" />
-          )}
-          <span className="pet-filterbar__toggle-caret" aria-hidden="true">
-            {open ? '▴' : '▾'}
-          </span>
-        </button>
-
-        {/* Contagem viva — anunciada por AT a cada mudança de filtro. */}
-        <p className="pet-filterbar__count" role="status" aria-live="polite">
-          {countText}
-        </p>
-      </div>
-
-      <div id={bodyId} className="pet-filterbar__body" hidden={!open}>
-        {/* ── Situação ── */}
-        <fieldset className="pet-filterbar__group">
-          <legend className="pet-filterbar__legend">Situação</legend>
-          <div className="pet-filterbar__chips" role="group" aria-label="Filtrar por situação">
-            {PET_STATUSES.map((s) => {
-              const on = Array.isArray(f.statuses) && f.statuses.indexOf(s.id) !== -1;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  aria-pressed={on}
-                  className={`mdf-chip pet-filterbar__chip pet-filterbar__chip--${s.id}${on ? ' mdf-chip--on pet-filterbar__chip--on' : ''}`}
-                  onClick={() => toggleStatus(s.id)}
-                >
-                  <span className="mdf-chip__icon" aria-hidden="true">{s.icon}</span>
-                  <span className="mdf-chip__label">{s.label}</span>
-                  {on && <span className="mdf-chip__check" aria-hidden="true">✓</span>}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        {/* ── Espécie ── */}
-        <fieldset className="pet-filterbar__group">
-          <legend className="pet-filterbar__legend">Espécie</legend>
-          <div className="pet-filterbar__chips" role="group" aria-label="Filtrar por espécie">
-            {PET_SPECIES.map((s) => {
-              const on = Array.isArray(f.species) && f.species.indexOf(s.id) !== -1;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  aria-pressed={on}
-                  className={`mdf-chip pet-filterbar__chip${on ? ' mdf-chip--on pet-filterbar__chip--on' : ''}`}
-                  onClick={() => toggleSpecies(s.id)}
-                >
-                  <span className="mdf-chip__icon" aria-hidden="true">{s.icon}</span>
-                  <span className="mdf-chip__label">{s.label}</span>
-                  {on && <span className="mdf-chip__check" aria-hidden="true">✓</span>}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        {/* ── Porte ── */}
-        <fieldset className="pet-filterbar__group">
-          <legend className="pet-filterbar__legend">Porte</legend>
-          <div className="pet-filterbar__chips" role="group" aria-label="Filtrar por porte">
-            {PET_SIZES.map((s) => {
-              const on = Array.isArray(f.sizes) && f.sizes.indexOf(s.id) !== -1;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  aria-pressed={on}
-                  className={`mdf-chip pet-filterbar__chip${on ? ' mdf-chip--on pet-filterbar__chip--on' : ''}`}
-                  onClick={() => toggleSize(s.id)}
-                >
-                  <span className="mdf-chip__label">{s.label}</span>
-                  {on && <span className="mdf-chip__check" aria-hidden="true">✓</span>}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        {/* ── Cor / pelagem (texto livre) ── */}
-        <div className="pet-filterbar__group">
-          <label className="pet-filterbar__legend" htmlFor={`${baseId}-color`}>
-            Cor / pelagem
-          </label>
-          <input
-            id={`${baseId}-color`}
-            type="text"
-            className="mdf-sheet__input pet-input pet-filterbar__color"
-            placeholder="Cor / pelagem — ex.: caramelo"
-            maxLength={40}
-            value={f.color || ''}
-            onChange={(e) => setColor(e.target.value)}
-          />
-        </div>
-
-        {/* ── Recência (single-select; tocar a ativa de novo limpa) ── */}
-        <fieldset className="pet-filterbar__group">
-          <legend className="pet-filterbar__legend">Quando foi reportado</legend>
-          <div className="pet-filterbar__chips" role="group" aria-label="Filtrar por recência">
-            {PET_RECENCY_OPTIONS.map((r) => {
-              const on = f.recencyDays === r.days;
-              return (
-                <button
-                  key={r.id}
-                  type="button"
-                  aria-pressed={on}
-                  className={`mdf-chip pet-filterbar__chip${on ? ' mdf-chip--on pet-filterbar__chip--on' : ''}`}
-                  onClick={() => toggleRecency(r.id)}
-                >
-                  <span className="mdf-chip__label">{r.label}</span>
-                  {on && <span className="mdf-chip__check" aria-hidden="true">✓</span>}
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
-
-        {/* Dica calma quando o filtro não casa ninguém (nenhuma urgência). */}
-        {anyActive && matchCount === 0 && (
-          <p className="pet-filterbar__empty">
-            Nenhum pet com esses filtros — toque em Limpar filtros.
-          </p>
-        )}
-
-        {/* "Limpar filtros" — secundário e quieto; só aparece com filtro ativo. */}
-        {anyActive && (
-          <div className="pet-filterbar__actions">
-            <button
-              type="button"
-              className="pet-filterbar__clear"
-              onClick={clearAll}
-            >
-              Limpar filtros
-            </button>
-          </div>
+    <section className="pet-filter" aria-labelledby="pet-filter-heading">
+      <div className="pet-filter__head">
+        <h2 id="pet-filter-heading" className="pet-filter__heading">
+          {t('pets.filter.heading')}
+        </h2>
+        {hasActive && (
+          <button
+            type="button"
+            className="pet-filter__clear"
+            onClick={onClear}
+          >
+            <span aria-hidden="true">✕</span> {t('pets.filter.clear')}
+          </button>
         )}
       </div>
+
+      {FACETS.map((facet) => {
+        const selected = selectedFor(facet.key);
+        return (
+          <fieldset className="pet-filter__facet" key={facet.key}>
+            <legend className="pet-filter__legend">{t(facet.legendKey)}</legend>
+            <div className="pet-filter__chips" role="group" aria-label={t(facet.groupKey)}>
+              {facet.options.map((opt) => {
+                const on = selected.indexOf(opt.id) !== -1;
+                // Para a faceta de status, pinta o chip selecionado com o
+                // --pet-<status> (mesma identidade visual do marcador/legenda);
+                // espécie/porte ficam no realce neutro --mdf (sem token de cor
+                // próprio). A classe de status é derivada do id (sem hardcode).
+                const statusClass = facet.key === 'statuses' ? ` pet-chip--${opt.id}` : '';
+                const onClass = on
+                  ? (facet.key === 'statuses' ? ' pet-chip--on' : ' mdf-chip--on')
+                  : '';
+                const baseClass = facet.key === 'statuses' ? 'pet-chip' : 'mdf-chip';
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    aria-pressed={on}
+                    className={`pet-filter__chip ${baseClass}${statusClass}${onClass}`}
+                    onClick={() => onToggle?.(facet.key, opt.id)}
+                  >
+                    {opt.icon && (
+                      <span className="mdf-chip__icon" aria-hidden="true">{opt.icon}</span>
+                    )}
+                    <span className="mdf-chip__label">{t(`pets.${facet.optNs}.${opt.id}.label`)}</span>
+                    {on && <span className="mdf-chip__check" aria-hidden="true">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+        );
+      })}
+
+      {/* Contagem de combinações — anunciada por AT. aria-live="polite" para não
+          interromper; role="status" reforça em leitores que ignoram o atributo.
+          A versão visível é calma e a SOT do número vem do pai (matchCount),
+          derivado por filterPets — a barra não recomputa nada. */}
+      <p className="pet-filter__count" role="status" aria-live="polite">
+        {matchCountLabel(matchCount, total)}
+      </p>
     </section>
   );
 }
@@ -257,10 +140,9 @@ PetFilterBar.propTypes = {
     statuses: PropTypes.arrayOf(PropTypes.string),
     species: PropTypes.arrayOf(PropTypes.string),
     sizes: PropTypes.arrayOf(PropTypes.string),
-    color: PropTypes.string,
-    recencyDays: PropTypes.number,
-  }).isRequired,
-  onChange: PropTypes.func.isRequired,
-  matchCount: PropTypes.number.isRequired,
-  total: PropTypes.number.isRequired,
+  }),
+  total: PropTypes.number,
+  matchCount: PropTypes.number,
+  onToggle: PropTypes.func,
+  onClear: PropTypes.func,
 };

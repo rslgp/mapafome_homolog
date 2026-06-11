@@ -25,6 +25,12 @@ import EmptyViewportOverlay from
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const COMPAT = join(HERE, '..', 'src', 'app', 'components', 'compatibility');
+// PET-M23 — the /pets surfaces (and petDomain/petShare) read pets.* keys, so the
+// no-dead-key scan must include them too (otherwise every new pets.* key would
+// look "dead" — it is referenced under src/app/pets, outside the compat tree).
+const PETS = join(HERE, '..', 'src', 'app', 'pets');
+// The /assinar route reads assinar.* keys outside the compat tree as well.
+const ASSINAR = join(HERE, '..', 'src', 'app', 'assinar');
 
 // pt-BR is the default; reset to it after each test so order is irrelevant and
 // no test leaks a locale into the next (module-level currentLocale is shared).
@@ -140,15 +146,14 @@ describe('dictionary — P8: parity + zero dead keys', () => {
     expect(localeKeys('es')).not.toContain('empty.no_pins_anywhere');
   });
 
-  it('every dictionary key is referenced in compat source (no dead keys)', () => {
-    // Recursively collect compat source EXCEPT the dictionary itself (strings.js
-    // — where every key appears as a DICT property and would self-satisfy) and
-    // test files. A key counts as live if it appears as a quoted string literal
-    // anywhere: most via t('key'), but a few are resolved dynamically (e.g.
-    // PinDetailSheet's STATUS_COPY maps a status to { key: 'pin.attended_today' }
-    // and later calls t(entry.key)). Matching the quoted literal covers both.
+  it('every dictionary key is referenced in source (no dead keys)', () => {
+    // Recursively collect source EXCEPT the dictionary itself (strings.js — where
+    // every key appears as a DICT property and would self-satisfy) and test files.
+    // PET-M23: walk COMPAT + the /pets and /assinar routes too — both read keys
+    // (pets.* / assinar.*) outside the compat tree, so a COMPAT-only scan would
+    // wrongly flag them dead.
     const files = [];
-    (function walk(dir) {
+    function walk(dir) {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const full = join(dir, entry.name);
         if (entry.isDirectory()) { walk(full); continue; }
@@ -157,12 +162,29 @@ describe('dictionary — P8: parity + zero dead keys', () => {
         if (entry.name === 'strings.js') continue; // the dictionary itself
         files.push(full);
       }
-    })(COMPAT);
+    }
+    walk(COMPAT);
+    walk(PETS);
+    walk(ASSINAR);
     const corpus = files.map((f) => readFileSync(f, 'utf8')).join('\n');
 
-    const dead = localeKeys('pt-BR').filter(
-      (key) => !corpus.includes(`'${key}'`) && !corpus.includes(`"${key}"`),
-    );
+    // A key counts as live if it appears as a quoted string literal anywhere
+    // (most via t('key'); some via a { key: 'pin.attended_today' } indirection).
+    // PET-M23 also resolves some keys DYNAMICALLY by id — e.g.
+    // t(`pets.status.${s.id}.label`) — so the full literal never appears. For
+    // those the composing TEMPLATE PREFIX appears instead (e.g. `pets.status.`),
+    // so a key is also live when its dotted prefix (up to and including the last
+    // dot before a known dynamic segment) is present as a template literal.
+    const present = (key) => corpus.includes(`'${key}'`) || corpus.includes(`"${key}"`);
+    // Dynamic prefixes used by the /pets render sites (t(`<prefix>${id}...`)).
+    const DYNAMIC_PREFIXES = [
+      'pets.status.', 'pets.species.', 'pets.size.', 'pets.lifecycle.',
+      'pets.publish.failed.', 'pets.publish.throttle.', 'pets.share.lead.',
+    ];
+    const liveViaDynamic = (key) =>
+      DYNAMIC_PREFIXES.some((p) => key.startsWith(p) && (corpus.includes(`\`${p}`) || corpus.includes(`'${p}`)));
+
+    const dead = localeKeys('pt-BR').filter((key) => !present(key) && !liveViaDynamic(key));
     expect(dead).toEqual([]);
   });
 });

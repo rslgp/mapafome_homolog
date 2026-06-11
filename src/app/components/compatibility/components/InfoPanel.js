@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Sugestao from './googlesheets/sugestao';
@@ -224,7 +225,11 @@ const InfoPanel = ({ rowCount }) => {
               <small className="mdf-btn__sub">O jogo do MAPA FOME</small>
             </span>
           </a>
-          <a
+          {/* PET-M22 — /pets is an internal app route: use next/link (NOT a raw
+           * <a href="/pets">, which trips eslint no-html-link-for-pages and forces
+           * a full reload). The header now carries the primary discovery entry;
+           * this stays as the in-panel secondary affordance. */}
+          <Link
             className="mdf-btn mdf-btn--secondary mdf-btn--lg"
             href="/pets"
             aria-label="MapaPets — mapa de animais perdidos"
@@ -232,7 +237,7 @@ const InfoPanel = ({ rowCount }) => {
           >
             <span className="mdf-btn__emoji" aria-hidden="true">🐾</span>
             <span>MapaPets</span>
-          </a>
+          </Link>
           <a
             className="mdf-btn mdf-btn--badge mdf-btn--framed ip-apps__globo"
             target="_blank"

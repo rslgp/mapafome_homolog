@@ -14,11 +14,72 @@
 //   • barricade: validateCoordinatePair lança ANTES de qualquer escrita.
 
 import { getSheet, appendRow, validateCoordinatePair } from '../components/compatibility/components/googlesheets/sheetsClient';
-import { buildPetDados, parsePetRow } from './petDomain';
+import {
+  buildPetDados,
+  parsePetRow,
+  isPetRow,
+  PET_RESOLVED_AT_KEY,
+  PET_CLOSURE_REASON_KEY,
+  isValidClosureReason,
+  PET_PUBLISH_RATE_LIMIT,
+  classifyPublishThrottle,
+  publishPayloadSignature,
+  incrementPetFlag,
+  PET_PUBLISH_THROTTLE,
+} from './petDomain';
 
 // Cache de idempotência client-side. Espelha o _idempotencyCache do
 // App.writePinToSheets (M5): um double-tap após timeout não grava duas linhas.
+// É ESTE conjunto que garante que um flush da fila offline (PET-M1) nunca faça
+// duplo-append: a chave já vista devolve sem gravar de novo.
 const seenIdempotencyKeys = new Set();
+
+// ─── PET-M4 — histórico de publicação para o rate-limit do lado do cliente ────
+// HONESTIDADE: este histórico vive na MEMÓRIA da aba (reseta no reload) e é
+// BURLÁVEL — ver a nota longa em petDomain (PET-M4) e o handoff de proxy de
+// escrita no fim deste arquivo. Ele amortece o double-tap nervoso e o bot
+// ingênuo, não um atacante. Lista de { at, signature } podada para a maior
+// janela do SOT; mantemos o array pequeno (o caso comum é 0–3 entradas).
+const publishHistory = [];
+
+// Poda o histórico para a maior janela relevante do SOT, evitando crescimento
+// ilimitado numa sessão longa. `nowMs` injetado (sem Date.now() aqui na lógica
+// pura de poda — o caller passa o relógio).
+function prunePublishHistory(nowMs) {
+  const horizon = nowMs - Math.max(
+    PET_PUBLISH_RATE_LIMIT.windowMs,
+    PET_PUBLISH_RATE_LIMIT.identicalWindowMs,
+  );
+  for (let i = publishHistory.length - 1; i >= 0; i -= 1) {
+    if (publishHistory[i].at < horizon) publishHistory.splice(i, 1);
+  }
+}
+
+// Erro tipado de bloqueio por rate-limit/abuso. Carrega o `throttleCode` estável
+// (PET_PUBLISH_THROTTLE.*) para o chamador (UI) escolher a cópia calma certa sem
+// reclassificar. É lançado ANTES de qualquer escrita — nenhuma linha é gravada.
+export class PetThrottleError extends Error {
+  constructor(throttleCode) {
+    super(`pet publish throttled: ${throttleCode}`);
+    this.name = 'PetThrottleError';
+    this.throttleCode = throttleCode;
+  }
+}
+
+// PET-M1. Timeout na ÚNICA chamada de rede que importa para o usuário (o write).
+// Espelha o withTimeout de appPinActions.writePinToSheets: 10s e rejeita com
+// 'network_slow' para o chamador distinguir "lento (pode ter salvo)" de "rede
+// caída". O write pode ter chegado ao servidor — por isso a fila + idempotência.
+const WRITE_TIMEOUT_MS = 10000;
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('network_slow')), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
 
 // Busca todos os pets da planilha. Mapeia cada linha por parsePetRow e descarta
 // os nulos — uma linha malformada (ou de fome) nunca derruba o batch, pois
@@ -38,6 +99,8 @@ export async function fetchPets() {
 // otimisticamente ao mapa sem refetch. Em republicação idempotente, retorna o
 // objeto montado sem gravar de novo.
 export async function publishPet({ coords, status, species, size, color, name, contact, detail, photos, idempotency_key }) {
+  const payload = { coords, status, species, size, color, name, contact, detail, photos };
+
   // 1. Barricada: lança (SheetsValidationError) se fora do bbox Brasil / não-finito.
   validateCoordinatePair(coords);
 
@@ -57,16 +120,157 @@ export async function publishPet({ coords, status, species, size, color, name, c
     dateIso,
   };
 
-  // 2. Idempotência: se já vimos esta chave, devolve sem gravar de novo.
+  // 2. Idempotência: se já vimos esta chave, devolve sem gravar de novo. Isto
+  // PRECEDE o rate-limit de propósito: um re-publish idempotente (flush da fila
+  // offline com a MESMA idempotency_key) é legítimo e já está deduplicado — não
+  // pode ser bloqueado como "rajada" nem contar no histórico de abuso.
   if (idempotency_key && seenIdempotencyKeys.has(idempotency_key)) {
     return normalized;
   }
 
+  // PET-M4. Guarda-corpo do lado do cliente (BURLÁVEL — ver a nota P14 em
+  // petDomain e o handoff no fim deste arquivo): amortece a rajada e o reenvio
+  // byte-idêntico ANTES de gastar a rede. `nowMs` é injetado AQUI no boundary
+  // (runtime real, igual a dateIso) — o predicado em petDomain fica puro. Lança
+  // PetThrottleError com o código calmo; nenhuma linha é gravada e o histórico
+  // NÃO registra a tentativa bloqueada (não pune o usuário acumulando contra ele).
+  const nowMs = Date.now();
+  prunePublishHistory(nowMs);
+  const throttle = classifyPublishThrottle(publishHistory, nowMs, payload);
+  if (throttle !== PET_PUBLISH_THROTTLE.OK) {
+    throw new PetThrottleError(throttle);
+  }
+
   // 4. Grava SOMENTE a coluna Dados — nada de Roaster/Categorias/need-field.
-  await appendRow(0, { Dados: JSON.stringify(dados) });
+  // Sob timeout de 10s: um servidor lento rejeita com 'network_slow' (o write
+  // pode ter saído), que o chamador classifica como server_slow e enfileira —
+  // a chave de idempotência acima evita o duplo-append no flush.
+  await withTimeout(appendRow(0, { Dados: JSON.stringify(dados) }), WRITE_TIMEOUT_MS);
 
   // 5. Marca a chave como vista só após o sucesso da gravação.
   if (idempotency_key) seenIdempotencyKeys.add(idempotency_key);
 
+  // 6. Registra a publicação BEM-SUCEDIDA no histórico de rate-limit (assinatura
+  // de conteúdo, não o idempotency_key) — é o que a próxima tentativa compara.
+  publishHistory.push({ at: nowMs, signature: publishPayloadSignature(payload) });
+
   return normalized;
 }
+
+// ─── PET-M2 — writer coords-keyed (reescreve SÓ a coluna Dados) ──────────────
+// Espelha sheetsClient.updatePinDadosByCoords (mesma forma: getSheet(0) → cache
+// de rows em envVariables → find por Coordinates → muta o blob → row.save()).
+// DUAS diferenças deliberadas, ambas exigidas pelo isolamento kind:'pet':
+//   1. O matcher exige isPetRow(dados) ALÉM de Coordinates iguais. Pets e fome
+//      compartilham a planilha; sem isso, um resolve de pet poderia reescrever
+//      uma linha de FOME que por acaso caiu nas mesmas coords. O guard torna
+//      isso impossível (forcing-function, não comentário).
+//   2. Reescreve APENAS target.Dados — nunca Roaster/Categorias/campo de need —
+//      preservando a invisibilidade da linha às superfícies de fome.
+// Reusa o cache envVariables.rows entre chamadas, igual ao writer de fome.
+// Retorna a linha atualizada, ou null se nenhuma linha de PET casar as coords.
+export async function updatePetByCoords(envVariables, coordsStr, mutator) {
+  const sheet = await getSheet(0);
+  if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
+  const target = envVariables.rows.find((x) => {
+    try {
+      const dados = JSON.parse(x.Dados);
+      // Isolamento: só casa se for linha de pet E as coords baterem.
+      return isPetRow(dados) && dados.Coordinates === coordsStr;
+    } catch (_e) {
+      return false;
+    }
+  });
+  if (!target) return null;
+  const dados = JSON.parse(target.Dados);
+  mutator(dados);
+  target.Dados = JSON.stringify(dados);
+  await target.save();
+  return target;
+}
+
+// Marca um pet como RESOLVIDO carimbando resolvedAt no blob Dados da linha que
+// casa as coords. Conveniência sobre updatePetByCoords: stamping de tempo é
+// feito AQUI (runtime real — espelha a disciplina de dateIso em publishPet),
+// deixando petDomain puro. O ISO pode ser INJETADO (resolvedAt) — é isto que
+// torna o resolve enfileirável: a fila offline do PET-M1 guarda o MESMO payload
+// (coords + resolvedAt + closureReason + idempotency_key) e um flush reaplica
+// com o mesmo carimbo, então um reload lê de volta IDÊNTICO ao escrito nesta
+// sessão (LSP).
+//
+// PET-M7b — `closureReason` ('reunido' | 'encerrado') diz POR QUÊ o report saiu
+// do mapa ativo. Os dois desfechos do estágio E da curva (PET_CURVE §1-E) carimbam
+// AMBOS resolvedAt (o pet some do mapa ativo) mas são semanticamente distintos:
+// 'reunido' = o pet voltou; 'encerrado' = o dono parou de procurar (fechamento
+// digno). O motivo é validado contra a SOT (isValidClosureReason) ANTES de ser
+// escrito — um valor lixo é descartado, então o blob nunca carrega um motivo
+// inválido. Reescreve SÓ os campos de ciclo de vida (resolvedAt + closureReason),
+// preservando o isolamento kind:'pet' herdado de updatePetByCoords.
+//
+// Idempotente: reusa o seenIdempotencyKeys de publishPet — um flush da fila
+// nunca reescreve duas vezes a mesma resolução. Retorna a linha (ou null se a
+// linha sumiu/arquivou — o chamador degrada com calma, PET-M18).
+export async function resolvePet({ coords, resolvedAt, closureReason, idempotency_key, envVariables = {} }) {
+  // Idempotência: se já aplicamos esta resolução, devolve sem gravar de novo.
+  if (idempotency_key && seenIdempotencyKeys.has(idempotency_key)) {
+    return null;
+  }
+  // Carimba o tempo no runtime (não no domínio puro); aceita injeção para a fila.
+  const stampIso = resolvedAt || new Date().toISOString();
+  const coordsStr = JSON.stringify(coords);
+  const row = await updatePetByCoords(envVariables, coordsStr, (dados) => {
+    // Escreve SÓ os campos de ciclo de vida; nada mais do blob é tocado.
+    dados[PET_RESOLVED_AT_KEY] = stampIso;
+    // Só carimba o motivo quando válido (SOT) — um motivo lixo é descartado.
+    if (isValidClosureReason(closureReason)) {
+      dados[PET_CLOSURE_REASON_KEY] = closureReason;
+    }
+  });
+  if (idempotency_key) seenIdempotencyKeys.add(idempotency_key);
+  return row;
+}
+
+// ─── PET-M4 — denunciar (flag) um relato para revisão ────────────────────────
+// Incrementa o contador de denúncias no blob Dados da linha que casa as coords,
+// reusando o MESMO writer coords-keyed do PET-M2 (updatePetByCoords). Isto herda
+// suas DUAS garantias de isolamento: (1) só casa uma linha de PET (isPetRow) —
+// uma linha de FOME nas mesmas coords NUNCA é tocada; (2) reescreve APENAS a
+// coluna Dados. O mutator (incrementPetFlag, em petDomain) toca SÓ o campo de
+// contagem — nada de status/contato/texto é alterado pela denúncia.
+//
+// HONESTIDADE DE ESCOPO: persistir o flag é o que esta milestone entrega; AGIR
+// sobre ele (esconder o pin, fila de moderação, auth) é do SERVIDOR — handoff
+// nomeado no fim deste arquivo. Sem servidor, a denúncia é um sinal gravado, não
+// uma ação de remoção. (Não há auto-hide aqui de propósito — escondê-lo no
+// cliente seria tanto burlável quanto um vetor de abuso: um denunciante de
+// má-fé sumiria com um relato legítimo.)
+//
+// Idempotente por idempotency_key (reusa o cache de publishPet) — um re-tap ou um
+// flush de fila futuro não conta a mesma denúncia duas vezes. Retorna a linha
+// atualizada (com a nova contagem em Dados) ou null se nenhuma linha de pet casa
+// as coords (relato sumiu/arquivou — o chamador degrada com calma).
+export async function flagPet({ coords, idempotency_key, envVariables = {} }) {
+  if (idempotency_key && seenIdempotencyKeys.has(idempotency_key)) {
+    return null;
+  }
+  const coordsStr = JSON.stringify(coords);
+  let newCount = 0;
+  const row = await updatePetByCoords(envVariables, coordsStr, (dados) => {
+    newCount = incrementPetFlag(dados);
+  });
+  if (row && idempotency_key) seenIdempotencyKeys.add(idempotency_key);
+  return row ? { row, flagCount: newCount } : null;
+}
+
+// ─── HANDOFF nomeado (bug-bounty / arquitetura de segredo) — NÃO resolvido aqui ─
+// Tudo neste arquivo que "protege a escrita" (rate-limit, heurística de abuso,
+// denúncia) é do LADO DO CLIENTE e BURLÁVEL enquanto NEXT_PUBLIC_GOOGLE_PRIVATE_KEY
+// embarca a chave de escrita no bundle do navegador (superfície herdada P14,
+// HIGH, mesma do homolog). Um atacante escreve direto na planilha sem passar por
+// nada disto. A correção DURÁVEL é um PROXY DE ESCRITA no servidor que:
+//   (1) REMOVE o segredo NEXT_PUBLIC do cliente (a chave nunca chega ao bundle);
+//   (2) aplica rate-limit/abuso/denúncia do LADO DO SERVIDOR, onde é confiável;
+//   (3) pode esconder/derrubar um pin denunciado e manter uma fila de moderação.
+// Isto é um HANDOFF para o consultant de bug-bounty / arquitetura de segredo
+// (v1_0_principal_bug_bounty_specialist_solone.yaml) — NÃO é escopo autônomo de
+// softwareengineer e NÃO está fingido como resolvido por estes controles de UI.

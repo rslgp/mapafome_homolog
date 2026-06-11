@@ -110,6 +110,53 @@
   box-shadow: var(--mdf-focus-ring);
 }
 
+/* ── Status notes (load error + PET-M18 deep-link "pet não encontrado") ──────
+ * Calm, token-only surfaces — no new color literal (cor/contraste é do coloring
+ * specialist; aqui só compomos tokens --mdf-* já provados em AA). O role/aria
+ * vive no JSX; o CSS só dá uma superfície serena e legível. */
+.mdf-pets__status {
+  margin: var(--mdf-space-3) 0;
+  padding: var(--mdf-space-3) var(--mdf-space-4);
+  border-radius: var(--mdf-radius-card);
+  background: var(--mdf-surface-2);
+  color: var(--mdf-ink);
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body, 1.5);
+}
+
+/* PET-M18 — a nota calma do deep link ausente. Mesma superfície serena; o
+ * modificador existe para o caso de o coloring specialist querer diferenciá-la
+ * do loadError (alert) no futuro sem tocar o JSX. */
+.mdf-pets__status--calm {
+  /* herda a superfície neutra; nenhum acento de erro (não é um erro, é informação). */
+}
+
+/* Botão "Entendi" embutido na nota — alvo de toque cheio, operável por teclado. */
+.mdf-pets__status-dismiss {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mdf-touch-target);
+  margin-left: var(--mdf-space-2);
+  padding: var(--mdf-space-1) var(--mdf-space-3);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  background: transparent;
+  color: var(--mdf-ink);
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mdf-pets__status-dismiss:hover {
+  border-color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+}
+
+.mdf-pets__status-dismiss:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
 /* ── Primary "Relatar um pet" action — bottom FAB ─────────── */
 
 .mdf-pets__report-btn {
@@ -154,6 +201,112 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mdf-pets__report-btn {
+    transition: none;
+  }
+}
+
+/* ── PET-M7: filtro do mapa (status / espécie / porte) ────── *
+ * Uma barra COMPACTA acima do mapa que estreita os pins. Reaproveita a geometria
+ * de chip (.mdf-chip + .pet-chip) e os tokens --mdf-* / --pet-* — sem hex cru.
+ * Cada chip é um toggle (aria-pressed): seleção múltipla dentro da faceta (OR).
+ *
+ * Calm-tone: o público está em estresse; espaçamento confortável, sem borda dura,
+ * a contagem de combinações é informativa (ink-muted, nunca alarme). Alvos >=44px
+ * herdados da geometria de chip (min-height: --mdf-touch-target). */
+
+.pet-filter {
+  max-width: 860px;
+  margin: 0 auto var(--mdf-space-3) auto;
+  padding: 0 var(--mdf-space-6);
+}
+
+.pet-filter__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+  margin-bottom: var(--mdf-space-2);
+}
+
+.pet-filter__heading {
+  font-size: var(--mdf-fs-small);
+  font-weight: 700;
+  color: var(--mdf-ink);
+  margin: 0;
+}
+
+/* "Limpar filtros" — discreto mas com alvo de toque pleno (>=44px). Texto ink
+ * sobre superfície neutra; nunca os tokens de alarme. */
+.pet-filter__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-1);
+  min-height: var(--mdf-touch-target);
+  padding: var(--mdf-space-1) var(--mdf-space-3);
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-filter__clear:hover {
+  color: var(--mdf-ink);
+  border-color: var(--mdf-ink);
+}
+
+.pet-filter__clear:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* Cada faceta: legenda curta + linha de chips que quebra em telas estreitas. */
+.pet-filter__facet {
+  border: none;
+  margin: 0 0 var(--mdf-space-2) 0;
+  padding: 0;
+}
+
+.pet-filter__legend {
+  padding: 0;
+  margin: 0 0 var(--mdf-space-1) 0;
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  color: var(--mdf-ink-muted);
+}
+
+.pet-filter__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+}
+
+/* Os chips do filtro são uma fila horizontal compacta (não o grid empilhado do
+ * report). Reseta o flex-direction column herdado de .pet-chip p/ a fila ficar
+ * em uma linha (rótulo + check lado a lado), mantendo o alvo >=44px. */
+.pet-filter__chip {
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: center;
+}
+
+/* Contagem de combinações (aria-live): calma, informativa, nunca alarme. */
+.pet-filter__count {
+  margin: var(--mdf-space-1) 0 0 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-filter__clear {
     transition: none;
   }
 }
@@ -305,10 +458,40 @@
   margin-bottom: 0;
 }
 
+/* ── PET-M3: aviso de higiene de texto livre ───────────────── *
+ * Calmo e informativo, NUNCA alarme: surface-2 neutra + ink-muted, com uma
+ * borda lateral sutil em --mdf-ink-subtle (o token de boundary visível — NÃO os
+ * tokens de risco vermelho, tonalmente errados num público em estresse). Só
+ * tokens, sem hex cru. */
+.pet-freetext-warning {
+  margin: var(--mdf-space-2) 0 0 0;
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border-left: 3px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-chip);
+  color: var(--mdf-ink-muted);
+}
+
+/* ── PET-M1: queued-publish notice (offline / servidor lento) ──────────────
+ * A causa offline/lento NÃO é um erro vermelho: o relato foi guardado e volta
+ * sozinho. A base .mdf-sheet__inline-error usa os tokens de risco vermelho
+ * (--mdf-risk-high-*), tonalmente errados aqui (assustam num público em
+ * estresse). Este modifier troca para um par NEUTRO calmo já no sistema —
+ * --mdf-surface-2 (#F1EFEA) com --mdf-ink (#1A1A1A), contraste muito acima de
+ * 4.5:1 (texto quase-preto sobre quase-branco). Só tokens, sem hex cru.
+ * HANDOFF coloring-ict6: se um tom "info/positivo" dedicado for desejado (ex.
+ * um --pet-info-tint/-ink), re-derivar com a razão AA medida anotada inline —
+ * reservei o par neutro seguro como base. */
+.mdf-sheet__inline-error--queued {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-border);
+}
+
 /* ── Detail sheet: album affordance — PRIMARY recognition aid ─ *
  * Elevated above the meta block and rendered as a SOLID brand CTA (the proven
- * app-wide --mdf-brand-hover bg + --mdf-brand-ink text pairing, white on
- * #B93838 ≈ 6.4:1, AA pass). This deliberately outweighs the secondary neutral
+ * app-wide --mdf-brand-hover bg + --mdf-brand-ink text pairing, white #FFF on
+ * #B93838 = 5.70:1 (AA text >=4.5 pass)). This deliberately outweighs the secondary neutral
  * .mdf-pin-sheet__contact pill so the album reads as the first thing to do. */
 
 .pet-detail__album {
@@ -370,6 +553,632 @@
   }
 }
 
+/* ── Detail sheet: contact reveal-on-tap gate (PET-M3) ─────── *
+ * O contato fica escondido até um tap explícito (barricada de PII — não
+ * auto-expõe o contato de um estranho). O botão é um alvo >=44px, operável por
+ * teclado, com foco visível; usa surface neutra (--mdf-surface-1 + --mdf-ink),
+ * nunca os tokens de risco/alarme (--mdf-risk-*), porque o público está em
+ * estresse e a nota é informativa, não punitiva (governador de tom calmo). */
+
+.pet-detail__contact-gate {
+  margin: 0 0 var(--mdf-space-3) 0;
+}
+
+.pet-detail__reveal-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  width: 100%;
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque */
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__reveal-btn:hover {
+  background: var(--mdf-surface-2);
+  border-color: var(--mdf-ink);
+}
+
+.pet-detail__reveal-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.pet-detail__privacy-note {
+  margin: var(--mdf-space-2) 0 0 0;
+  font-size: var(--mdf-fs-caption);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-detail__reveal-btn {
+    transition: none;
+  }
+}
+
+/* ── Detail sheet: denunciar (flag) affordance — PET-M4 ────── *
+ * Afordância CALMA e secundária para sinalizar um relato suspeito. NUNCA usa os
+ * tokens de risco/alarme vermelho (--mdf-risk-*): o público está em estresse e a
+ * denúncia é um ato de cuidado, não punitivo (governador de tom). Botão discreto
+ * de texto em ink-muted sobre surface neutra; alvo >=44px; foco sempre visível.
+ * O tratamento visual RICO de um relato JÁ sinalizado fica para coloring (escopo
+ * PET-M4 exclui isso). Só tokens, sem hex cru.
+ * HANDOFF coloring-ict6: se um tom dedicado de "sinalizado/em revisão" for
+ * desejado, re-derivar com a razão AA medida anotada inline — aqui fica o par
+ * neutro seguro como base. */
+
+.pet-detail__flag {
+  margin: var(--mdf-space-2) 0 var(--mdf-space-1) 0;
+}
+
+.pet-detail__flag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque */
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: 1px solid transparent;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--mdf-dur-fast) var(--mdf-ease-out),
+              background var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__flag-btn:hover {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+}
+
+.pet-detail__flag-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* Passo de confirmação — card neutro calmo (surface-2 + boundary sutil), nunca
+ * alarme. Os dois botões herdam a geometria >=44px de .pet-detail__flag-btn. */
+.pet-detail__flag-confirm {
+  padding: var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-card);
+}
+
+.pet-detail__flag-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+  margin-top: var(--mdf-space-2);
+}
+
+/* "Sim, sinalizar" pesa um pouco mais (boundary visível + ink cheio) sem virar
+ * vermelho de alarme; "Cancelar" fica discreto (a saída calma é a default). */
+.pet-detail__flag-btn--confirm {
+  color: var(--mdf-ink);
+  border-color: var(--mdf-ink-subtle);
+  background: var(--mdf-surface-1);
+}
+
+.pet-detail__flag-btn--confirm:hover {
+  border-color: var(--mdf-ink);
+}
+
+.pet-detail__flag-note {
+  margin: 0;
+  font-size: var(--mdf-fs-caption);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+}
+
+.pet-detail__flag-note--done {
+  color: var(--mdf-ink);
+}
+
+.pet-detail__flag-retry {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--mdf-ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pet-detail__flag-retry:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-radius: var(--mdf-radius-chip);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-detail__flag-btn {
+    transition: none;
+  }
+}
+
+/* ── Detail sheet: FECHAMENTO (reunido / encerrar busca) — PET-M7b ─────────── *
+ * As PRIMEIRAS ações de escrita da sheet (estágio E da curva, PET_CURVE §1-E).
+ * Calm-tone / regra do não-spike: NENHUM token de risco/alarme vermelho, NENHUM
+ * acento de comemoração. "Marcar como reunido" pesa como a ação primária HOPEFUL
+ * (preenchimento de marca já provado AA: --mdf-brand-hover / --mdf-brand-ink, o
+ * mesmo par do álbum/FAB), enquanto "Encerrar busca" é um botão NEUTRO discreto
+ * (saída digna, nunca punida nem desencorajada). Confirmação em card neutro calmo.
+ * O estado de sucesso é MORNO — surface-2 + ink, sem brilho. Só tokens, sem hex
+ * cru; cada controle tem alvo >=44px e foco visível. */
+
+.pet-detail__lifecycle {
+  margin: var(--mdf-space-4) 0 var(--mdf-space-2) 0;
+}
+
+.pet-detail__lifecycle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+}
+
+.pet-detail__lifecycle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque */
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  font-weight: 700;
+  line-height: var(--mdf-lh-body);
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__lifecycle-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* "Marcar como reunido" — ação primária esperançosa. Mesmo par de marca provado
+ * em AA do álbum/FAB (branco #FFF = 5.70:1 sobre --mdf-brand-hover #B93838, AA texto >=4.5). NÃO é um
+ * pico celebratório — só pesa como a decisão de primeira importância da curva. */
+.pet-detail__lifecycle-btn--reunido {
+  background: var(--mdf-brand-hover);
+  color: var(--mdf-brand-ink);
+  border: 1px solid transparent;
+}
+
+.pet-detail__lifecycle-btn--reunido:active {
+  transform: scale(0.99);
+}
+
+/* "Encerrar busca" — saída digna e discreta (boundary sutil + ink), nunca um
+ * botão de alarme/punição. Fica visivelmente SECUNDÁRIA ao reunido. */
+.pet-detail__lifecycle-btn--encerrar {
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: 1px solid var(--mdf-ink-subtle);
+  font-weight: 600;
+}
+
+.pet-detail__lifecycle-btn--encerrar:hover {
+  color: var(--mdf-ink);
+  border-color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+}
+
+/* Passo de confirmação — card neutro calmo (surface-2 + boundary sutil). */
+.pet-detail__lifecycle-confirm {
+  padding: var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-card);
+}
+
+.pet-detail__lifecycle-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+  margin-top: var(--mdf-space-2);
+}
+
+/* "Sim, ..." herda o peso da ação confirmada via surface-1 + boundary visível,
+ * sem virar vermelho de alarme; "Voltar" fica discreto (a saída calma é default). */
+.pet-detail__lifecycle-btn--confirm {
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  background: var(--mdf-surface-1);
+  font-size: var(--mdf-fs-small);
+}
+
+.pet-detail__lifecycle-btn--confirm:hover {
+  border-color: var(--mdf-ink);
+}
+
+.pet-detail__lifecycle-btn--cancel {
+  color: var(--mdf-ink-muted);
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+}
+
+.pet-detail__lifecycle-btn--cancel:hover {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+}
+
+.pet-detail__lifecycle-note {
+  margin: 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+}
+
+/* Sucesso MORNO (não spiked): ink cheio sobre superfície neutra, sem acento de
+ * comemoração. Card sereno em surface-2 com boundary sutil; é um descanso, não
+ * um payout. */
+.pet-detail__lifecycle-note--done {
+  display: block;
+  padding: var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-card);
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-2 (par neutro provado) */
+}
+
+.pet-detail__lifecycle-note--done:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.pet-detail__lifecycle-retry {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--mdf-ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pet-detail__lifecycle-retry:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-radius: var(--mdf-radius-chip);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-detail__lifecycle-btn {
+    transition: none;
+  }
+  .pet-detail__lifecycle-btn--reunido:active {
+    transform: none;
+  }
+}
+
+/* ── Detail sheet: "possível encontro" hint — PET-M9b ─────── *
+ * Hint OPT-IN, calmo e NUNCA certo (PET_MATCH_SPEC §2). Card neutro e SUAVE em
+ * --mdf-surface-2 com uma borda lateral sutil (--mdf-ink-subtle, o token de
+ * boundary visível) — NUNCA os tokens de risco/alarme vermelho (--mdf-risk-*),
+ * tonalmente errados para uma ESPERANÇA calibrada num público em estresse. Sem
+ * urgência, sem badge, sem porcentagem (governador de tom + spec §2.2). Só
+ * tokens, sem hex cru.
+ * HANDOFF coloring-ict6: se um tom dedicado de "esperança/possível" (ex. um
+ * --pet-hope-tint/-ink) for desejado, re-derivar com a razão AA medida anotada
+ * inline; aqui fica o par neutro seguro (surface-2 + ink) como base. */
+
+.pet-detail__match {
+  margin: 0 0 var(--mdf-space-3) 0;
+  padding: var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border-left: 3px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-card);
+}
+
+.pet-detail__match-lead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mdf-space-2);
+  margin: 0 0 var(--mdf-space-2) 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-2 (par neutro provado) */
+}
+
+.pet-detail__match-icon {
+  font-size: var(--mdf-fs-body);
+  line-height: 1;
+}
+
+.pet-detail__match-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+}
+
+/* "Ver o outro relato" — a UMA próxima decisão calma (spec §2.3). Pesa um pouco
+ * mais (boundary visível + ink cheio), nunca um CTA de alarme/urgência. >=44px. */
+.pet-detail__match-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque */
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__match-open:hover {
+  background: var(--mdf-surface-2);
+  border-color: var(--mdf-ink);
+}
+
+.pet-detail__match-open:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* "Agora não" — dispensa discreta, alvo >=44px, operável por teclado. O hint é
+ * opt-in e some sem culpar (spec §2.1). */
+.pet-detail__match-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: 1px solid transparent;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pet-detail__match-dismiss:hover {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+}
+
+.pet-detail__match-dismiss:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-detail__match-open {
+    transition: none;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * PET-M11 — CROSS-SURFACE STATUS-BADGE SOT (the single documented spec)
+ * ════════════════════════════════════════════════════════════════════════════
+ * One place that maps every {status x variant} to its --pet-* token combo with
+ * its PROVEN WCAG 2.2 AA ratio, so PET-M7 (filter chips) / PET-M8 (list rows) and
+ * any later surface REUSE these classes instead of re-deriving color. Ratios are
+ * the ones measured inline in petPalette.css; restated here at the point of use.
+ *
+ * THREE VARIANTS (each surface picks the one that fits its geometry):
+ *   • STROKE  — outline only (the marker ring + the on-map legend swatch). The
+ *               accent is a GRAPHICAL object on the white disc / page, floor >=3:1.
+ *   • TINT+INK — soft tinted fill + deep status ink (the selected chip / legend
+ *               row label). ink-on-tint is TEXT, floor >=4.5:1.
+ *   • SOLID+ON — solid accent fill + on-accent text (the detail badge / list-row
+ *               pill). text-on-accent is TEXT, floor >=4.5:1.
+ *
+ * MEASURED AA RATIOS PER {status x variant} (all PASS):
+ *   status      STROKE on #FFF / #FAFAF7    TINT+INK (ink-on-tint)   SOLID+ON (text-on-accent)
+ *   perdido     3.51:1 / 3.35:1             7.86:1                   4.83:1  ← see EXCEPTION
+ *   encontrado  5.36:1 / 5.12:1             8.78:1                   5.22:1
+ *   avistado    7.76:1 / 7.42:1             10.06:1                  7.55:1
+ *   reunido     5.02:1 / 4.80:1             9.07:1                   4.89:1
+ *
+ * THE perdido SOLID+ON EXCEPTION (encoded inline, never lost):
+ *   perdido #CE7106 is too LIGHT to host near-white text at AA. So --pet-perdido-on
+ *   is a DARK ink (#2E1700 -> 4.83:1), NOT the shared near-white --pet-on-accent.
+ *   NEVER put white/near-white text on the burnt-amber accent. The other three are
+ *   dark enough to host the near-white --pet-on-accent (#FCFCFA). This is wired in
+ *   the tokens (--pet-perdido-on overrides) so a class user cannot get it wrong.
+ *
+ * USAGE: add the base class + a status modifier:
+ *   <span class="pet-badge pet-badge--stroke   pet-badge--perdido">…</span>
+ *   <span class="pet-badge pet-badge--tint     pet-badge--encontrado">…</span>
+ *   <span class="pet-badge pet-badge--solid    pet-badge--reunido">…</span>
+ * Only tokens are referenced — no raw hex enters here.
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+.pet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-1);
+  padding: 2px var(--mdf-space-2);
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-caption);
+  font-weight: 700;
+  line-height: var(--mdf-lh-body);
+  white-space: nowrap;
+}
+
+/* STROKE variant — outline + status ink text on a neutral surface. The accent is
+ * graphical (>=3:1); the ink is the deep -ink token (well above text AA). */
+.pet-badge--stroke {
+  background: transparent;
+  border: 2px solid currentColor;
+}
+.pet-badge--stroke.pet-badge--perdido    { color: var(--pet-perdido-ink); border-color: var(--pet-perdido); }
+.pet-badge--stroke.pet-badge--encontrado { color: var(--pet-encontrado-ink); border-color: var(--pet-encontrado); }
+.pet-badge--stroke.pet-badge--avistado   { color: var(--pet-avistado-ink); border-color: var(--pet-avistado); }
+.pet-badge--stroke.pet-badge--reunido    { color: var(--pet-reunido-ink); border-color: var(--pet-reunido); }
+
+/* TINT+INK variant — soft tint fill + deep status ink (ink-on-tint >=4.5:1). The
+ * status border keeps the object legible against a light page. */
+.pet-badge--tint {
+  border: 1px solid currentColor;
+}
+.pet-badge--tint.pet-badge--perdido    { background: var(--pet-perdido-tint);    color: var(--pet-perdido-ink);    border-color: var(--pet-perdido); }
+.pet-badge--tint.pet-badge--encontrado { background: var(--pet-encontrado-tint); color: var(--pet-encontrado-ink); border-color: var(--pet-encontrado); }
+.pet-badge--tint.pet-badge--avistado   { background: var(--pet-avistado-tint);   color: var(--pet-avistado-ink);   border-color: var(--pet-avistado); }
+.pet-badge--tint.pet-badge--reunido    { background: var(--pet-reunido-tint);    color: var(--pet-reunido-ink);    border-color: var(--pet-reunido); }
+
+/* SOLID+ON variant — solid accent + on-accent text (text-on-accent >=4.5:1).
+ * perdido uses its DARK on-ink (the exception above); the rest use near-white. */
+.pet-badge--solid {
+  border: 1px solid transparent;
+}
+.pet-badge--solid.pet-badge--perdido    { background: var(--pet-perdido);    color: var(--pet-perdido-on); }
+.pet-badge--solid.pet-badge--encontrado { background: var(--pet-encontrado); color: var(--pet-encontrado-on); }
+.pet-badge--solid.pet-badge--avistado   { background: var(--pet-avistado);   color: var(--pet-avistado-on); }
+.pet-badge--solid.pet-badge--reunido    { background: var(--pet-reunido);    color: var(--pet-reunido-on); }
+
+/* ── On-map legend (PET-M11) ──────────────────────────────── *
+ * A compact, DISMISSIBLE legend mounted as a Leaflet control (bottom-right).
+ * It maps each status hue + glyph SHAPE to a pt-BR label (labels come from the
+ * petDomain SOT; the swatch is the REAL marker mini-icon from petMarkerIcon).
+ * Calm-tone: a quiet card on --mdf-surface-1, soft elevation, a real >=44px close
+ * button. Tokens only — no raw hex; the swatch SVG carries its --pet-* stroke. */
+
+.mdf-pets .pet-legend-control {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  margin: var(--mdf-space-3);
+}
+
+.mdf-pets .pet-legend-card {
+  max-width: 15rem;
+  padding: var(--mdf-space-2) var(--mdf-space-3) var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+  box-shadow: var(--mdf-elev-2);
+}
+
+.mdf-pets .pet-legend-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mdf-space-2);
+  margin-bottom: var(--mdf-space-2);
+}
+
+.mdf-pets .pet-legend-card__title {
+  margin: 0;
+  font-size: var(--mdf-fs-caption);
+  font-weight: 700;
+  color: var(--mdf-ink);
+}
+
+/* Botão fechar/dispensar — alvo >=44px, ink legível, foco visível. */
+.mdf-pets .pet-legend-card__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--mdf-touch-target);
+  min-height: var(--mdf-touch-target);
+  margin: calc(var(--mdf-space-2) * -1) calc(var(--mdf-space-2) * -1) 0 0;
+  padding: 0;
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: none;
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-body);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mdf-pets .pet-legend-card__close:hover {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-2);
+}
+
+.mdf-pets .pet-legend-card__close:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.mdf-pets .pet-legend-card__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mdf-pets .pet-legend-card__row {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  font-size: var(--mdf-fs-caption);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+/* O swatch é o mini-ícone REAL do marcador (mesmo SVG de petMarkerIcon), 22x22. */
+.mdf-pets .pet-legend-card__swatch {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+/* "Mostrar legenda" — afordância calma para reabrir após dispensar. */
+.mdf-pets .pet-legend-reopen {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-1);
+  min-height: var(--mdf-touch-target);
+  min-width: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  box-shadow: var(--mdf-elev-2);
+  font-family: inherit;
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mdf-pets .pet-legend-reopen:hover {
+  background: var(--mdf-surface-2);
+  border-color: var(--mdf-ink);
+}
+
+.mdf-pets .pet-legend-reopen:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring), var(--mdf-elev-2);
+}
+
 /* ── Detail-sheet status badge accents ────────────────────── *
  * Overrides the inherited .mdf-pin-sheet__status colors with the --pet-*
  * solid accent + its proven on-accent text, so the badge matches the marker. */
@@ -401,6 +1210,10 @@
   background: var(--pet-avistado);
   color: var(--pet-avistado-on);
 }
+.pet-detail__status--reunido {
+  background: var(--pet-reunido);
+  color: var(--pet-reunido-on);
+}
 
 .pet-detail__descline {
   font-size: var(--mdf-fs-small);
@@ -422,199 +1235,957 @@
   display: block;
 }
 
-/* ── Filter bar — collapsible facet filter above the map (PET-M7) ─── *
- * A worried owner narrows the pins to find THEIR pet by the full recognition
- * set: situação + espécie + porte + cor (texto livre) + recência. The bar is a
- * quiet card that sits between the header and the map: a "Filtrar" toggle + a
- * LIVE match count always visible; chips + color + recência revealed on expand.
+/* ── PET-M10: busca de endereço (leaflet-geosearch, modo 'bar') ─── *
+ * O CSS base do plugin é importado pelo PetSearchField; aqui só repintamos com
+ * tokens --mdf-* e elevamos o input a um alvo >=44px (o default é 30px), com
+ * foco visível e cópia/tom calmos. Só tokens, sem hex cru. O plugin desenha o
+ * próprio DOM (form > input + button.reset + .results); estilizamos por classe.
  *
- * Reuse, not redefinition: chips ride .mdf-chip geometry (ux/ReportSheet.css)
- * and the .mdf-chip--on selected state; the color input rides .mdf-sheet__input
- * + .pet-input. Active STATUS chips additionally tint from the --pet-* palette
- * (mirroring .pet-chip--<status>--on) so the facet reads as the same colored
- * object as its marker. No raw hex; only --mdf-* / --pet-* tokens. The "Limpar
- * filtros" reset is a quiet outlined secondary (the .mdf-pets__support idiom)
- * so it never competes with the primary "Relatar um pet" FAB. */
+ * Calm-tone: o público está em estresse — campo confortável, sombra suave, sem
+ * borda dura. Posicionado no topo central pelo próprio plugin (.leaflet-geosearch-bar). */
 
-.pet-filterbar {
-  margin: 0 0 var(--mdf-space-4) 0;
+.mdf-pets .leaflet-geosearch-bar {
+  /* Folga lateral p/ não colar nas bordas em telas estreitas (640px). */
+  max-width: calc(100% - var(--mdf-space-4) * 2);
+  margin-top: var(--mdf-space-3);
+}
+
+.mdf-pets .leaflet-geosearch-bar form,
+.mdf-pets .leaflet-control-geosearch form {
   background: var(--mdf-surface-1);
-  border: 1px solid var(--mdf-ink-subtle);
-  border-radius: var(--mdf-radius-card);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-pill);
+  box-shadow: var(--mdf-elev-2);
+  padding: 0 var(--mdf-space-2) 0 var(--mdf-space-4);
 }
 
-/* Always-visible header row: the toggle on the left, the live count on the
- * right. Wraps gracefully on narrow viewports so neither is clipped. */
-.pet-filterbar__bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--mdf-space-2);
-  padding: var(--mdf-space-2) var(--mdf-space-3);
-}
-
-.pet-filterbar__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--mdf-space-2);
+.mdf-pets .leaflet-control-geosearch form input {
+  height: var(--mdf-touch-target); /* >=44px alvo de toque */
   min-height: var(--mdf-touch-target);
-  padding: var(--mdf-space-2) var(--mdf-space-3);
-  background: transparent;
-  border: none;
-  border-radius: var(--mdf-radius-card);
-  font-family: inherit;
-  font-size: var(--mdf-fs-small);
-  font-weight: 600;
+  font-size: var(--mdf-fs-body);
   color: var(--mdf-ink);
-  cursor: pointer;
+  background: transparent;
+  text-indent: 0;
 }
 
-.pet-filterbar__toggle:hover {
+.mdf-pets .leaflet-control-geosearch form input::placeholder {
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-1 (proven token) */
+  opacity: 1;
+}
+
+.mdf-pets .leaflet-control-geosearch form input:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-radius: var(--mdf-radius-pill);
+}
+
+/* Botão "limpar busca" — alvo >=44px, ink legível, foco visível. */
+.mdf-pets .leaflet-control-geosearch button.reset {
+  min-width: var(--mdf-touch-target);
+  min-height: var(--mdf-touch-target);
+  line-height: var(--mdf-touch-target);
+  color: var(--mdf-ink-muted);
+  background: transparent;
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-h2);
+}
+
+.mdf-pets .leaflet-control-geosearch button.reset:hover {
+  color: var(--mdf-ink);
   background: var(--mdf-surface-2);
 }
 
-.pet-filterbar__toggle:focus-visible {
+.mdf-pets .leaflet-control-geosearch button.reset:focus-visible {
   outline: none;
   box-shadow: var(--mdf-focus-ring);
 }
 
-.pet-filterbar__toggle-icon {
+/* Lista de resultados — superfície clara, itens com alvo confortável e foco/
+ * hover legíveis; a borda usa o token de boundary visível. */
+.mdf-pets .leaflet-control-geosearch .results {
+  background: var(--mdf-surface-1);
+  border-radius: 0 0 var(--mdf-radius-card) var(--mdf-radius-card);
+}
+
+.mdf-pets .leaflet-control-geosearch .results > * {
+  min-height: var(--mdf-touch-target);
+  display: flex;
+  align-items: center;
+  line-height: var(--mdf-lh-body);
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  font-size: var(--mdf-fs-small);
+  color: var(--mdf-ink);
+}
+
+.mdf-pets .leaflet-control-geosearch .results.active {
+  border-top: 1px solid var(--mdf-border);
+}
+
+.mdf-pets .leaflet-control-geosearch .results > .active,
+.mdf-pets .leaflet-control-geosearch .results > :hover {
+  background: var(--mdf-surface-2);
+  border-color: transparent;
+}
+
+.mdf-pets .leaflet-bar-notfound {
+  color: var(--mdf-ink-muted);
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+}
+
+/* ── PET-M10: "perto de mim" — recentra no GPS sob demanda ──────── *
+ * Um L.Control nativo (PetLocateControl) no canto superior esquerdo. O botão é
+ * um <button> real: operável por teclado, rotulado p/ AT, alvo >=44px. Pintado
+ * com tokens --mdf-*; a mensagem de status (negado/indisponível) é calma e some
+ * sozinha — sem dead end, sem armadilha de erro. */
+
+.mdf-pets .pet-locate {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mdf-pets .pet-locate__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target); /* >=44px */
+  min-width: var(--mdf-touch-target);
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  box-shadow: var(--mdf-elev-2);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-pets .pet-locate__btn:hover:not(:disabled) {
+  background: var(--mdf-surface-2);
+  border-color: var(--mdf-ink);
+}
+
+.mdf-pets .pet-locate__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring), var(--mdf-elev-2);
+}
+
+.mdf-pets .pet-locate__btn:disabled {
+  cursor: progress;
+  color: var(--mdf-ink-muted);
+}
+
+.mdf-pets .pet-locate__icon {
   font-size: var(--mdf-fs-body);
   line-height: 1;
 }
 
-/* A small dot signals "filters are active" without color-only meaning: the
- * count line spells it out in words, so this is a redundant glance cue. */
-.pet-filterbar__toggle-dot {
-  width: 8px;
-  height: 8px;
+/* Mensagem de status (procurando / negado / indisponível): calma, neutra, nunca
+ * alarme vermelho (público em estresse). surface-2 + ink-muted, contraste >4.5:1. */
+.mdf-pets .pet-locate__status {
+  max-width: 16rem;
+  margin: var(--mdf-space-2) 0 0 0;
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border-radius: var(--mdf-radius-card);
+  box-shadow: var(--mdf-elev-1);
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+}
+
+.mdf-pets .pet-locate__status[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mdf-pets .pet-locate__btn {
+    transition: none;
+  }
+}
+
+/* ── PET-M8: alternância MAPA | LISTA + a lista de pets ───────────── *
+ * A lista é a alternativa acessível ao mapa Leaflet: MESMO conjunto (visiblePets),
+ * ordenado por distância (com GPS) ou recência. Só tokens --mdf-* / --pet-* — sem
+ * hex cru. Calm-tone: superfícies suaves, sem borda dura, alvos >=44px. */
+
+/* O par de tabs (mapa | lista): pílula segmentada, centrada, confortável. */
+.mdf-pets .pet-viewtoggle {
+  display: inline-flex;
+  align-self: center;
+  gap: var(--mdf-space-1);
+  margin: var(--mdf-space-3) auto 0;
+  padding: var(--mdf-space-1);
+  background: var(--mdf-surface-2);
   border-radius: var(--mdf-radius-pill);
-  background: var(--pet-perdido);
 }
 
-.pet-filterbar__toggle-caret {
-  font-size: var(--mdf-fs-caption);
-  color: var(--mdf-ink-muted);
+.mdf-pets .pet-viewtoggle__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-1);
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque (Fitts) */
+  padding: 0 var(--mdf-space-4);
+  background: transparent;
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-2 (proven token) */
+  border: 1px solid transparent;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
   line-height: 1;
+  cursor: pointer;
 }
 
-.pet-filterbar__count {
-  margin: 0 0 0 auto;
-  padding-right: var(--mdf-space-1);
-  font-size: var(--mdf-fs-small);
-  font-weight: 600;
-  color: var(--mdf-ink-muted);
-  font-variant-numeric: tabular-nums;
+/* Tab ATIVA: superfície elevada + ink cheio (estado óbvio, não só cor). */
+.mdf-pets .pet-viewtoggle__btn--on {
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border-color: var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  box-shadow: var(--mdf-elev-1);
 }
 
-.pet-filterbar__body {
-  padding: 0 var(--mdf-space-3) var(--mdf-space-3);
-  border-top: 1px solid var(--mdf-border);
-}
-
-/* Each facet is a labeled group with comfortable vertical rhythm. */
-.pet-filterbar__group {
-  border: none;
-  margin: var(--mdf-space-3) 0 0 0;
-  padding: 0;
-}
-
-.pet-filterbar__legend {
-  display: block;
-  padding: 0;
-  margin: 0 0 var(--mdf-space-2) 0;
-  font-size: var(--mdf-fs-small);
-  font-weight: 600;
+.mdf-pets .pet-viewtoggle__btn:hover:not(.pet-viewtoggle__btn--on) {
   color: var(--mdf-ink);
 }
 
-.pet-filterbar__chips {
+.mdf-pets .pet-viewtoggle__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* A lista rolável: ocupa a mesma faixa do mapa (altura limitada + scroll), para a
+ * troca de visão não empurrar o CTA "Relatar" para fora da dobra. */
+.mdf-pets .pet-list {
+  margin-top: var(--mdf-space-3);
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--mdf-radius-card);
+}
+
+.mdf-pets .pet-list__empty {
+  margin: 0;
+  padding: var(--mdf-space-5) var(--mdf-space-4);
+  text-align: center;
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre o fundo (proven token) */
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+}
+
+.mdf-pets .pet-list__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cada linha é um <button> de largura cheia — alvo grande (Fitts), operável por
+ * teclado, foco visível. >=44px garantido pelo min-height + padding. */
+.mdf-pets .pet-list__row {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-3);
+  width: 100%;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  padding: var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  border: none;
+  border-bottom: 1px solid var(--mdf-border);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mdf-pets .pet-list__row:hover {
+  background: var(--mdf-surface-2);
+}
+
+.mdf-pets .pet-list__row:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-radius: var(--mdf-radius-card);
+}
+
+/* Slot de foto (PET-M15) — reservado, sem imagem ainda: um disco neutro com o
+ * glifo da espécie. Não é um <img> quebrado; é um lugar pronto para a miniatura. */
+.mdf-pets .pet-list__thumb {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--mdf-surface-2);
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-h2);
+  line-height: 1;
+}
+
+.mdf-pets .pet-list__body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-1);
+  min-width: 0; /* deixa o texto truncar em vez de estourar a linha */
+}
+
+.mdf-pets .pet-list__top {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  min-width: 0;
+}
+
+.mdf-pets .pet-list__badge-icon {
+  font-size: var(--mdf-fs-small);
+  line-height: 1;
+}
+
+.mdf-pets .pet-list__name {
+  font-size: var(--mdf-fs-body);
+  font-weight: 600;
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-1 (proven token) */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mdf-pets .pet-list__descline {
+  font-size: var(--mdf-fs-small);
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-1 (proven token) */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mdf-pets .pet-list__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-1);
+  font-size: var(--mdf-fs-caption);
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+.mdf-pets .pet-list__chev {
+  flex: 0 0 auto;
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-h2);
+  line-height: 1;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * PET-M20 — MAP-LOAD STATES (loading / empty / error+retry) + post-publish
+ * CLOSURE micro-state + first-run hint.
+ * ════════════════════════════════════════════════════════════════════════════
+ * Calm-tone governor (PET_CURVE §2): no alarm-red tokens, no urgency, no
+ * celebratory accent. The empty state is HOPEFUL (not sad); the error state
+ * REASSURES (not scolds); the closure is warm-but-not-spiked. Token-only — no
+ * raw hex. prefers-reduced-motion suppresses the skeleton shimmer (no animation
+ * when reduced). Surfaces sit on the proven --mdf-* neutral pairs (ink/ink-muted
+ * on surface-1/surface-2 are all well above AA). */
+
+/* Shared shell for the three load-state cards: a calm centered region that
+ * occupies the band the map/list would, so the page does not jump. */
+.mdf-pets .pet-mapstate {
+  max-width: 860px;
+  margin: var(--mdf-space-3) auto;
+  padding: var(--mdf-space-6) var(--mdf-space-6);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+  text-align: center;
+}
+
+.mdf-pets .pet-mapstate__lead {
+  margin: 0 0 var(--mdf-space-2) 0;
+  font-size: var(--mdf-fs-body);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+.mdf-pets .pet-mapstate__point {
+  margin: 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+.mdf-pets .pet-mapstate__icon {
+  margin-right: var(--mdf-space-1);
+}
+
+/* Seta para o FAB "Relatar": decorativa (aria-hidden no JSX), só um sinal visual. */
+.mdf-pets .pet-mapstate__arrow {
+  display: inline-block;
+  margin-left: var(--mdf-space-1);
+  font-weight: 700;
+}
+
+/* ERROR — "Tentar de novo": alvo >=44px, operável por teclado, foco visível.
+ * Par de marca provado AA (branco #FFF = 5.70:1 sobre --mdf-brand-hover, AA texto >=4.5)
+ * para pesar como a ação de recuperação, sem virar vermelho de alarme. */
+.mdf-pets .pet-mapstate__retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque (Fitts) */
+  min-width: var(--mdf-touch-target);
+  margin-top: var(--mdf-space-3);
+  padding: var(--mdf-space-2) var(--mdf-space-5);
+  background: var(--mdf-brand-hover);
+  color: var(--mdf-brand-ink);
+  border: none;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform var(--mdf-dur-fast) var(--mdf-ease-out),
+              box-shadow var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-pets .pet-mapstate__retry:hover {
+  box-shadow: var(--mdf-elev-1);
+}
+
+.mdf-pets .pet-mapstate__retry:active {
+  transform: scale(0.98);
+}
+
+.mdf-pets .pet-mapstate__retry:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* LOADING — skeleton placeholder bars (the busy affordance, NOT spinner-only).
+ * Three soft bars on a neutral tint; a subtle shimmer hints "loading", removed
+ * entirely under prefers-reduced-motion. The words live in an sr-only line. */
+.mdf-pets .pet-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-2);
+  align-items: center;
+}
+
+.mdf-pets .pet-skeleton__bar {
+  width: 70%;
+  height: var(--mdf-space-5);
+  border-radius: var(--mdf-radius-pill);
+  background: linear-gradient(
+    90deg,
+    var(--mdf-surface-2) 0%,
+    var(--mdf-surface-1) 50%,
+    var(--mdf-surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: pet-skeleton-shimmer var(--mdf-dur-slow) var(--mdf-ease-out) infinite;
+}
+
+.mdf-pets .pet-skeleton__bar--wide { width: 90%; }
+.mdf-pets .pet-skeleton__bar--narrow { width: 50%; }
+
+@keyframes pet-skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Post-publish CLOSURE micro-state (PET_CURVE §4) ─────────── *
+ * Warm-but-not-spiked: a calm centered card, no celebratory accent. Sits over
+ * the page as a quiet panel (not a full-screen modal — it is a rest, not a trap).
+ * One primary next-decision ("Ver no mapa") weighted with the proven brand pair;
+ * "Fechar" is a discreet secondary dismissal. Tokens only. */
+.mdf-pets .pet-closure {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--mdf-space-16) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 1300; /* acima do FAB Relatar (1200) */
+  width: min(92vw, 30rem);
+}
+
+.mdf-pets .pet-closure__card {
+  padding: var(--mdf-space-5) var(--mdf-space-5) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+  box-shadow: var(--mdf-elev-3);
+  text-align: center;
+}
+
+.mdf-pets .pet-closure__icon {
+  margin: 0 0 var(--mdf-space-1) 0;
+  font-size: var(--mdf-fs-h1);
+  line-height: 1;
+}
+
+.mdf-pets .pet-closure__title {
+  margin: 0 0 var(--mdf-space-2) 0;
+  font-size: var(--mdf-fs-h2);
+  line-height: var(--mdf-lh-heading);
+  font-weight: 700;
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+.mdf-pets .pet-closure__lead {
+  margin: 0 0 var(--mdf-space-4) 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+.mdf-pets .pet-closure__actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--mdf-space-2);
 }
 
-/* The chip itself rides .mdf-chip; this only relaxes the fixed grid sizing so
- * facet chips hug their label and wrap as pills. */
-.pet-filterbar__chip {
-  flex: 0 1 auto;
-}
-
-/* Active STATUS chips carry the status tint (like .pet-chip--<status>--on),
- * so the facet reads as the same colored object as the marker. ink-on-tint
- * ratios are the AA-proven pairs from petPalette.css. */
-.pet-filterbar__chip--perdido.pet-filterbar__chip--on {
-  background: var(--pet-perdido-tint);
-  border-color: var(--pet-perdido);
-  color: var(--pet-perdido-ink);
-}
-.pet-filterbar__chip--encontrado.pet-filterbar__chip--on {
-  background: var(--pet-encontrado-tint);
-  border-color: var(--pet-encontrado);
-  color: var(--pet-encontrado-ink);
-}
-.pet-filterbar__chip--avistado.pet-filterbar__chip--on {
-  background: var(--pet-avistado-tint);
-  border-color: var(--pet-avistado);
-  color: var(--pet-avistado-ink);
-}
-
-/* The check inherits the chip ink so a tinted status chip's ✓ stays AA. */
-.pet-filterbar__chip--on .mdf-chip__check {
-  color: inherit;
-}
-
-.pet-filterbar__color {
-  /* rides .mdf-sheet__input + .pet-input; no extra geometry needed, but drop
-   * the inherited bottom margin since the group already owns the rhythm. */
-  margin-bottom: 0;
-}
-
-/* Calm empty hint when no pet matches — informational, no alarm color. */
-.pet-filterbar__empty {
-  margin: var(--mdf-space-3) 0 0 0;
-  font-size: var(--mdf-fs-small);
-  line-height: var(--mdf-lh-body);
-  color: var(--mdf-ink-muted);
-}
-
-.pet-filterbar__actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--mdf-space-3);
-}
-
-/* "Limpar filtros" — quiet outlined secondary (the .mdf-pets__support idiom):
- * ink text, never the brand fill, full touch target. */
-.pet-filterbar__clear {
+/* "Ver no mapa" — a ÚNICA próxima decisão (PET_CURVE §4.3). Par de marca provado
+ * AA; pesa como a ação à frente, sem ser um spike. >=44px. */
+.mdf-pets .pet-closure__primary {
   display: inline-flex;
   align-items: center;
-  min-height: var(--mdf-touch-target);
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  min-width: var(--mdf-touch-target);
+  padding: var(--mdf-space-2) var(--mdf-space-5);
+  background: var(--mdf-brand-hover);
+  color: var(--mdf-brand-ink);
+  border: none;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-pets .pet-closure__primary:active {
+  transform: scale(0.98);
+}
+
+.mdf-pets .pet-closure__primary:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* "Fechar" — dispensa discreta (saída calma como default), >=44px. */
+.mdf-pets .pet-closure__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  min-width: var(--mdf-touch-target);
   padding: var(--mdf-space-2) var(--mdf-space-4);
   background: transparent;
+  color: var(--mdf-ink-muted);
   border: 1px solid var(--mdf-ink-subtle);
   border-radius: var(--mdf-radius-pill);
   font-family: inherit;
   font-size: var(--mdf-fs-small);
   font-weight: 600;
-  color: var(--mdf-ink);
+  line-height: 1;
   cursor: pointer;
-  transition: border-color var(--mdf-dur-fast) var(--mdf-ease-out),
-              background var(--mdf-dur-fast) var(--mdf-ease-out);
 }
 
-.pet-filterbar__clear:hover {
+.mdf-pets .pet-closure__dismiss:hover {
+  color: var(--mdf-ink);
+  border-color: var(--mdf-ink);
+}
+
+.mdf-pets .pet-closure__dismiss:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* ── First-run hint (PET-M20) ─────────────────────────────── *
+ * Uma linha calma de uma só olhada, dispensável. Card neutro suave; o botão
+ * "Entendi" é um alvo >=44px operável por teclado. */
+.mdf-pets .pet-firsthint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mdf-space-2);
+  max-width: 860px;
+  margin: var(--mdf-space-3) auto;
+  padding: var(--mdf-space-3) var(--mdf-space-4);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+}
+
+.mdf-pets .pet-firsthint__text {
+  flex: 1 1 16rem;
+  margin: 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-2 (proven token) */
+}
+
+.mdf-pets .pet-firsthint__icon {
+  margin-right: var(--mdf-space-1);
+}
+
+.mdf-pets .pet-firsthint__dismiss {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  min-width: var(--mdf-touch-target);
+  padding: var(--mdf-space-1) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mdf-pets .pet-firsthint__dismiss:hover {
   border-color: var(--mdf-ink);
   background: var(--mdf-surface-2);
 }
 
-.pet-filterbar__clear:focus-visible {
+.mdf-pets .pet-firsthint__dismiss:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* prefers-reduced-motion — NENHUM shimmer/animação quando reduzido (governador
+ * §8): o skeleton vira um bloco estático; os botões perdem a transição/scale. */
+@media (prefers-reduced-motion: reduce) {
+  .mdf-pets .pet-skeleton__bar {
+    animation: none;
+    background: var(--mdf-surface-2);
+  }
+  .mdf-pets .pet-mapstate__retry,
+  .mdf-pets .pet-closure__primary {
+    transition: none;
+  }
+  .mdf-pets .pet-mapstate__retry:active,
+  .mdf-pets .pet-closure__primary:active {
+    transform: none;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * PET-M15 — PHOTO CAPTURE (report sheet) + PHOTO DISPLAY (detail sheet)
+ * ════════════════════════════════════════════════════════════════════════════
+ * Calm-tone governor: a panicked owner attaching a photo. No alarm tokens; the
+ * capture button is encouraged (brand-pair), the preview is a quiet figure, the
+ * detail photo degrades to a calm placeholder (never a broken-image glyph). Only
+ * --mdf-* / --pet-* tokens — no raw hex. The FINAL placeholder/skeleton COLOR
+ * treatment is PET-M16's job; here we ship the functional base (the three states
+ * exist + degrade). prefers-reduced-motion kills the skeleton pulse. */
+
+/* ── Report sheet: capture / choose-from-library affordance ── */
+
+.pet-photo-capture {
+  margin: var(--mdf-space-2) 0;
+}
+
+/* O <label> dispara o <input type=file> escondido (sr-only) — é a afordância
+ * acessível e o alvo de toque >=44px. Par de marca provado AA (branco #FFF = 5.70:1
+ * sobre --mdf-brand-hover, AA texto >=4.5) para CONVIDAR sem alarme. */
+.pet-photo-capture__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  width: 100%;
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque (Fitts) */
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-brand-hover);
+  color: var(--mdf-brand-ink);
+  border: 1px solid transparent;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  font-weight: 700;
+  line-height: var(--mdf-lh-body);
+  text-align: center;
+  cursor: pointer;
+  transition: box-shadow var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-photo-capture__btn:hover {
+  box-shadow: var(--mdf-elev-1);
+}
+
+/* O foco visível vem do <input> sr-only (que recebe o foco de teclado); espelha
+ * o estado no label via :focus-within para o anel aparecer ao redor do botão. */
+.pet-photo-capture:focus-within .pet-photo-capture__btn {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.pet-photo-capture__btn[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* Aviso de erro de preparo — calmo, neutro (NÃO os tokens de risco vermelho): a
+ * foto falhou mas o publicar segue possível, então o tom reassegura. */
+.pet-photo-capture__error {
+  margin: var(--mdf-space-2) 0 0 0;
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-2 (par neutro provado) */
+}
+
+.pet-photo-capture__privacy {
+  margin: var(--mdf-space-2) 0;
+}
+
+/* A PRÉVIA da foto reduzida no cliente: uma figure discreta. A imagem é contida
+ * (object-fit) num cartão neutro; a legenda é honesta sobre o que persiste. */
+.pet-photo-preview {
+  margin: var(--mdf-space-2) 0 0 0;
+  padding: var(--mdf-space-2);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+}
+
+.pet-photo-preview__img {
+  display: block;
+  width: 100%;
+  max-height: 14rem;
+  object-fit: contain;
+  border-radius: var(--mdf-radius-chip);
+  background: var(--mdf-surface-1);
+}
+
+.pet-photo-preview__cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mdf-space-2);
+  margin: var(--mdf-space-2) 0 0 0;
+  font-size: var(--mdf-fs-caption);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-2 (proven token) */
+}
+
+/* "Remover prévia" — alvo >=44px, ink legível, foco visível. */
+.pet-photo-preview__remove {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  padding: var(--mdf-space-1) var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pet-photo-preview__remove:hover {
+  border-color: var(--mdf-ink);
+}
+
+.pet-photo-preview__remove:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* Rótulo do campo de link (o que de fato publica) — ink cheio, ênfase secundária. */
+.pet-album-field__url-label {
+  display: block;
+  margin: var(--mdf-space-2) 0 var(--mdf-space-1) 0;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-2 (proven token) */
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * PET-M16 — PHOTO PLACEHOLDER + SKELETON COLOR/SURFACE TREATMENT (detail sheet)
+ * ════════════════════════════════════════════════════════════════════════════
+ * coloring-ict6 owns COLOR/SURFACE only here (uiux owns layout; no motion
+ * specialist so motion stays static/reduced). PET-M15 shipped the FUNCTIONAL base
+ * (the three states exist + degrade); M16 makes them TASTEFUL.
+ *
+ * THREE photo states, all token-only (--mdf-* / --pet-*), never pure #FFFFFF /
+ * #000000, all calm (a lost pet is anxious — the empty/error state must read
+ * intentional, NOT sad or broken):
+ *   EMPTY (no photo)      -> .pet-detail__photo-placeholder: a soft species-glyph
+ *                            on the low-chroma warm --pet-placeholder-tint card.
+ *   LOADING               -> .pet-detail__photo-skeleton: a subtle, low-contrast
+ *                            shimmer; under prefers-reduced-motion it becomes a
+ *                            STATIC calm fill (no shimmer) — see the reduced block.
+ *   ERROR / broken URL    -> the JS (photoLoadState==='error') falls through to the
+ *                            EMPTY placeholder above — NEVER a broken-image glyph.
+ *                            No separate error surface: graceful identity with EMPTY.
+ *
+ * MEASURED AA (over --pet-placeholder-tint #F3EDE3; ratios proven in petPalette.css):
+ *   placeholder label  --mdf-ink-muted : 5.74:1 (AA normal-text >=4.5)
+ *   glyph ink          --pet-perdido-ink: 7.95:1 (meaningful glyph >=3)
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/* ── Detail sheet: photo display (direct image) + skeleton + placeholder ── */
+
+/* Moldura da imagem direta: position-relative para o skeleton sobrepor enquanto
+ * a imagem carrega. Cartão neutro contido, elevado acima do bloco de meta. */
+.pet-detail__photo {
+  position: relative;
+  margin: 0 0 var(--mdf-space-4) 0;
+  border-radius: var(--mdf-radius-card);
+  overflow: hidden;
+  background: var(--mdf-surface-2);
+}
+
+.pet-detail__photo-img {
+  display: block;
+  width: 100%;
+  max-height: 18rem;
+  object-fit: cover;
+  /* Aparece só quando carregada (a classe --ready) — evita o flash de alt/0x0.
+   * Sem a classe, fica invisível e o skeleton mostra o estado de carga. */
+  opacity: 0;
+  transition: opacity var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__photo-img--ready {
+  opacity: 1;
+}
+
+/* LOADING — skeleton sobreposto enquanto a imagem direta baixa. PET-M16: o pulso
+ * é SUBTIL e de baixo contraste (a banda clara é --mdf-surface-1 sobre o leito
+ * --pet-placeholder-tint: ~1.10:1, um respiro, não um flash). Sob prefers-reduced-
+ * motion vira um leito ESTÁTICO calmo, SEM shimmer (bloco no fim — governador §8).
+ * Só tokens; jamais #FFFFFF / x #000000 puros. */
+.pet-detail__photo-skeleton {
+  position: absolute;
+  inset: 0;
+  min-height: 10rem;
+  background: linear-gradient(
+    90deg,
+    var(--pet-placeholder-tint) 0%,
+    var(--mdf-surface-1) 50%,
+    var(--pet-placeholder-tint) 100%
+  );
+  background-size: 200% 100%;
+  animation: pet-skeleton-shimmer var(--mdf-dur-slow) var(--mdf-ease-out) infinite;
+}
+
+/* EMPTY — placeholder calmo de "sem foto" (e o destino de ERROR/URL quebrada:
+ * o JS cai aqui em vez de pintar um <img> quebrado). PET-M16: leito da cor
+ * warm-sand de baixo croma --pet-placeholder-tint (um respiro acolhedor, não
+ * triste nem "quebrado"). Borda --mdf-ink-subtle (--mdf-border some sobre tom
+ * claro). Só tokens; jamais #FFFFFF / x #000000 puros. */
+.pet-detail__photo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  min-height: 8rem;
+  margin: 0 0 var(--mdf-space-4) 0;
+  padding: var(--mdf-space-5) var(--mdf-space-4);
+  background: var(--pet-placeholder-tint);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-card);
+  text-align: center;
+}
+
+/* O glifo da espécie ganha um DISCO suave (não dulled-por-opacity: opacity-alone
+ * num glifo significativo é exatamente o que evitamos). O disco é --mdf-surface-1
+ * com aro --mdf-ink-subtle sobre o leito --pet-placeholder-tint.
+ * PET-M24 AUDIT — este aro mede 2.96:1, ABAIXO do piso gráfico 3:1, e isso é
+ * INTENCIONAL e ACEITÁVEL: o disco é DECORAÇÃO PURA (WCAG 2.2 SC 1.4.11 isenta
+ * "pure decoration") — ele não codifica nenhum estado nem é um componente de UI
+ * operável; é só uma moldura calma sob o emoji. Nada de informação depende de
+ * enxergar o aro: o SIGNIFICADO acessível vem 100% do texto AA abaixo (inkMuted
+ * 5.74:1 sobre o leito) + o aria-label do JSX. Subir o aro para >=3:1 (ex.
+ * --mdf-ink-muted) endureceria a moldura e brigaria com o tom calmo do estado
+ * vazio sem ganho de acessibilidade. Mantido de propósito; jamais usar como
+ * fronteira que carrega estado. Sem opacity para escurecer. */
+.pet-detail__photo-placeholder-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mdf-space-12);
+  height: var(--mdf-space-12);
+  font-size: var(--mdf-fs-h1);
+  line-height: 1;
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-ink-subtle); /* aro DECORATIVO: 2.96:1 sobre o leito — sub-3:1 intencional, decoração pura (SC 1.4.11 isenta); nenhum estado depende dele */
+  border-radius: var(--mdf-radius-pill);
+}
+
+.pet-detail__photo-placeholder-text {
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted); /* sobre --pet-placeholder-tint: 5.74:1 (AA texto >=4.5) */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-photo-capture__btn {
+    transition: none;
+  }
+  .pet-detail__photo-img {
+    transition: none;
+  }
+  /* PET-M16 — SEM shimmer quando o movimento é reduzido (governador §8): o
+   * skeleton vira um leito ESTÁTICO calmo na MESMA cor warm-sand do placeholder,
+   * para LOADING e EMPTY lerem como o mesmo repouso. Só token, jamais #FFF / x. */
+  .pet-detail__photo-skeleton {
+    animation: none;
+    background: var(--pet-placeholder-tint);
+  }
+}
+
+/* ── Detail sheet: "Compartilhar" — PET-M19 ───────────────────────────────────
+ * Ação SECUNDÁRIA na linha de ações (ao lado de Fechar / Como chegar). Convite
+ * sereno (não um botão de urgência): boundary sutil + ink cheio, mesmo registro
+ * neutro do "Como chegar", herdando a geometria >=44px de --mdf-touch-target.
+ * Só tokens --mdf-*, nenhum hex cru. Botão NATIVO -> teclado e foco de graça. */
+.pet-detail__share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-5);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__share-btn:hover {
+  background: var(--mdf-surface-2);
+  border-color: var(--mdf-ink);
+}
+
+.pet-detail__share-btn:focus-visible {
   outline: none;
   box-shadow: var(--mdf-focus-ring);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pet-filterbar__clear {
+  .pet-detail__share-btn {
     transition: none;
   }
 }
