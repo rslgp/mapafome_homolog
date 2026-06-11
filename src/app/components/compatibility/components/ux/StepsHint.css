@@ -116,6 +116,35 @@
   background: var(--mdf-surface-2);
 }
 
+/* Atalho para o MapaPet — mesmo formato de pílula do "Ver mais", como link de
+ * navegação real. Alvo de toque >= 44px e anel de foco visível. */
+.mdf-steps__pets {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  flex-shrink: 0;
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-3);
+  background: transparent;
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  color: var(--mdf-ink);
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-steps__pets:hover {
+  background: var(--mdf-surface-2);
+}
+
+.mdf-steps__pets:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
 /* Hide secondary labels on narrow screens — dots and active-step label stay */
 @media (max-width: 480px) {
   .mdf-steps__item:not(.mdf-steps__item--active) .mdf-steps__label {
@@ -124,5 +153,10 @@
   .mdf-steps__item + .mdf-steps__item::before {
     width: var(--mdf-space-2);
     margin-right: var(--mdf-space-1);
+  }
+  /* Em telas estreitas só a patinha fica (o rótulo "Pets" some), economizando
+     espaço como os rótulos secundários dos passos. */
+  .mdf-steps__pets-label {
+    display: none;
   }
 }

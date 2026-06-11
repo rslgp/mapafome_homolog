@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import './StepsHint.css';
 
 // Cada passo aponta para a área que deve ganhar foco ao ser tocado. Os
@@ -48,6 +49,7 @@ export default function StepsHint({ activeStep = 0 }) {
       role="region"
       aria-label="Três passos para mapear"
     >
+      `{/*
       <ol className="mdf-steps__list">
         {STEPS.map(({ n, label, selectors }) => {
           const state =
@@ -69,6 +71,7 @@ export default function StepsHint({ activeStep = 0 }) {
           );
         })}
       </ol>
+      */}
       <button
         type="button"
         className="mdf-steps__tour"
@@ -77,6 +80,38 @@ export default function StepsHint({ activeStep = 0 }) {
       >
         Ver mais
       </button>
+      {/* Atalho para o MapaPet (achados e perdidos) — link de navegação real
+          (Next Link/<a href>), operável por teclado e antes da hidratação. */}
+      <Link
+        href="/pets"
+        className="mdf-steps__pets"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Abrir o MapaPet — mapa de pets perdidos (abre em nova aba)"
+      >
+        <span aria-hidden="true">🐾</span>
+        <span className="mdf-steps__pets-label">Pets</span>
+      </Link>
+
+      <Link
+        href="/solone"
+        className="mdf-steps__pets"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Jogar Solone para divulgar o MapaFome (abre em nova aba)"
+      >
+        <span aria-hidden="true">🎮</span>
+      </Link>
+
+      <Link
+        href="/bluey"
+        className="mdf-steps__pets"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Abrir o Bluey (abre em nova aba)"
+      >
+        <span aria-hidden="true">👦👧 2a9 anos</span>
+      </Link>
     </aside>
   );
 }
