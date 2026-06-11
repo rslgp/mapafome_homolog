@@ -95,7 +95,7 @@ milestones:
     priority: P0
     scope: "Include: distinguish failure causes in publishPet/PetsApp.handlePublish and surface distinct CALM pt-BR copy via role=alert — out-of-bounds coords (SheetsValidationError -> 'fora da área atendida'), offline -> queued + reassurance, server-slow/timeout -> 'pode ter sido salvo, não publique de novo', generic fallback; fork publishQueue.js (IndexedDB enqueue on offline/transient failure + bindOnlineFlush(publishPet) in PetsApp) reusing the same store seam; preserve the seenIdempotencyKeys dedupe so a flush never double-appends; log the real reason via analytics.trackError token-redaction. State what it REMOVES: the single generic 'publish_failed' string and the silent-loss-on-flaky-connection path. Exclude: photo payloads in the queued blob (PET-M13/M14); changing the Dados schema; server-side rate limiting (PET-M4)."
     gate: ["npm run lint", "npm run test", "npm run build"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M0"]
     acceptance_criteria:
       - "An offline publish is enqueued in IndexedDB and flushes on the next 'online' event with no double-write (idempotency_key asserted in a test)."
@@ -108,7 +108,7 @@ milestones:
     priority: P0
     scope: "Include: add an optional resolvedAt (ISO) to the petDomain SOT — buildPetDados emits it, parsePetRow round-trips it, old rows lacking it parse as ACTIVE (backward-compat); add an updatePetByCoords-style writer in petsData that rewrites ONLY the Dados column for the matching row (mirror the hunger updatePinDadosByCoords pattern), idempotent and queue-compatible with PET-M1; expose a resolved/active discriminator so the map/list can drop or distinguish reunited pets. LSP-shaped: a reloaded reunited pet reads back identically to one written this session. State what it REMOVES: the implicit assumption that every parsed pet is active. Exclude: the reunite ACTION/confirm UI (PET-M7b); the dimming visual (PET-M11)."
     gate: ["npm run lint", "npm run test", "npm run build"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M1"]
     acceptance_criteria:
       - "A pet can be marked reunido; resolvedAt persists to the shared sheet and survives a reload (round-trip asserted in a petDomain test)."
@@ -121,7 +121,7 @@ milestones:
     priority: P0
     scope: "Include: (a) REVEAL-ON-TAP gate — PetDetailSheet currently renders the WhatsApp/contact link immediately on open (line ~123); gate it behind an explicit 'Mostrar contato' tap so a stranger's contact is not auto-exposed; (b) pin the contact-NEVER-in-list/map invariant as a TEST (forcing-function, not a comment); (c) fully support CONTACTLESS reports end-to-end (publish + render) with a test; (d) free-text hygiene — name/color/detail go RAW into the shared public Dados with only `|| ''` today (a finder can paste a plate/address/abuse into 'detalhe'): add a maxLength cap + a strip of control chars in buildPetDados, and a calm pt-BR warning near the detail/contact fields ('não inclua dados de terceiros, placa ou endereço exato'); (e) a /pets-specific privacy note at the contact field clarifying reveal-on-tap; (f) confirm no contact/free-text leaks into analytics/error payloads (reuse trackError redaction). State what it REMOVES: the auto-render of contact and the unbounded raw free-text path. Exclude: encrypting contact at rest (separate decision); moderation/abuse flagging (PET-M4); deep server-side PII scrubbing (note as a bug-bounty handoff)."
     gate: ["npm run lint", "npm run test"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M0"]
     acceptance_criteria:
       - "Contact is hidden until an explicit 'Mostrar contato' tap; a test asserts contact never appears in the map/list data path, only on an opened detail sheet after the reveal."
@@ -134,7 +134,7 @@ milestones:
     priority: P1
     scope: "Include: client-side publish rate-limiting + a lightweight abuse heuristic (burst within a window / byte-identical repeated payload) with calm pt-BR feedback; a 'denunciar' affordance on PetDetailSheet that flags a listing for review, persisting the flag into the Dados blob (kind:'pet' isolation preserved). DOCUMENT the limitation explicitly: client controls are bypassable while NEXT_PUBLIC_GOOGLE_PRIVATE_KEY ships the write key into the bundle (the inherited HIGH-severity P14 surface); the durable fix is a server write proxy that also removes the NEXT_PUBLIC write secret — named as a bug-bounty/secret-architecture handoff (mirrors homolog P14), NOT pretended to be solved here. Exclude: the server moderation backend / auth (named handoff); auto-hiding flagged pins (needs server side); the visual treatment of a flagged listing."
     gate: ["npm run lint", "npm run test"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M0"]
     acceptance_criteria:
       - "A burst of identical publishes is throttled client-side with calm feedback (tested)."
@@ -147,7 +147,7 @@ milestones:
     priority: P0
     scope: "Include: vitest coverage for petDomain (buildPetDados/parsePetRow round-trip incl. resolvedAt + the free-text caps; isValidStatus/Species/Size; isPetRow discriminator; sanitizePhotosUrl rejects javascript:/data:; parsePetRow never throws on malformed input), petsData (mocked sheetsClient: writes ONLY the Dados column, idempotency dedupe, the coords-keyed update), petMarkerIcon (status->ring/glyph, ringWidthFor fallback); a render smoke for PetReportSheet/PetDetailSheet (modal contract present). ADD src/app/pets/** to vitest.config coverage.include so the pet suite actually gates pet code (today coverage.include omits it). The esbuild jsx loader already parses .js+JSX test files (config-handled, not a blocker). Exclude: e2e/browser tests; Leaflet map render (jsdom can't); backend/asaas tests."
     gate: ["npm run lint", "npm run test"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M2", "PET-M3"]
     acceptance_criteria:
       - "pets/* has unit tests; the buildPetDados/parsePetRow round-trip, the writes-only-Dados invariant, idempotency, and the contact/free-text invariants are asserted."
@@ -160,7 +160,7 @@ milestones:
     priority: P0
     scope: "Include: a short committed design artifact (alongside this file) that (1) maps the owner/finder emotional arc stage-by-stage — panic-on-arrival -> 'reportei, e agora?' -> waiting/hope -> recognition/match -> reunion OR honest closure — with the ONE feeling each /pets surface must produce; this is the INVERTED interest curve (the product LOWERS arousal, never spikes it); (2) states the calm-tone governor as enforceable rules (the BANNED list in the header: no streaks/countdowns/badges/variable-ratio nudges/celebratory spikes); (3) names, per PET-M item, which curve stage it serves so the backlog is auditable; (4) defines the post-publish reward/closure micro-state contract (a calm 'seu pet está no mapa — qualquer pessoa por perto pode reconhecê-lo' + ONE next-decision) that PET-M20 builds, and the account-free private-verification-detail credibility primitive ('detalhe que só o dono sabe', never shown publicly) that PET-M3/M9 reference, walked through the Lens-of-Failure on the fake-'eu-achei-seu-pet' scam. Pure design output, no code. Exclude: final UI copy (uiux owns surface strings); analytics implementation (PET-M21); redefining the data contract."
     gate: ["npm run lint"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M0"]
     acceptance_criteria:
       - "A committed artifact maps each loop stage to its target feeling and to the PET-M item(s) that serve it, and states the enforceable anti-engagement-bait governor (incl. the no-celebratory-spike rule)."
@@ -174,7 +174,7 @@ milestones:
     priority: P1
     scope: "Include: a compact, thumb-reachable filter control narrowing pet pins by status (perdido/encontrado/avistado), species, and size; reads labels/ids STRICTLY from the petDomain SOT (never hardcode 'perdido'); filter state lives in PetsApp and is passed to PetMarkers (and the PET-M8 list); reuse mdf-chip styling; role=group + clear labels; keyboard-operable; an obvious 'limpar filtros' reset; a live AT-announced match count; pt-BR + AA + >=44px. Exclude: free-text/address search (PET-M10); the list view itself (PET-M8); server-side filtering."
     gate: ["npm run lint", "npm run test", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M0"]
     acceptance_criteria:
       - "Selecting/deselecting any filter immediately narrows the rendered pins; 'limpar filtros' restores all; a live match count is AT-announced."
@@ -187,7 +187,7 @@ milestones:
     priority: P0
     scope: "Include: add the FIRST write actions to the read-only PetDetailSheet — 'Marcar como reunido' (the most hopeful outcome) AND 'Encerrar busca' (a dignified, conscious NEGATIVE closure for an owner who stops searching, distinct from silently aging out via PET-M16); each calls the PET-M2 writer with a gentle two-step pt-BR confirm and a WARM-BUT-NOT-SPIKED success state (per the calm-tone governor — no confetti/celebratory spike); preserve the existing modal contract (focus capture on open + restore to trigger on close via triggerRef, Escape-to-dismiss, backdrop-tap dismiss, re-focus after the state transition so a screen-reader user is not stranded); reachable in <=2 taps; pt-BR + AA + >=44px. Exclude: the persistence layer (PET-M2); the dimmed/checked marker visual (PET-M11); any un-reunite/edit flow."
     gate: ["npm run lint", "npm run test", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M2", "PET-M-CURVE"]
     acceptance_criteria:
       - "From a pet's detail sheet a user can mark it reunido OR encerrar busca in <=2 taps, each with a gentle confirm and a warm (non-spiked) success/closure state."
@@ -200,7 +200,7 @@ milestones:
     priority: P1
     scope: "Include: a toggle between map and a scrollable list of active pets (fork the hunger ListView); each row shows the status badge (from petDomain + the PET-M11 badge classes), species, the descline (species·size·color), relative time via formatRelativeTime, and distance when GPS is available; tapping a row opens the EXISTING PetDetailSheet (shared, not duplicated); sort by distance when GPS present else by recency; consume the PET-M7 filter state; honor the modal contract on the detail sheet it opens; AA + pt-BR + >=44px rows. Exclude: building the filter/search UIs (consumed, not built here); photo thumbnails (depends on PET-M14); reunite/share actions inside rows."
     gate: ["npm run lint", "npm run test", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M7"]
     acceptance_criteria:
       - "A user can switch to a list and open any pet's detail sheet from a row; the list reflects the same set as the map and respects active filters."
@@ -213,7 +213,7 @@ milestones:
     priority: P1
     scope: "Include: a DESIGN spec that PET-M9b implements — the match heuristic parameters (species match, distance radius, time window, status pairing perdido<->encontrado/avistado) with justified defaults; the surfacing rules (opt-in, calm copy, NO false certainty — 'pode ser' not 'encontramos'); the SILENCE rule (when a weak match must NOT be shown, to avoid a false-hope value-movement); exclusion of reunido/encerrado pets from candidates; and the interaction with the PET-M-CURVE credibility primitive. Walk Schell Lens of Surprise + Lens of Failure on the false-positive (wrong match) case. Pure design output. Exclude: the matching code/UI (PET-M9b); push notifications / standing geo-alerts (anti-bloat); auto-claim."
     gate: ["npm run lint"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M-CURVE"]
     acceptance_criteria:
       - "A documented heuristic with defaulted, justified params (species + radius + time window + status pairing) exists for PET-M9b to build against."
@@ -226,7 +226,7 @@ milestones:
     priority: P1
     scope: "Include: implement the PET-M9a heuristic as a PURE, unit-tested predicate next to petDomain (candidates exclude reunido/encerrado per PET-M2/PET-M16), and surface the calm opt-in 'possível encontro' hint linking the two listings per the spec's silence/tone rules; reads the petDomain SOT only. The matching predicate is engineering plumbing; the surface copy comes from the spec. Exclude: the design judgment itself (PET-M9a); notifications/accounts (anti-bloat); the credibility-primitive UI (rides PET-M3/M-CURVE)."
     gate: ["npm run lint", "npm run test", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M9a", "PET-M2"]
     acceptance_criteria:
       - "A pure match predicate (species + radius + time window + status pairing) is unit-tested; reunido/encerrado pets are excluded from candidates."
@@ -239,7 +239,7 @@ milestones:
     priority: P2
     scope: "Include: re-introduce a SearchField on PetMap (reuse the hunger map's leaflet-geosearch) to pan/zoom to a typed address, plus a 'perto de mim' button that recenters on device GPS on demand (not just at load); >=44px targets, accessible labels, keyboard reachable, calm pt-BR copy, graceful handling of denied/unavailable geolocation (no dead end). Needs only the shipped petDomain/PetMap — no other dependency. Exclude: server-side geocoding; reverse-geocoding the dropped pin; the filter (PET-M7) and list (PET-M8) surfaces."
     gate: ["npm run lint", "npm run build", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M0"]
     acceptance_criteria:
       - "Typing and selecting an address pans/zooms the map to it."
@@ -252,7 +252,7 @@ milestones:
     priority: P1
     scope: "Include: (a) a compact, dismissible on-map legend mapping the status hues + glyph shapes (real marker mini-icons from petMarkerIcon beside pt-BR labels, sourced from petDomain — no duplicated literals); (b) a documented cross-surface badge SOT + minimal reusable pets.css classes for the badge variants — stroke (marker), tint+ink (chip/selected), solid+on (detail/list-row) — covering all statuses including reunido, with the perdido-needs-DARK-ink exception encoded inline (never white text on the burnt-amber accent) and each variant citing its proven AA ratio so PET-M7/PET-M8 reuse them without re-deriving; (c) add a --pet-reunido / -tint / -ink / -on token set to petPalette.css with measured AA ratios inline (stroke >=3:1, ink-on-tint + text-on-accent >=4.5:1), provably distinct from the hunger success-green (#4A7C59) reserved axis and from all three active --pet-* hues under deuteranopia/protanopia, extending the lightness staircase; (d) extend petMarkerIcon with a lifecycle dimension — fresh / aged (toned-down but >=3:1 ring, with a NON-opacity secondary cue, never opacity-alone) / reunido (overlaid glyph filled with --pet-reunido) — via a pure, unit-tested helper mirroring ringWidthFor; reads --pet-* tokens only, no raw hex. Exclude: dark mode (deferred — see header note); the reunido data writer (PET-M2); the reunido action UI (PET-M7b); motion of any fade (no motion specialist — keep static)."
     gate: ["npm run lint", "npm run test", "npm run build", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M2"]
     acceptance_criteria:
       - "A legend shows each status as its actual marker glyph+ring+dash beside a pt-BR label; no new color literal is introduced; every hue resolves to an existing or new --pet-* token at >=3:1 on its surface (AA verified on a served build)."
@@ -265,7 +265,7 @@ milestones:
     priority: P1
     scope: "Include: age-archive active-map EXCLUSION for pet reports past a configurable window (default in petDomain, ONE SOT location — not scattered); fork the hunger cleanold/isArchived age helper; archive IN PLACE via a Dados flag, NEVER delete the row (preserves kind:'pet' isolation + the audit trail). Pure, unit-testable predicates next to petDomain. This is the MECHANICAL staleness damper; the owner-confirmed honest freshness check-in is PET-M13. Exclude: deleting rows; near-duplicate dedup (split out to PET-M12b — it carries a real data-loss risk); the visual treatment of aged pins (PET-M11)."
     gate: ["npm run lint", "npm run test"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M2"]
     acceptance_criteria:
       - "Reports past the configurable window no longer render on the active map but remain in the sheet (archive flag asserted in a test)."
@@ -278,7 +278,7 @@ milestones:
     priority: P2
     scope: "Include: detect and SOFT-merge near-duplicate reports (same species + close coords + close time window) so obvious dupes consolidate to one pin. RISK (why split from PET-M12): an over-eager merge of two different black cats ERASES a real report — a false-merge is a worse failure than a duplicate pin. So this REQUIRES a Lens-of-Failure pass (mirroring PET-M9a): consolidation is VISUAL/soft only (never deletes or rewrites the merged-away row's data), is conservative (tight thresholds, defaulted in the petDomain SOT), and is reversible/expandable by the viewer. Pure, unit-tested predicate. Exclude: any destructive merge; auto-dedup that hides a report's underlying data; the age-archival (PET-M12)."
     gate: ["npm run lint", "npm run test"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M12"]
     acceptance_criteria:
       - "Obvious duplicates (same species + radius + time window) are soft-consolidated to one expandable pin, never deleted or data-rewritten."
@@ -291,7 +291,7 @@ milestones:
     priority: P1
     scope: "Include: DESIGN of the honest-freshness mechanism that complements PET-M12's blunt auto-archive — as a report ages, gently invite the reporter (re-identified via a LOCAL-stored report token written at the publish moment, NO account) to confirm 'ainda procurando' (refresh the freshness timestamp) or 'já reencontrei' (mark reunido via PET-M2); HARD rule: prompts AT MOST ONCE, non-naggingly (no recurring nag, no notifications, no streaks — per the calm-tone governor's negative-feedback-loop, not a variable-interval anxiety loop). Specify how unconfirmed-but-not-denied reports degrade honestly (defer the visual to PET-M11) vs auto-archive (PET-M12). Output the persistence contract; hand the writer to softwareengineer (rides PET-M2). Exclude: accounts/login; email/push reminders; server cron; building the dimming visual (PET-M11) or the archive writer (PET-M12)."
     gate: ["npm run lint"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M2", "PET-M-CURVE"]
     acceptance_criteria:
       - "A documented, account-free, AT-MOST-ONCE freshness check-in lets a reporter confirm 'still looking' or 'reunited' via a local report token."
@@ -305,7 +305,7 @@ milestones:
     priority: P1
     scope: "Include: a written decision spike evaluating where pet photo BYTES live — external image host/bucket + URL in Dados; Google Drive via the existing service account; or strict client-resized base64 with a hard size cap — weighing cost, PII/LGPD exposure (a photo may incidentally capture a person/plate), reliability, the NEXT_PUBLIC client-bundle-secret blast radius (PET-M4/P14), and impact on the shared-sheet full-scan (fetchPets reads EVERY row, so base64-in-Dados accelerates the scaling cliff). Note: a paste-a-URL photo path ALREADY ships (sanitizePhotosUrl + 'Ver fotos do pet'); this spike decides the UPLOAD contract that supersedes/augments it (where bytes live, the Dados URL/ref shape, max dimensions/size, no-photo fallback). Decision artifact only — no upload code. Exclude: the capture/upload UI (PET-M15); the placeholder/skeleton visual (PET-M16); a server proxy (rides the PET-M4 secret-architecture handoff)."
     gate: ["npm run lint"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M0"]
     acceptance_criteria:
       - "A documented, justified photo-storage contract exists: where bytes live, the Dados URL/ref shape, max size/dimensions, and the no-photo fallback (and how it relates to the shipped paste-a-URL path)."
@@ -318,7 +318,7 @@ milestones:
     priority: P1
     scope: "Include: a photo field in PetReportSheet (capture-on-mobile / choose-from-library, client-side resize+compress before upload) and a photo on PetDetailSheet, persisting per the PET-M14 contract; graceful no-photo fallback (a tasteful placeholder, never a broken <img>); accessible alt text; loading/skeleton state; preserve the report sheet's focus/Escape/backdrop modal contract + >=44px; pt-BR. Reports without a photo still publish and render cleanly. Exclude: the storage backend DECISION (PET-M14); AI breed/photo auto-detection (anti-bloat); the placeholder/skeleton VISUAL tokens (PET-M16)."
     gate: ["npm run lint", "npm run test", "npm run build", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M14"]
     acceptance_criteria:
       - "A reporter can attach one photo (capture or library), resized/compressed client-side; it renders on the detail sheet with accessible alt text and a loading state."
@@ -331,7 +331,7 @@ milestones:
     priority: P2
     scope: "Include: color/surface styling for three photo states in PetDetailSheet's photo region — empty (no photo -> calm species-glyph placeholder on a --mdf-surface-2 / low-chroma --pet-* tint), loading (skeleton honoring prefers-reduced-motion — no shimmer when reduced), error/broken-URL (graceful fallback to the empty treatment, never a broken-image glyph); tokens only; avoid pure #FFFFFF/#000000; AA for any text/icon over the placeholder. Exclude: photo capture/upload/compression (PET-M15); the storage decision (PET-M14); detail-sheet layout/hierarchy (uiux); motion curves (no motion specialist — keep static/reduced)."
     gate: ["npm run lint", "npm run build", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M11", "PET-M15"]
     acceptance_criteria:
       - "A photoless, a loading, and a broken-URL pet each render a calm placeholder/skeleton, never a broken-image glyph."
@@ -345,7 +345,7 @@ milestones:
     priority: P1
     scope: "Include: a proper <title>/description for /pets (today it inherits the generic 'MAPA FOME' layout title) and Open Graph tags so a shared lost-pet link previews sensibly, respecting the ssr:false client-page constraint (e.g. a metadata wrapper at the route boundary). Split OUT from funnel analytics (PET-M21) and landed EARLY because it depends on nothing and the PET-M19 share action needs it for a rich preview. Exclude: per-pet dynamic OG images; the funnel analytics (PET-M21); the share action UI (PET-M19)."
     gate: ["npm run lint", "npm run build"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M0"]
     acceptance_criteria:
       - "/pets has its own title/description; a shared link shows a sensible preview (not the generic hunger title)."
@@ -357,7 +357,7 @@ milestones:
     priority: P1
     scope: "Include: PetsApp gains URL-param handling so an incoming deep link (e.g. ?pet=<coords-or-id>) recenters the map on that pet and opens its PetDetailSheet on load — today PetsApp has ZERO URL handling, so a shared link lands on the bare map and the share/OG loop is broken at the destination. Define a stable, PII-free link param shape (coords-keyed, NOT contact); degrade calmly when the pet is gone (archived/reunido) with a calm pt-BR note. State what it REMOVES: the dead-end where a shared link cannot focus its pet. Exclude: the share action that produces the link (PET-M19); per-pet OG images (PET-M17 covers static OG)."
     gate: ["npm run lint", "npm run test", "npm run build"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M0"]
     acceptance_criteria:
       - "An incoming /pets link with a pet param recenters the map and opens that pet's detail sheet on load."
@@ -370,7 +370,7 @@ milestones:
     priority: P2
     scope: "Include: a 'Compartilhar' action on PetDetailSheet that opens the native share sheet (navigator.share when available) or falls back to a WhatsApp deep link, with a pre-filled calm pt-BR message (status + species + area + the PET-M18 deep link back to the pet); the share/clipboard call MUST fire SYNCHRONOUSLY inside the gesture handler (no await before it) or mobile browsers silently drop it; >=44px target, accessible label, keyboard-operable; relies on PET-M17 metadata for a rich preview and PET-M18 for the link to land on the pet. Exclude: per-pet dynamic OG images; any social feed/comments (anti-bloat)."
     gate: ["npm run lint", "npm run build", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M17", "PET-M18"]
     acceptance_criteria:
       - "A user can share a pet via the native share sheet or a WhatsApp deep link with a working link that lands ON the pet (PET-M18)."
@@ -383,7 +383,7 @@ milestones:
     priority: P1
     scope: "Include: three explicit map-load states in PetsApp + pets.css — (1) a calm loading affordance while fetchPets() resolves (skeleton or aria-busy region, not spinner-only); (2) an empty state when loaded.length===0 ('Nenhum pet reportado por aqui ainda — seja o primeiro a ajudar' + an arrow to the Relatar FAB), reusing --mdf-* tokens; (3) upgrade the existing flat loadError banner (role=alert, no retry today) to a keyboard-operable >=44px 'Tentar de novo' that re-runs fetchPets without a full reload; ALSO build the PET-M-CURVE post-publish closure micro-state (a calm 'seu pet está no mapa' confirmation that recenters/highlights the just-dropped pin + ONE next-decision, e.g. compartilhar/ver no mapa — reassurance, NOT a nag/streak); ALSO a dismissible one-time first-visit hint (localStorage flag) explaining 'toque no mapa onde viu o pet, depois Relatar um pet'. All pt-BR, calm/hopeful, no false urgency. Exclude: the offline publish queue + per-cause error differentiation (PET-M1); a full guided multi-step tour; funnel analytics (PET-M21)."
     gate: ["npm run lint", "npm run test", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M-CURVE"]
     acceptance_criteria:
       - "Loading exposes a busy state (aria-busy/skeleton) distinct from empty and error; zero pets shows a calm empty state pointing to Relatar; a failed fetch shows calm pt-BR copy AND a >=44px keyboard-operable 'Tentar de novo' that re-fetches."
@@ -396,7 +396,7 @@ milestones:
     priority: P2
     scope: "Include: funnel events via the existing analytics.track seam — report_started, report_published, report_failed (with the differentiated reason from PET-M1), pet_opened, marked_reunido, encerrou_busca — so the reliability PET-M1 buys and the value loop are measurable; NO PII (no contact/free-text; coords rounded as analytics.js already does; reuse trackError redaction). Split from PET-M17 (metadata) so the cheap OG fix is not buried behind analytics. Exclude: a new analytics vendor; per-pet OG images; the metadata wrapper (PET-M17)."
     gate: ["npm run lint", "npm run test", "npm run build"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M1", "PET-M2"]
     acceptance_criteria:
       - "The report->publish->reunite/encerrar funnel emits events; report_failed carries the differentiated reason and zero PII."
@@ -408,7 +408,7 @@ milestones:
     priority: P1
     scope: "Include: a discoverable, accessible entry point to /pets from the hunger map (today App.js mentions /pets only in code comments — the surface is undiscoverable without typing the URL): a labeled Next <Link>/button that does not disrupt the hunger header layout, AA contrast, >=44px target, focus-visible ring, lang-correct pt-BR copy; confirm the return path (PetsApp already has '← Mapa'). Exclude: a shared global navigation redesign; restyling the hunger header beyond inserting the link; es-parity wiring of the new string (rides PET-M23)."
     gate: ["npm run lint", "npm run build", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M0"]
     acceptance_criteria:
       - "A user on the hunger map can reach /pets via a clear, labeled, keyboard-operable link without hunting; the return path works."
@@ -420,7 +420,7 @@ milestones:
     priority: P2
     scope: "Include: route EVERY user-visible /pets string through the existing strings.js t()/useLocale system under stable keys (PetsApp header/lead, PetReportSheet legends/errors/placeholders/consent, PetDetailSheet labels, petDomain labels/hints, and every new-surface copy added by PET-M1..M22) and add the matching es entries at full parity; HUMAN-author the dignity-sensitive lines (status hints, consent, reunite/encerrar confirms, safe-contact note); add/extend the parity test asserting every pt-BR key has an es twin; never inline a user-visible string after this lands. Exclude: new locales beyond es; machine-translating dignity-sensitive copy; changing the locale-toggle mechanism."
     gate: ["npm run lint", "npm run test"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M0"]
     acceptance_criteria:
       - "Switching locale updates ALL /pets copy; pt-BR and es are at key-parity (parity test green)."
@@ -433,7 +433,7 @@ milestones:
     priority: P1
     scope: "Include: a written audit re-measuring EVERY new /pets color pairing produced across the visual items — legend chips, the --pet-reunido set, aged/reunido markers, all badge variants, the photo placeholder — recording measured sighted contrast (>=3:1 graphical, >=4.5:1 text) PLUS simulated deuteranopia/protanopia separability, annotated inline in petPalette.css/pets.css the way the original three accents are; confirm the lightness staircase still holds across all four statuses + reunido; gated on a served a11y run. Exclude: authoring the surfaces themselves (other items own those); dark-mode pairings (deferred — see header note)."
     gate: ["npm run lint", "npm run a11y"]
-    status: planned
+    status: shipped
     depends_on: ["PET-M11", "PET-M16"]
     acceptance_criteria:
       - "Every new pet color pair has a recorded sighted AA ratio annotated at its token/class."
