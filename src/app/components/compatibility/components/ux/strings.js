@@ -35,6 +35,11 @@ const DICT = {
     'cta.report': 'Relatar',
     'cta.list':   'Lista',
     'cta.help':   'Como funciona',
+    // PET-M22 — header cross-link label to the /pets (achados e perdidos) map.
+    // Full pt-BR<->es parity + the dignity-sensitive /pets copy is owned by
+    // PET-M23; this navigational label is wired under a stable shared key now
+    // (both locales) so it never renders the raw key string.
+    'cta.pets':   'Pets perdidos',
     // ── /assinar — recurring support subscription (Asaas) ──────────────────
     'assinar.back':            '← Voltar ao mapa',
     'assinar.title':           'Apoie o MAPA FOME',
@@ -104,6 +109,9 @@ const DICT = {
     'cta.report': 'Reportar',
     'cta.list':   'Lista',
     'cta.help':   'Cómo funciona',
+    // PET-M22 — see the pt-BR note; es value is a provisional twin so the label
+    // is never the raw key. PET-M23 owns the human-authored /pets es parity.
+    'cta.pets':   'Mascotas perdidas',
     // ── /assinar — suscripción de apoyo recurrente (Asaas) ─────────────────
     'assinar.back':            '← Volver al mapa',
     'assinar.title':           'Apoya MAPA FOME',
