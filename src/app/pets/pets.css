@@ -421,3 +421,200 @@
 .pet-marker svg {
   display: block;
 }
+
+/* ── Filter bar — collapsible facet filter above the map (PET-M7) ─── *
+ * A worried owner narrows the pins to find THEIR pet by the full recognition
+ * set: situação + espécie + porte + cor (texto livre) + recência. The bar is a
+ * quiet card that sits between the header and the map: a "Filtrar" toggle + a
+ * LIVE match count always visible; chips + color + recência revealed on expand.
+ *
+ * Reuse, not redefinition: chips ride .mdf-chip geometry (ux/ReportSheet.css)
+ * and the .mdf-chip--on selected state; the color input rides .mdf-sheet__input
+ * + .pet-input. Active STATUS chips additionally tint from the --pet-* palette
+ * (mirroring .pet-chip--<status>--on) so the facet reads as the same colored
+ * object as its marker. No raw hex; only --mdf-* / --pet-* tokens. The "Limpar
+ * filtros" reset is a quiet outlined secondary (the .mdf-pets__support idiom)
+ * so it never competes with the primary "Relatar um pet" FAB. */
+
+.pet-filterbar {
+  margin: 0 0 var(--mdf-space-4) 0;
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-card);
+}
+
+/* Always-visible header row: the toggle on the left, the live count on the
+ * right. Wraps gracefully on narrow viewports so neither is clipped. */
+.pet-filterbar__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+}
+
+.pet-filterbar__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target);
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  background: transparent;
+  border: none;
+  border-radius: var(--mdf-radius-card);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  color: var(--mdf-ink);
+  cursor: pointer;
+}
+
+.pet-filterbar__toggle:hover {
+  background: var(--mdf-surface-2);
+}
+
+.pet-filterbar__toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.pet-filterbar__toggle-icon {
+  font-size: var(--mdf-fs-body);
+  line-height: 1;
+}
+
+/* A small dot signals "filters are active" without color-only meaning: the
+ * count line spells it out in words, so this is a redundant glance cue. */
+.pet-filterbar__toggle-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--mdf-radius-pill);
+  background: var(--pet-perdido);
+}
+
+.pet-filterbar__toggle-caret {
+  font-size: var(--mdf-fs-caption);
+  color: var(--mdf-ink-muted);
+  line-height: 1;
+}
+
+.pet-filterbar__count {
+  margin: 0 0 0 auto;
+  padding-right: var(--mdf-space-1);
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  color: var(--mdf-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pet-filterbar__body {
+  padding: 0 var(--mdf-space-3) var(--mdf-space-3);
+  border-top: 1px solid var(--mdf-border);
+}
+
+/* Each facet is a labeled group with comfortable vertical rhythm. */
+.pet-filterbar__group {
+  border: none;
+  margin: var(--mdf-space-3) 0 0 0;
+  padding: 0;
+}
+
+.pet-filterbar__legend {
+  display: block;
+  padding: 0;
+  margin: 0 0 var(--mdf-space-2) 0;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  color: var(--mdf-ink);
+}
+
+.pet-filterbar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+}
+
+/* The chip itself rides .mdf-chip; this only relaxes the fixed grid sizing so
+ * facet chips hug their label and wrap as pills. */
+.pet-filterbar__chip {
+  flex: 0 1 auto;
+}
+
+/* Active STATUS chips carry the status tint (like .pet-chip--<status>--on),
+ * so the facet reads as the same colored object as the marker. ink-on-tint
+ * ratios are the AA-proven pairs from petPalette.css. */
+.pet-filterbar__chip--perdido.pet-filterbar__chip--on {
+  background: var(--pet-perdido-tint);
+  border-color: var(--pet-perdido);
+  color: var(--pet-perdido-ink);
+}
+.pet-filterbar__chip--encontrado.pet-filterbar__chip--on {
+  background: var(--pet-encontrado-tint);
+  border-color: var(--pet-encontrado);
+  color: var(--pet-encontrado-ink);
+}
+.pet-filterbar__chip--avistado.pet-filterbar__chip--on {
+  background: var(--pet-avistado-tint);
+  border-color: var(--pet-avistado);
+  color: var(--pet-avistado-ink);
+}
+
+/* The check inherits the chip ink so a tinted status chip's ✓ stays AA. */
+.pet-filterbar__chip--on .mdf-chip__check {
+  color: inherit;
+}
+
+.pet-filterbar__color {
+  /* rides .mdf-sheet__input + .pet-input; no extra geometry needed, but drop
+   * the inherited bottom margin since the group already owns the rhythm. */
+  margin-bottom: 0;
+}
+
+/* Calm empty hint when no pet matches — informational, no alarm color. */
+.pet-filterbar__empty {
+  margin: var(--mdf-space-3) 0 0 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+}
+
+.pet-filterbar__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--mdf-space-3);
+}
+
+/* "Limpar filtros" — quiet outlined secondary (the .mdf-pets__support idiom):
+ * ink text, never the brand fill, full touch target. */
+.pet-filterbar__clear {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mdf-touch-target);
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: transparent;
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  color: var(--mdf-ink);
+  cursor: pointer;
+  transition: border-color var(--mdf-dur-fast) var(--mdf-ease-out),
+              background var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-filterbar__clear:hover {
+  border-color: var(--mdf-ink);
+  background: var(--mdf-surface-2);
+}
+
+.pet-filterbar__clear:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-filterbar__clear {
+    transition: none;
+  }
+}

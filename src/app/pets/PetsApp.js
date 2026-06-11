@@ -13,15 +13,17 @@
 // (ou no GPS / centro padrão). Publicar adiciona o pet ao estado de forma
 // otimista para o marcador aparecer na hora.
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import './petPalette.css';
 import './pets.css';
 import Header from '../components/compatibility/components/header';
 import PetMap from './PetMap';
+import PetFilterBar from './PetFilterBar';
 import PetReportSheet from './PetReportSheet';
 import PetDetailSheet from './PetDetailSheet';
 import { fetchPets, publishPet } from './petsData';
+import { defaultPetFilter, filterPets } from './petDomain';
 
 // Mesmo centro padrão do mapa de fome (Recife) até o GPS responder.
 const DEFAULT_CENTER = [-8.0671132, -34.8766719];
@@ -34,6 +36,22 @@ export default function PetsApp() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedPet, setSelectedPet] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [filter, setFilter] = useState(defaultPetFilter());
+  // O relógio (Date.now) é uma fonte EXTERNA impura: lê-lo no corpo do render
+  // é proibido (react-hooks/purity). Então a APP o amostra num effect — re-
+  // amostrado sempre que `pets`/`filter` mudam, que é exatamente quando a
+  // recência precisa ser reavaliada. petDomain segue sem relógio (puro).
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- sancionado: o effect SINCRONIZA o estado React com um sistema externo (o relógio), re-amostrando-o quando `pets`/`filter` mudam; é o uso legítimo de effect, não um cascading render por estado derivável.
+  useEffect(() => { setNowMs(Date.now()); }, [pets, filter]);
+
+  // Lista visível = pets crus estreitados pelo filtro (PET-M7). A regra de
+  // match (incl. a janela de recência) é toda do petDomain (puro); aqui a APP
+  // só injeta o `nowMs` amostrado acima.
+  const visiblePets = useMemo(
+    () => filterPets(pets, filter, nowMs),
+    [pets, filter, nowMs],
+  );
 
   // GPS + carga inicial dos pets — sincronização com sistemas externos
   // (geolocalização + planilha), o uso sancionado de um effect. setState mora
@@ -103,9 +121,16 @@ export default function PetsApp() {
         </p>
       )}
 
+      <PetFilterBar
+        filter={filter}
+        onChange={setFilter}
+        matchCount={visiblePets.length}
+        total={pets.length}
+      />
+
       <PetMap
         center={center}
-        pets={pets}
+        pets={visiblePets}
         onPinDropped={handlePinDropped}
         onPetClick={handlePetClick}
       />
