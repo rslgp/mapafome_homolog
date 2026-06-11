@@ -30,6 +30,7 @@ import {
   defaultPetFilter,
   filterPets,
   togglePetFilterValue,
+  activePetsByAge,
 } from './petDomain';
 import {
   enqueue as enqueuePetPublish,
@@ -71,6 +72,16 @@ export default function PetsApp() {
   // filtro só reporta toggles e a contagem é derivada por filterPets. Estado
   // inicial = filtro vazio (defaultPetFilter) → todos os pets aparecem.
   const [filter, setFilter] = useState(defaultPetFilter);
+  // PET-M12 — relógio para a EXCLUSÃO por idade. Date.now() é IMPURO e não pode
+  // rodar no corpo do render (react-hooks/purity), então o relógio entra por um
+  // effect/ref — exatamente o que o comentário do nowMs do M7 já prometia. Iniciado
+  // em 0 (nenhum pet arquivado até o effect rodar, no 1º paint: a idade contra a
+  // época é negativa → dentro da janela), depois carimbado uma vez na carga inicial
+  // (o limiar é de ~90 dias — granularidade de dias; não precisamos de um relógio
+  // que tique a cada render). O predicado activePetsByAge continua PURO: o nowMs é
+  // injetado, não consultado lá dentro. O setState mora num callback assíncrono
+  // (dentro do effect de carga abaixo), nunca no corpo síncrono do effect.
+  const [nowMs, setNowMs] = useState(0);
 
   // GPS + carga inicial dos pets — sincronização com sistemas externos
   // (geolocalização + planilha), o uso sancionado de um effect. setState mora
@@ -87,7 +98,13 @@ export default function PetsApp() {
     (async () => {
       try {
         const loaded = await fetchPets();
-        if (!cancelled) setPets(loaded);
+        if (!cancelled) {
+          setPets(loaded);
+          // PET-M12 — carimba o relógio real AQUI (callback assíncrono, não o corpo
+          // síncrono do effect): a exclusão por idade passa a valer assim que os
+          // pets chegam. Date.now() fica fora do render (purity); nowMs é injetado.
+          setNowMs(Date.now());
+        }
       } catch (e) {
         if (!cancelled) setLoadError(e && e.message);
       }
@@ -115,17 +132,18 @@ export default function PetsApp() {
   }, []);
   const handleClearFilter = useCallback(() => setFilter(defaultPetFilter()), []);
 
-  // Pets VISÍVEIS = todos os pets passados pelo predicado puro. nowMs injetado
-  // (reservado p/ futura faceta de recência). Passamos 0 — não Date.now() — para
-  // não introduzir uma chamada IMPURA dentro do render (react-hooks/purity): o
-  // filtro de status/espécie/porte deste milestone não consulta o tempo, então a
-  // saída é determinística. Quando a faceta de recência chegar, o nowMs entra por
-  // um effect/ref, não pelo corpo do useMemo. Memoizado em [pets, filter] para
-  // não recomputar/remontar o cluster à toa. É esta lista — não `pets` — que vai
-  // ao mapa, então (de)selecionar um filtro estreita os pins na hora (PET-M7).
+  // Pets VISÍVEIS no mapa ativo = pets → filtro de facetas (PET-M7) → EXCLUSÃO por
+  // idade (PET-M12). nowMs do M7 segue 0 (o filtro de status/espécie/porte não
+  // consulta o tempo — determinístico). A EXCLUSÃO por idade do M12 usa o `nowMs`
+  // carimbado pelo effect (não Date.now() no render — purity), passado ao predicado
+  // PURO activePetsByAge. No 1º paint (nowMs=0) nada é arquivado (idade contra a
+  // época é negativa → dentro da janela); o effect corrige para o relógio real e
+  // poda os arquivados. Os reports além da janela NÃO entram nesta lista (somem do
+  // MAPA ativo), mas a linha na planilha fica intacta — nada é mutado/deletado, e
+  // uma futura lista/sheet (PET-M8) que mostre arquivados NÃO aplica esta exclusão.
   const visiblePets = useMemo(
-    () => filterPets(pets, filter, 0),
-    [pets, filter],
+    () => activePetsByAge(filterPets(pets, filter, 0), nowMs),
+    [pets, filter, nowMs],
   );
 
   // Publica um pet, classificando a falha em uma causa CALMA distinta (PET-M1).

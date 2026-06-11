@@ -261,6 +261,18 @@ export function sanitizeFreeText(raw, maxLen) {
 // uma renomeação do campo na planilha é uma edição de uma linha só, aqui.
 export const PET_RESOLVED_AT_KEY = 'resolvedAt';
 
+// ─── PET-M12 / PET-M13 — chave ESTÁVEL do carimbo de FRESCOR no blob Dados (SOT) ─
+// PET_FRESHNESS_SPEC.md §5.2: `freshnessAt` é o "fato vivo" — quando o dono
+// afirmou pela última vez que o report vale. É SEPARADO de `DateISO` (o fato
+// histórico imutável de 1ª publicação): sobrescrever DateISO apagaria a verdade
+// e violaria a Lens of Honesty (um report de 45 dias pareceria ter 2). M12 só
+// LÊ este campo (a idade-para-arquivo mede contra ele com fallback p/ DateISO);
+// M13 o ESCREVE quando o dono toca "ainda procurando" (reusa o writer do PET-M2,
+// rides updatePetByCoords). Linhas sem o campo (todas, hoje) leem como "nunca
+// renovado" → a idade cai no fallback DateISO. Ninguém escreve a string literal
+// 'freshnessAt' fora deste módulo — leem/gravam por esta constante.
+export const PET_FRESHNESS_AT_KEY = 'freshnessAt';
+
 // Monta o blob `Dados` de uma linha de pet. PURA: lança Error claro se status ou
 // coords forem inválidos; exige `dateIso` do chamador (sem Date.now() aqui).
 // Campos de texto opcionais caem para string vazia.
@@ -271,7 +283,7 @@ export const PET_RESOLVED_AT_KEY = 'resolvedAt';
 // (sem resolvedAt) não carrega a chave, e o parser a lê de volta como ATIVA
 // (backward-compat). Isto REMOVE a suposição implícita de que todo pet montado
 // está ativo — o estado agora é explícito no blob.
-export function buildPetDados({ coords, status, species, size, color, name, contact, detail, photos, dateIso, resolvedAt }) {
+export function buildPetDados({ coords, status, species, size, color, name, contact, detail, photos, dateIso, resolvedAt, freshnessAt }) {
   if (!isValidStatus(status)) {
     throw new Error(`buildPetDados: status inválido "${status}"`);
   }
@@ -301,6 +313,13 @@ export function buildPetDados({ coords, status, species, size, color, name, cont
   // mantém as linhas ativas LIMPAS (sem campo nulo) e o round-trip simétrico.
   if (resolvedAt) {
     dados[PET_RESOLVED_AT_KEY] = resolvedAt;
+  }
+  // PET-M12/M13 — `freshnessAt` segue a MESMA disciplina opcional do resolvedAt:
+  // só é emitido quando o chamador injeta um ISO (o writer de "ainda procurando"
+  // do M13). Uma linha recém-publicada NÃO carrega a chave (round-trip limpo) e o
+  // parser a lê de volta como undefined → a idade cai no fallback DateISO.
+  if (freshnessAt) {
+    dados[PET_FRESHNESS_AT_KEY] = freshnessAt;
   }
   return dados;
 }
@@ -407,6 +426,10 @@ export function parsePetRow(row) {
   // ISO, mas o consumidor (mapa/lista) só precisa do booleano para descartar
   // ou distinguir um pet reunido (ver também isPetResolved).
   const resolvedAt = dados[PET_RESOLVED_AT_KEY] || undefined;
+  // PET-M12/M13 — carimbo de frescor (round-trip, backward-compat). Linhas sem o
+  // campo (todas hoje) leem como undefined → o relógio de idade cai no fallback
+  // DateISO (ver isPetArchivedByAge). M13 grava este campo via o writer do M2.
+  const freshnessAt = dados[PET_FRESHNESS_AT_KEY] || undefined;
   return {
     coords,
     status: dados.status,
@@ -420,6 +443,12 @@ export function parsePetRow(row) {
     dateIso: dados.DateISO,
     resolvedAt,
     resolved: Boolean(resolvedAt),
+    // `freshnessAt` é exposto para o relógio de idade do M12/M13 medir contra ele
+    // com fallback para `dateIso`. Não vira um booleano derivado aqui (diferente
+    // de `resolved`): a idade é contínua, então o discriminador `aged` é DERIVADO
+    // por isPetArchivedByAge(pet, nowMs) no boundary que tem o relógio (PetsApp),
+    // nunca no parse puro (que é determinístico, sem Date.now()).
+    freshnessAt,
   };
 }
 
@@ -429,6 +458,95 @@ export function parsePetRow(row) {
 // PET-M2.
 export function isPetResolved(pet) {
   return Boolean(pet && pet[PET_RESOLVED_AT_KEY]);
+}
+
+// ─── PET-M12 — amortecedor MECÂNICO de staleness (age-archive, EXCLUSÃO de mapa) ─
+//
+// A TESE (PET_FRESHNESS_SPEC §0): passado um limiar de IDADE, um report some do
+// mapa ATIVO — arquivado *in place*, NUNCA deletado. É a camada cega/determinística
+// que age sozinha quando ninguém confirmou nada (o convite humano honesto é o
+// PET-M13). Fork do helper de idade da fome (mdfMarkers.hoursSince/isArchived):
+// mesma forma "idade desde um ISO cruza um limiar = arquivado", MAS endurecida em
+// dois pontos exigidos pela disciplina deste módulo:
+//   1. PURA + DETERMINÍSTICA — `nowMs` é INJETADO pelo chamador, nunca Date.now()
+//      aqui (o helper de fome chama Date.now() inline; aqui o relógio mora no
+//      boundary, igual a buildPetDados/matchesPetFilter). Testável sem fake timers.
+//   2. EXCLUSÃO de LEITURA, não escrita — o report NÃO é mutado nem deletado. O
+//      predicado deriva o estado "arquivado" da IDADE; o mapa ativo o exclui na
+//      leitura. A linha na planilha fica intacta (audit trail + isolação kind:'pet'
+//      preservados). É o que a acceptance line "no row is ever deleted" exige.
+//
+// ── O LIMIAR VIVE EM UMA SOT (a constante abaixo) ──
+// Lido pelo predicado E por qualquer teste — nunca espalhado. ~90 dias é o default
+// do spec (§2.1) e é DURO que seja MAIOR que o limiar de frescor do M13 (30 dias):
+// o convite humano (M13) precede o machado mecânico (M12), dando ao dono ~60 dias
+// de folga entre "fui convidado a confirmar" e "fui arquivado por idade".
+export const PET_ARCHIVE_WINDOW_DAYS = 90;
+
+// Ms por dia — fator de conversão local (evita o número mágico 86400000 espalhado).
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+// Idade de um pet em DIAS, medida contra o carimbo de FRESCOR se presente, senão
+// contra o DateISO de publicação (PET_FRESHNESS_SPEC §2.1/§5.2). PURA: `nowMs`
+// injetado. Defensiva: ISO ausente/inválido → Infinity (um report sem data legível
+// conta como "infinitamente velho" e é arquivado, em vez de viver para sempre no
+// mapa por causa de um dado quebrado — espelha o hoursSince→Infinity da fome).
+//
+// O fallback DateISO→freshnessAt é o que torna o M13 capaz de ADIAR o M12: quando
+// o dono toca "ainda procurando" (M13 grava freshnessAt=agora), o relógio de idade
+// reseta legitimamente, porque o dono AFIRMOU que o report ainda vale. Hoje, sem
+// nenhuma linha carregando freshnessAt, a idade sempre cai no DateISO — o M13
+// alimenta este mesmo cálculo sem reescrever a assinatura (LSP).
+export function petAgeDays(pet, nowMs) {
+  const p = pet || {};
+  // freshnessAt (fato vivo) tem precedência sobre dateIso (fato histórico).
+  const iso = p[PET_FRESHNESS_AT_KEY] || p.dateIso;
+  if (!iso) return Infinity;
+  const then = Date.parse(iso);
+  if (Number.isNaN(then)) return Infinity;
+  return (nowMs - then) / MS_PER_DAY;
+}
+
+// Predicado PURO de "este report deve sair do mapa ativo por IDADE?". `nowMs`
+// injetado (determinístico, nunca Date.now() aqui). `windowDays` lido do SOT por
+// default; aceita um override só para testes determinísticos. NUNCA lança.
+//
+// Um pet REUNIDO (resolvedAt) NÃO é "arquivado por idade": ele já saiu do mapa
+// ativo pelo lifecycle resolvido (PET-M2), e tratá-lo como aged-by-age confundiria
+// dois eixos ortogonais (resolvido vs envelhecido). Aqui respondemos só ao eixo da
+// IDADE; o eixo do lifecycle resolvido é de isPetResolved. (lifecycleForPet em
+// petMarkerIcon já dá precedência a `reunido` sobre `aged`.)
+export function isPetArchivedByAge(pet, nowMs, windowDays = PET_ARCHIVE_WINDOW_DAYS) {
+  if (!pet) return false;
+  if (isPetResolved(pet)) return false; // resolvido sai por outro eixo, não por idade
+  return petAgeDays(pet, nowMs) >= windowDays;
+}
+
+// Estampa o discriminador derivado `aged` em UM pet parseado, SEM mutar o original
+// (devolve um objeto novo). `aged` é o que petMarkerIcon.lifecycleForPet já lê para
+// o cue visual de envelhecimento do PET-M11 — esta é a integração natural: o M12
+// computa o booleano (com o relógio do boundary) e o pendura no pet, e o M11
+// renderiza a pista. PURA: `nowMs` injetado. Não deleta nada; o flag é de leitura.
+//
+// NOTA de fronteira: aqui `aged` significa "cruzou a JANELA DE ARQUIVO" — o mesmo
+// limiar que o exclui do mapa. No mapa ativo um pet aged já foi EXCLUÍDO (não
+// renderiza), então o cue visual aged do M11 aparece em superfícies que mostram
+// reports arquivados (ex.: a lista/sheet, que mantém o report — acceptance line 1).
+export function withAgedFlag(pet, nowMs, windowDays = PET_ARCHIVE_WINDOW_DAYS) {
+  if (!pet) return pet;
+  return { ...pet, aged: isPetArchivedByAge(pet, nowMs, windowDays) };
+}
+
+// EXCLUSÃO de mapa ativo (SOT da regra, num só lugar): dado todos os pets + o
+// relógio injetado, devolve só os que NÃO foram arquivados por idade. PURA,
+// nunca lança, defende contra `pets` não-array (→ []). É READ-side: nenhuma linha
+// é mutada/deletada — os arquivados simplesmente não entram nesta lista. O PetsApp
+// chama isto para derivar a lista que vai ao mapa (espelha filterPets do PET-M7).
+// Os reports arquivados continuam existindo na planilha e na sheet/lista (que NÃO
+// aplica esta exclusão) — "somem do mapa ativo mas permanecem na sheet".
+export function activePetsByAge(pets, nowMs, windowDays = PET_ARCHIVE_WINDOW_DAYS) {
+  if (!Array.isArray(pets)) return [];
+  return pets.filter((pet) => !isPetArchivedByAge(pet, nowMs, windowDays));
 }
 
 // ─── PET-M4 — guarda-corpos de confiança: rate-limit + heurística de abuso ────
