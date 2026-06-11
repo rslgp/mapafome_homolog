@@ -13,6 +13,8 @@ import { MARKER_PLACED_EVENT, MARKER_CLEARED_EVENT } from './mapComponents';
 import { bean as coffeeBean, hub, green, red } from './image/svgHandler';
 import { NEED_CATEGORIES } from './ux/needCategories';
 
+import Link from 'next/link';
+
 const MainControls = ({
   isLoading,
   alimento,
@@ -238,8 +240,7 @@ const MainControls = ({
                     onChange={onTipoAlimentoChange}
                   />
                   <span className='greenHub'> Tenho alimento perto de se perder 
-                    <a target='_blank' rel="noreferrer" href="https://www.camara.leg.br/noticias/670937-nova-lei-incentiva-empresas-a-doarem-alimentos-e-refeicoes-para-pessoas-vulneraveis/">lei-2020</a>  
-                    <a target='_blank' rel="noreferrer" href="https://www2.camara.leg.br/legin/fed/lei/2025/lei-15224-30-setembro-2025-798048-publicacaooriginal-176570-pl.html">lei-2025</a>  
+                    <Link target='_blank' rel="noreferrer" href="https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2025/lei/l15224.htm">lei-2025</Link> 
                     
                     <img width="30px" height="30px" src={green} alt="green"></img></span>
                   <br></br>
