@@ -261,6 +261,35 @@ export function sanitizeFreeText(raw, maxLen) {
 // uma renomeação do campo na planilha é uma edição de uma linha só, aqui.
 export const PET_RESOLVED_AT_KEY = 'resolvedAt';
 
+// ─── PET-M7b — DISCRIMINADOR de MOTIVO do fechamento (closureReason, SOT) ─────
+// `resolvedAt` (PET-M2) diz QUANDO o report saiu do mapa ativo. `closureReason`
+// diz POR QUÊ — e os dois desfechos do estágio E da curva (PET_CURVE §1-E) são
+// semanticamente DISTINTOS, embora ambos carimbem resolvedAt:
+//   • REUNIDO   — o pet voltou (o desfecho mais esperançoso).
+//   • ENCERRADO — o dono parou de procurar, um fechamento DIGNO e consciente
+//                 (distinto de envelhecer/arquivar em silêncio pela janela do M12).
+// Round-trip igual ao resolvedAt: buildPetDados EMITE a chave só quando presente,
+// parsePetRow a LÊ de volta, e linhas antigas (sem a chave) leem como undefined
+// (backward-compat). Ninguém escreve a string literal 'closureReason' fora deste
+// módulo — o writer (petsData.resolvePet) e o parser usam esta constante.
+export const PET_CLOSURE_REASON_KEY = 'closureReason';
+
+// Os DOIS motivos válidos (SOT). Ids estáveis (vão pra planilha). Ninguém escreve
+// 'reunido'/'encerrado' hardcoded como motivo — importam destas constantes.
+export const PET_CLOSURE_REASON = {
+  REUNIDO: 'reunido',
+  ENCERRADO: 'encerrado',
+};
+
+const CLOSURE_REASON_IDS = new Set(Object.values(PET_CLOSURE_REASON));
+
+// Um motivo de fechamento é válido? Defensivo: qualquer valor fora da SOT (lixo,
+// undefined) → false. PURO. Usado por buildPetDados (barricada de escrita) e pode
+// ser lido por qualquer consumidor que precise distinguir os dois desfechos.
+export function isValidClosureReason(reason) {
+  return CLOSURE_REASON_IDS.has(reason);
+}
+
 // ─── PET-M12 / PET-M13 — chave ESTÁVEL do carimbo de FRESCOR no blob Dados (SOT) ─
 // PET_FRESHNESS_SPEC.md §5.2: `freshnessAt` é o "fato vivo" — quando o dono
 // afirmou pela última vez que o report vale. É SEPARADO de `DateISO` (o fato
@@ -283,7 +312,7 @@ export const PET_FRESHNESS_AT_KEY = 'freshnessAt';
 // (sem resolvedAt) não carrega a chave, e o parser a lê de volta como ATIVA
 // (backward-compat). Isto REMOVE a suposição implícita de que todo pet montado
 // está ativo — o estado agora é explícito no blob.
-export function buildPetDados({ coords, status, species, size, color, name, contact, detail, photos, dateIso, resolvedAt, freshnessAt }) {
+export function buildPetDados({ coords, status, species, size, color, name, contact, detail, photos, dateIso, resolvedAt, closureReason, freshnessAt }) {
   if (!isValidStatus(status)) {
     throw new Error(`buildPetDados: status inválido "${status}"`);
   }
@@ -313,6 +342,14 @@ export function buildPetDados({ coords, status, species, size, color, name, cont
   // mantém as linhas ativas LIMPAS (sem campo nulo) e o round-trip simétrico.
   if (resolvedAt) {
     dados[PET_RESOLVED_AT_KEY] = resolvedAt;
+  }
+  // PET-M7b — `closureReason` segue a MESMA disciplina opcional do resolvedAt:
+  // só é emitido quando o chamador passa um motivo VÁLIDO (da SOT). Um motivo
+  // lixo/inválido é descartado (não polui o blob) — a barricada de escrita aceita
+  // só 'reunido'/'encerrado'. Uma linha ativa (sem fechamento) não carrega a chave
+  // e o parser a lê de volta como undefined (backward-compat).
+  if (isValidClosureReason(closureReason)) {
+    dados[PET_CLOSURE_REASON_KEY] = closureReason;
   }
   // PET-M12/M13 — `freshnessAt` segue a MESMA disciplina opcional do resolvedAt:
   // só é emitido quando o chamador injeta um ISO (o writer de "ainda procurando"
@@ -426,6 +463,13 @@ export function parsePetRow(row) {
   // ISO, mas o consumidor (mapa/lista) só precisa do booleano para descartar
   // ou distinguir um pet reunido (ver também isPetResolved).
   const resolvedAt = dados[PET_RESOLVED_AT_KEY] || undefined;
+  // PET-M7b — motivo do fechamento (round-trip, backward-compat). Linhas antigas
+  // (sem a chave) E pets ativos leem como undefined. Um valor fora da SOT é
+  // descartado na leitura também (só 'reunido'/'encerrado' sobrevivem) — a mesma
+  // barricada da escrita, espelhada na leitura, para um blob adulterado não
+  // injetar um motivo lixo na UI.
+  const rawClosure = dados[PET_CLOSURE_REASON_KEY];
+  const closureReason = isValidClosureReason(rawClosure) ? rawClosure : undefined;
   // PET-M12/M13 — carimbo de frescor (round-trip, backward-compat). Linhas sem o
   // campo (todas hoje) leem como undefined → o relógio de idade cai no fallback
   // DateISO (ver isPetArchivedByAge). M13 grava este campo via o writer do M2.
@@ -443,6 +487,11 @@ export function parsePetRow(row) {
     dateIso: dados.DateISO,
     resolvedAt,
     resolved: Boolean(resolvedAt),
+    // PET-M7b — POR QUÊ do fechamento (ou undefined se ativo / linha antiga). O
+    // mapa/lista só precisa de `resolved` (booleano) para podar; `closureReason`
+    // distingue reunido de encerrado onde o desfecho importa (ex.: PET-M11 pode
+    // dar um glifo distinto, ou analytics PET-M21 separar os funis).
+    closureReason,
     // `freshnessAt` é exposto para o relógio de idade do M12/M13 medir contra ele
     // com fallback para `dateIso`. Não vira um booleano derivado aqui (diferente
     // de `resolved`): a idade é contínua, então o discriminador `aged` é DERIVADO

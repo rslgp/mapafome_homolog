@@ -19,6 +19,8 @@ import {
   parsePetRow,
   isPetRow,
   PET_RESOLVED_AT_KEY,
+  PET_CLOSURE_REASON_KEY,
+  isValidClosureReason,
   PET_PUBLISH_RATE_LIMIT,
   classifyPublishThrottle,
   publishPayloadSignature,
@@ -187,18 +189,28 @@ export async function updatePetByCoords(envVariables, coordsStr, mutator) {
   return target;
 }
 
-// Marca um pet como REUNIDO carimbando resolvedAt no blob Dados da linha que
+// Marca um pet como RESOLVIDO carimbando resolvedAt no blob Dados da linha que
 // casa as coords. Conveniência sobre updatePetByCoords: stamping de tempo é
 // feito AQUI (runtime real — espelha a disciplina de dateIso em publishPet),
 // deixando petDomain puro. O ISO pode ser INJETADO (resolvedAt) — é isto que
 // torna o resolve enfileirável: a fila offline do PET-M1 guarda o MESMO payload
-// (coords + resolvedAt + idempotency_key) e um flush reaplica com o mesmo
-// carimbo, então um reload lê de volta IDÊNTICO ao escrito nesta sessão (LSP).
+// (coords + resolvedAt + closureReason + idempotency_key) e um flush reaplica
+// com o mesmo carimbo, então um reload lê de volta IDÊNTICO ao escrito nesta
+// sessão (LSP).
+//
+// PET-M7b — `closureReason` ('reunido' | 'encerrado') diz POR QUÊ o report saiu
+// do mapa ativo. Os dois desfechos do estágio E da curva (PET_CURVE §1-E) carimbam
+// AMBOS resolvedAt (o pet some do mapa ativo) mas são semanticamente distintos:
+// 'reunido' = o pet voltou; 'encerrado' = o dono parou de procurar (fechamento
+// digno). O motivo é validado contra a SOT (isValidClosureReason) ANTES de ser
+// escrito — um valor lixo é descartado, então o blob nunca carrega um motivo
+// inválido. Reescreve SÓ os campos de ciclo de vida (resolvedAt + closureReason),
+// preservando o isolamento kind:'pet' herdado de updatePetByCoords.
 //
 // Idempotente: reusa o seenIdempotencyKeys de publishPet — um flush da fila
 // nunca reescreve duas vezes a mesma resolução. Retorna a linha (ou null se a
 // linha sumiu/arquivou — o chamador degrada com calma, PET-M18).
-export async function resolvePet({ coords, resolvedAt, idempotency_key, envVariables = {} }) {
+export async function resolvePet({ coords, resolvedAt, closureReason, idempotency_key, envVariables = {} }) {
   // Idempotência: se já aplicamos esta resolução, devolve sem gravar de novo.
   if (idempotency_key && seenIdempotencyKeys.has(idempotency_key)) {
     return null;
@@ -207,8 +219,12 @@ export async function resolvePet({ coords, resolvedAt, idempotency_key, envVaria
   const stampIso = resolvedAt || new Date().toISOString();
   const coordsStr = JSON.stringify(coords);
   const row = await updatePetByCoords(envVariables, coordsStr, (dados) => {
-    // Escreve SÓ o campo de ciclo de vida; nada mais do blob é tocado.
+    // Escreve SÓ os campos de ciclo de vida; nada mais do blob é tocado.
     dados[PET_RESOLVED_AT_KEY] = stampIso;
+    // Só carimba o motivo quando válido (SOT) — um motivo lixo é descartado.
+    if (isValidClosureReason(closureReason)) {
+      dados[PET_CLOSURE_REASON_KEY] = closureReason;
+    }
   });
   if (idempotency_key) seenIdempotencyKeys.add(idempotency_key);
   return row;

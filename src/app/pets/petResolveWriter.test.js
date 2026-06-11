@@ -24,7 +24,7 @@ vi.mock('../components/compatibility/components/googlesheets/sheetsClient', () =
   validateCoordinatePair: vi.fn((coords) => coords),
 }));
 
-import { buildPetDados, parsePetRow, PET_KIND } from './petDomain';
+import { buildPetDados, parsePetRow, PET_KIND, PET_CLOSURE_REASON } from './petDomain';
 
 const COORDS = [-8.0671132, -34.8766719];
 const ISO = '2026-06-11T12:00:00.000Z';
@@ -138,5 +138,68 @@ describe('resolvePet — carimba resolvedAt, idempotente, round-trip por reload'
     // O carimbo é exatamente o ISO injetado — é isto que deixa um flush da fila
     // reaplicar e ler de volta IDÊNTICO (LSP), sem depender de Date.now().
     expect(JSON.parse(row.Dados).resolvedAt).toBe(ISO);
+  });
+});
+
+describe('resolvePet — PET-M7b: closureReason ("reunido" | "encerrado") round-trip', () => {
+  it('carimba o motivo reunido junto com resolvedAt (reescreve SÓ os campos de ciclo)', async () => {
+    const petDados = buildPetDados({ coords: COORDS, status: 'perdido', dateIso: ISO });
+    const row = makeRow(petDados);
+    withRows([row]);
+
+    await resolvePet({
+      coords: COORDS, resolvedAt: ISO, closureReason: PET_CLOSURE_REASON.REUNIDO,
+      idempotency_key: 'reu', envVariables: {},
+    });
+
+    const reloaded = parsePetRow({ Dados: row.Dados });
+    expect(reloaded.resolved).toBe(true);
+    expect(reloaded.closureReason).toBe(PET_CLOSURE_REASON.REUNIDO);
+    // Isolamento intacto: nenhuma coluna de fome foi introduzida.
+    const written = JSON.parse(row.Dados);
+    expect(written.kind).toBe(PET_KIND);
+    expect(written.Roaster).toBeUndefined();
+  });
+
+  it('carimba o motivo encerrado (fechamento digno, distinto de reunido)', async () => {
+    const petDados = buildPetDados({ coords: COORDS, status: 'perdido', dateIso: ISO });
+    const row = makeRow(petDados);
+    withRows([row]);
+
+    await resolvePet({
+      coords: COORDS, resolvedAt: ISO, closureReason: PET_CLOSURE_REASON.ENCERRADO,
+      idempotency_key: 'enc', envVariables: {},
+    });
+
+    const reloaded = parsePetRow({ Dados: row.Dados });
+    expect(reloaded.resolved).toBe(true);
+    expect(reloaded.closureReason).toBe(PET_CLOSURE_REASON.ENCERRADO);
+  });
+
+  it('descarta um motivo inválido mas ainda resolve (resolvedAt carimbado)', async () => {
+    const petDados = buildPetDados({ coords: COORDS, status: 'perdido', dateIso: ISO });
+    const row = makeRow(petDados);
+    withRows([row]);
+
+    await resolvePet({
+      coords: COORDS, resolvedAt: ISO, closureReason: 'desistido',
+      idempotency_key: 'bad', envVariables: {},
+    });
+
+    const reloaded = parsePetRow({ Dados: row.Dados });
+    expect(reloaded.resolved).toBe(true);        // ainda resolve
+    expect(reloaded.closureReason).toBeUndefined(); // motivo lixo descartado
+  });
+
+  it('resolve sem motivo (compat) — resolvedAt sem closureReason', async () => {
+    const petDados = buildPetDados({ coords: COORDS, status: 'perdido', dateIso: ISO });
+    const row = makeRow(petDados);
+    withRows([row]);
+
+    await resolvePet({ coords: COORDS, resolvedAt: ISO, idempotency_key: 'noreason', envVariables: {} });
+
+    const reloaded = parsePetRow({ Dados: row.Dados });
+    expect(reloaded.resolved).toBe(true);
+    expect(reloaded.closureReason).toBeUndefined();
   });
 });

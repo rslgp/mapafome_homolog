@@ -16,8 +16,9 @@ import React from 'react';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 
-// PetDetailSheet importa flagPet de petsData; mockamos para o render ficar puro.
-vi.mock('./petsData', () => ({ flagPet: vi.fn() }));
+// PetDetailSheet importa flagPet + resolvePet de petsData; mockamos os dois para
+// o render ficar puro (sem tocar o I/O de planilha).
+vi.mock('./petsData', () => ({ flagPet: vi.fn(), resolvePet: vi.fn() }));
 
 import PetReportSheet from './PetReportSheet';
 import PetDetailSheet from './PetDetailSheet';

@@ -5,8 +5,8 @@ import '../components/compatibility/components/ux/PinDetailSheet.css';
 import './pets.css';
 import { createDirectionUrl, formatRelativeTime } from '../components/compatibility/components/mapUtils';
 import { resolveContact } from '../components/compatibility/components/ux/contactLink';
-import { PET_STATUS_MAP, PET_SPECIES, PET_SIZES, petCoordsKey, PET_DEEPLINK_PARAM } from './petDomain';
-import { flagPet } from './petsData';
+import { PET_STATUS_MAP, PET_SPECIES, PET_SIZES, petCoordsKey, PET_DEEPLINK_PARAM, PET_CLOSURE_REASON } from './petDomain';
+import { flagPet, resolvePet } from './petsData';
 
 // PET-M4 — estados do fluxo de denúncia (flag) na própria sheet (máquina de
 // estados pequena, dois passos: ocioso → confirmar → enviando → feito/erro).
@@ -18,6 +18,33 @@ const FLAG_CONFIRM = 'confirm';
 const FLAG_SENDING = 'sending';
 const FLAG_DONE = 'done';
 const FLAG_ERROR = 'error';
+
+// PET-M7b — máquina de estados do FECHAMENTO (lifecycle) na própria sheet,
+// ESPELHANDO o padrão de dois passos da denúncia acima. Um único state cobre os
+// DOIS desfechos (reunido / encerrar busca): o passo de confirmação guarda QUAL
+// motivo está pendente, então não duplicamos a máquina. Estágio E da curva
+// (PET_CURVE §1-E) — desfecho com confirmação GENTIL e sucesso MORNO, jamais um
+// pico celebratório (governador §2, regra do não-spike).
+//   IDLE:    mostra os dois botões de ação ("Marcar como reunido" / "Encerrar
+//            busca"); CONFIRM_REUNIDO / CONFIRM_ENCERRADO: pergunta calma +
+//            confirmar/voltar para o motivo escolhido; SENDING: gravando;
+//            DONE_REUNIDO / DONE_ENCERRADO: estado morno-mas-não-spiked específico
+//            de cada desfecho; ERROR: cópia calma de "não deu, tente de novo".
+const LC_IDLE = 'idle';
+const LC_CONFIRM_REUNIDO = 'confirm_reunido';
+const LC_CONFIRM_ENCERRADO = 'confirm_encerrado';
+const LC_SENDING = 'sending';
+const LC_DONE_REUNIDO = 'done_reunido';
+const LC_DONE_ENCERRADO = 'done_encerrado';
+const LC_ERROR = 'error';
+
+// Mapeia o estado de confirmação → o motivo de fechamento da SOT, para o handler
+// gravar o motivo certo sem reimplementar a regra em cada botão (lookup, não
+// condicional espalhada). Cada confirmação sabe qual motivo está pendente.
+const CONFIRM_TO_REASON = {
+  [LC_CONFIRM_REUNIDO]: PET_CLOSURE_REASON.REUNIDO,
+  [LC_CONFIRM_ENCERRADO]: PET_CLOSURE_REASON.ENCERRADO,
+};
 
 // /pets — read-only detail sheet, forked from PinDetailSheet. Shows the report a
 // person published: status badge, species/size/color line, name (or fallback),
@@ -39,10 +66,14 @@ function describePet(pet) {
   return parts.join(' · ');
 }
 
-export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, onClose }) {
+export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, onResolved, onClose }) {
   const triggerRef = useRef(null);
   const closeRef = useRef(null);
   const revealRef = useRef(null);
+  // PET-M7b — leva o foco para o estado de fechamento DONE depois da transição,
+  // para um usuário de leitor de tela não ficar preso no botão que sumiu (mesma
+  // disciplina rAF do revealRef). O nó DONE tem role=status (anúncio AT) + tabIndex.
+  const lifecycleDoneRef = useRef(null);
 
   // PET-M3 — REVEAL-ON-TAP. O contato de quem reportou NÃO é exposto ao abrir o
   // detalhe: um estranho que só passa o olho na listagem não leva o contato de
@@ -54,6 +85,11 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
   // PET-M4 — estado do fluxo de denúncia (dois passos). Reseta junto com o
   // reveal quando o pet aberto muda (mesma forcing-function de não-vazamento).
   const [flagState, setFlagState] = useState(FLAG_IDLE);
+
+  // PET-M7b — estado do fluxo de FECHAMENTO (lifecycle). Reseta ao trocar de pet
+  // (mesma forcing-function): um fechamento pendente de um pet jamais "vaza" para
+  // o próximo aberto.
+  const [lifecycleState, setLifecycleState] = useState(LC_IDLE);
 
   // PET-M9b — o hint "possível encontro" é DISPENSÁVEL (opt-in, não-intrusivo,
   // spec §2.1/§2.4): o dono pode fechá-lo sem agir. Reseta ao trocar de pet (igual
@@ -74,6 +110,8 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
     if (revealed) setRevealed(false);
     // PET-M4 — a denúncia de um pet jamais "vaza" para o próximo aberto.
     if (flagState !== FLAG_IDLE) setFlagState(FLAG_IDLE);
+    // PET-M7b — um fechamento pendente de um pet também não vaza para o próximo.
+    if (lifecycleState !== LC_IDLE) setLifecycleState(LC_IDLE);
     // PET-M9b — a dispensa do hint também não vaza para o próximo pet aberto.
     if (matchDismissed) setMatchDismissed(false);
   }
@@ -178,6 +216,42 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
       setFlagState(FLAG_ERROR);
     }
   };
+
+  // PET-M7b — confirma e grava o FECHAMENTO (reunido / encerrar busca). Espelha
+  // handleFlag: persiste pelo writer coords-keyed do PET-M2 (resolvePet →
+  // updatePetByCoords), que reescreve SÓ a coluna Dados (resolvedAt + closureReason)
+  // e só casa uma linha de pet (isolamento). A idempotency_key é DERIVADA das coords
+  // do pet, então um re-tap não regrava (reusa o cache de petsData). Async é
+  // aceitável (não é um gesto sensível de share/clipboard — é uma escrita comum).
+  // Em sucesso, AVISA o PetsApp (onResolved) para atualizar o pet no estado: o
+  // marcador reunido do M11 renderiza e o pet sai do mapa ativo na hora. Degrada
+  // com calma para ERROR se a gravação falhar — sem culpa, sem alarme.
+  const handleResolve = async (reason) => {
+    if (!pet) return;
+    setLifecycleState(LC_SENDING);
+    // Carimba o ISO AQUI (uma vez) e passa ao writer E ao onResolved, para o pet
+    // otimista no estado bater com o que foi gravado (mesmo resolvedAt — LSP).
+    const resolvedAt = new Date().toISOString();
+    try {
+      const key = `resolve:${reason}:${JSON.stringify(pet.coords)}`;
+      await resolvePet({ coords: pet.coords, resolvedAt, closureReason: reason, idempotency_key: key });
+      onResolved?.({ ...pet, resolvedAt, resolved: true, closureReason: reason });
+      setLifecycleState(reason === PET_CLOSURE_REASON.REUNIDO ? LC_DONE_REUNIDO : LC_DONE_ENCERRADO);
+    } catch (_e) {
+      setLifecycleState(LC_ERROR);
+    }
+  };
+
+  // Após a transição para um estado DONE, leva o foco para a mensagem de
+  // fechamento (role=status já anuncia ao AT; o foco evita o leitor de tela/
+  // teclado ficar preso no botão que sumiu). rAF: espera o DOM pintar o novo nó.
+  // Mesma disciplina do effect de revelar contato (PET-M3).
+  const lifecycleDone = lifecycleState === LC_DONE_REUNIDO || lifecycleState === LC_DONE_ENCERRADO;
+  useEffect(() => {
+    if (!lifecycleDone) return undefined;
+    const id = requestAnimationFrame(() => lifecycleDoneRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [lifecycleDone]);
 
   if (!open || !pet || !derived) return null;
 
@@ -313,6 +387,137 @@ export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, o
           <p ref={revealRef} tabIndex={-1} className="mdf-pin-sheet__stub">
             {revealedContact.label}
           </p>
+        )}
+
+        {/* PET-M7b — ações de FECHAMENTO (estágio E da curva, PET_CURVE §1-E): as
+            PRIMEIRAS ações de escrita da sheet. "Marcar como reunido" (o desfecho
+            mais esperançoso) e "Encerrar busca" (um fechamento DIGNO e consciente,
+            sem culpa). Cada uma é um fluxo de DOIS passos gentil (ESPELHA a máquina
+            da denúncia): tocar → confirmação calma → grava via resolvePet (PET-M2,
+            isolamento kind:'pet') → estado MORNO-mas-não-spiked. SEM confete, SEM
+            pico celebratório (governador §2, regra do não-spike). <=2 taps; cada
+            alvo >=44px, operável por teclado. role/aria-live em cada estado para o
+            AT (público em estresse não caça feedback sutil). */}
+        {(pet.resolved && lifecycleState === LC_IDLE) ? null : (
+        <div className="pet-detail__lifecycle">
+          {lifecycleState === LC_IDLE && (
+            <div className="pet-detail__lifecycle-actions" role="group" aria-label="Desfecho deste relato">
+              <button
+                type="button"
+                className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--reunido"
+                onClick={() => setLifecycleState(LC_CONFIRM_REUNIDO)}
+              >
+                <span aria-hidden="true">🐾</span>
+                <span>Marcar como reunido</span>
+              </button>
+              <button
+                type="button"
+                className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--encerrar"
+                onClick={() => setLifecycleState(LC_CONFIRM_ENCERRADO)}
+              >
+                Encerrar busca
+              </button>
+            </div>
+          )}
+
+          {lifecycleState === LC_CONFIRM_REUNIDO && (
+            <div className="pet-detail__lifecycle-confirm" role="group" aria-label="Confirmar reencontro">
+              <p className="pet-detail__lifecycle-note">
+                Que notícia boa. Vamos marcar este pet como reunido e tirá-lo do
+                mapa ativo — o relato continua guardado.
+              </p>
+              <div className="pet-detail__lifecycle-confirm-actions">
+                <button
+                  type="button"
+                  className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--confirm"
+                  onClick={() => handleResolve(PET_CLOSURE_REASON.REUNIDO)}
+                >
+                  Sim, foi reunido
+                </button>
+                <button
+                  type="button"
+                  className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--cancel"
+                  onClick={() => setLifecycleState(LC_IDLE)}
+                >
+                  Voltar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {lifecycleState === LC_CONFIRM_ENCERRADO && (
+            <div className="pet-detail__lifecycle-confirm" role="group" aria-label="Confirmar encerramento da busca">
+              <p className="pet-detail__lifecycle-note">
+                Tudo bem encerrar quando você decidir. Vamos tirar este relato do
+                mapa ativo — ele fica guardado, e você pode relatar de novo se
+                precisar.
+              </p>
+              <div className="pet-detail__lifecycle-confirm-actions">
+                <button
+                  type="button"
+                  className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--confirm"
+                  onClick={() => handleResolve(PET_CLOSURE_REASON.ENCERRADO)}
+                >
+                  Encerrar a busca
+                </button>
+                <button
+                  type="button"
+                  className="pet-detail__lifecycle-btn pet-detail__lifecycle-btn--cancel"
+                  onClick={() => setLifecycleState(LC_IDLE)}
+                >
+                  Voltar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {lifecycleState === LC_SENDING && (
+            <p className="pet-detail__lifecycle-note" aria-live="polite">
+              Salvando…
+            </p>
+          )}
+
+          {/* Sucesso MORNO, não um pico (governador §2): registro calmo
+              "que bom — bom reencontro 🐾". role=status anuncia ao AT; tabIndex+ref
+              levam o foco para cá após a transição (sem foco preso). */}
+          {lifecycleState === LC_DONE_REUNIDO && (
+            <p
+              ref={lifecycleDoneRef}
+              tabIndex={-1}
+              className="pet-detail__lifecycle-note pet-detail__lifecycle-note--done"
+              role="status"
+            >
+              <span aria-hidden="true">🐾</span> Que bom — bom reencontro. Este pet
+              saiu do mapa ativo, e o relato fica guardado.
+            </p>
+          )}
+
+          {/* Encerramento DIGNO: sem culpa, sem "tem certeza que quer desistir?". */}
+          {lifecycleState === LC_DONE_ENCERRADO && (
+            <p
+              ref={lifecycleDoneRef}
+              tabIndex={-1}
+              className="pet-detail__lifecycle-note pet-detail__lifecycle-note--done"
+              role="status"
+            >
+              Busca encerrada. Foi visto, foi tentado — e tudo bem parar. O relato
+              fica guardado, e você pode voltar quando quiser.
+            </p>
+          )}
+
+          {lifecycleState === LC_ERROR && (
+            <p className="pet-detail__lifecycle-note" role="status">
+              Não deu para salvar agora. Você pode tentar de novo em instantes.{' '}
+              <button
+                type="button"
+                className="pet-detail__lifecycle-retry"
+                onClick={() => setLifecycleState(LC_IDLE)}
+              >
+                Tentar de novo
+              </button>
+            </p>
+          )}
+        </div>
         )}
 
         {/* PET-M4 — denunciar (flag) um relato suspeito. Afordância CALMA e

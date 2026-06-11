@@ -712,6 +712,167 @@
   }
 }
 
+/* ── Detail sheet: FECHAMENTO (reunido / encerrar busca) — PET-M7b ─────────── *
+ * As PRIMEIRAS ações de escrita da sheet (estágio E da curva, PET_CURVE §1-E).
+ * Calm-tone / regra do não-spike: NENHUM token de risco/alarme vermelho, NENHUM
+ * acento de comemoração. "Marcar como reunido" pesa como a ação primária HOPEFUL
+ * (preenchimento de marca já provado AA: --mdf-brand-hover / --mdf-brand-ink, o
+ * mesmo par do álbum/FAB), enquanto "Encerrar busca" é um botão NEUTRO discreto
+ * (saída digna, nunca punida nem desencorajada). Confirmação em card neutro calmo.
+ * O estado de sucesso é MORNO — surface-2 + ink, sem brilho. Só tokens, sem hex
+ * cru; cada controle tem alvo >=44px e foco visível. */
+
+.pet-detail__lifecycle {
+  margin: var(--mdf-space-4) 0 var(--mdf-space-2) 0;
+}
+
+.pet-detail__lifecycle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+}
+
+.pet-detail__lifecycle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque */
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-body);
+  font-weight: 700;
+  line-height: var(--mdf-lh-body);
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__lifecycle-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* "Marcar como reunido" — ação primária esperançosa. Mesmo par de marca provado
+ * em AA do álbum/FAB (branco ≈ 6.4:1 sobre --mdf-brand-hover #B93838). NÃO é um
+ * pico celebratório — só pesa como a decisão de primeira importância da curva. */
+.pet-detail__lifecycle-btn--reunido {
+  background: var(--mdf-brand-hover);
+  color: var(--mdf-brand-ink);
+  border: 1px solid transparent;
+}
+
+.pet-detail__lifecycle-btn--reunido:active {
+  transform: scale(0.99);
+}
+
+/* "Encerrar busca" — saída digna e discreta (boundary sutil + ink), nunca um
+ * botão de alarme/punição. Fica visivelmente SECUNDÁRIA ao reunido. */
+.pet-detail__lifecycle-btn--encerrar {
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: 1px solid var(--mdf-ink-subtle);
+  font-weight: 600;
+}
+
+.pet-detail__lifecycle-btn--encerrar:hover {
+  color: var(--mdf-ink);
+  border-color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+}
+
+/* Passo de confirmação — card neutro calmo (surface-2 + boundary sutil). */
+.pet-detail__lifecycle-confirm {
+  padding: var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-card);
+}
+
+.pet-detail__lifecycle-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+  margin-top: var(--mdf-space-2);
+}
+
+/* "Sim, ..." herda o peso da ação confirmada via surface-1 + boundary visível,
+ * sem virar vermelho de alarme; "Voltar" fica discreto (a saída calma é default). */
+.pet-detail__lifecycle-btn--confirm {
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  background: var(--mdf-surface-1);
+  font-size: var(--mdf-fs-small);
+}
+
+.pet-detail__lifecycle-btn--confirm:hover {
+  border-color: var(--mdf-ink);
+}
+
+.pet-detail__lifecycle-btn--cancel {
+  color: var(--mdf-ink-muted);
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+}
+
+.pet-detail__lifecycle-btn--cancel:hover {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+}
+
+.pet-detail__lifecycle-note {
+  margin: 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+}
+
+/* Sucesso MORNO (não spiked): ink cheio sobre superfície neutra, sem acento de
+ * comemoração. Card sereno em surface-2 com boundary sutil; é um descanso, não
+ * um payout. */
+.pet-detail__lifecycle-note--done {
+  display: block;
+  padding: var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-card);
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-2 (par neutro provado) */
+}
+
+.pet-detail__lifecycle-note--done:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+.pet-detail__lifecycle-retry {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--mdf-ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pet-detail__lifecycle-retry:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-radius: var(--mdf-radius-chip);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-detail__lifecycle-btn {
+    transition: none;
+  }
+  .pet-detail__lifecycle-btn--reunido:active {
+    transform: none;
+  }
+}
+
 /* ── Detail sheet: "possível encontro" hint — PET-M9b ─────── *
  * Hint OPT-IN, calmo e NUNCA certo (PET_MATCH_SPEC §2). Card neutro e SUAVE em
  * --mdf-surface-2 com uma borda lateral sutil (--mdf-ink-subtle, o token de

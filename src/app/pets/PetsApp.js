@@ -182,6 +182,24 @@ export default function PetsApp() {
   const handlePetClick = useCallback((pet) => { setSelectedPet(pet); setDetailOpen(true); }, []);
   const handleCloseDetail = useCallback(() => setDetailOpen(false), []);
 
+  // PET-M7b — um pet acabou de ser RESOLVIDO (reunido / encerrar busca) na sheet.
+  // Atualiza o pet em `pets` no lugar (casando por coords — a identidade estável
+  // do report) com a forma JÁ resolvida que a sheet devolveu (mesmo resolvedAt +
+  // closureReason — LSP com o que foi gravado). O `resolved:true` faz o pet sair
+  // de `visiblePets` (activePetsByAge não poda resolvidos, mas o marcador do M11
+  // os distingue/dimensiona; o mapa reflete o desfecho na hora, sem refetch).
+  // Mantém o `selectedPet` em sincronia para a sheet aberta refletir o estado novo.
+  const handlePetResolved = useCallback((resolvedPet) => {
+    if (!resolvedPet || !Array.isArray(resolvedPet.coords)) return;
+    const key = JSON.stringify(resolvedPet.coords);
+    setPets((prev) => prev.map((p) => (
+      JSON.stringify(p.coords) === key ? { ...p, ...resolvedPet } : p
+    )));
+    setSelectedPet((prev) => (
+      prev && JSON.stringify(prev.coords) === key ? { ...prev, ...resolvedPet } : prev
+    ));
+  }, []);
+
   // PET-M9b — "possível encontro" (opt-in, NUNCA certo). Os candidatos do pet
   // ABERTO são DERIVADOS por um predicado PURO (findPossibleMatches, petDomain
   // SOT): perdido↔encontrado/avistado dentro de raio/janela, com a EXCLUSÃO de
@@ -364,6 +382,7 @@ export default function PetsApp() {
         pet={selectedPet}
         matches={selectedMatches}
         onOpenMatch={handleOpenMatch}
+        onResolved={handlePetResolved}
         onClose={handleCloseDetail}
       />
       </main>
