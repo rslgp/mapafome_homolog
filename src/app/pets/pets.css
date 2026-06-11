@@ -1408,3 +1408,172 @@
     transition: none;
   }
 }
+
+/* ── PET-M8: alternância MAPA | LISTA + a lista de pets ───────────── *
+ * A lista é a alternativa acessível ao mapa Leaflet: MESMO conjunto (visiblePets),
+ * ordenado por distância (com GPS) ou recência. Só tokens --mdf-* / --pet-* — sem
+ * hex cru. Calm-tone: superfícies suaves, sem borda dura, alvos >=44px. */
+
+/* O par de tabs (mapa | lista): pílula segmentada, centrada, confortável. */
+.mdf-pets .pet-viewtoggle {
+  display: inline-flex;
+  align-self: center;
+  gap: var(--mdf-space-1);
+  margin: var(--mdf-space-3) auto 0;
+  padding: var(--mdf-space-1);
+  background: var(--mdf-surface-2);
+  border-radius: var(--mdf-radius-pill);
+}
+
+.mdf-pets .pet-viewtoggle__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-1);
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque (Fitts) */
+  padding: 0 var(--mdf-space-4);
+  background: transparent;
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-2 (proven token) */
+  border: 1px solid transparent;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Tab ATIVA: superfície elevada + ink cheio (estado óbvio, não só cor). */
+.mdf-pets .pet-viewtoggle__btn--on {
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border-color: var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  box-shadow: var(--mdf-elev-1);
+}
+
+.mdf-pets .pet-viewtoggle__btn:hover:not(.pet-viewtoggle__btn--on) {
+  color: var(--mdf-ink);
+}
+
+.mdf-pets .pet-viewtoggle__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* A lista rolável: ocupa a mesma faixa do mapa (altura limitada + scroll), para a
+ * troca de visão não empurrar o CTA "Relatar" para fora da dobra. */
+.mdf-pets .pet-list {
+  margin-top: var(--mdf-space-3);
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--mdf-radius-card);
+}
+
+.mdf-pets .pet-list__empty {
+  margin: 0;
+  padding: var(--mdf-space-5) var(--mdf-space-4);
+  text-align: center;
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre o fundo (proven token) */
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+}
+
+.mdf-pets .pet-list__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cada linha é um <button> de largura cheia — alvo grande (Fitts), operável por
+ * teclado, foco visível. >=44px garantido pelo min-height + padding. */
+.mdf-pets .pet-list__row {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-3);
+  width: 100%;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  padding: var(--mdf-space-3);
+  background: var(--mdf-surface-1);
+  border: none;
+  border-bottom: 1px solid var(--mdf-border);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mdf-pets .pet-list__row:hover {
+  background: var(--mdf-surface-2);
+}
+
+.mdf-pets .pet-list__row:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-radius: var(--mdf-radius-card);
+}
+
+/* Slot de foto (PET-M15) — reservado, sem imagem ainda: um disco neutro com o
+ * glifo da espécie. Não é um <img> quebrado; é um lugar pronto para a miniatura. */
+.mdf-pets .pet-list__thumb {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--mdf-surface-2);
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-h2);
+  line-height: 1;
+}
+
+.mdf-pets .pet-list__body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-1);
+  min-width: 0; /* deixa o texto truncar em vez de estourar a linha */
+}
+
+.mdf-pets .pet-list__top {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  min-width: 0;
+}
+
+.mdf-pets .pet-list__badge-icon {
+  font-size: var(--mdf-fs-small);
+  line-height: 1;
+}
+
+.mdf-pets .pet-list__name {
+  font-size: var(--mdf-fs-body);
+  font-weight: 600;
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-1 (proven token) */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mdf-pets .pet-list__descline {
+  font-size: var(--mdf-fs-small);
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-1 (proven token) */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mdf-pets .pet-list__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-1);
+  font-size: var(--mdf-fs-caption);
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-1 (proven token) */
+}
+
+.mdf-pets .pet-list__chev {
+  flex: 0 0 auto;
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-h2);
+  line-height: 1;
+}

@@ -20,6 +20,7 @@ import './pets.css';
 import Header from '../components/compatibility/components/header';
 import PetMap from './PetMap';
 import PetFilterBar from './PetFilterBar';
+import PetListView from './PetListView';
 import PetReportSheet from './PetReportSheet';
 import PetDetailSheet from './PetDetailSheet';
 import { fetchPets, publishPet } from './petsData';
@@ -44,6 +45,27 @@ import { trackError } from '../components/compatibility/components/ux/analytics'
 // Mesmo centro padrão do mapa de fome (Recife) até o GPS responder.
 const DEFAULT_CENTER = [-8.0671132, -34.8766719];
 
+// PET-M8 — as DUAS visões alternáveis do /pets (mapa | lista). Ids estáveis (vão
+// pro localStorage); a SOT da forma da preferência mora aqui.
+const PET_VIEW = { MAP: 'map', LIST: 'list' };
+// Chave do localStorage onde a visão escolhida persiste entre sessões — um usuário
+// que prefere a lista (ex.: leitor de tela) não reescolhe a cada visita.
+const PET_VIEW_STORAGE_KEY = 'mapapet:view';
+
+// Lê a visão persistida (uma vez, no boundary client). Guarda de SSR/no-window
+// (/pets é ssr:false, mas defensivo, custo zero) e de localStorage indisponível
+// (modo privado/quota). Default = MAPA (a visão primária). PURO o suficiente para
+// rodar num inicializador lazy de useState (não num effect).
+function readStoredView() {
+  if (typeof window === 'undefined') return PET_VIEW.MAP;
+  try {
+    const v = window.localStorage.getItem(PET_VIEW_STORAGE_KEY);
+    return v === PET_VIEW.LIST ? PET_VIEW.LIST : PET_VIEW.MAP;
+  } catch (_e) {
+    return PET_VIEW.MAP;
+  }
+}
+
 // Erro classificado de publicação (PET-M1). Carrega o `reasonCode` estável
 // (PET_PUBLISH_FAILURE.*) para o PetReportSheet escolher a cópia calma certa —
 // sem o sheet ter de re-classificar a causa. `queued:true` quando o relato já
@@ -65,7 +87,18 @@ function isOfflineNow() {
 
 export default function PetsApp() {
   const [center, setCenter] = useState(DEFAULT_CENTER);
+  // PET-M8 — o `center` arranca no DEFAULT_CENTER (Recife) só para o mapa ter um
+  // ponto inicial; isso NÃO significa que o GPS do usuário respondeu. A ordenação
+  // por DISTÂNCIA da lista só vale quando há GPS REAL — por isso um flag separado
+  // que vira true só no callback de sucesso da geolocalização. Enquanto false, a
+  // lista cai na ordenação por RECÊNCIA (acceptance 2), em vez de medir distância
+  // a partir de um centro padrão que não é "perto de mim".
+  const [hasGps, setHasGps] = useState(false);
   const [pets, setPets] = useState([]);
+  // PET-M8 — visão atual (mapa | lista), persistida no localStorage. Inicializador
+  // LAZY (roda uma vez no mount, não num effect) lê a preferência salva — espelha
+  // a disciplina do deepLinkKey abaixo (ler no boundary, sem set-state-in-effect).
+  const [view, setView] = useState(readStoredView);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportCoords, setReportCoords] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -112,8 +145,15 @@ export default function PetsApp() {
     let cancelled = false;
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => { if (!cancelled) setCenter([pos.coords.latitude, pos.coords.longitude]); },
-        () => { /* sem permissão de GPS: mantém o centro padrão */ },
+        (pos) => {
+          if (cancelled) return;
+          setCenter([pos.coords.latitude, pos.coords.longitude]);
+          // PET-M8 — só AGORA o centro é "perto de mim" de verdade: a lista pode
+          // ordenar por distância. Sem permissão (callback de erro abaixo), o flag
+          // fica false e a lista ordena por recência.
+          setHasGps(true);
+        },
+        () => { /* sem permissão de GPS: mantém o centro padrão, hasGps fica false */ },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
       );
     }
@@ -181,6 +221,20 @@ export default function PetsApp() {
   const handleCloseReport = useCallback(() => setReportOpen(false), []);
   const handlePetClick = useCallback((pet) => { setSelectedPet(pet); setDetailOpen(true); }, []);
   const handleCloseDetail = useCallback(() => setDetailOpen(false), []);
+
+  // PET-M8 — troca a visão (mapa | lista) e PERSISTE a preferência no localStorage
+  // (envolto em try/catch: modo privado/quota nunca derruba a troca de visão — a
+  // persistência é um conforto, não um requisito). setState no handler de clique
+  // (sancionado), nunca no corpo de um effect.
+  const handleSetView = useCallback((next) => {
+    setView(next);
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(PET_VIEW_STORAGE_KEY, next);
+    } catch (_e) {
+      /* persistência indisponível: a troca de visão ainda funciona nesta sessão */
+    }
+  }, []);
 
   // PET-M7b — um pet acabou de ser RESOLVIDO (reunido / encerrar busca) na sheet.
   // Atualiza o pet em `pets` no lugar (casando por coords — a identidade estável
@@ -356,12 +410,53 @@ export default function PetsApp() {
         onClear={handleClearFilter}
       />
 
-      <PetMap
-        center={center}
-        pets={visiblePets}
-        onPinDropped={handlePinDropped}
-        onPetClick={handlePetClick}
-      />
+      {/* PET-M8 — alternância MAPA | LISTA. role=tablist semântico: os dois botões
+          são tabs (aria-selected reflete a visão ativa), operáveis por teclado,
+          alvo >=44px. A preferência persiste (handleSetView → localStorage). Ambas
+          as visões consomem o MESMO visiblePets (filtrado pelo M7 + podado por
+          idade pelo M12) — a lista reflete exatamente o mapa (acceptance 1). */}
+      <div className="pet-viewtoggle" role="tablist" aria-label="Como ver os pets">
+        <button
+          type="button"
+          role="tab"
+          id="pet-viewtoggle-map"
+          aria-selected={view === PET_VIEW.MAP}
+          className={`pet-viewtoggle__btn${view === PET_VIEW.MAP ? ' pet-viewtoggle__btn--on' : ''}`}
+          onClick={() => handleSetView(PET_VIEW.MAP)}
+        >
+          <span aria-hidden="true">🗺️</span> Mapa
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="pet-viewtoggle-list"
+          aria-selected={view === PET_VIEW.LIST}
+          className={`pet-viewtoggle__btn${view === PET_VIEW.LIST ? ' pet-viewtoggle__btn--on' : ''}`}
+          onClick={() => handleSetView(PET_VIEW.LIST)}
+        >
+          <span aria-hidden="true">📋</span> Lista
+        </button>
+      </div>
+
+      {view === PET_VIEW.LIST ? (
+        <div role="tabpanel" aria-labelledby="pet-viewtoggle-list">
+          <PetListView
+            pets={visiblePets}
+            center={hasGps ? center : null}
+            nowMs={nowMs}
+            onPetClick={handlePetClick}
+          />
+        </div>
+      ) : (
+        <div role="tabpanel" aria-labelledby="pet-viewtoggle-map">
+          <PetMap
+            center={center}
+            pets={visiblePets}
+            onPinDropped={handlePinDropped}
+            onPetClick={handlePetClick}
+          />
+        </div>
+      )}
 
       <button
         type="button"
