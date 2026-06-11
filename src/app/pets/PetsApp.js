@@ -38,6 +38,7 @@ import {
   classifyPublishFailure,
   shouldQueuePublishFailure,
   PET_PUBLISH_FAILURE,
+  PET_CLOSURE_REASON,
   defaultPetFilter,
   filterPets,
   togglePetFilterValue,
@@ -51,6 +52,18 @@ import {
   bindOnlineFlush as bindPetOnlineFlush,
 } from './petPublishQueue';
 import { trackError } from '../components/compatibility/components/ux/analytics';
+// PET-M21 — emissores do FUNIL de observabilidade (sobre o seam analytics.track
+// existente; ver petAnalytics.js). NENHUM carrega PII: cada um monta o payload por
+// allow-list de campos enumerados/codificados da SOT petDomain. Mantém os eventos
+// de pet num módulo pets/* (não infla analytics.js), como manda a PET-M21.
+import {
+  trackReportStarted,
+  trackReportPublished,
+  trackReportFailed,
+  trackPetOpened,
+  trackMarkedReunido,
+  trackEncerrouBusca,
+} from './petAnalytics';
 
 // Mesmo centro padrão do mapa de fome (Recife) até o GPS responder.
 const DEFAULT_CENTER = [-8.0671132, -34.8766719];
@@ -262,6 +275,10 @@ export default function PetsApp() {
   const handleOpenReport = useCallback(() => {
     setReportCoords((c) => c || center);
     setReportOpen(true);
+    // PET-M21 — topo do funil: a sheet de relato abriu. Único ponto de entrada do
+    // sheet (setReportOpen(true) só acontece aqui), então o evento dispara uma vez
+    // por abertura. Sem PII — só marca a INTENÇÃO de relatar.
+    trackReportStarted({});
   }, [center]);
 
   // PET-M8 — troca a visão (mapa | lista) e PERSISTE a preferência no localStorage
@@ -316,7 +333,14 @@ export default function PetsApp() {
     setHintOpen(false);
   }, []);
 
-  const handlePetClick = useCallback((pet) => { setSelectedPet(pet); setDetailOpen(true); }, []);
+  const handlePetClick = useCallback((pet) => {
+    setSelectedPet(pet);
+    setDetailOpen(true);
+    // PET-M21 — meio do funil (descoberta): uma sheet de detalhe abriu. Só o status
+    // do pet aberto (enumerado da SOT) — mede "que tipo de pet as pessoas abrem" sem
+    // identificar o pet (nada de coords/contato/nome).
+    trackPetOpened({ status: pet && pet.status });
+  }, []);
   const handleCloseDetail = useCallback(() => setDetailOpen(false), []);
 
   // PET-M7b — um pet acabou de ser RESOLVIDO (reunido / encerrar busca) na sheet.
@@ -335,6 +359,16 @@ export default function PetsApp() {
     setSelectedPet((prev) => (
       prev && JSON.stringify(prev.coords) === key ? { ...prev, ...resolvedPet } : prev
     ));
+    // PET-M21 — fundo do funil: o loop de valor FECHOU. Os dois desfechos do estágio
+    // E da curva (PET_CURVE §1-E) são eventos DISTINTOS para medir reunido vs
+    // encerrar-busca separadamente. O motivo vem da SOT (closureReason que a sheet
+    // gravou via PET-M7b); despachamos por ele. Cada emissor carrega só o status
+    // (enumerado) + o motivo fixo da SOT — nunca contato/coords/nome.
+    if (resolvedPet.closureReason === PET_CLOSURE_REASON.ENCERRADO) {
+      trackEncerrouBusca({ status: resolvedPet.status });
+    } else if (resolvedPet.closureReason === PET_CLOSURE_REASON.REUNIDO) {
+      trackMarkedReunido({ status: resolvedPet.status });
+    }
   }, []);
 
   // PET-M9b — "possível encontro" (opt-in, NUNCA certo). Os candidatos do pet
@@ -363,6 +397,10 @@ export default function PetsApp() {
     setSelectedPet(matchPet);
     setCenter(matchPet.coords);
     setDetailOpen(true);
+    // PET-M21 — abrir "o outro relato" a partir do hint também ABRE uma sheet de
+    // detalhe: mesmo evento de funil que handlePetClick (consistência — o funil de
+    // descoberta não tem um buraco por onde o pet foi aberto). Sem PII.
+    trackPetOpened({ status: matchPet.status });
   }, []);
 
   // PET-M7 — toggle imutável de um id numa faceta (a regra pura vive em
@@ -416,11 +454,18 @@ export default function PetsApp() {
       await enqueuePetPublish(payload);
       const reasonCode = PET_PUBLISH_FAILURE.OFFLINE;
       trackError('pet_publish', new Error('offline_at_publish'), { reason: reasonCode, queued: true });
+      // PET-M21 — evento de FUNIL de falha (distinto do trackError técnico acima): o
+      // funil mede a CLASSE da falha + se foi enfileirada (a confiabilidade que o
+      // PET-M1 comprou), sem contato/coords/texto. `status`/`species` vêm enumerados
+      // do payload (ids de SET, não texto livre); o resto do payload é ignorado.
+      trackReportFailed({ reasonCode, queued: true });
       throw new PetPublishError(reasonCode, true);
     }
     try {
       const pet = await publishPet(payload);
       setPets((prev) => [...prev, pet]);
+      // PET-M21 — sucesso (loop de valor avança). Só status + espécie enumerados.
+      trackReportPublished({ status: payload && payload.status, species: payload && payload.species });
     } catch (err) {
       const reasonCode = classifyPublishFailure(err, { isOffline: isOfflineNow() });
       const queued = shouldQueuePublishFailure(reasonCode);
@@ -431,6 +476,8 @@ export default function PetsApp() {
       // Loga a causa real (mensagem técnica, redação de token via trackError);
       // sem contato/texto-livre no payload.
       trackError('pet_publish', err, { reason: reasonCode, queued });
+      // PET-M21 — evento de FUNIL de falha com o reasonCode DIFERENCIADO do PET-M1.
+      trackReportFailed({ reasonCode, queued });
       throw new PetPublishError(reasonCode, queued, err);
     }
   }, []);
