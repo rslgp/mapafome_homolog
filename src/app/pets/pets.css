@@ -504,3 +504,177 @@
 .pet-marker svg {
   display: block;
 }
+
+/* ── PET-M10: busca de endereço (leaflet-geosearch, modo 'bar') ─── *
+ * O CSS base do plugin é importado pelo PetSearchField; aqui só repintamos com
+ * tokens --mdf-* e elevamos o input a um alvo >=44px (o default é 30px), com
+ * foco visível e cópia/tom calmos. Só tokens, sem hex cru. O plugin desenha o
+ * próprio DOM (form > input + button.reset + .results); estilizamos por classe.
+ *
+ * Calm-tone: o público está em estresse — campo confortável, sombra suave, sem
+ * borda dura. Posicionado no topo central pelo próprio plugin (.leaflet-geosearch-bar). */
+
+.mdf-pets .leaflet-geosearch-bar {
+  /* Folga lateral p/ não colar nas bordas em telas estreitas (640px). */
+  max-width: calc(100% - var(--mdf-space-4) * 2);
+  margin-top: var(--mdf-space-3);
+}
+
+.mdf-pets .leaflet-geosearch-bar form,
+.mdf-pets .leaflet-control-geosearch form {
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
+  border-radius: var(--mdf-radius-pill);
+  box-shadow: var(--mdf-elev-2);
+  padding: 0 var(--mdf-space-2) 0 var(--mdf-space-4);
+}
+
+.mdf-pets .leaflet-control-geosearch form input {
+  height: var(--mdf-touch-target); /* >=44px alvo de toque */
+  min-height: var(--mdf-touch-target);
+  font-size: var(--mdf-fs-body);
+  color: var(--mdf-ink);
+  background: transparent;
+  text-indent: 0;
+}
+
+.mdf-pets .leaflet-control-geosearch form input::placeholder {
+  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-1 (proven token) */
+  opacity: 1;
+}
+
+.mdf-pets .leaflet-control-geosearch form input:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+  border-radius: var(--mdf-radius-pill);
+}
+
+/* Botão "limpar busca" — alvo >=44px, ink legível, foco visível. */
+.mdf-pets .leaflet-control-geosearch button.reset {
+  min-width: var(--mdf-touch-target);
+  min-height: var(--mdf-touch-target);
+  line-height: var(--mdf-touch-target);
+  color: var(--mdf-ink-muted);
+  background: transparent;
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-h2);
+}
+
+.mdf-pets .leaflet-control-geosearch button.reset:hover {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-2);
+}
+
+.mdf-pets .leaflet-control-geosearch button.reset:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* Lista de resultados — superfície clara, itens com alvo confortável e foco/
+ * hover legíveis; a borda usa o token de boundary visível. */
+.mdf-pets .leaflet-control-geosearch .results {
+  background: var(--mdf-surface-1);
+  border-radius: 0 0 var(--mdf-radius-card) var(--mdf-radius-card);
+}
+
+.mdf-pets .leaflet-control-geosearch .results > * {
+  min-height: var(--mdf-touch-target);
+  display: flex;
+  align-items: center;
+  line-height: var(--mdf-lh-body);
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  font-size: var(--mdf-fs-small);
+  color: var(--mdf-ink);
+}
+
+.mdf-pets .leaflet-control-geosearch .results.active {
+  border-top: 1px solid var(--mdf-border);
+}
+
+.mdf-pets .leaflet-control-geosearch .results > .active,
+.mdf-pets .leaflet-control-geosearch .results > :hover {
+  background: var(--mdf-surface-2);
+  border-color: transparent;
+}
+
+.mdf-pets .leaflet-bar-notfound {
+  color: var(--mdf-ink-muted);
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+}
+
+/* ── PET-M10: "perto de mim" — recentra no GPS sob demanda ──────── *
+ * Um L.Control nativo (PetLocateControl) no canto superior esquerdo. O botão é
+ * um <button> real: operável por teclado, rotulado p/ AT, alvo >=44px. Pintado
+ * com tokens --mdf-*; a mensagem de status (negado/indisponível) é calma e some
+ * sozinha — sem dead end, sem armadilha de erro. */
+
+.mdf-pets .pet-locate {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mdf-pets .pet-locate__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target); /* >=44px */
+  min-width: var(--mdf-touch-target);
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  box-shadow: var(--mdf-elev-2);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-pets .pet-locate__btn:hover:not(:disabled) {
+  background: var(--mdf-surface-2);
+  border-color: var(--mdf-ink);
+}
+
+.mdf-pets .pet-locate__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring), var(--mdf-elev-2);
+}
+
+.mdf-pets .pet-locate__btn:disabled {
+  cursor: progress;
+  color: var(--mdf-ink-muted);
+}
+
+.mdf-pets .pet-locate__icon {
+  font-size: var(--mdf-fs-body);
+  line-height: 1;
+}
+
+/* Mensagem de status (procurando / negado / indisponível): calma, neutra, nunca
+ * alarme vermelho (público em estresse). surface-2 + ink-muted, contraste >4.5:1. */
+.mdf-pets .pet-locate__status {
+  max-width: 16rem;
+  margin: var(--mdf-space-2) 0 0 0;
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border-radius: var(--mdf-radius-card);
+  box-shadow: var(--mdf-elev-1);
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+}
+
+.mdf-pets .pet-locate__status[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mdf-pets .pet-locate__btn {
+    transition: none;
+  }
+}
