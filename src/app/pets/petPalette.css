@@ -98,4 +98,18 @@
    * ink) above. #FCFCFA is the eye-comfort near-white (matches --mdf-surface tone,
    * never pure #FFFFFF). */
   --pet-on-accent: #FCFCFA;       /* on --pet-encontrado: 5.22:1 | on --pet-avistado: 7.55:1 | on --pet-reunido: 4.89:1 (all AA >=4.5) */
+
+  /* ---- placeholder tint (PET-M16: the photoless / loading / broken-URL state) ----
+   * A SINGLE low-chroma warm-sand neutral for the detail-sheet photo placeholder
+   * surface — NOT a status accent and never semantic (a photoless report has no
+   * "status hue"). It is a hair warmer than the neutral --mdf-surface-2 #F1EFEA so
+   * the empty state reads CALM and intentional, not sad or broken. Off every
+   * reserved axis (it is a near-neutral parchment, not amber/teal/violet/rose/red/
+   * green). Both --mdf-ink-muted (label) and --pet-perdido-ink (a warm glyph ink)
+   * clear AA over it. Eye-comfort: never pure #FFFFFF / #000000.
+   * Contrast over --pet-placeholder-tint:
+   *   --mdf-ink-muted  text (placeholder label) ... 5.74:1 (AA normal-text >=4.5)
+   *   --mdf-ink        text                      .. 14.95:1 (AA >=4.5)
+   *   --pet-perdido-ink as a meaningful glyph ink . 7.95:1 (graphical/icon >=3) */
+  --pet-placeholder-tint: #F3EDE3;
 }

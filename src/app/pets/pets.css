@@ -2014,6 +2014,30 @@
   color: var(--mdf-ink); /* >=4.5:1 sobre surface-2 (proven token) */
 }
 
+/* ════════════════════════════════════════════════════════════════════════════
+ * PET-M16 — PHOTO PLACEHOLDER + SKELETON COLOR/SURFACE TREATMENT (detail sheet)
+ * ════════════════════════════════════════════════════════════════════════════
+ * coloring-ict6 owns COLOR/SURFACE only here (uiux owns layout; no motion
+ * specialist so motion stays static/reduced). PET-M15 shipped the FUNCTIONAL base
+ * (the three states exist + degrade); M16 makes them TASTEFUL.
+ *
+ * THREE photo states, all token-only (--mdf-* / --pet-*), never pure #FFFFFF /
+ * #000000, all calm (a lost pet is anxious — the empty/error state must read
+ * intentional, NOT sad or broken):
+ *   EMPTY (no photo)      -> .pet-detail__photo-placeholder: a soft species-glyph
+ *                            on the low-chroma warm --pet-placeholder-tint card.
+ *   LOADING               -> .pet-detail__photo-skeleton: a subtle, low-contrast
+ *                            shimmer; under prefers-reduced-motion it becomes a
+ *                            STATIC calm fill (no shimmer) — see the reduced block.
+ *   ERROR / broken URL    -> the JS (photoLoadState==='error') falls through to the
+ *                            EMPTY placeholder above — NEVER a broken-image glyph.
+ *                            No separate error surface: graceful identity with EMPTY.
+ *
+ * MEASURED AA (over --pet-placeholder-tint #F3EDE3; ratios proven in petPalette.css):
+ *   placeholder label  --mdf-ink-muted : 5.74:1 (AA normal-text >=4.5)
+ *   glyph ink          --pet-perdido-ink: 7.95:1 (meaningful glyph >=3)
+ * ──────────────────────────────────────────────────────────────────────────── */
+
 /* ── Detail sheet: photo display (direct image) + skeleton + placeholder ── */
 
 /* Moldura da imagem direta: position-relative para o skeleton sobrepor enquanto
@@ -2041,50 +2065,68 @@
   opacity: 1;
 }
 
-/* Skeleton sobreposto enquanto a imagem direta baixa (PET-M16 refina a cor). Um
- * pulso suave de carga; removido sob prefers-reduced-motion (bloco no fim). */
+/* LOADING — skeleton sobreposto enquanto a imagem direta baixa. PET-M16: o pulso
+ * é SUBTIL e de baixo contraste (a banda clara é --mdf-surface-1 sobre o leito
+ * --pet-placeholder-tint: ~1.10:1, um respiro, não um flash). Sob prefers-reduced-
+ * motion vira um leito ESTÁTICO calmo, SEM shimmer (bloco no fim — governador §8).
+ * Só tokens; jamais #FFFFFF / x #000000 puros. */
 .pet-detail__photo-skeleton {
   position: absolute;
   inset: 0;
   min-height: 10rem;
   background: linear-gradient(
     90deg,
-    var(--mdf-surface-2) 0%,
+    var(--pet-placeholder-tint) 0%,
     var(--mdf-surface-1) 50%,
-    var(--mdf-surface-2) 100%
+    var(--pet-placeholder-tint) 100%
   );
   background-size: 200% 100%;
   animation: pet-skeleton-shimmer var(--mdf-dur-slow) var(--mdf-ease-out) infinite;
 }
 
-/* Placeholder calmo de "sem foto" (ou imagem direta que falhou): glifo da espécie
- * sobre superfície neutra. NUNCA um ícone de imagem quebrada. PET-M16 dá a cor/
- * tratamento final; aqui é a base funcional. */
+/* EMPTY — placeholder calmo de "sem foto" (e o destino de ERROR/URL quebrada:
+ * o JS cai aqui em vez de pintar um <img> quebrado). PET-M16: leito da cor
+ * warm-sand de baixo croma --pet-placeholder-tint (um respiro acolhedor, não
+ * triste nem "quebrado"). Borda --mdf-ink-subtle (--mdf-border some sobre tom
+ * claro). Só tokens; jamais #FFFFFF / x #000000 puros. */
 .pet-detail__photo-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--mdf-space-1);
+  gap: var(--mdf-space-2);
   min-height: 8rem;
   margin: 0 0 var(--mdf-space-4) 0;
   padding: var(--mdf-space-5) var(--mdf-space-4);
-  background: var(--mdf-surface-2);
+  background: var(--pet-placeholder-tint);
   border: 1px solid var(--mdf-ink-subtle); /* boundary visível (--mdf-border some) */
   border-radius: var(--mdf-radius-card);
   text-align: center;
 }
 
+/* O glifo da espécie ganha um DISCO suave (não dulled-por-opacity: opacity-alone
+ * num glifo significativo é exatamente o que evitamos). O disco é --mdf-surface-1
+ * com aro --mdf-ink-subtle (2.96:1 sobre o leito — limite gráfico discreto,
+ * intencional), assentando o emoji como elemento deliberado e calmo. O emoji traz
+ * cor intrínseca; o SIGNIFICADO acessível vem do texto AA abaixo + o aria-label do
+ * JSX. Sem opacity para escurecer. */
 .pet-detail__photo-placeholder-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mdf-space-12);
+  height: var(--mdf-space-12);
   font-size: var(--mdf-fs-h1);
   line-height: 1;
-  opacity: 0.7;
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-ink-subtle); /* aro discreto: 2.96:1 sobre o leito */
+  border-radius: var(--mdf-radius-pill);
 }
 
 .pet-detail__photo-placeholder-text {
   font-size: var(--mdf-fs-small);
   line-height: var(--mdf-lh-body);
-  color: var(--mdf-ink-muted); /* >=4.5:1 sobre surface-2 (proven token) */
+  color: var(--mdf-ink-muted); /* sobre --pet-placeholder-tint: 5.74:1 (AA texto >=4.5) */
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2094,8 +2136,11 @@
   .pet-detail__photo-img {
     transition: none;
   }
+  /* PET-M16 — SEM shimmer quando o movimento é reduzido (governador §8): o
+   * skeleton vira um leito ESTÁTICO calmo na MESMA cor warm-sand do placeholder,
+   * para LOADING e EMPTY lerem como o mesmo repouso. Só token, jamais #FFF / x. */
   .pet-detail__photo-skeleton {
     animation: none;
-    background: var(--mdf-surface-2);
+    background: var(--pet-placeholder-tint);
   }
 }
