@@ -158,6 +158,112 @@
   }
 }
 
+/* ── PET-M7: filtro do mapa (status / espécie / porte) ────── *
+ * Uma barra COMPACTA acima do mapa que estreita os pins. Reaproveita a geometria
+ * de chip (.mdf-chip + .pet-chip) e os tokens --mdf-* / --pet-* — sem hex cru.
+ * Cada chip é um toggle (aria-pressed): seleção múltipla dentro da faceta (OR).
+ *
+ * Calm-tone: o público está em estresse; espaçamento confortável, sem borda dura,
+ * a contagem de combinações é informativa (ink-muted, nunca alarme). Alvos >=44px
+ * herdados da geometria de chip (min-height: --mdf-touch-target). */
+
+.pet-filter {
+  max-width: 860px;
+  margin: 0 auto var(--mdf-space-3) auto;
+  padding: 0 var(--mdf-space-6);
+}
+
+.pet-filter__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+  margin-bottom: var(--mdf-space-2);
+}
+
+.pet-filter__heading {
+  font-size: var(--mdf-fs-small);
+  font-weight: 700;
+  color: var(--mdf-ink);
+  margin: 0;
+}
+
+/* "Limpar filtros" — discreto mas com alvo de toque pleno (>=44px). Texto ink
+ * sobre superfície neutra; nunca os tokens de alarme. */
+.pet-filter__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-1);
+  min-height: var(--mdf-touch-target);
+  padding: var(--mdf-space-1) var(--mdf-space-3);
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-filter__clear:hover {
+  color: var(--mdf-ink);
+  border-color: var(--mdf-ink);
+}
+
+.pet-filter__clear:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* Cada faceta: legenda curta + linha de chips que quebra em telas estreitas. */
+.pet-filter__facet {
+  border: none;
+  margin: 0 0 var(--mdf-space-2) 0;
+  padding: 0;
+}
+
+.pet-filter__legend {
+  padding: 0;
+  margin: 0 0 var(--mdf-space-1) 0;
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  color: var(--mdf-ink-muted);
+}
+
+.pet-filter__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+}
+
+/* Os chips do filtro são uma fila horizontal compacta (não o grid empilhado do
+ * report). Reseta o flex-direction column herdado de .pet-chip p/ a fila ficar
+ * em uma linha (rótulo + check lado a lado), mantendo o alvo >=44px. */
+.pet-filter__chip {
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: center;
+}
+
+/* Contagem de combinações (aria-live): calma, informativa, nunca alarme. */
+.pet-filter__count {
+  margin: var(--mdf-space-1) 0 0 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-filter__clear {
+    transition: none;
+  }
+}
+
 /* ── Pet status chips — single-select radio-group ─────────── *
  * Built on .mdf-chip geometry but stacks a label row above a hint line and
  * paints the selected state from the per-status --pet-* palette tokens.       */

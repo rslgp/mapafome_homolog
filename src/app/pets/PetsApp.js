@@ -13,12 +13,13 @@
 // (ou no GPS / centro padrão). Publicar adiciona o pet ao estado de forma
 // otimista para o marcador aparecer na hora.
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import './petPalette.css';
 import './pets.css';
 import Header from '../components/compatibility/components/header';
 import PetMap from './PetMap';
+import PetFilterBar from './PetFilterBar';
 import PetReportSheet from './PetReportSheet';
 import PetDetailSheet from './PetDetailSheet';
 import { fetchPets, publishPet } from './petsData';
@@ -26,6 +27,9 @@ import {
   classifyPublishFailure,
   shouldQueuePublishFailure,
   PET_PUBLISH_FAILURE,
+  defaultPetFilter,
+  filterPets,
+  togglePetFilterValue,
 } from './petDomain';
 import {
   enqueue as enqueuePetPublish,
@@ -63,6 +67,10 @@ export default function PetsApp() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedPet, setSelectedPet] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  // PET-M7 — estado do filtro do mapa. Mora AQUI (dono de `pets`); a barra de
+  // filtro só reporta toggles e a contagem é derivada por filterPets. Estado
+  // inicial = filtro vazio (defaultPetFilter) → todos os pets aparecem.
+  const [filter, setFilter] = useState(defaultPetFilter);
 
   // GPS + carga inicial dos pets — sincronização com sistemas externos
   // (geolocalização + planilha), o uso sancionado de um effect. setState mora
@@ -99,6 +107,26 @@ export default function PetsApp() {
   const handleCloseReport = useCallback(() => setReportOpen(false), []);
   const handlePetClick = useCallback((pet) => { setSelectedPet(pet); setDetailOpen(true); }, []);
   const handleCloseDetail = useCallback(() => setDetailOpen(false), []);
+
+  // PET-M7 — toggle imutável de um id numa faceta (a regra pura vive em
+  // petDomain; aqui só fazemos o setState). Limpar volta ao filtro vazio.
+  const handleToggleFilter = useCallback((facetKey, id) => {
+    setFilter((prev) => togglePetFilterValue(prev, facetKey, id));
+  }, []);
+  const handleClearFilter = useCallback(() => setFilter(defaultPetFilter()), []);
+
+  // Pets VISÍVEIS = todos os pets passados pelo predicado puro. nowMs injetado
+  // (reservado p/ futura faceta de recência). Passamos 0 — não Date.now() — para
+  // não introduzir uma chamada IMPURA dentro do render (react-hooks/purity): o
+  // filtro de status/espécie/porte deste milestone não consulta o tempo, então a
+  // saída é determinística. Quando a faceta de recência chegar, o nowMs entra por
+  // um effect/ref, não pelo corpo do useMemo. Memoizado em [pets, filter] para
+  // não recomputar/remontar o cluster à toa. É esta lista — não `pets` — que vai
+  // ao mapa, então (de)selecionar um filtro estreita os pins na hora (PET-M7).
+  const visiblePets = useMemo(
+    () => filterPets(pets, filter, 0),
+    [pets, filter],
+  );
 
   // Publica um pet, classificando a falha em uma causa CALMA distinta (PET-M1).
   // Remove a antiga string genérica única 'publish_failed' E o caminho de
@@ -177,9 +205,20 @@ export default function PetsApp() {
         </p>
       )}
 
+      {/* PET-M7 — filtro do mapa. A contagem é DERIVADA (visiblePets.length /
+          pets.length): a barra não conhece os pets, só recebe os números e os
+          toggles. Estreita os pins na hora porque é `visiblePets` que vai ao mapa. */}
+      <PetFilterBar
+        filter={filter}
+        total={pets.length}
+        matchCount={visiblePets.length}
+        onToggle={handleToggleFilter}
+        onClear={handleClearFilter}
+      />
+
       <PetMap
         center={center}
-        pets={pets}
+        pets={visiblePets}
         onPinDropped={handlePinDropped}
         onPetClick={handlePetClick}
       />

@@ -67,6 +67,116 @@ export function isValidSize(id) {
   return SIZE_IDS.has(id);
 }
 
+// ─── PET-M7 — filtro do mapa (SOT do estado + predicado PURO) ────────────────
+//
+// O filtro estreita os PINS por facetas: status / espécie / porte. As OPÇÕES
+// não vivem aqui como literais — são as MESMAS listas SOT acima (PET_STATUSES /
+// PET_SPECIES / PET_SIZES). Mudar a SOT muda o filtro sem outra edição: a UI
+// itera as listas para desenhar os chips e o predicado valida contra os mesmos
+// Sets. Ninguém escreve 'perdido' (ou qualquer id) hardcoded — é tudo derivado.
+//
+// SEMÂNTICA (a regra de negócio do filtro, num só lugar):
+//   • faceta VAZIA = sem restrição (combina com tudo). O estado inicial é o
+//     filtro vazio → todos os pets aparecem.
+//   • DENTRO de uma faceta: OR (status perdido OU encontrado).
+//   • ENTRE facetas: AND (status escolhido E espécie escolhida E porte escolhido).
+// É o mesmo modelo mental de um filtro de e-commerce — Jakob's Law: o usuário já
+// o conhece de outras superfícies, então não há custo de aprendizado.
+
+// Fábrica do estado de filtro vazio (SOT da FORMA do filtro). Devolve uma cópia
+// NOVA a cada chamada (arrays próprios) para o React poder tratar como imutável
+// sem aliasing acidental entre montagens. Mantida a status/species/size neste
+// milestone (cor/recência ficam de fora deliberadamente — escopo PET-M7).
+export function defaultPetFilter() {
+  return { statuses: [], species: [], sizes: [] };
+}
+
+// Normaliza uma faceta para um array de ids (defensivo: aceita null/undefined/
+// não-array → []). PURA. Usada pelo predicado e por qualquer leitor de contagem.
+function facetIds(facet) {
+  return Array.isArray(facet) ? facet : [];
+}
+
+// Uma faceta "combina"? VAZIA → sempre (sem restrição). Não-vazia → o valor do
+// pet precisa estar na lista escolhida (OR dentro da faceta). PURA + defensiva:
+// um `value` undefined/'' só combina se a faceta estiver vazia (um pet sem porte
+// não some por engano enquanto NENHUM porte está filtrado, mas é excluído assim
+// que o usuário escolhe um porte específico — comportamento esperado).
+function facetMatches(selected, value) {
+  const ids = facetIds(selected);
+  if (ids.length === 0) return true; // faceta vazia = sem restrição
+  return ids.indexOf(value) !== -1;  // OR dentro da faceta
+}
+
+// Predicado PURO e DETERMINÍSTICO do filtro. Recebe UM pet (forma do parsePetRow),
+// o estado de filtro e `nowMs` INJETADO pelo chamador (nunca Date.now() aqui —
+// espelha buildPetDados/classifyPublishFailure; reservado para uma futura faceta
+// de recência sem reescrever a assinatura). NUNCA lança: um pet malformado
+// (null, sem campos) é tratado como objeto vazio e simplesmente não combina com
+// nenhuma faceta ATIVA — some do mapa em vez de derrubar o render.
+//
+// ENTRE facetas é AND: todas precisam combinar. Com o filtro vazio, as três
+// facetas combinam (vazias) → true para todo pet (combina com tudo).
+//
+// `nowMs` é parte da ASSINATURA (injetado pelo chamador, nunca Date.now() aqui)
+// mas ainda não é consultado: as facetas de status/espécie/porte deste milestone
+// não dependem do tempo. Fica reservado para uma futura faceta de recência sem
+// reescrever a assinatura nem quebrar quem já chama com nowMs (LSP).
+export function matchesPetFilter(pet, filter, nowMs) {
+  // Referência inócua: marca nowMs como "consumido" para o linter sem alterar a
+  // semântica (a saída independe do tempo neste milestone) — documenta a injeção.
+  void nowMs;
+  const p = pet || {};
+  const f = filter || {};
+  return (
+    facetMatches(f.statuses, p.status)
+    && facetMatches(f.species, p.species)
+    && facetMatches(f.sizes, p.size)
+  );
+}
+
+// Helper FINO de array: aplica o predicado a uma lista. PURO. `nowMs` injetado e
+// repassado (mesma disciplina). Defende contra `pets` não-array (→ []). É o que o
+// PetsApp chama para derivar os pets visíveis a partir de todos os pets + filtro.
+export function filterPets(pets, filter, nowMs) {
+  if (!Array.isArray(pets)) return [];
+  return pets.filter((pet) => matchesPetFilter(pet, filter, nowMs));
+}
+
+// Conta quantas facetas estão ATIVAS (não-vazias) — usado pela UI para decidir se
+// o botão "limpar filtros" deve aparecer e para o resumo "filtrando por N". PURO.
+export function countActivePetFilterFacets(filter) {
+  const f = filter || {};
+  let n = 0;
+  if (facetIds(f.statuses).length) n += 1;
+  if (facetIds(f.species).length) n += 1;
+  if (facetIds(f.sizes).length) n += 1;
+  return n;
+}
+
+// Toggle PURO e IMUTÁVEL de um id dentro de uma faceta: devolve um filtro NOVO com
+// o id adicionado (se ausente) ou removido (se presente), sem mutar o anterior.
+// A UI lê daqui em vez de reimplementar a lógica de array em cada handler — uma
+// só verdade de "selecionar/desselecionar". `facetKey` é 'statuses'|'species'|
+// 'sizes'. Defensivo: chave desconhecida devolve o filtro inalterado (clonado).
+export function togglePetFilterValue(filter, facetKey, id) {
+  const base = filter || defaultPetFilter();
+  const next = {
+    statuses: facetIds(base.statuses).slice(),
+    species: facetIds(base.species).slice(),
+    sizes: facetIds(base.sizes).slice(),
+  };
+  const arr = next[facetKey];
+  if (!arr) return next; // faceta desconhecida: no-op seguro (filtro clonado)
+  const at = arr.indexOf(id);
+  if (at === -1) {
+    arr.push(id);
+  } else {
+    arr.splice(at, 1);
+  }
+  return next;
+}
+
 // Validação pura de um par [lat,lng]: ambos finitos. (O range Brasil é validado
 // no writer via validateCoordinatePair do sheetsClient — aqui só garantimos a
 // forma, mantendo o domínio independente de regras geográficas.)
