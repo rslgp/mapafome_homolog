@@ -5,7 +5,7 @@ import '../components/compatibility/components/ux/PinDetailSheet.css';
 import './pets.css';
 import { createDirectionUrl, formatRelativeTime } from '../components/compatibility/components/mapUtils';
 import { resolveContact } from '../components/compatibility/components/ux/contactLink';
-import { PET_STATUS_MAP, PET_SPECIES, PET_SIZES } from './petDomain';
+import { PET_STATUS_MAP, PET_SPECIES, PET_SIZES, petCoordsKey, PET_DEEPLINK_PARAM } from './petDomain';
 import { flagPet } from './petsData';
 
 // PET-M4 — estados do fluxo de denúncia (flag) na própria sheet (máquina de
@@ -39,7 +39,7 @@ function describePet(pet) {
   return parts.join(' · ');
 }
 
-export default function PetDetailSheet({ open, pet, onClose }) {
+export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, onClose }) {
   const triggerRef = useRef(null);
   const closeRef = useRef(null);
   const revealRef = useRef(null);
@@ -55,6 +55,11 @@ export default function PetDetailSheet({ open, pet, onClose }) {
   // reveal quando o pet aberto muda (mesma forcing-function de não-vazamento).
   const [flagState, setFlagState] = useState(FLAG_IDLE);
 
+  // PET-M9b — o hint "possível encontro" é DISPENSÁVEL (opt-in, não-intrusivo,
+  // spec §2.1/§2.4): o dono pode fechá-lo sem agir. Reseta ao trocar de pet (igual
+  // ao reveal/flag) para a dispensa de um detalhe não vazar para o próximo aberto.
+  const [matchDismissed, setMatchDismissed] = useState(false);
+
   // Reseta a revelação quando ABRE ou TROCA de pet, SEM um effect (que dispararia
   // o aviso react-hooks/set-state-in-effect e um render em cascata). Padrão
   // oficial do React "ajustar estado durante o render quando uma prop muda":
@@ -69,6 +74,8 @@ export default function PetDetailSheet({ open, pet, onClose }) {
     if (revealed) setRevealed(false);
     // PET-M4 — a denúncia de um pet jamais "vaza" para o próximo aberto.
     if (flagState !== FLAG_IDLE) setFlagState(FLAG_IDLE);
+    // PET-M9b — a dispensa do hint também não vaza para o próximo pet aberto.
+    if (matchDismissed) setMatchDismissed(false);
   }
 
   useEffect(() => {
@@ -116,6 +123,31 @@ export default function PetDetailSheet({ open, pet, onClose }) {
     if (!pet || !revealed) return null;
     return resolveContact(pet.contact);
   }, [pet, revealed]);
+
+  // PET-M9b — "possível encontro" (opt-in, calmo, NUNCA certo). `matches` já vem
+  // do predicado PURO (findPossibleMatches) com o LIMIAR DE SILÊNCIO aplicado:
+  // pares fracos/coringa NUNCA chegam aqui (spec §3). Mostramos só o MELHOR
+  // candidato (matches[0], já ordenado) → UMA próxima decisão calma: ver o outro
+  // relato (spec §2.3). NENHUM score/porcentagem é exposto (banido §2.2); o tom é
+  // "pode ser", não "encontramos" (§2.2). O link ao candidato usa a identidade
+  // M18 (petCoordsKey) — a mesma SOT do deep-link, então abrir o outro relato é a
+  // ação de focar AQUELE pet. Espelhamento dono/achador (§1.1): se o pet ABERTO é
+  // o `perdido`, o dono vê "alguém pode ter visto seu pet"; se é um achado, o autor
+  // vê "este pet pode ter dono procurando".
+  const matchHint = useMemo(() => {
+    if (!pet || !Array.isArray(matches) || matches.length === 0) return null;
+    const best = matches[0];
+    if (!best || !best.pet) return null;
+    const targetKey = petCoordsKey(best.pet.coords);
+    if (!targetKey) return null; // sem identidade estável → não oferece o link (degrada calmo)
+    // Registro de tom espelhado (a copy LITERAL final é de uiux/PET-M23; aqui fixa-se
+    // o registro "possível", calmo, sem certeza — spec §2.2/§2.4).
+    const openIsLost = pet.status === 'perdido';
+    const lead = openIsLost
+      ? 'Pode ser que alguém tenha visto um pet parecido por perto.'
+      : 'Pode ser que este pet tenha alguém procurando por ele por perto.';
+    return { targetPet: best.pet, targetKey, lead, count: matches.length };
+  }, [pet, matches]);
 
   // Após revelar, leva o foco para o contato revelado (leitor de tela e teclado
   // não ficam presos no botão que acabou de sumir). rAF: espera o DOM pintar o
@@ -208,6 +240,40 @@ export default function PetDetailSheet({ open, pet, onClose }) {
         </dl>
 
         {derived.detail && <p className="mdf-pin-sheet__detail">{derived.detail}</p>}
+
+        {/* PET-M9b — hint "possível encontro": OPT-IN, calmo, NUNCA certo. Aparece
+            só quando há um candidato que ROMPEU O SILÊNCIO (spec §3, já filtrado no
+            predicado). Tom "pode ser" (§2.2), sem score/porcentagem (§2.2), UMA
+            próxima decisão calma — ver o outro relato (§2.3) — e DISPENSÁVEL (§2.1).
+            role=note (informação serena), aria-live=off (não interrompe o AT: o dono
+            decide olhar). O link foca o candidato via a identidade M18 (petCoordsKey),
+            sem prometer "verificado" (§5 — o match aproxima, não prova). */}
+        {matchHint && !matchDismissed && (
+          <div className="pet-detail__match" role="note" aria-label="Possível encontro">
+            <p className="pet-detail__match-lead">
+              <span className="pet-detail__match-icon" aria-hidden="true">💛</span>
+              {matchHint.lead} Vale olhar com calma — pode não ser, e tudo bem.
+            </p>
+            <div className="pet-detail__match-actions">
+              <button
+                type="button"
+                className="pet-detail__match-open"
+                data-deeplink-param={PET_DEEPLINK_PARAM}
+                data-match-key={matchHint.targetKey}
+                onClick={() => onOpenMatch?.(matchHint.targetPet)}
+              >
+                Ver o outro relato
+              </button>
+              <button
+                type="button"
+                className="pet-detail__match-dismiss"
+                onClick={() => setMatchDismissed(true)}
+              >
+                Agora não
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* PET-M3 — contato sob reveal-on-tap. Enquanto NÃO revelado, mostramos
             só um botão calmo + a nota de privacidade /pets-específica. O dado de

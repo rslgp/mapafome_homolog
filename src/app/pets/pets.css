@@ -712,6 +712,110 @@
   }
 }
 
+/* ── Detail sheet: "possível encontro" hint — PET-M9b ─────── *
+ * Hint OPT-IN, calmo e NUNCA certo (PET_MATCH_SPEC §2). Card neutro e SUAVE em
+ * --mdf-surface-2 com uma borda lateral sutil (--mdf-ink-subtle, o token de
+ * boundary visível) — NUNCA os tokens de risco/alarme vermelho (--mdf-risk-*),
+ * tonalmente errados para uma ESPERANÇA calibrada num público em estresse. Sem
+ * urgência, sem badge, sem porcentagem (governador de tom + spec §2.2). Só
+ * tokens, sem hex cru.
+ * HANDOFF coloring-ict6: se um tom dedicado de "esperança/possível" (ex. um
+ * --pet-hope-tint/-ink) for desejado, re-derivar com a razão AA medida anotada
+ * inline; aqui fica o par neutro seguro (surface-2 + ink) como base. */
+
+.pet-detail__match {
+  margin: 0 0 var(--mdf-space-3) 0;
+  padding: var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border-left: 3px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-card);
+}
+
+.pet-detail__match-lead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mdf-space-2);
+  margin: 0 0 var(--mdf-space-2) 0;
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body);
+  color: var(--mdf-ink); /* >=4.5:1 sobre surface-2 (par neutro provado) */
+}
+
+.pet-detail__match-icon {
+  font-size: var(--mdf-fs-body);
+  line-height: 1;
+}
+
+.pet-detail__match-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+}
+
+/* "Ver o outro relato" — a UMA próxima decisão calma (spec §2.3). Pesa um pouco
+ * mais (boundary visível + ink cheio), nunca um CTA de alarme/urgência. >=44px. */
+.pet-detail__match-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px alvo de toque */
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
+              border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-detail__match-open:hover {
+  background: var(--mdf-surface-2);
+  border-color: var(--mdf-ink);
+}
+
+.pet-detail__match-open:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* "Agora não" — dispensa discreta, alvo >=44px, operável por teclado. O hint é
+ * opt-in e some sem culpar (spec §2.1). */
+.pet-detail__match-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mdf-touch-target); /* >=44px */
+  padding: var(--mdf-space-2) var(--mdf-space-3);
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: 1px solid transparent;
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pet-detail__match-dismiss:hover {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+}
+
+.pet-detail__match-dismiss:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-detail__match-open {
+    transition: none;
+  }
+}
+
 /* ════════════════════════════════════════════════════════════════════════════
  * PET-M11 — CROSS-SURFACE STATUS-BADGE SOT (the single documented spec)
  * ════════════════════════════════════════════════════════════════════════════

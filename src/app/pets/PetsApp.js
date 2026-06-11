@@ -33,6 +33,7 @@ import {
   activePetsByAge,
   parsePetDeepLinkParam,
   findPetByCoordsKey,
+  findPossibleMatches,
 } from './petDomain';
 import {
   enqueue as enqueuePetPublish,
@@ -180,6 +181,34 @@ export default function PetsApp() {
   const handleCloseReport = useCallback(() => setReportOpen(false), []);
   const handlePetClick = useCallback((pet) => { setSelectedPet(pet); setDetailOpen(true); }, []);
   const handleCloseDetail = useCallback(() => setDetailOpen(false), []);
+
+  // PET-M9b — "possível encontro" (opt-in, NUNCA certo). Os candidatos do pet
+  // ABERTO são DERIVADOS por um predicado PURO (findPossibleMatches, petDomain
+  // SOT): perdido↔encontrado/avistado dentro de raio/janela, com a EXCLUSÃO de
+  // resolvidos/arquivados ANTES de parear e o LIMIAR DE SILÊNCIO já aplicado (a
+  // lista só traz pares que ROMPEM o silêncio — pares fracos/coringa ficam de
+  // fora aqui mesmo). nowMs é o relógio carimbado pelo effect (injetado, puro).
+  //
+  // BUSCA na lista COMPLETA `pets`, NÃO em `visiblePets`: o match precisa enxergar
+  // candidatos mesmo que um filtro do M7 os esconda do mapa — espelha a decisão do
+  // deep-link M18 (honrar a intenção, não a poda de UI). A exclusão por idade do M12
+  // continua valendo (faz parte da elegibilidade do §4 dentro de findPossibleMatches),
+  // então um candidato arquivado não vaza por usar a lista completa.
+  const selectedMatches = useMemo(
+    () => (selectedPet ? findPossibleMatches(selectedPet, pets, nowMs) : []),
+    [selectedPet, pets, nowMs],
+  );
+
+  // Abrir "o outro relato" a partir do hint: recentra e abre o detalhe do candidato
+  // (mesma transição do handlePetClick + recentro do deep-link M18). É UMA próxima
+  // decisão calma (spec §2.3): comparar as duas listagens. O foco volta a ser
+  // gerenciado pela própria PetDetailSheet ao trocar de pet (contrato de modal).
+  const handleOpenMatch = useCallback((matchPet) => {
+    if (!matchPet) return;
+    setSelectedPet(matchPet);
+    setCenter(matchPet.coords);
+    setDetailOpen(true);
+  }, []);
 
   // PET-M7 — toggle imutável de um id numa faceta (a regra pura vive em
   // petDomain; aqui só fazemos o setState). Limpar volta ao filtro vazio.
@@ -333,6 +362,8 @@ export default function PetsApp() {
       <PetDetailSheet
         open={detailOpen}
         pet={selectedPet}
+        matches={selectedMatches}
+        onOpenMatch={handleOpenMatch}
         onClose={handleCloseDetail}
       />
       </main>
