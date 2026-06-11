@@ -94,17 +94,30 @@ export function sanitizePhotosUrl(raw) {
   return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? v : '';
 }
 
+// Chave ESTÁVEL do campo de ciclo-de-vida "reunido" dentro do blob Dados (SOT).
+// PET-M2. Ninguém fora deste módulo escreve a string literal 'resolvedAt' — o
+// writer (petsData.updatePetByCoords) e o parser leem por esta constante, então
+// uma renomeação do campo na planilha é uma edição de uma linha só, aqui.
+export const PET_RESOLVED_AT_KEY = 'resolvedAt';
+
 // Monta o blob `Dados` de uma linha de pet. PURA: lança Error claro se status ou
 // coords forem inválidos; exige `dateIso` do chamador (sem Date.now() aqui).
 // Campos de texto opcionais caem para string vazia.
-export function buildPetDados({ coords, status, species, size, color, name, contact, detail, photos, dateIso }) {
+//
+// PET-M2 — ciclo de vida "reunido": `resolvedAt` é OPCIONAL e, igual a `dateIso`,
+// é INJETADO pelo chamador (ISO string; nunca Date.now() aqui — a função segue
+// pura/determinística). Só é EMITIDO quando fornecido: uma linha recém-publicada
+// (sem resolvedAt) não carrega a chave, e o parser a lê de volta como ATIVA
+// (backward-compat). Isto REMOVE a suposição implícita de que todo pet montado
+// está ativo — o estado agora é explícito no blob.
+export function buildPetDados({ coords, status, species, size, color, name, contact, detail, photos, dateIso, resolvedAt }) {
   if (!isValidStatus(status)) {
     throw new Error(`buildPetDados: status inválido "${status}"`);
   }
   if (!isFiniteCoordPair(coords)) {
     throw new Error('buildPetDados: coords deve ser um par [lat,lng] finito');
   }
-  return {
+  const dados = {
     kind: PET_KIND,
     status,
     species: species || '',
@@ -117,6 +130,12 @@ export function buildPetDados({ coords, status, species, size, color, name, cont
     Coordinates: JSON.stringify(coords),
     DateISO: dateIso,
   };
+  // Só carimba a chave quando o chamador realmente passou um ISO não-vazio —
+  // mantém as linhas ativas LIMPAS (sem campo nulo) e o round-trip simétrico.
+  if (resolvedAt) {
+    dados[PET_RESOLVED_AT_KEY] = resolvedAt;
+  }
+  return dados;
 }
 
 // ─── Classificação de FALHA de publicação (SOT) ──────────────────────────────
@@ -215,6 +234,12 @@ export function parsePetRow(row) {
   }
   if (!isFiniteCoordPair(coords)) return null;
 
+  // PET-M2 — ciclo de vida "reunido". Linhas antigas (sem a chave) leem como
+  // resolvedAt:undefined → resolved:false → ATIVAS (backward-compat, sem
+  // regressão de parse). `resolved` é o discriminador derivado: a fonte é o
+  // ISO, mas o consumidor (mapa/lista) só precisa do booleano para descartar
+  // ou distinguir um pet reunido (ver também isPetResolved).
+  const resolvedAt = dados[PET_RESOLVED_AT_KEY] || undefined;
   return {
     coords,
     status: dados.status,
@@ -226,5 +251,15 @@ export function parsePetRow(row) {
     detail: dados.Detalhe || '',
     photos: sanitizePhotosUrl(dados.photos),
     dateIso: dados.DateISO,
+    resolvedAt,
+    resolved: Boolean(resolvedAt),
   };
+}
+
+// Discriminador resolvido/ativo (SOT). Lê a verdade de UM lugar — o campo
+// resolvedAt do pet parseado — para que o mapa/lista deixe de assumir que todo
+// pet é ativo. Aceita o objeto parseado (forma do parsePetRow) e nunca lança.
+// PET-M2.
+export function isPetResolved(pet) {
+  return Boolean(pet && pet[PET_RESOLVED_AT_KEY]);
 }

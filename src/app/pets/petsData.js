@@ -14,7 +14,7 @@
 //   • barricade: validateCoordinatePair lança ANTES de qualquer escrita.
 
 import { getSheet, appendRow, validateCoordinatePair } from '../components/compatibility/components/googlesheets/sheetsClient';
-import { buildPetDados, parsePetRow } from './petDomain';
+import { buildPetDados, parsePetRow, isPetRow, PET_RESOLVED_AT_KEY } from './petDomain';
 
 // Cache de idempotência client-side. Espelha o _idempotencyCache do
 // App.writePinToSheets (M5): um double-tap após timeout não grava duas linhas.
@@ -89,4 +89,63 @@ export async function publishPet({ coords, status, species, size, color, name, c
   if (idempotency_key) seenIdempotencyKeys.add(idempotency_key);
 
   return normalized;
+}
+
+// ─── PET-M2 — writer coords-keyed (reescreve SÓ a coluna Dados) ──────────────
+// Espelha sheetsClient.updatePinDadosByCoords (mesma forma: getSheet(0) → cache
+// de rows em envVariables → find por Coordinates → muta o blob → row.save()).
+// DUAS diferenças deliberadas, ambas exigidas pelo isolamento kind:'pet':
+//   1. O matcher exige isPetRow(dados) ALÉM de Coordinates iguais. Pets e fome
+//      compartilham a planilha; sem isso, um resolve de pet poderia reescrever
+//      uma linha de FOME que por acaso caiu nas mesmas coords. O guard torna
+//      isso impossível (forcing-function, não comentário).
+//   2. Reescreve APENAS target.Dados — nunca Roaster/Categorias/campo de need —
+//      preservando a invisibilidade da linha às superfícies de fome.
+// Reusa o cache envVariables.rows entre chamadas, igual ao writer de fome.
+// Retorna a linha atualizada, ou null se nenhuma linha de PET casar as coords.
+export async function updatePetByCoords(envVariables, coordsStr, mutator) {
+  const sheet = await getSheet(0);
+  if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
+  const target = envVariables.rows.find((x) => {
+    try {
+      const dados = JSON.parse(x.Dados);
+      // Isolamento: só casa se for linha de pet E as coords baterem.
+      return isPetRow(dados) && dados.Coordinates === coordsStr;
+    } catch (_e) {
+      return false;
+    }
+  });
+  if (!target) return null;
+  const dados = JSON.parse(target.Dados);
+  mutator(dados);
+  target.Dados = JSON.stringify(dados);
+  await target.save();
+  return target;
+}
+
+// Marca um pet como REUNIDO carimbando resolvedAt no blob Dados da linha que
+// casa as coords. Conveniência sobre updatePetByCoords: stamping de tempo é
+// feito AQUI (runtime real — espelha a disciplina de dateIso em publishPet),
+// deixando petDomain puro. O ISO pode ser INJETADO (resolvedAt) — é isto que
+// torna o resolve enfileirável: a fila offline do PET-M1 guarda o MESMO payload
+// (coords + resolvedAt + idempotency_key) e um flush reaplica com o mesmo
+// carimbo, então um reload lê de volta IDÊNTICO ao escrito nesta sessão (LSP).
+//
+// Idempotente: reusa o seenIdempotencyKeys de publishPet — um flush da fila
+// nunca reescreve duas vezes a mesma resolução. Retorna a linha (ou null se a
+// linha sumiu/arquivou — o chamador degrada com calma, PET-M18).
+export async function resolvePet({ coords, resolvedAt, idempotency_key, envVariables = {} }) {
+  // Idempotência: se já aplicamos esta resolução, devolve sem gravar de novo.
+  if (idempotency_key && seenIdempotencyKeys.has(idempotency_key)) {
+    return null;
+  }
+  // Carimba o tempo no runtime (não no domínio puro); aceita injeção para a fila.
+  const stampIso = resolvedAt || new Date().toISOString();
+  const coordsStr = JSON.stringify(coords);
+  const row = await updatePetByCoords(envVariables, coordsStr, (dados) => {
+    // Escreve SÓ o campo de ciclo de vida; nada mais do blob é tocado.
+    dados[PET_RESOLVED_AT_KEY] = stampIso;
+  });
+  if (idempotency_key) seenIdempotencyKeys.add(idempotency_key);
+  return row;
 }
