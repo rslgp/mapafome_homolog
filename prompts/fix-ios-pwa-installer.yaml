@@ -1,0 +1,281 @@
+# prompt artifact — authored by the promptengineer agent
+meta:
+  task: "Fix the PWA installer on iOS (iPhone/iPad/iPadOS) without regressing the working Android/Chromium PWA-lite install flow"
+  slug: "fix-ios-pwa-installer"
+  created: "2026-06-11"
+  author: "promptengineer (agent)"
+  model_for_run: "session-default"
+prompt: |
+  ROLE: You are the MAPA FOME softwareengineer agent. You will EDIT this repo to fix the
+  iOS PWA "Add to Home Screen" flow WITHOUT regressing the working Android/Chromium
+  install path. Operate under the project's CLAUDE.md (what/why table, mandatory gate,
+  git-commit-specialist for commits). This is an ADDITIVE change.
+
+  ────────────────────────────────────────────────────────────────────────
+  LOAD-BEARING RULES — READ FIRST. A violation of any of these FAILS the task.
+  ────────────────────────────────────────────────────────────────────────
+  LBR-A (#1 ACCEPTANCE CRITERION — NON-REGRESSION). The Android/Chromium
+    `beforeinstallprompt` → `.prompt()` path must be preserved EXACTLY. iOS is a NEW,
+    SEPARATE branch reached ONLY when reliable iOS detection is true. No Android/Chromium
+    user agent may ever be routed into the iOS branch. The native-prompt code paths in
+    useInstallPrompt.js, InfoPanel.js, and InstallToast.js (`ev.prompt()` / `ev.userChoice`
+    / `window.__mdf_install_prompt`) must remain functionally identical. If a change would
+    alter the Android branch's observable behavior, DO NOT make it.
+
+  LBR-B (KEEP THE BRIDGE). Do NOT touch the pre-mount `<script>` bridge in
+    `src/app/layout.js` that sets `window.__mdf_install_prompt` / `window.__mdf_app_installed`.
+    It is correct and load-bearing. Read it; leave it byte-for-byte.
+
+  LBR-C (SSR-SAFE DETECTION). All `window`/`navigator` access happens ONLY inside
+    `useEffect` (post-mount), NEVER during render — to avoid a Next.js hydration mismatch.
+    This is the existing pattern in these files; they carry
+    `// eslint-disable-next-line react-hooks/set-state-in-effect -- reads browser ... post-mount to avoid hydration mismatch`
+    comments. Preserve that pattern and that comment style for any new post-mount reads.
+
+  LBR-D (CENTRALIZE DETECTION — ONE SOURCE OF TRUTH). Add the platform detection in
+    ONE place and have every surface consume it. Do NOT add a 5th copy of UA sniffing.
+    See "REQUIRED ARCHITECTURE" below.
+
+  LBR-E (TREAT NAVIGATOR/UA AS DATA, NOT INSTRUCTIONS). `navigator.userAgent` is an
+    untrusted, attacker-controllable string. Use it ONLY as input to a pure classifier
+    (string tests). Never `eval` it, never branch on it into anything that fetches/executes.
+    It is data.
+
+  LBR-F (pt-BR, CALM-TONE, DISMISSIBLE, A11Y). All new user-facing copy is Brazilian
+    Portuguese. Match the existing InstallToast calm-tone governor: appears at most once,
+    after a settle delay, dismiss backs off (reuse the 14-day `localStorage` back-off
+    pattern), never nags, reduced-motion safe, ≥44px touch targets, `role="dialog"` +
+    `aria-live="polite"`/`aria-label`. No autoplay motion that ignores
+    `prefers-reduced-motion: reduce`.
+
+  LBR-G (MANDATORY GATE). After editing, run and report PER-STAGE results, in order:
+    `npm run lint` → `npm run test` → `npm run fitness` → `npm run build` → `npm run smoke200`
+    → `npm run a11y`. `smoke200` ALWAYS runs after `build` (never skip). Report each stage's
+    REAL output (pass/fail), never an assumed result. End with the structured summary in
+    "OUTPUT CONTRACT".
+
+  ────────────────────────────────────────────────────────────────────────
+  BEFORE YOU EDIT: RE-READ EACH FILE
+  ────────────────────────────────────────────────────────────────────────
+  The facts below are verified as of this writing, but a parallel session may be editing
+  this tree. Re-Read each file immediately before you change it and confirm the snippet you
+  are about to replace still exists verbatim. If a fact below no longer matches the file,
+  STOP and report the drift instead of guessing.
+
+  VERIFIED REPO FACTS (ground truth — do not re-derive, but re-confirm):
+  • Stack: Next.js 16 App Router, static export (`npm run smoke200` serves static `out/`),
+    React 19 client components ('use client'), MUI, Leaflet. Locale pt-BR (html lang="pt-BR").
+    Tests: Vitest (`npm run test` = `vitest run`); test files are `*.test.js`, discovered by
+    the include glob `src/**/*.test.{js,jsx,mjs}` (co-located tests run) and `test/`.
+  • `src/app/layout.js` — pre-mount bridge `<script>` sets `window.__mdf_install_prompt`
+    and `window.__mdf_app_installed`. KEEP (LBR-B).
+  • FOUR install surfaces, all Android-first with the SAME weak iOS fallback today:
+    1. `src/app/components/compatibility/components/ux/useInstallPrompt.js` — shared hook.
+       `promptInstall()` returns 'accepted'|'dismissed'|'ios'|'unavailable'. Current iOS test:
+         /iphone|ipad|ipod/i.test(ua) || (/safari/i.test(ua) && !/chrome|crios|android/i.test(ua))
+       (This misses iPadOS-as-Mac and does not detect in-app browsers — see DEFECTS.)
+    2. `src/app/components/compatibility/components/InfoPanel.js` — has its OWN duplicated
+       `beforeinstallprompt` useEffect + `handleInstall()` (does NOT use the shared hook),
+       renders Google-Play / App-Store badge buttons, and the iOS fallback is a single string:
+         setInstallHint('No iPhone/iPad (Safari): toque em Compartilhar e escolha "Adicionar à Tela de Início".')
+    3. `src/app/components/compatibility/components/ux/InstallToast.js` — auto toast; only
+       reveals when a `beforeinstallprompt` event exists, so on iOS it NEVER appears today.
+    4. `src/app/components/compatibility/components/ux/StepsHint.js` — "Ver mais" button
+       (`scrollToInstall`) scrolls to `.ip-apps__install-badges` / `#MoreInfo`.
+
+  ────────────────────────────────────────────────────────────────────────
+  iOS DEFECTS YOU MUST FIX / EXPLICITLY HANDLE
+  ────────────────────────────────────────────────────────────────────────
+  D1. iOS Safari never fires `beforeinstallprompt` (Apple policy); there is NO programmatic
+      install API on iOS. Today iPhone users get only a one-line text hint and the toast
+      never appears. Provide REAL, VISUAL Add-to-Home-Screen guidance: the Share (⎙) icon →
+      "Adicionar à Tela de Início" (offer the English "Add to Home Screen" as a secondary
+      label). Show it in a calm, dismissible surface — ONLY on real iOS, ONLY when NOT
+      already standalone.
+  D2. iPadOS 13+ Safari masquerades as desktop Mac Safari (UA says "Macintosh", not "iPad").
+      Robust iPad detection: `navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1`
+      (touch-capable "Mac" == iPad), IN ADDITION to the classic `/ipad/i` UA test. The current
+      regex misses these iPads — fix it.
+  D3. iOS in-app browsers (Instagram, Facebook, WhatsApp, LinkedIn, Line webviews) CANNOT
+      add to home screen (no Share→Add option). Detect common in-app UA tokens — e.g. `FBAN`,
+      `FBAV`, `Instagram`, `Line`, `WhatsApp`, `LinkedIn` — and instead instruct the user to
+      open the page in Safari first: pt-BR "Abra no Safari para instalar" with the ⋯/aA →
+      "Abrir no Safari" hint. Do NOT show Share→Add instructions that won't work in a webview.
+  D4. Already-standalone iOS: `navigator.standalone === true` means already installed →
+      treat as installed, show NO invite. Keep this consistent with the existing
+      `matchMedia('(display-mode: standalone)')` and `window.__mdf_app_installed` checks.
+
+  ────────────────────────────────────────────────────────────────────────
+  REQUIRED ARCHITECTURE (this is the eval's backbone — build it so it is unit-testable)
+  ────────────────────────────────────────────────────────────────────────
+  STEP 1 — Extract a PURE detection function (no React, no module-level `window` read).
+    Create a new module, e.g.
+    `src/app/components/compatibility/components/ux/detectPlatform.js`, exporting a pure
+    function that takes an INJECTED navigator-like object and returns a plain result:
+
+      detectPlatform(nav) -> {
+        platform: 'android' | 'ios' | 'desktop',
+        isIOS: boolean,            // true for iPhone/iPod AND iPadOS-as-Mac (D2)
+        isStandalone: boolean,     // nav.standalone === true (D4); caller still OR-s matchMedia
+        isInAppBrowser: boolean,   // FBAN/FBAV/Instagram/Line/WhatsApp/LinkedIn... (D3)
+      }
+
+    Requirements for the pure function:
+      • Reads ONLY from the passed-in `nav` argument (`nav.userAgent`, `nav.platform`,
+        `nav.maxTouchPoints`, `nav.standalone`). It must NOT reference the global `window`
+        or `navigator` — so it runs in a plain Vitest test with a synthetic object.
+      • Must handle a missing/partial `nav` (e.g. `{}` or `undefined`) without throwing →
+        default to platform:'desktop', all flags false.
+      • Android wins decisively: any UA containing `android` (or `crios` Chrome-on-iOS is
+        still Chromium but on iOS — classify by the UA precedence rules you encode and
+        DOCUMENT them in a comment) must NOT be classified `ios` in a way that steals the
+        `beforeinstallprompt` branch. The invariant: a real Android Chrome UA → platform
+        'android', isIOS false (so LBR-A holds).
+      • iPad-as-Mac: `nav.platform === 'MacIntel' && nav.maxTouchPoints > 1` → isIOS true,
+        platform 'ios'. A genuine desktop Mac (maxTouchPoints 0/1) → 'desktop', isIOS false.
+
+  STEP 2 — Centralize consumption in the shared hook (LBR-D).
+    Extend `useInstallPrompt.js` to call `detectPlatform(window.navigator)` INSIDE its
+    existing `useEffect` (post-mount, LBR-C) and EXPORT the platform info on its return value,
+    e.g. `{ canInstall, isInstalled, promptInstall, platform, isIOS, isStandalone, isInAppBrowser }`.
+    `isStandalone` here is the OR of `detectPlatform().isStandalone`,
+    `matchMedia('(display-mode: standalone)').matches`, and `window.__mdf_app_installed`.
+    Keep `promptInstall()`'s existing return contract; it may still return 'ios' for the
+    no-event iOS case.
+
+  STEP 3 — Make the three other surfaces CONSUME the shared hook's platform info instead of
+    re-sniffing:
+      • InstallToast.js: when `isIOS && !isStandalone && !isInAppBrowser`, reveal an iOS
+        variant of the toast with the visual Share→"Adicionar à Tela de Início" guidance
+        (D1) — reusing the SAME calm-tone settle delay + 14-day dismiss back-off + reduced-
+        motion + touch-target rules already in this file. When `isIOS && isInAppBrowser`,
+        show the "Abra no Safari para instalar" variant (D3). The Android branch (event
+        present) is UNCHANGED (LBR-A).
+      • InfoPanel.js: replace the single `setInstallHint('No iPhone/iPad ...')` string with
+        guidance driven by the shared platform info (iOS Safari → Share→Add steps; iOS in-app
+        → open-in-Safari; non-iOS no-event → keep the existing "⋮ → Instalar app" hint). DRY
+        the duplicated `beforeinstallprompt` useEffect toward the shared hook IF AND ONLY IF
+        the store badges and existing button behavior are preserved exactly (LBR-A). If
+        DRY-ing risks the badge behavior, keep InfoPanel's event wiring as-is and only swap
+        its iOS fallback to consume the shared `isIOS`/`isInAppBrowser` — non-regression beats
+        DRY here.
+      • StepsHint.js: no behavior change required; if `scrollToInstall` lands on an iOS user
+        with no badges, ensure it still scrolls to `#MoreInfo` (already does). Touch only if
+        needed to surface the new iOS guidance.
+
+  ────────────────────────────────────────────────────────────────────────
+  HOW iOS IS VERIFIED WITHOUT A DEVICE (you cannot run an iPhone — this is the EVAL)
+  ────────────────────────────────────────────────────────────────────────
+  Write a Vitest unit test co-located next to the pure module, e.g.
+  `src/app/components/compatibility/components/ux/detectPlatform.test.js`, that feeds
+  SYNTHETIC navigator objects into `detectPlatform()` and asserts the returned
+  platform/flags. It MUST cover at least these rows (see ACCEPTANCE CRITERION):
+
+    | case                         | synthetic nav                                                                 | expected |
+    |------------------------------|-------------------------------------------------------------------------------|----------|
+    | Android Chrome               | userAgent: '...Linux; Android 13...Chrome/...Mobile...'                        | platform 'android', isIOS false, isInAppBrowser false |
+    | iPhone Safari                | userAgent: '...iPhone; CPU iPhone OS 17...Safari...', platform 'iPhone'        | platform 'ios', isIOS true |
+    | iPadOS-as-Mac (D2)           | userAgent: '...Macintosh; Intel Mac OS X...Safari...', platform 'MacIntel', maxTouchPoints 5 | platform 'ios', isIOS true |
+    | real desktop Mac             | userAgent: '...Macintosh...Safari...', platform 'MacIntel', maxTouchPoints 0   | platform 'desktop', isIOS false |
+    | iOS Instagram in-app (D3)    | userAgent: '...iPhone...Instagram 300...', platform 'iPhone'                   | isIOS true, isInAppBrowser true |
+    | iOS standalone (D4)          | userAgent: '...iPhone...', standalone: true                                    | isIOS true, isStandalone true |
+    | desktop Chrome               | userAgent: '...Windows NT 10...Chrome/...'                                     | platform 'desktop', isIOS false |
+    | empty/partial nav            | {} or undefined                                                               | platform 'desktop', all flags false, no throw |
+
+  This test is the proof that LBR-A holds (Android still → native-prompt branch) and the iOS
+  cases route to the correct new branch. The visual flow cannot be device-tested in CI; the
+  pure function is the testable core, so keep ALL classification logic in it.
+
+  ────────────────────────────────────────────────────────────────────────
+  OUTPUT CONTRACT (return exactly this, in this order)
+  ────────────────────────────────────────────────────────────────────────
+  1. A what/why TABLE: one row per file changed — columns `File / Change` · `What` · `Why`.
+  2. A separate GATE table: one row per stage (lint, test, fitness, build, smoke200, a11y)
+     with its REAL pass/fail and the relevant output line. smoke200 per-route result included.
+  3. The new unit test's result (the detectPlatform synthetic-navigator suite): PASS/FAIL +
+     the count of cases.
+  4. DEFERRED: anything intentionally NOT changed and why (e.g. "kept InfoPanel event wiring
+     to protect badge behavior — LBR-A").
+  5. A final fenced JSON block matching this schema (so this result can be parsed downstream):
+     {
+       "android_path_preserved": boolean,
+       "ios_branch_added": boolean,
+       "detection_centralized_in": string,        // module path
+       "pure_detect_test": { "file": string, "cases": number, "pass": boolean },
+       "files_changed": string[],
+       "gate": { "lint": "pass|fail", "test": "pass|fail", "fitness": "pass|fail",
+                 "build": "pass|fail", "smoke200": "pass|fail", "a11y": "pass|fail" },
+       "deferred": string[]
+     }
+     Emit ONLY valid JSON in that block. Report real results; if a stage was not run or was
+     blocked, mark it "fail" or state it explicitly — never assume a pass.
+
+  After the gate is green, route the commit through the git-commit-specialist agent per
+  CLAUDE.md (do not hand-write the commit). Do NOT commit while any stage is red.
+acceptance_criterion: >-
+  npm run test passes including a new detectPlatform.test.js suite covering all 8
+  synthetic-navigator cases (Android Chrome -> android/isIOS=false; iPhone Safari -> ios;
+  iPadOS-as-Mac (MacIntel+maxTouchPoints>1) -> ios; real desktop Mac -> desktop; iOS
+  Instagram -> isInAppBrowser; standalone -> isStandalone; desktop Chrome -> desktop; empty
+  nav -> desktop, no throw), AND the full gate (lint/test/fitness/build/smoke200/a11y) is
+  green, AND the Android beforeinstallprompt branch is byte-for-byte behavior-preserved.
+eval:
+  check: >-
+    npx vitest run src/app/components/compatibility/components/ux/detectPlatform.test.js
+    (8 cases over the pure detectPlatform(nav) function with synthetic navigator objects)
+  pass: >-
+    All 8 cases green: Android UA resolves to platform 'android' / isIOS false (proves
+    LBR-A non-regression), iPhone + iPad-as-Mac resolve to ios, Instagram -> isInAppBrowser,
+    standalone -> isStandalone, desktop cases -> desktop, empty nav does not throw.
+  fail: >-
+    Any case red — e.g. Android resolves isIOS=true (Android stolen into the iOS branch),
+    iPad-as-Mac resolves to desktop (D2 unfixed), or empty nav throws. A red here BLOCKS
+    the change.
+guarded_lbrs:
+  - "LBR-02 — forces an explicit measurable acceptance criterion + runnable eval"
+  - "LBR-04 — bounds output to a fixed contract (what/why table, gate table, JSON block)"
+  - "LBR-05 — scopes hard constraints to non-regression; makes DRY optional so capability isn't killed"
+  - "LBR-07 — quarantines navigator.userAgent as DATA into a pure classifier, never executed"
+  - "LBR-08 — forces a final JSON schema block so the result parses downstream"
+  - "LBR-09 — eval asserts the right branch FIRES (iOS surface on iOS, native prompt on Android)"
+  - "LBR-10 — pairs every 'don't break Android' with a positive target (iOS = new gated branch)"
+  - "LBR-12 — detection forced into a pure, deterministic, window-free function for testability"
+  - "project — additive/non-regressive, SSR-safe (hydration), centralized detection, pt-BR calm-tone a11y, mandatory smoke200 gate"
+notes: >-
+  All 5 brief facts were verified against live code before authoring (iOS regex,
+  setInstallHint string, InfoPanel's duplicated useEffect, InstallToast event-gating,
+  StepsHint scroll, layout bridge). Eval infra confirmed present (Vitest + co-located
+  *.test.js include glob + existing pure-fn idiom in petDomain.filter.test.js). Open product
+  calls left to the human/coding agent: (a) whether Chrome-on-iOS (CriOS) should also receive
+  the iOS Share->Add guidance (it is iOS WebKit and also cannot use beforeinstallprompt);
+  (b) whether to force-DRY InfoPanel's duplicated event wiring now (default: deferred, to
+  protect the install badges) vs this pass. New module name detectPlatform.js is a suggestion;
+  only "one pure window-free module" is required.
+run:
+  default: true
+  last_result:
+    ran_on: "2026-06-11"
+    executed_by: "softwareengineer (agent)"
+    input_used: "the live MAPA FOME repo (real run — the prompt's whole purpose is to edit this codebase)"
+    eval_verdict: "PASS — npx vitest run detectPlatform.test.js → 12 cases passed (8 required rows + 4 documented precedence edges); independently re-run by the orchestrator (Vitest 4.1.8, 12/12 green)"
+    gate:
+      lint: "pass"
+      test: "pass (18 files, 262 tests)"
+      fitness: "pass (file-loc, function-loc, todo-density, token-contrast within v5 limits)"
+      build: "pass (11 routes static-exported)"
+      smoke200: "pass (all 16 routes 200 + real render; / hosts InstallToast+InfoPanel)"
+      a11y: "pass (axe-core 4.12.0, 0 violations on /)"
+    files_changed:
+      - "src/app/components/compatibility/components/ux/detectPlatform.js (NEW — pure classifier)"
+      - "src/app/components/compatibility/components/ux/detectPlatform.test.js (NEW — 12-case eval)"
+      - "src/app/components/compatibility/components/ux/useInstallPrompt.js (MOD — exports platform info; promptInstall byte-for-byte preserved)"
+      - "src/app/components/compatibility/components/ux/InstallToast.js (MOD — NEW iOS branch: Share→Add / open-in-Safari)"
+      - "src/app/components/compatibility/components/InfoPanel.js (MOD — iOS hint driven by shared flags)"
+    android_path_preserved: true
+    notes: >-
+      Independently verified by the orchestrator: detectPlatform.js is pure/window-free with
+      Android-wins-first precedence (so no Android UA reaches the iOS branch — LBR-A holds at
+      source); promptInstall() in useInstallPrompt.js is unchanged vs the original; InstallToast
+      consumes the shared hook (no re-sniff). Not committed — left for the git-commit-specialist
+      to stage the 5 install-flow paths explicitly (concurrent session owns imprensa/parceiros/
+      build-stamp files; do NOT git add .).
