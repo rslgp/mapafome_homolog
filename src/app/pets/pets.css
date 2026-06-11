@@ -305,6 +305,22 @@
   margin-bottom: 0;
 }
 
+/* ── PET-M1: queued-publish notice (offline / servidor lento) ──────────────
+ * A causa offline/lento NÃO é um erro vermelho: o relato foi guardado e volta
+ * sozinho. A base .mdf-sheet__inline-error usa os tokens de risco vermelho
+ * (--mdf-risk-high-*), tonalmente errados aqui (assustam num público em
+ * estresse). Este modifier troca para um par NEUTRO calmo já no sistema —
+ * --mdf-surface-2 (#F1EFEA) com --mdf-ink (#1A1A1A), contraste muito acima de
+ * 4.5:1 (texto quase-preto sobre quase-branco). Só tokens, sem hex cru.
+ * HANDOFF coloring-ict6: se um tom "info/positivo" dedicado for desejado (ex.
+ * um --pet-info-tint/-ink), re-derivar com a razão AA medida anotada inline —
+ * reservei o par neutro seguro como base. */
+.mdf-sheet__inline-error--queued {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-border);
+}
+
 /* ── Detail sheet: album affordance — PRIMARY recognition aid ─ *
  * Elevated above the meta block and rendered as a SOLID brand CTA (the proven
  * app-wide --mdf-brand-hover bg + --mdf-brand-ink text pairing, white on

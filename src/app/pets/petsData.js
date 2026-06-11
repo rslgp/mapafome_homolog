@@ -18,7 +18,24 @@ import { buildPetDados, parsePetRow } from './petDomain';
 
 // Cache de idempotência client-side. Espelha o _idempotencyCache do
 // App.writePinToSheets (M5): um double-tap após timeout não grava duas linhas.
+// É ESTE conjunto que garante que um flush da fila offline (PET-M1) nunca faça
+// duplo-append: a chave já vista devolve sem gravar de novo.
 const seenIdempotencyKeys = new Set();
+
+// PET-M1. Timeout na ÚNICA chamada de rede que importa para o usuário (o write).
+// Espelha o withTimeout de appPinActions.writePinToSheets: 10s e rejeita com
+// 'network_slow' para o chamador distinguir "lento (pode ter salvo)" de "rede
+// caída". O write pode ter chegado ao servidor — por isso a fila + idempotência.
+const WRITE_TIMEOUT_MS = 10000;
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('network_slow')), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
 
 // Busca todos os pets da planilha. Mapeia cada linha por parsePetRow e descarta
 // os nulos — uma linha malformada (ou de fome) nunca derruba o batch, pois
@@ -63,7 +80,10 @@ export async function publishPet({ coords, status, species, size, color, name, c
   }
 
   // 4. Grava SOMENTE a coluna Dados — nada de Roaster/Categorias/need-field.
-  await appendRow(0, { Dados: JSON.stringify(dados) });
+  // Sob timeout de 10s: um servidor lento rejeita com 'network_slow' (o write
+  // pode ter saído), que o chamador classifica como server_slow e enfileira —
+  // a chave de idempotência acima evita o duplo-append no flush.
+  await withTimeout(appendRow(0, { Dados: JSON.stringify(dados) }), WRITE_TIMEOUT_MS);
 
   // 5. Marca a chave como vista só após o sucesso da gravação.
   if (idempotency_key) seenIdempotencyKeys.add(idempotency_key);

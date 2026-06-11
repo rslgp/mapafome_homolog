@@ -3,7 +3,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import '../components/compatibility/components/ux/ReportSheet.css';
 import './pets.css';
-import { PET_STATUSES, PET_SPECIES, PET_SIZES } from './petDomain';
+import {
+  PET_STATUSES,
+  PET_SPECIES,
+  PET_SIZES,
+  PET_PUBLISH_FAILURE,
+  PET_PUBLISH_FAILURE_COPY,
+} from './petDomain';
 
 // /pets — reporter bottom-sheet, forked from the hunger ReportSheet.
 // Key difference from the hunger flow: STATUS is a SINGLE-SELECT, REQUIRED
@@ -15,8 +21,14 @@ const DEFAULT_SPECIES = 'outro';
 
 const ERRORS = {
   status_required: 'Escolha uma situação: perdido, encontrado ou avistado.',
-  publish_failed: 'Não foi possível publicar. Verifique sua conexão e tente de novo.',
 };
+
+// Resolve a cópia calma a partir do reasonCode classificado em PetsApp (PET-M1).
+// Fallback para 'generic' se vier um código desconhecido — nunca deixa o usuário
+// sem mensagem nem mostra "publish_failed" cru. SOT da cópia: petDomain.
+function failureCopyFor(reasonCode) {
+  return PET_PUBLISH_FAILURE_COPY[reasonCode] || PET_PUBLISH_FAILURE_COPY[PET_PUBLISH_FAILURE.GENERIC];
+}
 
 function newIdempotencyKey() {
   // Survives retries so a double-tap after a slow publish does not double-write.
@@ -38,7 +50,8 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [phase, setPhase] = useState('idle');       // idle | publishing | success | error
-  const [errorMsg, setErrorMsg] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);   // erro de validação (status obrigatório)
+  const [publishError, setPublishError] = useState(null); // { reasonCode, queued } — falha de publicação
 
   const sheetRef = useRef(null);
   const firstFocusRef = useRef(null);
@@ -65,6 +78,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
     setContactOpen(false);
     setPhase('idle');
     setErrorMsg(null);
+    setPublishError(null);
     setSheetHeightVh(null);
 
     const id = requestAnimationFrame(() => firstFocusRef.current?.focus());
@@ -130,6 +144,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
     }
     setPhase('publishing');
     setErrorMsg(null);
+    setPublishError(null);
 
     try {
       await onPublish?.({
@@ -148,23 +163,31 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
       // 'Publicado ✓' for ~1.2s, then close.
       setTimeout(() => onClose?.('published'), 1200);
     } catch (err) {
-      // Surface the real reason (missing config, out-of-bounds coords, network)
-      // to the console — the inline copy stays calm/generic, but a swallowed
-      // error makes a failed publish undiagnosable. Mirrors the hunger flow's
-      // need to distinguish causes (see PETS_MILESTONES: richer error + offline queue).
-      console.error('[pets] publish failed:', err && err.message ? err.message : err);
+      // PET-M1 — onPublish (PetsApp) classifica a causa e lança PetPublishError
+      // com um reasonCode estável + flag queued. Aqui só ESCOLHEMOS a cópia
+      // calma distinta; a classificação e o log (trackError com redação de
+      // token) já aconteceram no chamador. Fallback para 'generic' se vier um
+      // erro não-classificado (ex.: lançado fora do fluxo do PetsApp).
+      const reasonCode = (err && err.reasonCode) || PET_PUBLISH_FAILURE.GENERIC;
+      const queued = Boolean(err && err.queued);
       setPhase('error');
-      setErrorMsg(ERRORS.publish_failed);
+      setPublishError({ reasonCode, queued });
     }
   }
 
   const busy = phase === 'publishing' || phase === 'success';
 
+  // Quando a falha foi enfileirada (offline/lento), o relato está guardado e vai
+  // sozinho — o rótulo confirma "Guardado" em vez de cobrar "Tentar de novo"
+  // (governador de tom: reassegura, não cobra). Em falha não-enfileirada
+  // (out-of-bounds/genérica), "Tentar de novo" continua certo.
+  const queuedFailure = phase === 'error' && publishError && publishError.queued;
   const buttonLabel =
     phase === 'publishing' ? 'Publicando…'
       : phase === 'success' ? 'Publicado ✓'
-        : phase === 'error' ? 'Tentar de novo'
-          : 'Publicar pet';
+        : queuedFailure ? 'Guardado ✓'
+          : phase === 'error' ? 'Tentar de novo'
+            : 'Publicar pet';
 
   const locationLabel = coords
     ? `Ponto em: ${coords[0].toFixed(5)}, ${coords[1].toFixed(5)}`
@@ -383,9 +406,16 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
           </p>
         </details>
 
-        {errorMsg === ERRORS.publish_failed && (
-          <p className="mdf-sheet__inline-error" role="alert">
-            {errorMsg}
+        {publishError && (
+          /* role="alert" já implica aria-live assertivo: o leitor de tela anuncia
+             a cópia calma assim que ela aparece (o público está em estresse agudo
+             e precisa ouvir o resultado). Sem aria-live explícito para não
+             duplicar o anúncio em alguns leitores. */
+          <p
+            className={`mdf-sheet__inline-error${publishError.queued ? ' mdf-sheet__inline-error--queued' : ''}`}
+            role="alert"
+          >
+            {failureCopyFor(publishError.reasonCode)}
           </p>
         )}
 

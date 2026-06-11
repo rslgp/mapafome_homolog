@@ -119,6 +119,81 @@ export function buildPetDados({ coords, status, species, size, color, name, cont
   };
 }
 
+// ─── Classificação de FALHA de publicação (SOT) ──────────────────────────────
+// PET-M1. Antes existia UMA única string genérica ('publish_failed'). Agora a
+// causa real é classificada num código estável e mapeada para uma cópia CALMA
+// distinta (governador de tom: nada de "ERRO!!!", sem urgência, pt-BR).
+//
+// PURA e DETERMINÍSTICA: recebe um erro (ou null) e devolve só o CÓDIGO. Nenhum
+// Date.now()/navigator aqui — quem chama injeta o estado de rede (isOffline) e o
+// tempo, mantendo o domínio testável (espelha buildPetDados/publishPet).
+//
+// Códigos (chaves estáveis; a UI lê a cópia em PET_PUBLISH_FAILURE_COPY):
+//   • 'out_of_bounds' — coords fora da área atendida (SheetsValidationError).
+//   • 'offline'       — sem internet: foi enfileirado, será enviado depois.
+//   • 'server_slow'   — timeout/lento: PODE ter sido salvo, não republique.
+//   • 'generic'       — qualquer outra falha (fallback calmo).
+export const PET_PUBLISH_FAILURE = {
+  OUT_OF_BOUNDS: 'out_of_bounds',
+  OFFLINE: 'offline',
+  SERVER_SLOW: 'server_slow',
+  GENERIC: 'generic',
+};
+
+// Cópia CALMA por código (pt-BR; i18n/es entra no PET-M23). Cada linha LOWERS a
+// ansiedade do dono — reassegura, nunca cobra. Lida pela UI via role=alert.
+export const PET_PUBLISH_FAILURE_COPY = {
+  [PET_PUBLISH_FAILURE.OUT_OF_BOUNDS]:
+    'Esse ponto está fora da área que a gente atende por aqui. Toque no mapa, dentro da região, para marcar onde o pet foi visto.',
+  [PET_PUBLISH_FAILURE.OFFLINE]:
+    'Você está sem internet agora. Seu relato foi guardado com segurança e vai ser publicado sozinho assim que a conexão voltar.',
+  [PET_PUBLISH_FAILURE.SERVER_SLOW]:
+    'A conexão está lenta e seu relato pode já ter sido salvo. Aguarde um instante e recarregue antes de publicar de novo, para não duplicar.',
+  [PET_PUBLISH_FAILURE.GENERIC]:
+    'Não deu para publicar agora. Seu relato não se perdeu — confira a conexão e tente de novo com calma.',
+};
+
+// Erros (mensagem ou .name) que indicam servidor LENTO / timeout. O write pode
+// ter chegado ao servidor: a fila reenvia depois e a chave de idempotência evita
+// o duplo-append, então a cópia diz "pode ter sido salvo, não republique".
+const SERVER_SLOW_RE = /network_slow|timeout|timed out|abort/i;
+// Erros que indicam rede caída / fetch falho (distinto de "lento").
+const NETWORK_RE = /network|failed to fetch|networkerror|offline/i;
+
+// Classifica uma falha de publicação num código estável. `isOffline` é INJETADO
+// pelo chamador (navigator.onLine) para manter a função pura/determinística.
+// Ordem de precedência: out-of-bounds (regra de negócio) > offline (estado de
+// rede explícito) > lento/timeout (write pode ter saído) > rede caída > genérico.
+export function classifyPublishFailure(error, { isOffline = false } = {}) {
+  // SheetsValidationError carrega .reason 'outside Brazil bbox' (ver sheetsClient).
+  // Detecta por shape (não por instanceof — sobrevive a fronteiras de módulo/bundle).
+  if (error && (error.reason === 'outside Brazil bbox' || error.name === 'SheetsValidationError')) {
+    return PET_PUBLISH_FAILURE.OUT_OF_BOUNDS;
+  }
+  if (isOffline) {
+    return PET_PUBLISH_FAILURE.OFFLINE;
+  }
+  const msg = (error && (error.message || String(error))) || '';
+  if (SERVER_SLOW_RE.test(msg)) {
+    return PET_PUBLISH_FAILURE.SERVER_SLOW;
+  }
+  if (NETWORK_RE.test(msg)) {
+    // Rede caída em runtime sem navigator.onLine ter pegado: tratamos como offline
+    // (foi/​será enfileirado) para a cópia reassegurar em vez de assustar.
+    return PET_PUBLISH_FAILURE.OFFLINE;
+  }
+  return PET_PUBLISH_FAILURE.GENERIC;
+}
+
+// Verdade ÚNICA de "esta falha deve ir para a fila offline?" — usada pela UI E
+// pelos testes (sem reimplementar a regex em dois lugares). offline e server_slow
+// vão pra fila (o input não se perde); out_of_bounds e generic NÃO (o usuário
+// precisa corrigir / é uma falha real que enfileirar só esconderia).
+export function shouldQueuePublishFailure(reasonCode) {
+  return reasonCode === PET_PUBLISH_FAILURE.OFFLINE
+    || reasonCode === PET_PUBLISH_FAILURE.SERVER_SLOW;
+}
+
 // Lê uma linha da planilha (objeto com `.Dados` em JSON-string) e retorna um pet
 // NORMALIZADO ou null. Nunca lança — toda etapa é defensiva (barricada de leitura).
 export function parsePetRow(row) {
