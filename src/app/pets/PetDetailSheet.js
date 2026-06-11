@@ -58,6 +58,7 @@ export default function PetDetailSheet({ open, pet, onClose }) {
       descline: describePet(pet),
       name: (pet.name || '').trim(),
       detail: (pet.detail || '').trim(),
+      photos: (pet.photos || '').trim(),
       timeSince: formatRelativeTime(pet.dateIso),
       contact: resolveContact(pet.contact),
     };
@@ -94,6 +95,24 @@ export default function PetDetailSheet({ open, pet, onClose }) {
 
         {derived.descline && (
           <p className="pet-detail__descline">{derived.descline}</p>
+        )}
+
+        {/* Album — primary recognition aid (PET-M13). Elevated above the meta
+            block and styled as a solid brand CTA so it reads as the first thing
+            to do, clearly distinct from the secondary neutral contact pill. */}
+        {derived.photos && (
+          <a
+            className="pet-detail__album"
+            href={derived.photos}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span className="pet-detail__album-icon" aria-hidden="true">📷</span>
+            <span className="pet-detail__album-text">
+              <span className="pet-detail__album-title">Ver as fotos do pet</span>
+              <span className="pet-detail__album-sub">o que mais ajuda a reconhecer</span>
+            </span>
+          </a>
         )}
 
         <dl className="mdf-pin-sheet__meta">

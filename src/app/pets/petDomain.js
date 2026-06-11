@@ -77,10 +77,27 @@ function isFiniteCoordPair(coords) {
     && Number.isFinite(coords[1]);
 }
 
+// Sanitiza a URL de fotos (ex.: link de pasta do Google Drive). PURA: aceita
+// SÓ http/https — qualquer outro esquema (javascript:, data:, ftp:, lixo) vira
+// '' . É a barricada que protege o <a href> renderizado no PetDetailSheet de
+// carregar um esquema perigoso, já que a URL vem de entrada livre do usuário.
+// Roda igual no browser e no Node (URL é global em ambos).
+export function sanitizePhotosUrl(raw) {
+  const v = String(raw || '').trim();
+  if (!v) return '';
+  let parsed;
+  try {
+    parsed = new URL(v);
+  } catch (_e) {
+    return '';
+  }
+  return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? v : '';
+}
+
 // Monta o blob `Dados` de uma linha de pet. PURA: lança Error claro se status ou
 // coords forem inválidos; exige `dateIso` do chamador (sem Date.now() aqui).
 // Campos de texto opcionais caem para string vazia.
-export function buildPetDados({ coords, status, species, size, color, name, contact, detail, dateIso }) {
+export function buildPetDados({ coords, status, species, size, color, name, contact, detail, photos, dateIso }) {
   if (!isValidStatus(status)) {
     throw new Error(`buildPetDados: status inválido "${status}"`);
   }
@@ -96,6 +113,7 @@ export function buildPetDados({ coords, status, species, size, color, name, cont
     name: name || '',
     contact: contact || '',
     Detalhe: detail || '',
+    photos: sanitizePhotosUrl(photos),
     Coordinates: JSON.stringify(coords),
     DateISO: dateIso,
   };
@@ -131,6 +149,7 @@ export function parsePetRow(row) {
     name: dados.name || '',
     contact: dados.contact || '',
     detail: dados.Detalhe || '',
+    photos: sanitizePhotosUrl(dados.photos),
     dateIso: dados.DateISO,
   };
 }

@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import './petPalette.css';
 import './pets.css';
+import Header from '../components/compatibility/components/header';
 import PetMap from './PetMap';
 import PetReportSheet from './PetReportSheet';
 import PetDetailSheet from './PetDetailSheet';
@@ -78,23 +79,22 @@ export default function PetsApp() {
   }, []);
 
   return (
-    <main className="mdf-pets">
-      <Link href="/" className="mdf-pets__back">← Mapa</Link>
+    <>
+      {/* Same shared brand header as the hunger map: carries the "Doar" (Pix)
+          donate button + PWA install. No onStartReport/onStartTour passed, so the
+          hunger-only Relatar / Como-funciona actions stay off; /pets keeps its
+          own "Relatar um pet" CTA below. */}
+      <Header />
+      <main className="mdf-pets">
+        <Link href="/" className="mdf-pets__back">← Mapa</Link>
       <header className="mdf-pets__header">
-        <h1 className="mdf-pets__title">Mapa Pet — achados e perdidos</h1>
+        <h1 className="mdf-pets__title">MapaPets seu pet perdido é encontrado por pessoas do bem</h1>
         <p className="mdf-pets__lead">
           Toque no mapa onde o pet foi visto e toque em <b>Relatar um pet</b>.
           Juntos a gente reúne mais bichinhos com suas famílias.{' '}
           <span aria-hidden="true">🐾</span>
         </p>
-        <Link
-          href="/assinar"
-          className="mdf-pets__support"
-          aria-label="Apoie o projeto — assinatura mensal via Pix, cartão ou boleto"
-          title="Apoie o projeto — assinatura mensal via Pix, cartão ou boleto"
-        >
-          <span aria-hidden="true">💛</span> Apoie o projeto
-        </Link>
+        
       </header>
 
       {loadError && (
@@ -129,6 +129,7 @@ export default function PetsApp() {
         pet={selectedPet}
         onClose={handleCloseDetail}
       />
-    </main>
+      </main>
+    </>
   );
 }
