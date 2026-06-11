@@ -31,6 +31,8 @@ import {
   filterPets,
   togglePetFilterValue,
   activePetsByAge,
+  parsePetDeepLinkParam,
+  findPetByCoordsKey,
 } from './petDomain';
 import {
   enqueue as enqueuePetPublish,
@@ -83,6 +85,25 @@ export default function PetsApp() {
   // (dentro do effect de carga abaixo), nunca no corpo síncrono do effect.
   const [nowMs, setNowMs] = useState(0);
 
+  // PET-M18 — deep link de UM pet (?pet=<coordsKey>).
+  //
+  // O param CRU é lido UMA vez, no boundary client, por um INICIALIZADOR LAZY de
+  // useState (uma função, roda só na 1ª montagem) — NÃO num effect. Ler no
+  // inicializador evita o react-hooks/set-state-in-effect (nenhum setState
+  // síncrono num corpo de effect) e é a fonte-no-mundo correta: o param já existe
+  // no mount, não é um sistema externo que muda com o tempo. Guarda de SSR/
+  // no-window: /pets é ssr:false (page.js faz dynamic import), mas checamos typeof
+  // window mesmo assim — defensivo, custo zero. parsePetDeepLinkParam é PURO
+  // (petDomain SOT); aqui só injetamos window.location.search. Resultado: string
+  // crua (havia param) | null (não havia).
+  const [deepLinkKey] = useState(() => (
+    typeof window === 'undefined' ? null : parsePetDeepLinkParam(window.location.search)
+  ));
+  // Vira true quando HAVIA um param mas o pet-alvo não foi achado (sumiu/
+  // arquivado/reunido/nunca existiu) → dispara a nota calma pt-BR; o mapa segue
+  // 100% usável (degradação calma, sem crash, sem trap de erro).
+  const [deepLinkMissing, setDeepLinkMissing] = useState(false);
+
   // GPS + carga inicial dos pets — sincronização com sistemas externos
   // (geolocalização + planilha), o uso sancionado de um effect. setState mora
   // em callbacks/promessas (não no corpo síncrono), guardado por `cancelled`.
@@ -104,13 +125,48 @@ export default function PetsApp() {
           // síncrono do effect): a exclusão por idade passa a valer assim que os
           // pets chegam. Date.now() fica fora do render (purity); nowMs é injetado.
           setNowMs(Date.now());
+
+          // PET-M18 — resolve o deep link AQUI, no MESMO callback assíncrono onde os
+          // pets acabaram de chegar (setState sancionado: callback/promessa, nunca o
+          // corpo síncrono do effect — espelha o setPets/setNowMs acima e evita o
+          // react-hooks/set-state-in-effect). Roda uma vez só (este bloco roda uma
+          // vez por carga inicial).
+          //
+          // BUSCA NA LISTA COMPLETA (`loaded`), NÃO na filtrada/podada por idade: um
+          // link compartilhado é um pedido EXPLÍCITO do usuário para ver AQUELE pet.
+          // Honrá-lo mesmo que um filtro do M7 ou a janela de idade do M12 o
+          // esconderia do mapa por padrão é o comportamento menos surpreendente — o
+          // usuário clicou no link de propósito. A sheet do pet-alvo abre mesmo que o
+          // pin esteja filtrado/arquivado no mapa.
+          //
+          // DEGRADAÇÃO CALMA: param presente mas nenhum pet casa (sumiu/arquivado/
+          // reunido/nunca existiu) → deepLinkMissing → nota pt-BR serena; o mapa
+          // segue usável. Sem param (null) → nada acontece, o mapa abre normal.
+          if (deepLinkKey) {
+            const target = findPetByCoordsKey(loaded, deepLinkKey);
+            if (target) {
+              // Recentra no pet E abre o detalhe — o link "aterrissa" no pet, fechando
+              // o beco-sem-saída que esta milestone REMOVE (um link compartilhado que
+              // não conseguia focar o seu pet).
+              setCenter(target.coords);
+              setSelectedPet(target);
+              setDetailOpen(true);
+            } else {
+              setDeepLinkMissing(true);
+            }
+          }
         }
       } catch (e) {
         if (!cancelled) setLoadError(e && e.message);
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+    // deepLinkKey é estável (inicializador lazy, nunca muda) — o effect segue de
+    // montagem única; listá-lo documenta a dependência sem re-disparar.
+  }, [deepLinkKey]);
+
+  // PET-M18 — dispensa a nota de "pet não encontrado" (o usuário leu; o mapa segue).
+  const handleDismissDeepLinkNote = useCallback(() => setDeepLinkMissing(false), []);
 
   // Tocar/segurar no mapa só LEMBRA o local (o pin solto confirma visualmente);
   // o sheet abre pelo botão CTA, não a cada toque, para não atrapalhar a navegação.
@@ -220,6 +276,25 @@ export default function PetsApp() {
       {loadError && (
         <p className="mdf-pets__status" role="alert">
           Não foi possível carregar os pets agora. Você ainda pode reportar um.
+        </p>
+      )}
+
+      {/* PET-M18 — degradação CALMA do deep link: o link chegou, mas o pet-alvo
+          não está mais no mapa (já foi reunido, arquivado por idade, ou o relato
+          não existe mais). Tom sereno, sem alarme — informa sem assustar e deixa o
+          mapa totalmente usável. role=status (não alert): é uma informação calma,
+          não um erro. Dispensável num toque. */}
+      {deepLinkMissing && (
+        <p className="mdf-pets__status mdf-pets__status--calm" role="status">
+          Esse pet não está mais no mapa — pode já ter sido reencontrado. Veja os
+          outros pets por aqui, ou relate um novo.{' '}
+          <button
+            type="button"
+            className="mdf-pets__status-dismiss"
+            onClick={handleDismissDeepLinkNote}
+          >
+            Entendi
+          </button>
         </p>
       )}
 

@@ -110,6 +110,53 @@
   box-shadow: var(--mdf-focus-ring);
 }
 
+/* ── Status notes (load error + PET-M18 deep-link "pet não encontrado") ──────
+ * Calm, token-only surfaces — no new color literal (cor/contraste é do coloring
+ * specialist; aqui só compomos tokens --mdf-* já provados em AA). O role/aria
+ * vive no JSX; o CSS só dá uma superfície serena e legível. */
+.mdf-pets__status {
+  margin: var(--mdf-space-3) 0;
+  padding: var(--mdf-space-3) var(--mdf-space-4);
+  border-radius: var(--mdf-radius-card);
+  background: var(--mdf-surface-2);
+  color: var(--mdf-ink);
+  font-size: var(--mdf-fs-small);
+  line-height: var(--mdf-lh-body, 1.5);
+}
+
+/* PET-M18 — a nota calma do deep link ausente. Mesma superfície serena; o
+ * modificador existe para o caso de o coloring specialist querer diferenciá-la
+ * do loadError (alert) no futuro sem tocar o JSX. */
+.mdf-pets__status--calm {
+  /* herda a superfície neutra; nenhum acento de erro (não é um erro, é informação). */
+}
+
+/* Botão "Entendi" embutido na nota — alvo de toque cheio, operável por teclado. */
+.mdf-pets__status-dismiss {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mdf-touch-target);
+  margin-left: var(--mdf-space-2);
+  padding: var(--mdf-space-1) var(--mdf-space-3);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  background: transparent;
+  color: var(--mdf-ink);
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mdf-pets__status-dismiss:hover {
+  border-color: var(--mdf-ink);
+  background: var(--mdf-surface-1);
+}
+
+.mdf-pets__status-dismiss:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
 /* ── Primary "Relatar um pet" action — bottom FAB ─────────── */
 
 .mdf-pets__report-btn {
