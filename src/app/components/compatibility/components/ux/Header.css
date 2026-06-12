@@ -160,8 +160,27 @@
   grid-row: 2;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--mdf-space-2);
+  /* Horizontally scrollable on narrow screens: the CTA cluster (Relatar, tour,
+     MapaPets, Doar, install…) overflows on small phones — let it scroll
+     sideways instead of wrapping or being squished/clipped. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;   /* momentum scroll on iOS */
+  scrollbar-width: thin;               /* slim bar, Firefox */
+  scroll-snap-type: x proximity;
+  /* room for the bar so it doesn't overlap the buttons; negative-margin keeps
+     the visual edge flush with the header padding. */
+  padding-bottom: var(--mdf-space-1);
+}
+
+/* Children must keep their intrinsic size and not shrink, or the buttons squish
+   instead of scrolling. */
+.mdf-header__actions > * {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
 }
 
 @media (min-width: 768px) {
@@ -169,6 +188,9 @@
     grid-column: 3;
     grid-row: 1;
     justify-content: flex-end;
+    /* Desktop has room — no scroll needed; restore normal flow. */
+    overflow-x: visible;
+    padding-bottom: 0;
   }
 }
 

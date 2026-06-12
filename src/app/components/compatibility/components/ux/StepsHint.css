@@ -22,8 +22,11 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  flex: 1 1 auto;
-  min-width: 0;
+  /* Do NOT shrink: the list must keep its intrinsic width so the whole
+     .mdf-steps row scrolls horizontally (overflow-x: auto above) instead of
+     compressing the step labels. flex:1 1 auto + min-width:0 here would let the
+     list squish and defeat the scroll. */
+  flex: 0 0 auto;
 }
 
 .mdf-steps__item {
