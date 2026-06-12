@@ -118,13 +118,14 @@ const PetSearchField = () => {
   const searchControl = useMemo(() => new GeoSearchControl({
     provider,
     // 'bar': campo sempre visível (alcançável por teclado/AT). updateMap:true faz
-    // o próprio controle dar pan/zoom ao selecionar — sem subir estado p/ o pai.
+    // o próprio controle dar pan/zoom ao selecionar.
     style: 'bar',
     marker: {
       icon: ICONS.CURRENT_LOCATION,
       draggable: false,
     },
     showMarker: true,
+    updateMap: true,
     autoClose: true,
     keepResult: true,
     searchLabel: t('pets.search.label'),
@@ -135,11 +136,30 @@ const PetSearchField = () => {
   useEffect(() => {
     map.addControl(searchControl);
 
+    // Reposiciona o mapa quando uma localização é escolhida. O controle JÁ faz
+    // isso via updateMap, mas em alguns navegadores/versões o pan interno não
+    // dispara de forma confiável no modo 'bar'; este listener é a rede de
+    // segurança que garante o reposicionamento (usa bounds quando houver, senão
+    // centra no ponto). É idempotente com o updateMap do controle.
+    const handleShowLocation = (e) => {
+      const loc = e && e.location;
+      if (!loc) return;
+      const hasBounds = Array.isArray(loc.bounds) && loc.bounds.length === 2;
+      if (hasBounds) {
+        map.fitBounds(loc.bounds);
+      } else if (Number.isFinite(loc.y) && Number.isFinite(loc.x)) {
+        map.setView([loc.y, loc.x], Math.max(map.getZoom(), 14));
+      }
+    };
+    map.on('geosearch/showlocation', handleShowLocation);
+
     // O input gerado pelo plugin não traz aria-label/type=search nem dicas de
-    // teclado mobile. Enriquecemos o DOM já criado (sem fork do pacote) para AT
-    // e teclado virtual. pcall-style: tudo guardado por null-check, nunca lança.
+    // teclado mobile. No modo 'bar' o controle é montado no .leaflet-control-
+    // container (topo), e pode existir MAIS DE UM .leaflet-control-geosearch no
+    // DOM — então buscamos o input pelo formulário do PRÓPRIO controle (que tem
+    // os resultados), não por um seletor genérico. pcall-style: null-check, nunca lança.
     const container = map.getContainer();
-    const input = container && container.querySelector('.leaflet-control-geosearch form input');
+    const input = searchControl.searchElement && searchControl.searchElement.input;
     if (input) {
       input.setAttribute('type', 'search');
       input.setAttribute('aria-label', t('pets.search.label'));
@@ -150,7 +170,37 @@ const PetSearchField = () => {
       input.setAttribute('enterkeyhint', 'search');
     }
 
-    return () => map.removeControl(searchControl);
+    // REDE DE SEGURANÇA do clique/toque no resultado. No modo 'bar' o handler
+    // interno do plugin não reposiciona o mapa de forma confiável (a lista de
+    // resultados é criada dinamicamente e o onSubmit nem sempre dispara). Em vez
+    // de depender disso, DELEGAMOS o evento no formulário do controle (que sempre
+    // existe), subimos de e.target até o item com data-key, lemos o resultado
+    // correspondente em searchControl.resultList.results e reposicionamos o mapa
+    // nós mesmos. Usamos 'pointerdown' (dispara ANTES de o plugin limpar a lista).
+    const formEl = searchControl.searchElement && searchControl.searchElement.form;
+    const selectResultFromEvent = (ev) => {
+      let node = ev.target;
+      while (node && node !== formEl && !(node.getAttribute && node.getAttribute('data-key') !== null && node.hasAttribute('data-key'))) {
+        node = node.parentElement;
+      }
+      if (!node || !node.hasAttribute || !node.hasAttribute('data-key')) return;
+      const idx = Number(node.getAttribute('data-key'));
+      const results = searchControl.resultList && searchControl.resultList.results;
+      const loc = Array.isArray(results) ? results[idx] : null;
+      if (loc) {
+        // Preenche o input + fecha a lista, espelhando o comportamento do plugin,
+        // e reposiciona o mapa (bounds quando houver, senão centra no ponto).
+        if (input) input.value = loc.label || '';
+        handleShowLocation({ location: loc });
+      }
+    };
+    if (formEl) formEl.addEventListener('pointerdown', selectResultFromEvent, true);
+
+    return () => {
+      map.off('geosearch/showlocation', handleShowLocation);
+      if (formEl) formEl.removeEventListener('pointerdown', selectResultFromEvent, true);
+      map.removeControl(searchControl);
+    };
   }, [map, searchControl]);
 
   return null;
