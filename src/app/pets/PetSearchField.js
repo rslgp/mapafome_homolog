@@ -68,11 +68,23 @@ const PetSearchField = () => {
     base.search = (opts) => {
       const key = (opts && opts.query) ? String(opts.query).trim().toLowerCase() : '';
       if (!key) return Promise.resolve([]);
+
+      // SUBMIT (clique no resultado / Enter): o leaflet-geosearch chama
+      // provider.search({ query, data: <resultado já resolvido> }). Esse caminho
+      // NÃO pode ser debounced — ele precisa devolver o resultado AGORA para o
+      // controle dar pan/zoom (showResult -> centerMap). Antes, o debounce
+      // engolia o submit (resolvia [] pela via de cancelamento) e o mapa não se
+      // reposicionava. Quando `data` veio junto, devolvemos [data] na hora; se
+      // não, fazemos UMA busca imediata (sem debounce) e a cacheamos.
+      if (opts && opts.data) {
+        return Promise.resolve([opts.data]);
+      }
+
       if (cache.has(key)) return Promise.resolve(cache.get(key));
 
       // Cancela qualquer debounce em voo — só a última busca da janela de 350ms
       // sai; as anteriores resolvem [] para o dropdown limpar em vez de mostrar
-      // resultado velho.
+      // resultado velho. (Só o autocomplete passa por aqui; o submit já saiu acima.)
       if (pendingTimer) {
         clearTimeout(pendingTimer);
         if (pendingResolve) pendingResolve([]);
