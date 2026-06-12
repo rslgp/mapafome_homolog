@@ -1,18 +1,35 @@
 .mdf-steps {
+  min-height: var(--mdf-steps-hint-h);
+  background: var(--mdf-surface-1);
+  border-bottom: 1px solid var(--mdf-border);
+  /* The aside no longer scrolls itself; the inner .mdf-steps__scroll is the
+     horizontal scroller. Keeping the aside as a plain block avoids the
+     flex+overflow padding-clip that squished/cut the last button. */
+}
+
+/* Horizontal scroll rail — the actual overflow container. Children do not
+   shrink (rules below), so on a narrow screen the row scrolls sideways instead
+   of compressing or clipping the buttons. */
+.mdf-steps__scroll {
   display: flex;
   align-items: center;
   gap: var(--mdf-space-3);
   min-height: var(--mdf-steps-hint-h);
   padding: var(--mdf-space-2) var(--mdf-space-4);
-  background: var(--mdf-surface-1);
-  border-bottom: 1px solid var(--mdf-border);
   overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;   /* momentum scroll on iOS */
+  scrollbar-width: none;               /* hidden bar, Firefox */
 }
 
-.mdf-steps::-webkit-scrollbar {
+.mdf-steps__scroll::-webkit-scrollbar {
   display: none;
+}
+
+/* Every direct child of the rail keeps its intrinsic size — the load-bearing
+   rule that makes the row SCROLL rather than squish. */
+.mdf-steps__scroll > * {
+  flex: 0 0 auto;
 }
 
 .mdf-steps__list {

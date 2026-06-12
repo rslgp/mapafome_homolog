@@ -49,69 +49,55 @@ export default function StepsHint({ activeStep = 0 }) {
       role="region"
       aria-label="Três passos para mapear"
     >
-      `{/*
-      <ol className="mdf-steps__list">
-        {STEPS.map(({ n, label, selectors }) => {
-          const state =
-            n < activeStep ? 'done' : n === activeStep ? 'active' : 'idle';
-          return (
-            <li key={n} className={`mdf-steps__item mdf-steps__item--${state}`}>
-              <button
-                type="button"
-                className="mdf-steps__btn"
-                onClick={() => scrollToSelectors(selectors)}
-                aria-label={`Passo ${n}: ${label}, ir para essa área`}
-              >
-                <span className="mdf-steps__dot" aria-hidden="true">
-                  {n}
-                </span>
-                <span className="mdf-steps__label">{label}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-      */}
-      <button
-        type="button"
-        className="mdf-steps__tour"
-        onClick={scrollToInstall}
-        aria-label="Ver mais e instalar o aplicativo"
-      >
-        Ver mais
-      </button>
-      {/* Atalho para o MapaPet (achados e perdidos) — link de navegação real
-          (Next Link/<a href>), operável por teclado e antes da hidratação. */}
-      <Link
-        href="/pets"
-        className="mdf-steps__pets"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Abrir o MapaPet — mapa de pets perdidos (abre em nova aba)"
-      >
-        <span aria-hidden="true">🐾</span>
-        <span className="mdf-steps__pets-label">Pets</span>
-      </Link>
+      {/* Trilho de rolagem HORIZONTAL: todos os atalhos vivem num único div que
+          é o container de scroll (overflow-x). Mantê-los aqui (e não soltos no
+          <aside>) garante o scroll lateral em telas estreitas independente do
+          padding/flex do aside — os filhos não encolhem (flex:0 0 auto no CSS),
+          então o trilho rola em vez de espremer/cortar os botões. */}
+      <div className="mdf-steps__scroll">
+        {/* Os três passos numerados ficam desativados por ora (fluxo guiado em
+            revisão); os atalhos abaixo continuam ativos. */}
+        <button
+          type="button"
+          className="mdf-steps__tour"
+          onClick={scrollToInstall}
+          aria-label="Ver mais e instalar o aplicativo"
+        >
+          Ver mais
+        </button>
+        {/* Atalho para o MapaPet (achados e perdidos) — link de navegação real
+            (Next Link/<a href>), operável por teclado e antes da hidratação. */}
+        <Link
+          href="/pets"
+          className="mdf-steps__pets"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Abrir o MapaPet — mapa de pets perdidos (abre em nova aba)"
+        >
+          <span aria-hidden="true">🐾</span>
+          <span className="mdf-steps__pets-label">Pets</span>
+        </Link>
 
-      <Link
-        href="/solone"
-        className="mdf-steps__pets"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Jogar Solone para divulgar o MapaFome (abre em nova aba)"
-      >
-        <span aria-hidden="true">🎮</span>
-      </Link>
+        <Link
+          href="/solone"
+          className="mdf-steps__pets"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Jogar Solone para divulgar o MapaFome (abre em nova aba)"
+        >
+          <span aria-hidden="true">🎮</span>
+        </Link>
 
-      <Link
-        href="/bluey"
-        className="mdf-steps__pets"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Abrir o Bluey (abre em nova aba)"
-      >
-        <span aria-hidden="true">👦👧 2a9 anos</span>
-      </Link>
+        <Link
+          href="/bluey"
+          className="mdf-steps__pets"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Abrir o Bluey (abre em nova aba)"
+        >
+          <span aria-hidden="true">👦👧 2a9 anos</span>
+        </Link>
+      </div>
     </aside>
   );
 }
