@@ -439,6 +439,15 @@ export default function PetsApp() {
   );
   const isReady = loadState === PET_MAP_LOAD_STATE.READY;
 
+  // PET-M20 fix — o MAPA deve aparecer tanto em READY quanto em EMPTY: com zero
+  // pets (o estado padrão hoje — 0 linhas de pet existem ainda), o visitante
+  // PRECISA do mapa para tocar e soltar um pin e relatar o primeiro pet. Só
+  // LOADING (skeleton) e ERROR (retry) substituem o mapa; EMPTY o acompanha com
+  // a dica esperançosa por cima. (Antes, `isReady` escondia o mapa em EMPTY, e
+  // como ninguém reportou nada o mapa nunca aparecia.)
+  const showMap = loadState === PET_MAP_LOAD_STATE.READY
+    || loadState === PET_MAP_LOAD_STATE.EMPTY;
+
   // Publica um pet, classificando a falha em uma causa CALMA distinta (PET-M1).
   // Remove a antiga string genérica única 'publish_failed' E o caminho de
   // perda-silenciosa em conexão instável: offline/lento vão para a fila
@@ -555,22 +564,25 @@ export default function PetsApp() {
         />
       )}
 
-      {/* PET-M20 — os três estados EXPLÍCITOS de carga do mapa (loading | erro |
-          vazio). Renderizado SÓ quando NÃO está pronto; em READY mostra o mapa/lista
-          abaixo. O estado de erro carrega o "Tentar de novo" que re-roda o fetch sem
-          reload (handleRetryLoad). Distintos por design: skeleton aria-busy ≠ vazio
-          ≠ alerta (acceptance 1). */}
-      {!isReady && (
+      {/* PET-M20 — estados EXPLÍCITOS de carga. LOADING (skeleton) e ERROR
+          (retry) substituem o mapa: não há dados a mostrar ainda. EMPTY NÃO
+          substitui — ele acompanha o mapa (a dica "seja o primeiro" por cima),
+          porque o visitante precisa do mapa para soltar um pin e relatar o
+          primeiro pet. O erro carrega "Tentar de novo" (handleRetryLoad, sem
+          reload). Distintos por design: skeleton aria-busy ≠ vazio ≠ alerta. */}
+      {!showMap && (
         <PetMapLoadStates state={loadState} onRetry={handleRetryLoad} />
       )}
 
-      {isReady && (
+      {showMap && (
         <>
           {/* PET-M8 — alternância MAPA | LISTA. role=tablist semântico: os dois
               botões são tabs (aria-selected reflete a visão ativa), operáveis por
               teclado, alvo >=44px. A preferência persiste (handleSetView →
               localStorage). Ambas as visões consomem o MESMO visiblePets (filtrado
-              pelo M7 + podado por idade pelo M12) — a lista reflete o mapa. */}
+              pelo M7 + podado por idade pelo M12) — a lista reflete o mapa. Só
+              aparece em READY: alternar para uma lista vazia não faz sentido. */}
+          {isReady && (
           <div className="pet-viewtoggle" role="tablist" aria-label={t('pets.view.aria')}>
             <button
               type="button"
@@ -593,8 +605,9 @@ export default function PetsApp() {
               <span aria-hidden="true">📋</span> {t('pets.view.list')}
             </button>
           </div>
+          )}
 
-          {view === PET_VIEW.LIST ? (
+          {isReady && view === PET_VIEW.LIST ? (
             <div role="tabpanel" aria-labelledby="pet-viewtoggle-list">
               <PetListView
                 pets={visiblePets}
@@ -605,6 +618,12 @@ export default function PetsApp() {
             </div>
           ) : (
             <div role="tabpanel" aria-labelledby="pet-viewtoggle-map">
+              {/* PET-M20 — em EMPTY o mapa continua aqui (para soltar um pin e
+                  relatar o 1º pet) com a dica esperançosa por cima; em READY é o
+                  mapa normal. */}
+              {loadState === PET_MAP_LOAD_STATE.EMPTY && (
+                <PetMapLoadStates state={loadState} onRetry={handleRetryLoad} />
+              )}
               <PetMap
                 center={center}
                 pets={visiblePets}
