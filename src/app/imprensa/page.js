@@ -95,12 +95,12 @@ const BOILERPLATE = [
   {
     id: 'medium',
     label: 'Média (2–3 frases)',
-    text: 'O MAPA FOME é uma plataforma pública, gratuita e anônima que conecta quem quer ajudar a quem precisa de comida agora. Em três toques, qualquer cidadão mapeia uma pessoa em situação de insegurança alimentar e voluntários próximos recebem o aviso para levar ajuda em tempo real. Não rastreia ninguém: mede só números agregados por território e tempo. Nascido na Paraíba e em expansão pelo Brasil. Não substitui ninguém — conecta todo mundo.',
+    text: 'O MAPA FOME é uma plataforma pública, gratuita e anônima que conecta quem quer ajudar a quem precisa de comida agora. Em três toques, qualquer cidadão mapeia uma pessoa em situação de insegurança alimentar e voluntários próximos recebem o aviso para levar ajuda em tempo real. Não rastreia ninguém: mede só números agregados por território e tempo. Nascido em Recife e em expansão pelo Brasil, com planos para expandir internacionalmente. Não substitui ninguém — conecta todo mundo.',
   },
   {
     id: 'long',
     label: 'Longa (~1 parágrafo)',
-    text: 'O MAPA FOME (mapafome.com.br) é um mapa colaborativo, público, gratuito e anônimo que permite a qualquer pessoa, em três toques, sinalizar alguém em situação de fome para que voluntários por perto levem ajuda em tempo real. A plataforma conecta cidadãos e voluntários de forma direta, sem burocracia e sem intermediário — sem substituir política pública nem as organizações que já atuam no território. Construída com tecnologia livre (React, Material-UI, LeafletJS e Next.js) e conectada a planilhas abertas que a própria comunidade edita e cura, trabalha com dados abertos e em tempo real. Dignidade é inegociável: o MAPA FOME não rastreia indivíduos, não usa pixel, device id nem cookie de retargeting; suas métricas são agregadas apenas por território e tempo. Nascido em João Pessoa e Campina Grande (Paraíba), está em expansão por todo o Brasil. Como resume o próprio projeto: "Não substitui ninguém. Conecta todo mundo." Slogan: "Um mapa colaborativo. Aberto. Em tempo real."',
+    text: 'O MAPA FOME (mapafome.com.br) é um mapa colaborativo, público, gratuito e anônimo que permite a qualquer pessoa, em três toques, sinalizar alguém em situação de fome para que voluntários por perto levem ajuda em tempo real. A plataforma conecta cidadãos e voluntários de forma direta, sem burocracia e sem intermediário — sem substituir política pública nem as organizações que já atuam no território. Construída com tecnologia livre (React, Material-UI, LeafletJS e Next.js) e conectada a planilhas abertas que a própria comunidade edita e cura, trabalha com dados abertos e em tempo real. Dignidade é inegociável: o MAPA FOME não rastreia indivíduos, não usa pixel, device id nem cookie de retargeting; suas métricas são agregadas apenas por território e tempo. Nascido em Recife, com origem acadêmica no CIn UFPE, está em expansão por todo o Brasil. Como resume o próprio projeto: "Não substitui ninguém. Conecta todo mundo." Slogan: "Um mapa colaborativo. Aberto. Em tempo real."',
   },
 ];
 
@@ -109,7 +109,7 @@ const FACTS = [
   ['O que é', 'Mapa colaborativo público, gratuito e anônimo para combater a fome em tempo real. Em três toques, qualquer pessoa mapeia alguém em situação de insegurança alimentar para que voluntários próximos levem ajuda.'],
   ['Como funciona', 'Três toques para mapear um ponto de necessidade; voluntários por perto veem em tempo real e levam ajuda. Dados abertos, editáveis e curados pela comunidade.'],
   ['Quem', 'Iniciativa cívica de código aberto, mantida pela comunidade e por parceiros. Cidadãos reportam, voluntários atendem; o projeto apenas conecta.'],
-  ['Onde / Origem', 'Paraíba (João Pessoa e Campina Grande), Brasil; em expansão por todo o país. Acesso pela web.'],
+  ['Onde / Origem', 'Recife, Brasil (origem acadêmica no CIn UFPE); em expansão por todo o país. Acesso pela web.'],
   ['Tecnologia', "App web estático (Next.js, output:'export') com React, Material-UI e LeafletJS, conectado ao Google Sheets para curadoria comunitária. Hospedado no GitHub Pages."],
   ['Privacidade', 'Sem rastreamento individual: nenhum pixel, device id ou cookie de retargeting. Métricas agregadas apenas por território × tempo.'],
   ['Licença / dados', 'Software livre; dados abertos e em tempo real. Ativos de marca liberados para uso editorial e divulgação com crédito (ver Termos de uso dos ativos).'],
@@ -249,7 +249,7 @@ export default function ImprensaPage() {
               O MAPA FOME é um mapa colaborativo, público, gratuito e anônimo. Em três
               toques, qualquer pessoa marca no mapa alguém em situação de fome para que
               voluntários por perto levem ajuda em tempo real. É software livre, com
-              dados abertos, nascido na Paraíba (João Pessoa e Campina Grande) e em
+              dados abertos, nascido em Recife (origem acadêmica no CIn UFPE) e em
               expansão pelo Brasil. Princípio inegociável: ajudamos pessoas, não
               vigiamos pessoas.
             </p>
@@ -467,7 +467,7 @@ export default function ImprensaPage() {
             <code>{RECIPIENT}</code>
             <CopyButton text={RECIPIENT} idleLabel="Copiar e-mail" ariaLabel="Copiar e-mail de imprensa" ghost />
           </div>
-          <p className="mdf-press__signoff">MAPA FOME — Paraíba, Brasil.</p>
+          <p className="mdf-press__signoff">MAPA FOME — Recife, Brasil.</p>
         </div>
       </section>
 
