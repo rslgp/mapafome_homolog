@@ -1,47 +1,66 @@
 'use client';
 
 // PetFilterBar.js — PET-M7: filtro compacto que estreita os PINS do mapa por
-// status / espécie / porte. UI burra: NÃO conhece os pets nem aplica o predicado
-// — só desenha as opções (lidas da SOT petDomain), reporta toggles ao pai
-// (PetsApp, dono do estado) e ANUNCIA a contagem de combinações via aria-live.
+// status / espécie / COR / porte / RECÊNCIA. UI burra: NÃO conhece os pets nem
+// aplica o predicado — só desenha as opções (lidas da SOT petDomain), reporta
+// toggles/seleções ao pai (PetsApp, dono do estado) e ANUNCIA a contagem de
+// combinações via aria-live.
 //
 // Por que aqui e não no PetMap: o estado de filtro mora no PetsApp (que já é dono
 // de `pets`), que deriva os pets visíveis com filterPets() e os passa ao
 // PetMarkers. Esta barra é uma superfície de CONTROLE pura — testável sem Leaflet.
 //
-// FONTE ÚNICA: as três facetas iteram PET_STATUSES / PET_SPECIES / PET_SIZES.
-// Nenhum label/id de status é escrito aqui — mudar a SOT muda os chips sem outra
-// edição (acceptance PET-M7). Nenhuma string 'perdido' hardcoded.
+// FONTE ÚNICA: as facetas iteram PET_STATUSES / PET_SPECIES / PET_COLORS /
+// PET_SIZES / PET_RECENCY_OPTIONS. Nenhum label/id é escrito aqui — mudar a SOT
+// muda os chips sem outra edição. Nenhuma string 'perdido'/'caramelo' hardcoded.
+//
+// ORDEM das facetas (decisão do game-designer, NÃO reabrir): Situação → Espécie →
+// COR → Porte → RECÊNCIA. Certeza primeiro (situação/espécie), aparência depois
+// (cor/porte) e o eixo de TEMPO por ÚLTIMO (recência) — é o adjacente à ansiedade,
+// então fica no fim, fora do caminho de quem só quer olhar o mapa.
+//
+// FORMA das facetas (duas famílias):
+//   • MULTI-SELEÇÃO (toggle/OR interno): status/espécie/cor/porte. Cada chip é um
+//     <button aria-pressed> (um toggle, não um radio — seleção MÚLTIPLA = OR).
+//   • SINGLE-SELEÇÃO (radio-like): RECÊNCIA. 7⊂30⊂90 são aninhados — multi não tem
+//     significado. Modelado como role=radiogroup + role=radio (aria-checked):
+//     escolher um deseleciona os outros; tocar o ATIVO de novo limpa (→ null).
 //
 // A11y (Yablonski/Fitts + WCAG):
-//   • cada faceta é um group rotulado (role implícito do <fieldset>/<legend>),
-//     com aria-label explícito no grupo de chips;
-//   • cada chip é um <button> real (operável por teclado, foco visível) com
-//     aria-pressed refletindo seleção — um toggle, não um radio (seleção MÚLTIPLA
-//     dentro da faceta = OR);
+//   • cada faceta é um group/radiogroup rotulado, com aria-label explícito;
 //   • alvos >=44px (geometria herdada de .mdf-chip via --mdf-touch-target);
-//   • a contagem de combinações vai num região aria-live="polite" para o leitor
-//     de tela anunciar "N pets no mapa" a cada mudança (acceptance PET-M7);
-//   • "limpar filtros" só aparece quando há faceta ativa (Hick: não polui quando
-//     não há o que limpar) e é um alvo >=44px operável por teclado.
+//   • a contagem de combinações vai numa região aria-live="polite" para o leitor
+//     de tela anunciar "N pets no mapa" a cada mudança;
+//   • "limpar filtros" só aparece quando há faceta ativa (Hick) e é um alvo >=44px.
+//     CALM-TONE (PET_CURVE §2): a contagem ZERO nunca é um beco sem saída — quando
+//     o filtro estreitou demais, a cópia frama o FILTRO (não a ausência do pet) e
+//     um "limpar" inline fica ALI MESMO, a um toque, junto da contagem.
 
 import React from 'react';
 import PropTypes from 'prop-types';
 import {
   PET_STATUSES,
   PET_SPECIES,
+  PET_COLORS,
   PET_SIZES,
+  PET_RECENCY_OPTIONS,
   countActivePetFilterFacets,
 } from './petDomain';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
-// Descreve as três facetas de forma declarativa (DRY): cada uma aponta para a
-// lista SOT, a chave do estado de filtro, a CHAVE i18n do rótulo (resolvida via
-// t()) e o NAMESPACE i18n das opções (pets.<optNs>.<id>.label). Iterar isto evita
-// repetir o markup de chips três vezes e mantém os rótulos fora do código.
+// Descreve as facetas MULTI-SELEÇÃO de forma declarativa (DRY): cada uma aponta
+// para a lista SOT, a chave do estado de filtro (array de ids), a CHAVE i18n do
+// rótulo (resolvida via t()) e o NAMESPACE i18n das opções (pets.<optNs>.<id>.
+// label). Iterar isto evita repetir o markup de chips e mantém os rótulos fora do
+// código. A RECÊNCIA NÃO está aqui: é single-select (radiogroup) e tem o seu
+// próprio bloco de render abaixo (forma diferente do estado + semântica ARIA).
+//
+// A ORDEM deste array É a ordem de cima→baixo na UI: status → espécie → COR →
+// porte (a recência, single-select, é renderizada LOGO DEPOIS, fechando a barra).
 const FACETS = [
   { key: 'statuses', legendKey: 'pets.filter.legend.status',  groupKey: 'pets.filter.group.status',  optNs: 'status',  options: PET_STATUSES },
   { key: 'species',  legendKey: 'pets.filter.legend.species', groupKey: 'pets.filter.group.species', optNs: 'species', options: PET_SPECIES },
+  { key: 'colors',   legendKey: 'pets.filter.legend.color',   groupKey: 'pets.filter.group.color',   optNs: 'color',   options: PET_COLORS },
   { key: 'sizes',    legendKey: 'pets.filter.legend.size',    groupKey: 'pets.filter.group.size',    optNs: 'size',    options: PET_SIZES },
 ];
 
@@ -60,7 +79,7 @@ function matchCountLabel(count, total) {
   return t(key).replace('{count}', String(count)).replace('{total}', String(total));
 }
 
-export default function PetFilterBar({ filter, total, matchCount, onToggle, onClear }) {
+export default function PetFilterBar({ filter, total, matchCount, onToggle, onSetRecency, onClear }) {
   // PET-M23 — re-render on a locale switch so every t() re-reads.
   useLocale();
   const activeFacets = countActivePetFilterFacets(filter);
@@ -68,6 +87,8 @@ export default function PetFilterBar({ filter, total, matchCount, onToggle, onCl
 
   // Lê o array de ids selecionados de uma faceta com defesa (faceta ausente → []).
   const selectedFor = (key) => (filter && Array.isArray(filter[key]) ? filter[key] : []);
+  // Recência ATIVA = recencyDays é um número finito (null = inativa). Defensivo.
+  const activeRecency = filter && Number.isFinite(filter.recencyDays) ? filter.recencyDays : null;
 
   return (
     <section className="pet-filter" aria-labelledby="pet-filter-heading">
@@ -96,8 +117,9 @@ export default function PetFilterBar({ filter, total, matchCount, onToggle, onCl
                 const on = selected.indexOf(opt.id) !== -1;
                 // Para a faceta de status, pinta o chip selecionado com o
                 // --pet-<status> (mesma identidade visual do marcador/legenda);
-                // espécie/porte ficam no realce neutro --mdf (sem token de cor
-                // próprio). A classe de status é derivada do id (sem hardcode).
+                // espécie/cor/porte ficam no realce neutro --mdf (sem token de cor
+                // próprio — um agente de coloração é o dono das HUES das cores; aqui
+                // só reusamos o realce neutro). A classe de status deriva do id.
                 const statusClass = facet.key === 'statuses' ? ` pet-chip--${opt.id}` : '';
                 const onClass = on
                   ? (facet.key === 'statuses' ? ' pet-chip--on' : ' mdf-chip--on')
@@ -124,12 +146,59 @@ export default function PetFilterBar({ filter, total, matchCount, onToggle, onCl
         );
       })}
 
+      {/* RECÊNCIA — single-select (radio-like). Vem por ÚLTIMO (eixo de TEMPO,
+          adjacente à ansiedade — fora do caminho de quem só olha o mapa). Os
+          labels são JANELAS NEUTRAS ("Últimos 7 dias"), NUNCA veredictos de
+          frescor (CALM-TONE PET_CURVE §2.2: nada de "relógio que corre contra
+          você"). Semântica ARIA: role=radiogroup + role=radio (aria-checked) —
+          escolher um deseleciona os outros; tocar o ATIVO de novo limpa (→ null,
+          via setPetFilterRecency no pai, que detecta o toggle-off). */}
+      <fieldset className="pet-filter__facet">
+        <legend className="pet-filter__legend">{t('pets.filter.legend.recency')}</legend>
+        <div className="pet-filter__chips" role="radiogroup" aria-label={t('pets.filter.group.recency')}>
+          {PET_RECENCY_OPTIONS.map((opt) => {
+            const on = activeRecency === opt.days;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                className={`pet-filter__chip mdf-chip${on ? ' mdf-chip--on' : ''}`}
+                // SINGLE-select: sempre manda o `days` tocado. O setter no domínio
+                // (setPetFilterRecency) faz o toggle-off quando o valor já está
+                // ativo — a UI manda o id tocado sem checar antes (idempotente).
+                onClick={() => onSetRecency?.(opt.days)}
+              >
+                <span className="mdf-chip__label">{t(`pets.recency.${opt.id}.label`)}</span>
+                {on && <span className="mdf-chip__check" aria-hidden="true">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
       {/* Contagem de combinações — anunciada por AT. aria-live="polite" para não
           interromper; role="status" reforça em leitores que ignoram o atributo.
           A versão visível é calma e a SOT do número vem do pai (matchCount),
-          derivado por filterPets — a barra não recomputa nada. */}
+          derivado por filterPets — a barra não recomputa nada.
+
+          CALM-TONE (PET_CURVE §2 / guardrail do game-designer): quando a contagem
+          é ZERO com filtro ativo, a cópia já frama o FILTRO (não a ausência do
+          pet) E um "limpar" INLINE fica ALI MESMO — a contagem 0 nunca é um beco
+          sem saída: a recuperação está a um toque, junto do número, não só no topo
+          da barra. */}
       <p className="pet-filter__count" role="status" aria-live="polite">
-        {matchCountLabel(matchCount, total)}
+        <span className="pet-filter__count-text">{matchCountLabel(matchCount, total)}</span>
+        {matchCount === 0 && hasActive && (
+          <button
+            type="button"
+            className="pet-filter__count-clear"
+            onClick={onClear}
+          >
+            {t('pets.filter.count.clearInline')}
+          </button>
+        )}
       </p>
     </section>
   );
@@ -139,10 +208,13 @@ PetFilterBar.propTypes = {
   filter: PropTypes.shape({
     statuses: PropTypes.arrayOf(PropTypes.string),
     species: PropTypes.arrayOf(PropTypes.string),
+    colors: PropTypes.arrayOf(PropTypes.string),
     sizes: PropTypes.arrayOf(PropTypes.string),
+    recencyDays: PropTypes.number,
   }),
   total: PropTypes.number,
   matchCount: PropTypes.number,
   onToggle: PropTypes.func,
+  onSetRecency: PropTypes.func,
   onClear: PropTypes.func,
 };

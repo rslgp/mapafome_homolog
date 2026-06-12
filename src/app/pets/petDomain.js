@@ -55,11 +55,70 @@ export const PET_SIZES = [
   withLabelHint({ id: 'grande' },  'pets.size.grande.label'),
 ];
 
+// ─── COR — BUCKETS canônicos (SOT) ───────────────────────────────────────────
+// Decisão do game-designer (NÃO reabrir): a COR é um CHIP de bucket FECHADO, não
+// texto livre. O dono ESCREVE a cor em texto livre (`pet.color`, ex.: "caramelo
+// claro", "pretinho", "tigrado") — mas quem PROCURA filtra por um conjunto
+// pequeno e estável de baldes ("preto", "caramelo", ...). Esta lista é a verdade
+// ÚNICA dos baldes; a UI itera ela pra desenhar os chips (igual faz com
+// PET_STATUSES/PET_SPECIES/PET_SIZES) e o normalizePetColorToBucket() abaixo
+// mapeia o texto livre armazenado pra um destes ids. Os labels NÃO são inline:
+// resolvem via t('pets.color.<id>.label') no idioma ativo (o agente de UI/i18n
+// preenche as strings em strings.js — aqui só declaramos as CHAVES, espelhando o
+// padrão dos outros SOTs). 'outro' é o balde-âncora: todo texto que não casa
+// nenhum bucket específico (e o vazio) cai aqui — nunca "sem cor", para o filtro
+// permanecer total e honesto.
+export const PET_COLORS = [
+  withLabelHint({ id: 'preto' },    'pets.color.preto.label'),
+  withLabelHint({ id: 'branco' },   'pets.color.branco.label'),
+  withLabelHint({ id: 'caramelo' }, 'pets.color.caramelo.label'),
+  withLabelHint({ id: 'marrom' },   'pets.color.marrom.label'),
+  withLabelHint({ id: 'cinza' },    'pets.color.cinza.label'),
+  withLabelHint({ id: 'rajado' },   'pets.color.rajado.label'),
+  withLabelHint({ id: 'claro' },    'pets.color.claro.label'),
+  withLabelHint({ id: 'outro' },    'pets.color.outro.label'),
+];
+
+// ─── RECÊNCIA — opções de janela (SOT, SINGLE-SELECT) ────────────────────────
+// Decisão do game-designer (NÃO reabrir): recência é um eixo ÚNICO. 7 ⊂ 30 ⊂ 90
+// dias são ANINHADOS — multi-seleção não teria significado ("≤7 OU ≤30" é só
+// "≤30"). Por isso o estado NÃO é um array de toggle como as outras facetas: é um
+// valor único `recencyDays` (number) ou `null` (= sem restrição, o DEFAULT).
+//
+// LIMITE de coerência com o mapa ativo: os baldes (7/30/90) são SUBCONJUNTOS da
+// janela de arquivo (PET_ARCHIVE_WINDOW_DAYS = 90, definida abaixo). Todos ≤ 90 →
+// nenhum balde pede um pet que o mapa ativo já teria escondido por idade (PET-M12),
+// então a recência só ESTREITA o que já está visível, nunca contradiz/excede o
+// arquivo. Se um dia o arquivo encolher abaixo de 90, o maior balde aqui precisa
+// encolher junto (por isso a referência explícita à constante na doc, não um 90
+// mágico solto). PET_MATCH_DEFAULTS.windowDays (30) já citava este staircase.
+export const PET_RECENCY_OPTIONS = [
+  withLabelHint({ id: '7',  days: 7  }, 'pets.recency.7.label'),
+  withLabelHint({ id: '30', days: 30 }, 'pets.recency.30.label'),
+  withLabelHint({ id: '90', days: 90 }, 'pets.recency.90.label'),
+];
+
+// id → entrada, lookup O(1) (espelha PET_STATUS_MAP; v5 § replace_conditional_
+// with_lookup). A UI lê o `days` de um id selecionado por aqui sem varrer a lista.
+export const PET_RECENCY_MAP = PET_RECENCY_OPTIONS.reduce((map, r) => {
+  map[r.id] = r;
+  return map;
+}, {});
+
 // Conjuntos de ids válidos — montados a partir das listas acima (sem duplicar a
 // verdade; se a lista muda, os validadores acompanham automaticamente).
 const STATUS_IDS  = new Set(PET_STATUSES.map((s) => s.id));
 const SPECIES_IDS = new Set(PET_SPECIES.map((s) => s.id));
 const SIZE_IDS    = new Set(PET_SIZES.map((s) => s.id));
+const COLOR_IDS   = new Set(PET_COLORS.map((c) => c.id));
+
+// Ms por dia — fator de conversão local (evita o número mágico 86400000 espalhado).
+// Declarado AQUI, no topo, porque agora tem consumidores ACIMA do bloco PET-M12
+// (matchesRecency, na faceta de recência do filtro) além dos de baixo (petAgeDays,
+// timeStrength, isNearDuplicate). Uma constante deve ser declarada antes de QUALQUER
+// referência em ordem de fonte — espelha a disciplina "locais no topo" do playbook
+// (evita o footgun de TDZ/ordem-de-declaração).
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 // Discrimina uma linha de pet pelo campo `kind`. É o único critério que torna a
 // linha visível ao /pets e invisível ao /fome.
@@ -79,28 +138,121 @@ export function isValidSize(id) {
   return SIZE_IDS.has(id);
 }
 
+// Um id de COR-BUCKET é válido (está na SOT PET_COLORS)? Defensivo, PURO. Usado
+// pelo filtro de cor para descartar ids-lixo numa faceta antes de comparar.
+export function isValidColor(id) {
+  return COLOR_IDS.has(id);
+}
+
+// ─── COR — normalizador de TEXTO LIVRE → BUCKET (PURO, nunca lança) ───────────
+// O campo `pet.color` é TEXTO LIVRE (sanitizado, mas acento/caixa/grafia variam:
+// "Caramelo", "caramelado", "pretinho", "tigrado"). O chip de filtro, porém,
+// trabalha com os baldes FECHADOS de PET_COLORS. Esta função é a PONTE: mapeia
+// uma string de cor crua para UM id de bucket, casando por palavra-chave de forma
+// insensível a acento e caixa (substring após normalizar). Determinística e PURA
+// (sem Date.now()/locale-dependente). NUNCA lança: entrada não-string/vazia/sem
+// casamento → 'outro' (o balde-âncora; nunca null/throw — o filtro precisa de um
+// id sempre).
+//
+// TABELA DE MAPEAMENTO (palavra-chave normalizada → bucket). A ORDEM importa:
+// a 1ª palavra-chave que casa (por substring) vence, então a tabela vai do mais
+// ESPECÍFICO/dominante para o mais GENÉRICO/fraco:
+//   1. 'rajado' PRIMEIRO — é um PADRÃO, não uma cor sólida; quando aparece, domina
+//      a percepção ("gato rajado preto" é rajado, não preto). Avaliá-lo antes das
+//      cores sólidas evita que "preto"/"branco" no meio da frase o sequestrem.
+//   2. as cores SÓLIDAS (preto/branco/caramelo/marrom/cinza) no meio.
+//   3. 'claro' por ÚLTIMO antes de 'outro' — é o balde mais genérico/fraco, só
+//      vence quando NENHUMA cor concreta apareceu ("marrom claro" → 'marrom', a cor
+//      dominante; "caramelo claro" → 'caramelo'; só "claro" sozinho → 'claro').
+// Sem casamento → 'outro'.
+const COLOR_KEYWORD_BUCKETS = [
+  // bucket 'rajado' — PADRÃO (tigrado/malhado/listrado/manchado/tricolor): PRIMEIRO,
+  //   o padrão domina a cor sólida que possa aparecer junto na mesma string.
+  { bucket: 'rajado',   keywords: ['rajado', 'rajada', 'tigrado', 'tigrada', 'malhado', 'malhada', 'listrado', 'listrada', 'manchado', 'manchada', 'tricolor', 'mesclado', 'mesclada', 'escaminha'] },
+  // bucket 'preto' — preto/pretinho/negro/dark.
+  { bucket: 'preto',    keywords: ['preto', 'pretinho', 'preta', 'negro', 'negra', 'dark'] },
+  // bucket 'branco' — branco/branquinho/albino.
+  { bucket: 'branco',   keywords: ['branco', 'branca', 'branquinho', 'branquinha', 'albino'] },
+  // bucket 'caramelo' — caramelo/caramelado/dourado/amarelo/laranja/ruivo/mel/bege.
+  { bucket: 'caramelo', keywords: ['caramelo', 'caramelado', 'caramelada', 'dourado', 'dourada', 'amarelo', 'amarela', 'laranja', 'ruivo', 'ruiva', 'mel', 'bege', 'loiro', 'loira'] },
+  // bucket 'marrom' — marrom/castanho/chocolate/cafe.
+  { bucket: 'marrom',   keywords: ['marrom', 'castanho', 'castanha', 'chocolate', 'cafe', 'marron'] },
+  // bucket 'cinza' — cinza/cinzento/grafite/prata/gray/grey.
+  { bucket: 'cinza',    keywords: ['cinza', 'cinzento', 'cinzenta', 'grafite', 'prata', 'prateado', 'gray', 'grey'] },
+  // bucket 'claro' — genérico/fraco (claro/clarinho), só vence se nada concreto casou.
+  { bucket: 'claro',    keywords: ['claro', 'clara', 'clarinho', 'clarinha'] },
+];
+
+// Normaliza uma string para casamento de palavra-chave: minúsculas + remoção de
+// diacríticos (NFD + strip da faixa combinante U+0300–U+036F). PURO. Defensivo:
+// não-string/null → ''. Espelha a disciplina Unicode-safe do sanitizeFreeText
+// (acento NUNCA corrompe pt-BR — aqui só o REMOVEMOS para comparar, sem alterar o
+// dado armazenado). normalize('NFD') é padrão ECMAScript (browser E Node).
+function normalizeColorText(raw) {
+  return String(raw == null ? '' : raw)
+    .toLowerCase()
+    .normalize('NFD')
+    // Remove a FAIXA de diacríticos combinantes (U+0300–U+036F) que o NFD separou
+    // da letra-base — escape unicode explícito (não um literal combinante no
+    // source, que seria invisível/frágil). Assim "ç"→"c", "ã"→"a", "é"→"e".
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+// Mapeia um texto livre de cor → id de bucket de PET_COLORS. PURO, nunca lança.
+// Empty/desconhecido → 'outro'. Acento/caixa-insensível por construção (via
+// normalizeColorText). 1ª palavra-chave que casa (por substring) vence — a ordem
+// de COLOR_KEYWORD_BUCKETS codifica a precedência (cor dominante > 'claro' fraco).
+export function normalizePetColorToBucket(rawColor) {
+  const text = normalizeColorText(rawColor);
+  if (!text) return 'outro';
+  for (const entry of COLOR_KEYWORD_BUCKETS) {
+    for (const kw of entry.keywords) {
+      if (text.indexOf(kw) !== -1) return entry.bucket;
+    }
+  }
+  return 'outro';
+}
+
 // ─── PET-M7 — filtro do mapa (SOT do estado + predicado PURO) ────────────────
 //
-// O filtro estreita os PINS por facetas: status / espécie / porte. As OPÇÕES
-// não vivem aqui como literais — são as MESMAS listas SOT acima (PET_STATUSES /
-// PET_SPECIES / PET_SIZES). Mudar a SOT muda o filtro sem outra edição: a UI
-// itera as listas para desenhar os chips e o predicado valida contra os mesmos
-// Sets. Ninguém escreve 'perdido' (ou qualquer id) hardcoded — é tudo derivado.
+// O filtro estreita os PINS por facetas: status / espécie / porte / COR / RECÊNCIA.
+// As OPÇÕES não vivem aqui como literais — são as MESMAS listas SOT acima
+// (PET_STATUSES / PET_SPECIES / PET_SIZES / PET_COLORS / PET_RECENCY_OPTIONS).
+// Mudar a SOT muda o filtro sem outra edição: a UI itera as listas para desenhar
+// os chips e o predicado valida contra os mesmos Sets/mapas. Ninguém escreve
+// 'perdido' (ou qualquer id) hardcoded — é tudo derivado.
 //
 // SEMÂNTICA (a regra de negócio do filtro, num só lugar):
 //   • faceta VAZIA = sem restrição (combina com tudo). O estado inicial é o
 //     filtro vazio → todos os pets aparecem.
-//   • DENTRO de uma faceta: OR (status perdido OU encontrado).
-//   • ENTRE facetas: AND (status escolhido E espécie escolhida E porte escolhido).
+//   • DENTRO de uma faceta multi-seleção: OR (status perdido OU encontrado;
+//     cor preto OU caramelo).
+//   • ENTRE facetas: AND (status E espécie E porte E cor E recência).
+//   • RECÊNCIA é a exceção de FORMA: single-select (`recencyDays` number|null),
+//     não um array de toggle — 7⊂30⊂90 são aninhados (multi-seleção não teria
+//     significado). null = sem restrição.
 // É o mesmo modelo mental de um filtro de e-commerce — Jakob's Law: o usuário já
 // o conhece de outras superfícies, então não há custo de aprendizado.
+//
+// COR: a faceta guarda ids de BUCKET (de PET_COLORS); o pet armazena cor em TEXTO
+// LIVRE. A ponte é normalizePetColorToBucket(pet.color) — o predicado compara o
+// BUCKET do pet contra os buckets selecionados (não o texto cru). Assim "caramelo
+// claro" (texto) casa o chip 'caramelo'.
 
 // Fábrica do estado de filtro vazio (SOT da FORMA do filtro). Devolve uma cópia
 // NOVA a cada chamada (arrays próprios) para o React poder tratar como imutável
-// sem aliasing acidental entre montagens. Mantida a status/species/size neste
-// milestone (cor/recência ficam de fora deliberadamente — escopo PET-M7).
+// sem aliasing acidental entre montagens.
+//
+// FORMA (5 facetas; estado inicial = tudo vazio → todos os pets aparecem):
+//   • statuses/species/sizes/colors — ARRAYS de ids (multi-seleção, OR interno).
+//   • recencyDays — number | null. SINGLE-select (recência é eixo único, 7⊂30⊂90
+//     aninhados). `null` = SEM restrição (o DEFAULT). NÃO é um array.
+// `colors` parte vazio e `recencyDays` parte null (sem restrição) — um pet sem cor,
+// ou sem data legível, aparece enquanto essas facetas estão inativas. Filtros
+// antigos sem essas chaves leem como vazias (backward-compat, via facetIds/leituras
+// defensivas no predicado).
 export function defaultPetFilter() {
-  return { statuses: [], species: [], sizes: [] };
+  return { statuses: [], species: [], sizes: [], colors: [], recencyDays: null };
 }
 
 // Normaliza uma faceta para um array de ids (defensivo: aceita null/undefined/
@@ -120,30 +272,58 @@ function facetMatches(selected, value) {
   return ids.indexOf(value) !== -1;  // OR dentro da faceta
 }
 
+// Faceta de RECÊNCIA (PURA + DETERMINÍSTICA, `nowMs` injetado). Um pet "combina"
+// se foi publicado HÁ NO MÁXIMO `recencyDays` dias, medido contra o relógio
+// injetado. Regras:
+//   • recencyDays null/undefined/não-finito → SEM restrição (combina com tudo).
+//   • idade = (nowMs - Date.parse(dateIso)) / dia. Combina se idade <= janela.
+//   • dateIso AUSENTE ou ILEGÍVEL com a recência ATIVA → FAIL-CLOSED (exclui).
+//     Decisão documentada: não dá para PROVAR que um report sem data é recente, e
+//     o eixo de recência existe justamente para quem quer só os relatos novos —
+//     incluir um pet de idade desconhecida traíria a intenção do filtro. (Sem o
+//     filtro ativo, esse mesmo pet aparece normalmente — a exclusão é só quando o
+//     usuário PEDE recência.) Espelha o petAgeDays→Infinity do M12, mas aqui a
+//     consequência é "não combina" em vez de "arquiva".
+// Usa o DateISO de PUBLICAÇÃO (fato histórico de quando o relato entrou), não o
+// freshnessAt — "publicado nos últimos N dias" é o que o usuário lê como recência.
+function matchesRecency(dateIso, recencyDays, nowMs) {
+  if (!Number.isFinite(recencyDays)) return true; // null/undefined = sem restrição
+  if (!dateIso) return false;                      // fail-closed: idade indemonstrável
+  const then = Date.parse(dateIso);
+  if (Number.isNaN(then)) return false;            // fail-closed: data ilegível
+  const ageDays = (nowMs - then) / MS_PER_DAY;
+  return ageDays <= recencyDays;                   // dentro da janela (inclusive)
+}
+
 // Predicado PURO e DETERMINÍSTICO do filtro. Recebe UM pet (forma do parsePetRow),
 // o estado de filtro e `nowMs` INJETADO pelo chamador (nunca Date.now() aqui —
-// espelha buildPetDados/classifyPublishFailure; reservado para uma futura faceta
-// de recência sem reescrever a assinatura). NUNCA lança: um pet malformado
+// espelha buildPetDados/classifyPublishFailure). NUNCA lança: um pet malformado
 // (null, sem campos) é tratado como objeto vazio e simplesmente não combina com
 // nenhuma faceta ATIVA — some do mapa em vez de derrubar o render.
 //
-// ENTRE facetas é AND: todas precisam combinar. Com o filtro vazio, as três
-// facetas combinam (vazias) → true para todo pet (combina com tudo).
+// ENTRE facetas é AND: todas precisam combinar. Com o filtro vazio, as cinco
+// facetas combinam (vazias / recência null) → true para todo pet (combina com tudo).
 //
-// `nowMs` é parte da ASSINATURA (injetado pelo chamador, nunca Date.now() aqui)
-// mas ainda não é consultado: as facetas de status/espécie/porte deste milestone
-// não dependem do tempo. Fica reservado para uma futura faceta de recência sem
-// reescrever a assinatura nem quebrar quem já chama com nowMs (LSP).
+// `nowMs` AGORA É CONSULTADO pela faceta de recência (matchesRecency): a idade do
+// pet é medida contra o relógio INJETADO. As demais facetas (status/espécie/porte/
+// cor) são atemporais. A faceta de cor compara o BUCKET do pet (derivado do texto
+// livre por normalizePetColorToBucket) contra os buckets selecionados.
 export function matchesPetFilter(pet, filter, nowMs) {
-  // Referência inócua: marca nowMs como "consumido" para o linter sem alterar a
-  // semântica (a saída independe do tempo neste milestone) — documenta a injeção.
-  void nowMs;
   const p = pet || {};
   const f = filter || {};
+  // Cor: o pet guarda texto livre; comparamos pelo BUCKET derivado. Calculado só
+  // quando a faceta de cor está ATIVA (facetMatches já curto-circuita o vazio, mas
+  // evitamos a normalização desnecessária no caminho comum sem filtro de cor).
+  const colorIds = facetIds(f.colors);
+  const colorOk = colorIds.length === 0
+    ? true
+    : colorIds.indexOf(normalizePetColorToBucket(p.color)) !== -1;
   return (
     facetMatches(f.statuses, p.status)
     && facetMatches(f.species, p.species)
     && facetMatches(f.sizes, p.size)
+    && colorOk
+    && matchesRecency(p.dateIso, f.recencyDays, nowMs)
   );
 }
 
@@ -155,37 +335,80 @@ export function filterPets(pets, filter, nowMs) {
   return pets.filter((pet) => matchesPetFilter(pet, filter, nowMs));
 }
 
-// Conta quantas facetas estão ATIVAS (não-vazias) — usado pela UI para decidir se
-// o botão "limpar filtros" deve aparecer e para o resumo "filtrando por N". PURO.
+// Conta quantas facetas estão ATIVAS — usado pela UI para decidir se o botão
+// "limpar filtros" deve aparecer e para o resumo "filtrando por N". PURO. Uma
+// faceta de ARRAY é ativa quando não-vazia; a RECÊNCIA (single-select) é ativa
+// quando recencyDays é um número finito (null = inativa). Defensivo contra filtro
+// ausente / facetas não-array / recencyDays lixo.
 export function countActivePetFilterFacets(filter) {
   const f = filter || {};
   let n = 0;
   if (facetIds(f.statuses).length) n += 1;
   if (facetIds(f.species).length) n += 1;
   if (facetIds(f.sizes).length) n += 1;
+  if (facetIds(f.colors).length) n += 1;
+  if (Number.isFinite(f.recencyDays)) n += 1; // recência ativa = janela escolhida
   return n;
 }
 
-// Toggle PURO e IMUTÁVEL de um id dentro de uma faceta: devolve um filtro NOVO com
-// o id adicionado (se ausente) ou removido (se presente), sem mutar o anterior.
-// A UI lê daqui em vez de reimplementar a lógica de array em cada handler — uma
-// só verdade de "selecionar/desselecionar". `facetKey` é 'statuses'|'species'|
-// 'sizes'. Defensivo: chave desconhecida devolve o filtro inalterado (clonado).
-export function togglePetFilterValue(filter, facetKey, id) {
+// Conjunto das facetas que são ARRAYS (multi-seleção, toggle-áveis). A recência
+// NÃO está aqui: é single-select e tem seu próprio setter (setPetFilterRecency).
+const TOGGLEABLE_FACET_KEYS = new Set(['statuses', 'species', 'sizes', 'colors']);
+
+// Clona a FORMA COMPLETA do filtro (todas as 5 facetas), sem mutar o original e
+// sem aliasing de array. PURO. É o ÚNICO ponto que conhece a forma do filtro para
+// os mutators — assim adicionar uma faceta no futuro é uma edição de uma linha.
+// Crucial: o clone preserva `colors` E `recencyDays`, então nenhum mutator
+// (toggle de array OU set de recência) DERRUBA a outra faceta (regressão clássica
+// de "esqueci de copiar o campo novo no spread").
+function clonePetFilter(filter) {
   const base = filter || defaultPetFilter();
-  const next = {
+  // recencyDays só sobrevive se for um número finito; qualquer lixo → null (default).
+  const recencyDays = Number.isFinite(base.recencyDays) ? base.recencyDays : null;
+  return {
     statuses: facetIds(base.statuses).slice(),
     species: facetIds(base.species).slice(),
     sizes: facetIds(base.sizes).slice(),
+    colors: facetIds(base.colors).slice(),
+    recencyDays,
   };
+}
+
+// Toggle PURO e IMUTÁVEL de um id dentro de uma faceta de ARRAY: devolve um filtro
+// NOVO com o id adicionado (se ausente) ou removido (se presente), sem mutar o
+// anterior. A UI lê daqui em vez de reimplementar a lógica de array em cada handler
+// — uma só verdade de "selecionar/desselecionar". `facetKey` é 'statuses'|'species'|
+// 'sizes'|'colors'. Defensivo: chave desconhecida (ou 'recencyDays', que NÃO é
+// toggle-ável aqui) devolve o filtro inalterado (clonado, preservando recência).
+export function togglePetFilterValue(filter, facetKey, id) {
+  const next = clonePetFilter(filter);
+  if (!TOGGLEABLE_FACET_KEYS.has(facetKey)) return next; // no-op seguro (recência usa o setter)
   const arr = next[facetKey];
-  if (!arr) return next; // faceta desconhecida: no-op seguro (filtro clonado)
   const at = arr.indexOf(id);
   if (at === -1) {
     arr.push(id);
   } else {
     arr.splice(at, 1);
   }
+  return next;
+}
+
+// Setter PURO e IMUTÁVEL da faceta de RECÊNCIA (single-select). Recência NÃO é um
+// toggle de array: é um valor único `recencyDays` (number) ou `null`. A UI chama
+// isto ao tocar um chip de recência. SEMÂNTICA do clique:
+//   • passar um número (7/30/90) → define essa janela (substitui a anterior);
+//   • passar null/undefined/não-finito → LIMPA (volta a "sem restrição").
+//   • tocar o chip JÁ ATIVO de novo = limpar: a UI detecta isso e chama com null
+//     (este módulo não conhece "o chip atual"; ele só aplica o valor pedido). Por
+//     simetria/conveniência, repassar o MESMO valor já ativo também limpa (toggle-
+//     off idempotente), para a UI poder mandar sempre o id tocado sem checar antes.
+// Devolve um filtro NOVO preservando TODAS as outras facetas (via clonePetFilter).
+export function setPetFilterRecency(filter, recencyDaysOrNull) {
+  const next = clonePetFilter(filter);
+  const requested = Number.isFinite(recencyDaysOrNull) ? recencyDaysOrNull : null;
+  // Tocar o valor já ativo de novo desativa (toggle-off): clicar "7d" quando "7d"
+  // já está selecionado volta para null (sem restrição) — o gesto "desmarcar".
+  next.recencyDays = (requested !== null && requested === next.recencyDays) ? null : requested;
   return next;
 }
 
@@ -681,8 +904,8 @@ export function parsePetDeepLinkParam(search) {
 // de folga entre "fui convidado a confirmar" e "fui arquivado por idade".
 export const PET_ARCHIVE_WINDOW_DAYS = 90;
 
-// Ms por dia — fator de conversão local (evita o número mágico 86400000 espalhado).
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+// (MS_PER_DAY foi promovido ao bloco de constantes do topo — ver lá. Tem
+// consumidores acima E abaixo deste ponto, então mora antes de todos eles.)
 
 // Idade de um pet em DIAS, medida contra o carimbo de FRESCOR se presente, senão
 // contra o DateISO de publicação (PET_FRESHNESS_SPEC §2.1/§5.2). PURA: `nowMs`

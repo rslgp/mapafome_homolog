@@ -82,23 +82,7 @@ export default function Header({ rowCountProp, onStartTour, onStartReport }) {
               <span className="mdf-header__tour-icon" aria-hidden="true">?</span>
             </button>
           )}
-          {/* PET-M22 — discoverable cross-link from the hunger map to the
-           * /pets (achados e perdidos) map. next/link (NOT a raw <a>) so it is
-           * a client-side navigation and passes no-html-link-for-pages; the
-           * return path is PetsApp's "← Mapa" link back to "/". Reuses the
-           * secondary header-button look (surface-2 / ink / border) + the
-           * shared --mdf-focus-ring; >=44px via --mdf-touch-target. The paw
-           * glyph is decorative; the visible "Pets perdidos" label + aria-label
-           * carry the meaning a worried owner recognizes. */}
-          <Link
-            href="/pets"
-            className="mdf-header__pets"
-            aria-label="Pets perdidos — mapa de achados e perdidos"
-            title="Pets perdidos — mapa de achados e perdidos"
-          >
-            <span className="mdf-header__pets-icon" aria-hidden="true">🐾</span>
-            <span className="mdf-header__pets-label">{t('cta.pets')}</span>
-          </Link>
+          
           {!isInstalled && (
             <button
               type="button"
@@ -137,6 +121,24 @@ export default function Header({ rowCountProp, onStartTour, onStartReport }) {
             />
             <span className="mdf-header__donate-label">Doar</span>
           </a>
+
+          {/* PET-M22 — discoverable cross-link from the hunger map to the
+           * /pets (achados e perdidos) map. next/link (NOT a raw <a>) so it is
+           * a client-side navigation and passes no-html-link-for-pages; the
+           * return path is PetsApp's "← Mapa" link back to "/". Reuses the
+           * secondary header-button look (surface-2 / ink / border) + the
+           * shared --mdf-focus-ring; >=44px via --mdf-touch-target. The paw
+           * glyph is decorative; the visible "Pets perdidos" label + aria-label
+           * carry the meaning a worried owner recognizes. */}
+          <Link
+            href="/pets"
+            className="mdf-header__pets"
+            aria-label="Pets perdidos — mapa de achados e perdidos"
+            title="Pets perdidos — mapa de achados e perdidos"
+          >
+            <span className="mdf-header__pets-icon" aria-hidden="true">🐾</span>
+            <span className="mdf-header__pets-label">{t('cta.pets')}</span>
+          </Link>
         </div>
       </div>
     </header>

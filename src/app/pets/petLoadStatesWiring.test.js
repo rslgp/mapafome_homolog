@@ -15,6 +15,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import PetMapLoadStates from './PetMapLoadStates';
 import PetPublishClosure from './PetPublishClosure';
+import PetFilterBar from './PetFilterBar';
+import { defaultPetFilter } from './petDomain';
 import { mapLoadState, resolveClosurePin, PET_MAP_LOAD_STATE } from './petMapLoadState';
 
 afterEach(cleanup);
@@ -64,11 +66,40 @@ function Harness({ fetchPets }) {
 
   const state = mapLoadState({ loading, error, count: pets.length });
   const isReady = state === PET_MAP_LOAD_STATE.READY;
+  // Espelha o gate do PetsApp: o MAPA (e a barra de filtro que o ACOMPANHA)
+  // aparece em READY e em EMPTY; só LOADING/ERROR o substituem (PetMapLoadStates).
+  const showMap = state === PET_MAP_LOAD_STATE.READY
+    || state === PET_MAP_LOAD_STATE.EMPTY;
 
   return (
     <div>
-      {!isReady && <PetMapLoadStates state={state} onRetry={handleRetry} />}
+      {/* Espelha PetsApp: PetMapLoadStates SUBSTITUI o mapa só em LOADING/ERROR
+          (gate `!showMap`). Em EMPTY o mapa fica, e a dica esperançosa "seja o
+          primeiro" é renderizada DENTRO do bloco do mapa (segundo render abaixo),
+          exatamente como o PetsApp faz (PetsApp.js, `loadState === EMPTY`). */}
+      {!showMap && <PetMapLoadStates state={state} onRetry={handleRetry} />}
       {isReady && <div data-testid="map-ready">{pets.length} pets</div>}
+
+      {/* A barra de filtro é gateada em `showMap` (READY ou EMPTY), NÃO em
+          `isReady` — um dono que procura o pet em produção (0 pets → EMPTY) vê o
+          mapa E os chips de filtro. Esta fiação é o regression-guard do bug
+          "filtros somem em EMPTY" (gate trocado de isReady → showMap). */}
+      {showMap && (
+        <PetFilterBar
+          filter={defaultPetFilter()}
+          total={pets.length}
+          matchCount={pets.length}
+          onToggle={() => {}}
+          onSetRecency={() => {}}
+          onClear={() => {}}
+        />
+      )}
+
+      {/* PET-M20 — em EMPTY a dica "seja o primeiro" acompanha o mapa (PetsApp
+          renderiza este PetMapLoadStates DENTRO do bloco do mapa). */}
+      {showMap && state === PET_MAP_LOAD_STATE.EMPTY && (
+        <PetMapLoadStates state={state} onRetry={handleRetry} />
+      )}
 
       {/* simula os dois fechamentos da sheet de relato */}
       <button type="button" onClick={() => handleCloseReport('published')}>
@@ -113,11 +144,52 @@ describe('PET-M20 wiring — EMPTY quando 0 pets', () => {
   it('um fetch que resolve [] mostra o estado vazio calmo apontando para Relatar', async () => {
     const fetchPets = vi.fn().mockResolvedValue([]);
     render(<Harness fetchPets={fetchPets} />);
+    // A dica esperançosa do PetMapLoadStates ("…seja o primeiro a ajudar") é a cópia
+    // ÚNICA do estado vazio — desambigua do `noneTotal` da barra de filtro ("Nenhum
+    // pet reportado por aqui ainda."), que agora também rende no harness em EMPTY.
     await waitFor(() =>
-      expect(screen.getByText(/nenhum pet reportado por aqui ainda/i)).toBeTruthy(),
+      expect(screen.getByText(/seja o primeiro a ajudar/i)).toBeTruthy(),
     );
     expect(screen.getByText(/relatar um pet/i)).toBeTruthy();
     expect(screen.queryByTestId('map-ready')).toBeNull();
+  });
+});
+
+// Regression-guard do bug "os filtros não aparecem para o dono que procura o pet":
+// a barra de filtro estava gateada em `isReady` (= só READY), mas o mapa passou a
+// aparecer também em EMPTY (PET-M20 — 0 pets é o estado de produção hoje). Com 0
+// pets, mapLoadState retorna EMPTY → o mapa aparecia mas a barra de filtro nunca,
+// então um dono via o mapa e NENHUM chip de filtro. O fix troca o gate da barra
+// para `showMap` (= READY OU EMPTY). Esta fiação trava isso: a barra ACOMPANHA o
+// mapa em EMPTY e em READY, e SOME só em LOADING/ERROR (onde não há mapa). O seletor
+// é o id do heading da barra (independente de locale).
+const filterBarHeading = () => document.getElementById('pet-filter-heading');
+
+describe('regression — a barra de filtro ACOMPANHA o mapa (showMap, não isReady)', () => {
+  it('com 0 pets (EMPTY) o mapa aparece E a barra de filtro também', async () => {
+    const fetchPets = vi.fn().mockResolvedValue([]);
+    render(<Harness fetchPets={fetchPets} />);
+    // o estado vazio (mapa) chegou… (cópia ÚNICA do PetMapLoadStates, não o
+    // `noneTotal` da barra que também rende em EMPTY).
+    await waitFor(() =>
+      expect(screen.getByText(/seja o primeiro a ajudar/i)).toBeTruthy(),
+    );
+    // …e a barra de filtro está presente JUNTO (o bug original a escondia aqui).
+    expect(filterBarHeading()).not.toBeNull();
+  });
+
+  it('com >=1 pet (READY) a barra de filtro também aparece', async () => {
+    const fetchPets = vi.fn().mockResolvedValue([{ coords: COORDS, status: 'perdido' }]);
+    render(<Harness fetchPets={fetchPets} />);
+    await waitFor(() => expect(screen.getByTestId('map-ready')).toBeTruthy());
+    expect(filterBarHeading()).not.toBeNull();
+  });
+
+  it('em ERROR (fetch falha) NÃO há barra de filtro (não há mapa)', async () => {
+    const fetchPets = vi.fn().mockRejectedValue(new Error('rede caiu'));
+    render(<Harness fetchPets={fetchPets} />);
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
+    expect(filterBarHeading()).toBeNull();
   });
 });
 

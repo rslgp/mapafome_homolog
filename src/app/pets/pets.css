@@ -296,8 +296,14 @@
   align-items: center;
 }
 
-/* Contagem de combinações (aria-live): calma, informativa, nunca alarme. */
+/* Contagem de combinações (aria-live): calma, informativa, nunca alarme. Flex em
+ * linha (com wrap) para o "limpar" inline da contagem ZERO ficar JUNTO do texto —
+ * uma só unidade visual: a contagem 0 nunca é beco sem saída (CALM-TONE §2). */
 .pet-filter__count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mdf-space-2);
   margin: var(--mdf-space-1) 0 0 0;
   font-size: var(--mdf-fs-small);
   line-height: var(--mdf-lh-body);
@@ -305,8 +311,37 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Recuperação INLINE da contagem zero: a um toque, ali mesmo, junto do número.
+ * Reusa o realce de "limpar filtros" (ink sobre superfície neutra; nunca os
+ * tokens de alarme) e mantém o alvo de toque pleno (>=44px). */
+.pet-filter__count-clear {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mdf-touch-target);
+  padding: var(--mdf-space-1) var(--mdf-space-3);
+  background: transparent;
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-filter__count-clear:hover {
+  border-color: var(--mdf-ink);
+}
+
+.pet-filter__count-clear:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .pet-filter__clear {
+  .pet-filter__clear,
+  .pet-filter__count-clear {
     transition: none;
   }
 }

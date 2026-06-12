@@ -42,6 +42,7 @@ import {
   defaultPetFilter,
   filterPets,
   togglePetFilterValue,
+  setPetFilterRecency,
   activePetsByAge,
   parsePetDeepLinkParam,
   findPetByCoordsKey,
@@ -407,24 +408,34 @@ export default function PetsApp() {
     trackPetOpened({ status: matchPet.status });
   }, []);
 
-  // PET-M7 — toggle imutável de um id numa faceta (a regra pura vive em
-  // petDomain; aqui só fazemos o setState). Limpar volta ao filtro vazio.
+  // PET-M7 — toggle imutável de um id numa faceta MULTI-SELEÇÃO (status/espécie/
+  // cor/porte). A regra pura vive em petDomain; aqui só fazemos o setState.
   const handleToggleFilter = useCallback((facetKey, id) => {
     setFilter((prev) => togglePetFilterValue(prev, facetKey, id));
+  }, []);
+  // PET-M7 — RECÊNCIA é single-select (eixo único, 7⊂30⊂90). Recebe o `days`
+  // tocado e delega ao setter PURO (setPetFilterRecency), que faz o toggle-off
+  // quando o valor já está ativo (clicar o chip ativo de novo → null = sem
+  // restrição). A UI manda sempre o days tocado; a regra de "limpar se já ativo"
+  // mora no domínio, não aqui.
+  const handleSetRecency = useCallback((daysOrNull) => {
+    setFilter((prev) => setPetFilterRecency(prev, daysOrNull));
   }, []);
   const handleClearFilter = useCallback(() => setFilter(defaultPetFilter()), []);
 
   // Pets VISÍVEIS no mapa ativo = pets → filtro de facetas (PET-M7) → EXCLUSÃO por
-  // idade (PET-M12). nowMs do M7 segue 0 (o filtro de status/espécie/porte não
-  // consulta o tempo — determinístico). A EXCLUSÃO por idade do M12 usa o `nowMs`
-  // carimbado pelo effect (não Date.now() no render — purity), passado ao predicado
-  // PURO activePetsByAge. No 1º paint (nowMs=0) nada é arquivado (idade contra a
-  // época é negativa → dentro da janela); o effect corrige para o relógio real e
-  // poda os arquivados. Os reports além da janela NÃO entram nesta lista (somem do
-  // MAPA ativo), mas a linha na planilha fica intacta — nada é mutado/deletado, e
-  // uma futura lista/sheet (PET-M8) que mostre arquivados NÃO aplica esta exclusão.
+  // idade (PET-M12). A faceta de RECÊNCIA do M7 agora CONSULTA o tempo (matchesRecency
+  // mede a idade do pet contra `nowMs`), então filterPets recebe o MESMO `nowMs`
+  // carimbado pelo effect — NÃO mais o 0 hardcoded (que tornava toda idade absurda e
+  // fazia a recência não filtrar nada). status/espécie/cor/porte continuam atemporais
+  // (ignoram o nowMs). A EXCLUSÃO por idade do M12 (activePetsByAge) usa o MESMO nowMs.
+  // No 1º paint (nowMs=0) nada é arquivado nem restringido por recência (idade contra
+  // a época é negativa → dentro de qualquer janela); o effect de carga carimba o
+  // relógio real e a lista recomputa (o useMemo já keya em nowMs), aplicando recência
+  // e poda de idade juntas. Os reports fora da janela somem do MAPA ativo, mas a linha
+  // na planilha fica intacta — nada é mutado/deletado.
   const visiblePets = useMemo(
-    () => activePetsByAge(filterPets(pets, filter, 0), nowMs),
+    () => activePetsByAge(filterPets(pets, filter, nowMs), nowMs),
     [pets, filter, nowMs],
   );
 
@@ -551,15 +562,20 @@ export default function PetsApp() {
 
       {/* PET-M7 — filtro do mapa. A contagem é DERIVADA (visiblePets.length /
           pets.length): a barra não conhece os pets, só recebe os números e os
-          toggles. Só aparece quando há pets para filtrar (estado READY) — filtrar
-          um mapa em carregamento/erro/vazio não tem sentido e só adicionaria ruído
-          de UI a um público em estresse. */}
-      {isReady && (
+          toggles. Aparece sempre que o MAPA aparece (READY ou EMPTY) — gateada em
+          `showMap`, NÃO em `isReady`. PET-M20 passou a mostrar o mapa em EMPTY (0
+          pets — o estado de produção hoje) para o dono soltar um pin e relatar;
+          a barra de filtro precisa ACOMPANHAR o mapa, senão um dono que procura o
+          próprio pet vê o mapa mas NENHUM chip de filtro (status/espécie/cor/porte/
+          recência). Só LOADING (skeleton) e ERROR (retry) — onde não há mapa nem
+          dados — a escondem. */}
+      {showMap && (
         <PetFilterBar
           filter={filter}
           total={pets.length}
           matchCount={visiblePets.length}
           onToggle={handleToggleFilter}
+          onSetRecency={handleSetRecency}
           onClear={handleClearFilter}
         />
       )}
