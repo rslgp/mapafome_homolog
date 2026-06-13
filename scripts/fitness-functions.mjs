@@ -31,7 +31,11 @@ const TODO_HARD_LIMIT = 50;
 //   key = `<rel-path>:<1-based-decl-line>` (matches the FF2 failure string).
 //   NOTE: line-anchored — refresh the line number if the component moves.
 const FF2_BASELINE = new Set([
-    'src/app/components/compatibility/components/mapComponents.js:387',
+    // MapClickHandler moved 387→119 when the pure tap logic / event contract /
+    // registries were extracted into siblings (tapRecognition/markerEvents/
+    // mapRegistries). The handler body itself (one big event-binding useEffect)
+    // is unchanged and still over the limit — same debt, refreshed anchor.
+    'src/app/components/compatibility/components/mapComponents.js:119',
 ]);
 
 function walk(dir) {
