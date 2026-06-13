@@ -14,6 +14,9 @@
 //   • barricade: validateCoordinatePair lança ANTES de qualquer escrita.
 
 import { getSheet, appendRow, validateCoordinatePair } from '../components/compatibility/components/googlesheets/sheetsClient';
+import { activeCountryFor } from '../components/compatibility/components/geofence';
+import * as countryStore from '../components/compatibility/components/countryStore';
+import { INTL_ENABLED } from '../components/compatibility/components/intlConfig';
 import {
   buildPetDados,
   parsePetRow,
@@ -101,8 +104,15 @@ export async function fetchPets() {
 export async function publishPet({ coords, status, species, size, color, name, contact, detail, photos, idempotency_key }) {
   const payload = { coords, status, species, size, color, name, contact, detail, photos };
 
-  // 1. Barricada: lança (SheetsValidationError) se fora do bbox Brasil / não-finito.
-  validateCoordinatePair(coords);
+  // 1. Barricada (Camada B — pets NÃO tem Camada A/dentroLimites, ARCH-7): lança
+  // (SheetsValidationError) se fora do bbox do país / não-finito. O país é o MESMO
+  // que o app de fome resolve no momento da marca: activeCountryFor(INTL_ENABLED,
+  // countryStore) → país selecionado quando a flag ON, 'br' quando OFF (INTL M4 /
+  // §4.2). Sem isto, validateCoordinatePair cairia no default 'br' e uma marca de
+  // pet no exterior seria rejeitada mesmo com a flag ligada. Passar o país explícito
+  // mantém pets ≡ fome sob a flag (proibido ler o store DENTRO de sheetsClient — a
+  // resolução fica AQUI, um nível acima, §4.4).
+  validateCoordinatePair(coords, 'Coordinates', activeCountryFor(INTL_ENABLED, countryStore));
 
   // 3. Monta o blob (data carimbada AQUI — runtime real; petDomain fica puro).
   const dateIso = new Date().toISOString();
