@@ -19,6 +19,7 @@
 // duplicated network round-trip.
 
 import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { isInsideCountry } from '../countries';
 
 let docInstance = null;
 let initPromise = null;
@@ -80,9 +81,18 @@ export class SheetsValidationError extends Error {
     }
 }
 
-const BR_BBOX = { N: 5.27, S: -33.75, W: -73.99, E: -34.79 };
-
-export function validateCoordinatePair(coords, field = 'Coordinates') {
+// INTL M2 (§4.4/§4.6): the publish geofence is now the SINGLE source of truth in
+// countries.COUNTRY_PUBLISH_BOUNDS, read through isInsideCountry(coords, code).
+// The local Brazil bbox literal that used to live here is REMOVED (FIT-1: the
+// bounds literal survives only in the country SOT). `code` is passed EXPLICITLY —
+// this module NEVER reads the countryStore singleton (that would reintroduce
+// global-state coupling into the data layer and break test-mock determinism).
+// Absent `code` defaults to 'br' so the legacy pets path stays Brazil-only until
+// it is internationalized on purpose (M4).
+//
+// NOTE: the `reason` string stays 'outside Brazil bbox' for M2 — only the bounds
+// SOURCE changes here; the stable-error-code rename to OUT_OF_COUNTRY_BBOX is M3.
+export function validateCoordinatePair(coords, field = 'Coordinates', code = 'br') {
     if (!Array.isArray(coords) || coords.length !== 2) {
         throw new SheetsValidationError(field, 'must be a [lat,lng] tuple', coords);
     }
@@ -90,7 +100,7 @@ export function validateCoordinatePair(coords, field = 'Coordinates') {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
         throw new SheetsValidationError(field, 'lat/lng must be finite numbers', coords);
     }
-    if (lat < BR_BBOX.S || lat > BR_BBOX.N || lng < BR_BBOX.W || lng > BR_BBOX.E) {
+    if (!isInsideCountry(coords, code)) {
         throw new SheetsValidationError(field, 'outside Brazil bbox', coords);
     }
     return coords;
@@ -117,16 +127,22 @@ export function validateTelefoneBR(telefone) {
     return stripped;
 }
 
-export function validatePinPayload(payload) {
+// INTL M2 (§4.4): `code` is threaded EXPLICITLY from the publish action (which
+// already knows the active country) into the coordinate barricade. Absent → 'br'.
+export function validatePinPayload(payload, code = 'br') {
     if (!payload || typeof payload !== 'object') {
         throw new SheetsValidationError('payload', 'must be an object', payload);
     }
     // Coordinates may be JSON string or array — tolerate both, normalize.
+    // PARSE-1 (§4.4): the JSON.parse below preserves a legitimate ZERO component
+    // ('[0,-45]' → [0,-45]); validateCoordinatePair gates on Number.isFinite +
+    // isInsideCountry (strict numeric comparisons), never on truthiness, so a 0
+    // is NOT dropped. The zero-component case is covered in sheetsValidators.test.
     if (payload.Coordinates !== undefined) {
         const coords = typeof payload.Coordinates === 'string'
             ? JSON.parse(payload.Coordinates)
             : payload.Coordinates;
-        validateCoordinatePair(coords);
+        validateCoordinatePair(coords, 'Coordinates', code);
     }
     if (payload.Telefone) validateTelefoneBR(payload.Telefone);
     return payload;

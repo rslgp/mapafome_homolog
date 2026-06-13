@@ -109,9 +109,56 @@ export const DEFAULT_COUNTRY = 'br';
 export const COUNTRY_PUBLISH_BOUNDS = {
   // Brazil: rect1 (wider-north) OR rect2 (lower-west). Verbatim from
   // variaveisAmbiente.dentroLimites:13-22, frozen by the M0 net (RECT1/RECT2).
+  // DO NOT EDIT these two rectangles — they are the dark-ship byte-identical
+  // contract (D5/§4.0); the M0 characterization net fails on any change.
   br: [
     { N: 2.20, S: -14.09, W: -52.42, E: -34.32 }, // rect1
     { N: -14.18, S: -32.66, W: -55.55, E: -38.06 }, // rect2
+  ],
+
+  // ── INTL M2 — curated launch-country subset (D4 / §4.4 / §5 M2a) ──
+  //
+  // [Inference] These are LAUNCH-APPROXIMATE mainland bounding boxes, hand-
+  // picked to be SANE (no ocean-only box, no Antarctica) but deliberately rough.
+  // They are NOT coast-tightened — M4.5 (DATA-3) tightens the offshore margins.
+  // Shape matches Brazil's: { N, S, W, E } with the SAME strict (< / >) edges
+  // isInsideCountry enforces. A box can be multi-rectangle (an array of rects)
+  // when a single box would be absurd (e.g. the continental US is split so the
+  // box does not swallow the whole mid-Atlantic + mid-Pacific).
+  //
+  // FAR-FLUNG TERRITORY POLICY (launch): mainland box ONLY. Where a country has
+  // non-contiguous territory it is EXCLUDED for now and called out inline:
+  //   • us — Alaska + Hawaii EXCLUDED (contiguous lower-48 only).
+  //   • fr — overseas (Guyane, Réunion, Antilles, Polynésie…) EXCLUDED
+  //          (metropolitan / European France only).
+  //   • pt — Azores + Madeira EXCLUDED (mainland Iberian Portugal only).
+  // These exclusions are intentional launch scope, to be revisited post-launch.
+  //
+  // NOTE: 'es' here is the COUNTRY code for Spain (ISO-3166 alpha-2) — a DIFFERENT
+  // namespace from the 'es' UI-locale code used by the i18n layer. Do not conflate.
+
+  // Iberia / Western Europe
+  pt: [{ N: 42.20, S: 36.90, W: -9.60, E: -6.15 }], // mainland Portugal (Azores/Madeira excluded)
+  es: [{ N: 43.85, S: 36.00, W: -9.40, E: 3.40 }], // mainland Spain (Canary Is. excluded by box)
+  fr: [{ N: 51.15, S: 41.30, W: -5.20, E: 9.70 }], // metropolitan France (overseas excluded)
+  de: [{ N: 55.10, S: 47.20, W: 5.85, E: 15.05 }], // Germany
+  it: [{ N: 47.10, S: 36.60, W: 6.60, E: 18.55 }], // Italy (incl. Sicily/Sardinia, in-box)
+  gb: [{ N: 60.90, S: 49.85, W: -8.70, E: 1.80 }], // United Kingdom (GB + NI)
+
+  // South America (launch demand)
+  ar: [{ N: -21.75, S: -55.10, W: -73.60, E: -53.60 }], // Argentina (incl. Tierra del Fuego)
+  uy: [{ N: -30.05, S: -35.05, W: -58.50, E: -53.05 }], // Uruguay
+  py: [{ N: -19.25, S: -27.65, W: -62.70, E: -54.20 }], // Paraguay
+  cl: [{ N: -17.45, S: -56.00, W: -75.80, E: -66.30 }], // Chile (long-thin mainland)
+  co: [{ N: 13.55, S: -4.30, W: -79.10, E: -66.80 }], // Colombia
+  pe: [{ N: 0.10, S: -18.40, W: -81.40, E: -68.60 }], // Peru
+  bo: [{ N: -9.60, S: -22.95, W: -69.70, E: -57.40 }], // Bolivia
+
+  // North America
+  ca: [{ N: 83.20, S: 41.60, W: -141.10, E: -52.50 }], // Canada
+  us: [
+    // Contiguous lower-48 (Alaska + Hawaii EXCLUDED — far-flung, launch scope).
+    { N: 49.40, S: 24.40, W: -125.10, E: -66.90 },
   ],
 };
 

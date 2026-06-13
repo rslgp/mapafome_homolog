@@ -7,6 +7,11 @@
 // FF4: no remaining TODO/FIXME/XXX in production code over a threshold
 // FF5: documented load-bearing --mdf-* color pairs keep their WCAG 2.x contrast
 //      floor (deterministic; complements the slow/flaky browser axe gate)
+// FF6: one-bbox-SOT (INTERNATIONAL_PLAN FIT-1 / §4.6) — the publish geofence has a
+//      SINGLE source of truth (countries.COUNTRY_PUBLISH_BOUNDS via isInsideCountry).
+//      No `BR_BBOX` identifier may survive anywhere in src/ EXCEPT countries.js
+//      (where it appears only in a clarifying comment). Converts the DRY claim into
+//      a forcing function instead of hope (Norman: forcing function, not a comment).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -122,6 +127,30 @@ for (const file of walk(SRC)) {
 }
 if (todoCount > TODO_HARD_LIMIT) {
     failures.push(`FF4: ${todoCount} TODO/FIXME/XXX markers in src/ > ${TODO_HARD_LIMIT} ceiling`);
+}
+
+// FF6: one-bbox-SOT. The legacy BR_BBOX literal lived in THREE places
+// (sheetsClient, Coordinates, plus the dentroLimites inline). M2 folded all of
+// them into countries.COUNTRY_PUBLISH_BOUNDS as the single source of truth, read
+// through isInsideCountry(coords, code). Assert no `BR_BBOX` identifier survives
+// in src/ outside countries.js — a re-introduction (a new local copy of the box)
+// fails the gate on the spot. countries.js is allowlisted because the token only
+// appears there inside a clarifying comment ("NOT the viewport, NOT BR_BBOX").
+const FF6_BBOX_SOT_FILE = 'src/app/components/compatibility/components/countries.js';
+const BR_BBOX_TOKEN = /\bBR_BBOX\b/;
+for (const file of walk(SRC)) {
+    const relForward = rel(file).split(path.sep).join('/');
+    if (relForward === FF6_BBOX_SOT_FILE) continue; // SOT — comment-only mention
+    const src = fs.readFileSync(file, 'utf8');
+    const lines = src.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        if (BR_BBOX_TOKEN.test(lines[i])) {
+            failures.push(
+                `FF6: one-bbox-SOT — \`BR_BBOX\` found at ${relForward}:${i + 1} ` +
+                `(must live ONLY in COUNTRY_PUBLISH_BOUNDS / ${FF6_BBOX_SOT_FILE}). ` +
+                `INTERNATIONAL_PLAN FIT-1 / §4.6.`);
+        }
+    }
 }
 
 // FF5: token-level WCAG contrast forcing-function.

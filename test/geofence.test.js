@@ -124,10 +124,19 @@ describe('isInsideCountry — Brazil bit-for-bit equivalence to the legacy predi
 });
 
 describe('isInsideCountry — non-BR country + no-bounds (D6 block)', () => {
-  it('returns false for a country with no publish bounds (pre-M2)', () => {
-    // Portugal has no publish shape yet → blocked, never "allow without clamp".
-    expect(isInsideCountry([38.72, -9.14], 'pt')).toBe(false); // Lisbon
-    expect(isInsideCountry([40.42, -3.70], 'es')).toBe(false); // Madrid
+  // UPDATED for M2 (§4.4/§5 M2a): the curated launch subset now gives pt/es a
+  // publish shape, so Lisbon/Madrid are ACCEPTED. The D6 "no bounds → blocked"
+  // case is now exercised by a real country still OUTSIDE the launch subset.
+  it('accepts a point inside a curated launch country (M2 subset)', () => {
+    expect(isInsideCountry([38.72, -9.14], 'pt')).toBe(true); // Lisbon (mainland PT)
+    expect(isInsideCountry([40.42, -3.70], 'es')).toBe(true); // Madrid (mainland ES)
+  });
+
+  it('returns false for a known country NOT in the launch subset (D6 block)', () => {
+    // Mexico is a real ISO country but has no publish shape in the M2 launch set
+    // → blocked, never "allow without clamp". Same for Australia.
+    expect(isInsideCountry([19.43, -99.13], 'mx')).toBe(false); // Mexico City
+    expect(isInsideCountry([-33.87, 151.21], 'au')).toBe(false); // Sydney
   });
 
   it('is case/whitespace tolerant on the code (Postel: liberal input form)', () => {

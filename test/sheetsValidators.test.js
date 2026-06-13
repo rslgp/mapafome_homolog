@@ -10,7 +10,13 @@ import {
 } from '../src/app/components/compatibility/components/googlesheets/sheetsClient.js';
 
 describe('validateCoordinatePair', () => {
-    it('accepts a valid Brazil coord', () => {
+    // INTL M2 (§4.4/§4.6): the barricade now routes through the publish geofence
+    // SOT (isInsideCountry over countries.COUNTRY_PUBLISH_BOUNDS) instead of a
+    // local BR_BBOX literal. `code` defaults to 'br'. The `reason` STRING stays
+    // 'outside Brazil bbox' for M2 (the OUT_OF_COUNTRY_BBOX rename is M3) — only
+    // the bounds SOURCE changed here.
+    it('accepts a valid Brazil coord (default code br)', () => {
+        // João Pessoa-ish: inside Brazil rect1 of the two-rectangle publish shape.
         expect(validateCoordinatePair([-7.1, -34.8])).toEqual([-7.1, -34.8]);
     });
     it('rejects non-array', () => {
@@ -21,6 +27,20 @@ describe('validateCoordinatePair', () => {
     });
     it('rejects coord outside BR bbox', () => {
         expect(() => validateCoordinatePair([0, 0])).toThrow(/outside Brazil bbox/);
+    });
+    it('PARSE-1: does NOT drop a legitimate ZERO component', () => {
+        // [0, -45] has a 0 lat that is a REAL, in-Brazil coordinate (rect1). The
+        // barricade must gate on Number.isFinite + isInsideCountry, never on
+        // truthiness, so a 0 is accepted, not treated as missing/falsy.
+        expect(validateCoordinatePair([0, -45])).toEqual([0, -45]);
+    });
+    it('threads an explicit country code (es accepts Madrid, br rejects it)', () => {
+        // Madrid is inside Spain's launch box but outside Brazil — proves `code`
+        // is honored, not hard-pinned to Brazil.
+        expect(validateCoordinatePair([40.42, -3.70], 'Coordinates', 'es'))
+            .toEqual([40.42, -3.70]);
+        expect(() => validateCoordinatePair([40.42, -3.70], 'Coordinates', 'br'))
+            .toThrow(/outside Brazil bbox/);
     });
 });
 
@@ -62,5 +82,16 @@ describe('validatePinPayload', () => {
     });
     it('rejects payload with bad coords', () => {
         expect(() => validatePinPayload({ Coordinates: '[0,0]' })).toThrow(/outside Brazil/);
+    });
+    it('PARSE-1: a payload whose parsed coord has a 0 component is NOT dropped', () => {
+        const payload = { Coordinates: '[0,-45]' };
+        expect(validatePinPayload(payload)).toBe(payload);
+    });
+    it('threads code into the coordinate barricade', () => {
+        const payload = { Coordinates: '[40.42,-3.70]' };
+        // With code 'es' Madrid passes; with the default 'br' it would not.
+        expect(validatePinPayload(payload, 'es')).toBe(payload);
+        expect(() => validatePinPayload({ Coordinates: '[40.42,-3.70]' }))
+            .toThrow(/outside Brazil/);
     });
 });

@@ -17,10 +17,10 @@ describe('Coordinates', () => {
         const c = Coordinates.parse('[-7.1,-34.8]');
         expect(c.lat).toBe(-7.1);
     });
-    it('isInsideBR true for João Pessoa, false for São Paulo-side ocean', () => {
-        expect(new Coordinates(-7.1, -34.8).isInsideBR()).toBe(true);
-        expect(new Coordinates(0, 0).isInsideBR()).toBe(false);
-    });
+    // INTL M2 (§4.5): the isInsideBR() test was removed — the method and its
+    // private BR_BBOX literal were deleted (zero production consumers). The
+    // publish geofence's single source of truth is now isInsideCountry in
+    // countries.js, characterized by test/geofence*.test.js.
     it('distanceKmTo Recife → João Pessoa is ~120km', () => {
         const recife = new Coordinates(-8.05, -34.9);
         const jp = new Coordinates(-7.1, -34.8);
