@@ -12,6 +12,13 @@
 //      No `BR_BBOX` identifier may survive anywhere in src/ EXCEPT countries.js
 //      (where it appears only in a clarifying comment). Converts the DRY claim into
 //      a forcing function instead of hope (Norman: forcing function, not a comment).
+// FF7: Pais-stamp invariant (INTERNATIONAL_PLAN FIT-2 / §4.6.1 / DEST-1) — every
+//      publish row built by variaveisAmbiente.criarRow MUST stamp `Dados.Pais`, so
+//      non-BR marks on the single shared sheet are attributable and the read-back
+//      filter can scope by country (legacy rows with no Pais default to 'br').
+//      A refactor that drops the stamp would silently re-collapse all marks into
+//      the BR view; this asserts the assignment survives. Structural grep (the FF6
+//      pattern); the data-flow correctness is covered by test/intlReadback.test.js.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -149,6 +156,32 @@ for (const file of walk(SRC)) {
                 `FF6: one-bbox-SOT — \`BR_BBOX\` found at ${relForward}:${i + 1} ` +
                 `(must live ONLY in COUNTRY_PUBLISH_BOUNDS / ${FF6_BBOX_SOT_FILE}). ` +
                 `INTERNATIONAL_PLAN FIT-1 / §4.6.`);
+        }
+    }
+}
+
+// FF7: Pais-stamp invariant. variaveisAmbiente.criarRow must assign Dados.Pais
+// on the JSON blob it builds, so every publish path stamps the mark's country
+// (resolved via the injected resolver / an explicit dadosRow.pais). If this
+// assignment disappears, non-BR marks become indistinguishable from BR ones on
+// the shared sheet and the read-back filter silently re-collapses them. We match
+// the literal assignment token in the SOT file; the behavioral proof (OFF→'br',
+// missing→'br', non-BR attribution) lives in test/intlReadback.test.js.
+const FF7_PAIS_STAMP_FILE = 'src/app/components/compatibility/components/variaveisAmbiente.js';
+const FF7_PAIS_STAMP_TOKEN = /dadosJSON\.Pais\s*=/;
+{
+    const stampPath = path.join(ROOT, FF7_PAIS_STAMP_FILE);
+    if (!fs.existsSync(stampPath)) {
+        failures.push(
+            `FF7: Pais-stamp — ${FF7_PAIS_STAMP_FILE} not found (cannot verify ` +
+            `criarRow stamps Dados.Pais). INTERNATIONAL_PLAN FIT-2 / §4.6.1.`);
+    } else {
+        const stampSrc = fs.readFileSync(stampPath, 'utf8');
+        if (!FF7_PAIS_STAMP_TOKEN.test(stampSrc)) {
+            failures.push(
+                `FF7: Pais-stamp — \`dadosJSON.Pais = …\` not found in ${FF7_PAIS_STAMP_FILE}. ` +
+                `criarRow must stamp every publish row's country (DEST-1) or non-BR ` +
+                `marks collapse into the BR read-back. INTERNATIONAL_PLAN FIT-2 / §4.6.1.`);
         }
     }
 }
@@ -300,7 +333,7 @@ if (failures.length > 0) {
     process.exit(1);
 }
 
-console.log(`[fitness] OK — file-loc, function-loc, todo-density, token-contrast all within v5 hard limits.`);
+console.log(`[fitness] OK — file-loc, function-loc, todo-density, bbox-SOT, Pais-stamp, token-contrast all within v5 hard limits.`);
 if (ff2BaselineHits > 0) {
     console.log(`[fitness] note: ${ff2BaselineHits} FF2 baseline-allowlisted long function(s) (pre-existing debt — see FF2_BASELINE).`);
 }

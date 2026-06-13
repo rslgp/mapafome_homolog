@@ -7,6 +7,38 @@
 // explicit arguments so the file remains a pure function of its inputs.
 
 import { isInsideCountry } from './components/countries';
+// INTL M2.5 (§4.6.1 / DEST-1): the read-back path becomes country-aware so non-BR
+// rows on the single shared sheet 0 are attributed to their country instead of
+// collapsing into the BR view. activeCountryFor resolves the active country the
+// SAME way M1 wired the publish geofence (OFF → 'br'); countryStore is the SOT for
+// the selected country; INTL_ENABLED is the dark-ship flag.
+import { activeCountryFor } from './components/geofence';
+import * as countryStore from './components/countryStore';
+import { INTL_ENABLED } from './components/intlConfig';
+
+// INTL M2.5 (§4.6.1 / DEST-1) — country-aware read-back, extracted as a PURE
+// helper so the invariant is unit-testable without touching Google Sheets.
+// Each row here has already had its Dados blob spread onto it (so x.Pais and
+// x.kind are populated), exactly as runMain does before calling this.
+//   • Pets (kind === 'pet') are always dropped from the hunger dataMaps.
+//   • A row with NO Pais (undefined/null/'') is a LEGACY BR row — the field
+//     predates this stamp, so it defaults to 'br' and is NEVER dropped/crashed
+//     (backward compatibility, §4.6.1).
+//   • activeCountry === 'br' (also the flag-OFF case, activeCountryFor → 'br'):
+//     keep BR-stamped + legacy rows → byte-identical to today.
+//   • activeCountry !== 'br' (INTL ON, non-BR session): keep only rows stamped
+//     with that exact country, so a non-BR user sees their own marks and BR rows
+//     do not bleed into a foreign view.
+export function rowCountry(x) {
+  return x && x.Pais !== undefined && x.Pais !== null && x.Pais !== ''
+    ? x.Pais
+    : 'br';
+}
+
+export function filterRowsByCountry(rows, activeCountry) {
+  const country = activeCountry || 'br';
+  return rows.filter((x) => x.kind !== 'pet' && rowCountry(x) === country);
+}
 
 // Loads the Google Sheet, decrypts/flattens each row's Dados blob into the row
 // object, and pushes the result into the component state. Called once geolocation
@@ -119,9 +151,17 @@ export function runMain(self, deps) {
     // crucially the LiveAnnouncer aria-live count (which keys on DateISO, not
     // Categorias) — ever shows, counts, or announces a lost-pet pin.
     // `kind` is read off the row because the loop above spreads JSON.parse(Dados)
-    // onto each row, so x.kind is populated by this point.
+    // onto each row, so x.kind is populated by this point. The country attribution
+    // (filterRowsByCountry, INTL M2.5/§4.6.1) is country-aware: marks share this
+    // one sheet (region routing stays single-sheet, §4.3/R3), so the read path
+    // scopes the rendered set to the active country (legacy rows with no Pais
+    // default to 'br'). This realizes the center-vs-country fix §4.3 promised —
+    // the LOAD gate (regiao) above stays BR-decoupled/permissive, THIS filter is
+    // what scopes by country. With the flag OFF activeCountryFor → 'br', so the
+    // rendered set is byte-identical to today.
     // See src/app/pets/* and the kind:'pet' guard in reports.js.
-    const dataMaps = rows.filter((x) => x.kind !== 'pet');
+    const activeCountry = activeCountryFor(INTL_ENABLED, countryStore);
+    const dataMaps = filterRowsByCountry(rows, activeCountry);
     // rowCount mirrors what hunger surfaces actually show — count the
     // pet-filtered set, not raw rows, so lost-pet pins never inflate the
     // public "pontos mapeados" headline or its aria-live announcement.

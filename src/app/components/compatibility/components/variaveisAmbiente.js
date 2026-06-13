@@ -59,7 +59,7 @@ const envVariables = {
         
         
         let dadosJSON = {
-            "Roaster": dadosRow.alimento, 
+            "Roaster": dadosRow.alimento,
             "DateISO": new Date().toISOString(),
             "AlimentoEntregue":0,
             "Avaliacao": {
@@ -71,6 +71,18 @@ const envVariables = {
             },
 
         };
+        // INTL M2.5 (§4.6.1 / DEST-1): stamp the country this mark was created in
+        // so the single shared sheet 0 stops collapsing non-BR rows into the BR
+        // view. The country is resolved the SAME injected-resolver way M1 wired
+        // dentroLimites (the POJO must NOT import countryStore/intlConfig, §4.2):
+        // a caller may pass dadosRow.pais explicitly, otherwise the resolver
+        // answers (it resolves activeCountryFor(INTL_ENABLED, countryStore) at the
+        // composition root). With the INTL flag OFF the resolver returns 'br', so
+        // EVERY row is stamped Pais:'br' and flag-OFF meaning is byte-identical to
+        // today (the field is additive; legacy readers ignore it). Read-back in
+        // appMainBootstrap treats a MISSING Pais as 'br' so historical rows (which
+        // never carried this field) still attribute correctly.
+        dadosJSON.Pais = dadosRow.pais || activeCountryResolver();
         if(dadosRow.numero!=="") dadosJSON.URL = dadosRow.numero;
         if(dadosRow.coords!=="") dadosJSON.Coordinates = JSON.stringify(dadosRow.coords);
         if(dadosRow.telefone!=="") dadosJSON.Telefone = dadosRow.telefone;
