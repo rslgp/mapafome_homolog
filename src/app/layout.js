@@ -1,5 +1,6 @@
 // app/layout.js
 import './globals.css';
+import LocaleAutoDetect from './components/LocaleAutoDetect';
 
 export const metadata = {
   metadataBase: new URL('https://mapafome.com.br'),
@@ -45,7 +46,14 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        {/* INTL M6.2 — first-session browser-language auto-detect, run as a
+            client mount-effect (renders null). Mounted once here so every route
+            is covered; SSR-safe (no markup, detection deferred to the effect) so
+            the prerendered DEFAULT_LOCALE HTML is never contradicted (R12). */}
+        <LocaleAutoDetect />
+        {children}
+      </body>
     </html>
   );
 }

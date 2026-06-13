@@ -51,6 +51,16 @@ describe('strings.t() — locale resolution', () => {
     expect(t('empty.no_pins_in_view')).toContain('Nadie ha sido mapeado');
   });
 
+  it('returns en-US strings after setLocale("en-US") (INTL M6)', () => {
+    act(() => setLocale('en-US'));
+    expect(getLocale()).toBe('en-US');
+    // A finalized mechanical label.
+    expect(t('cta.report')).toBe('Report');
+    // A dignity-sensitive line is DRAFTED, not final: it must still carry the
+    // [REVISAR-HUMANO] marker until a human approves the tone (plan D7/M6.3).
+    expect(t('empty.no_pins_in_view')).toContain('[REVISAR-HUMANO] ');
+  });
+
   it('falls back to the key for an unknown id', () => {
     expect(t('does.not.exist')).toBe('does.not.exist');
   });
@@ -135,15 +145,29 @@ describe('errors.offline — P7: queue-and-retry copy, wired via t()', () => {
 
 // ── ROADMAP P8 — no dead keys, parity holds ────────────────────────────────
 describe('dictionary — P8: parity + zero dead keys', () => {
-  it('pt-BR and es expose the exact same key set (no orphans either side)', () => {
-    const pt = localeKeys('pt-BR');
-    const es = localeKeys('es');
-    expect(es).toEqual(pt); // both are sorted; deep-equal proves 1:1 parity
+  // INTL M6.4: data-driven over SUPPORTED_LOCALES (was a hard-coded pt-BR/es
+  // deep-equal), so adding a 3rd locale (en-US) is covered automatically and a
+  // 4th would be too. pt-BR is the reference key set; EVERY locale must match it
+  // 1:1 — no orphan keys on any side, no missing keys on a new locale.
+  it('every supported locale exposes the exact same key set as pt-BR (full parity)', () => {
+    const reference = localeKeys('pt-BR');
+    // Guard against a vacuous pass (an empty filter / missing dict).
+    expect(reference.length).toBeGreaterThan(0);
+    for (const locale of SUPPORTED_LOCALES) {
+      expect(localeKeys(locale), `${locale} key set must equal pt-BR 1:1`).toEqual(reference);
+    }
   });
 
-  it('the retired empty.no_pins_anywhere key is gone from both locales', () => {
-    expect(localeKeys('pt-BR')).not.toContain('empty.no_pins_anywhere');
-    expect(localeKeys('es')).not.toContain('empty.no_pins_anywhere');
+  it('all three UI locales are wired (pt-BR, es, en-US)', () => {
+    expect(SUPPORTED_LOCALES).toContain('pt-BR');
+    expect(SUPPORTED_LOCALES).toContain('es');
+    expect(SUPPORTED_LOCALES).toContain('en-US');
+  });
+
+  it('the retired empty.no_pins_anywhere key is gone from every locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      expect(localeKeys(locale)).not.toContain('empty.no_pins_anywhere');
+    }
   });
 
   it('every dictionary key is referenced in source (no dead keys)', () => {

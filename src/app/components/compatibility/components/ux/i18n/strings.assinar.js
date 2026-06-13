@@ -3,6 +3,12 @@
 // ONLY this file. assinar.rail.* keys are read in page.js by rail id; the RAILS
 // id/structure SOT stays in asaasSubscriptionClient. See ../strings.js (barrel)
 // and ./engine.js (runtime). pt-BR primary; es parity is human-authored.
+//
+// INTL M6 — en-US (`enUS`) is the third UI locale. These are transactional /
+// payment-rail strings (rail labels, field labels, payment instructions), all
+// MECHANICAL/neutral, so the en-US block is finalized (no [REVISAR-HUMANO]).
+// `R$` and the `{value}` placeholder are preserved verbatim (the backend bills in
+// BRL). New en-US strings avoid the em-dash (use commas/parentheses).
 
 export const pt = {
   // ── /assinar — recurring support subscription (Asaas) ──────────────────
@@ -100,4 +106,53 @@ export const es = {
   'assinar.rail.cartao.hint':   'Suscripción con tarjeta, renovación automática',
   'assinar.rail.boleto.label':  'Boleto',
   'assinar.rail.boleto.hint':   'Un boleto por mes — pagas cada uno',
+};
+
+export const enUS = {
+  // ── /assinar — recurring support subscription (Asaas). All mechanical. ──
+  'assinar.back':            '← Back to the map',
+  'assinar.title':           'Support MAPA FOME',
+  'assinar.sub':             'A monthly contribution helps keep the map online. Pick the method you prefer.',
+  'assinar.legend.rail':     'Payment method',
+  'assinar.legend.value':    'Monthly amount',
+  'assinar.value.presets':   'Suggested amounts',
+  'assinar.value.other':     'Other amount (R$)',
+  'assinar.field.name':      'Full name',
+  'assinar.field.email':     'Email',
+  'assinar.field.cpfcnpj':   'CPF or CNPJ',
+  'assinar.field.phone':     'Mobile (optional)',
+  'assinar.cta.submitting':  'Processing…',
+  'assinar.cta.support':     'Support with R$ {value}/month',
+  'assinar.note':            'Payment processed by Asaas. You can cancel anytime.',
+  'assinar.error.fallback':  'We could not complete it. Please try again.',
+  'assinar.success.title':   'Thank you for your support 💛',
+  'assinar.success.sub':     'Your subscription of {value} per month has been created.',
+  'assinar.success.active':  'The recurring charge is already active.',
+  // Inline payment screen (Pix QR / boleto / card redirect).
+  'assinar.pay.loading':       'Generating your payment…',
+  'assinar.pay.error':         'We could not load the payment.',
+  'assinar.pay.retry':         'Try again',
+  'assinar.pay.pix.title':     'Pay with Pix',
+  'assinar.pay.pix.help':      'Open your bank app, scan the QR code, or use Pix copy and paste.',
+  'assinar.pay.pix.copy':      'Copy Pix code',
+  'assinar.pay.pix.copied':    'Code copied!',
+  'assinar.pay.pix.qrAlt':     'Pix QR code for the payment',
+  'assinar.pay.boleto.title':  'Pay with boleto',
+  'assinar.pay.boleto.help':   'Copy the payment line or open the boleto PDF to pay at your bank.',
+  'assinar.pay.boleto.line':   'Payment line',
+  'assinar.pay.boleto.copy':   'Copy payment line',
+  'assinar.pay.boleto.copied': 'Line copied!',
+  'assinar.pay.boleto.open':   'Open boleto (PDF)',
+  'assinar.pay.card.title':    'Pay with card',
+  'assinar.pay.card.help':     'You will be taken to the secure Asaas environment to enter your card details.',
+  'assinar.pay.card.cta':      'Go to secure payment',
+  'assinar.pay.pending':       'Your payment is being generated. Reload in a moment.',
+  // Rail display copy — RAILS (asaasSubscriptionClient) stays the id/structure
+  // SOT; these are pulled in page.js via t() keyed by rail id.
+  'assinar.rail.pix.label':     'Pix',
+  'assinar.rail.pix.hint':      'Pix Automático (recurring debit, no card fee)',
+  'assinar.rail.cartao.label':  'Credit card',
+  'assinar.rail.cartao.hint':   'Card subscription, automatic renewal',
+  'assinar.rail.boleto.label':  'Boleto',
+  'assinar.rail.boleto.hint':   'One boleto per month (you pay each one)',
 };

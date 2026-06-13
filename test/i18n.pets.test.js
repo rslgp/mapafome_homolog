@@ -18,7 +18,7 @@
 
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 
-import { t, setLocale, localeKeys } from
+import { t, setLocale, localeKeys, SUPPORTED_LOCALES } from
   '../src/app/components/compatibility/components/ux/strings.js';
 import {
   PET_STATUSES,
@@ -39,11 +39,15 @@ const petsKeys = (locale) => localeKeys(locale).filter((k) => k.startsWith(PREFI
 beforeEach(() => { setLocale('pt-BR'); });
 afterEach(() => { setLocale('pt-BR'); });
 
-describe('pets.* dictionary — pt-BR/es parity', () => {
-  it('exposes the exact same pets.* key set in both locales (no orphans)', () => {
-    const pt = petsKeys('pt-BR');
-    const es = petsKeys('es');
-    expect(es).toEqual(pt); // both sorted; deep-equal proves 1:1 parity
+describe('pets.* dictionary — parity across all locales', () => {
+  // INTL M6.4: data-driven over SUPPORTED_LOCALES (was a hard-coded pt-BR/es
+  // deep-equal). en-US is covered automatically; pt-BR is the reference set.
+  it('exposes the exact same pets.* key set in every locale (no orphans)', () => {
+    const reference = petsKeys('pt-BR');
+    expect(reference.length).toBeGreaterThan(0);
+    for (const locale of SUPPORTED_LOCALES) {
+      expect(petsKeys(locale), `${locale} pets.* key set must equal pt-BR 1:1`).toEqual(reference);
+    }
   });
 
   it('actually has a substantial pets.* key set (guards an empty filter passing)', () => {
@@ -51,8 +55,8 @@ describe('pets.* dictionary — pt-BR/es parity', () => {
     expect(petsKeys('pt-BR').length).toBeGreaterThan(80);
   });
 
-  it('has no empty-string value for any pets.* key in either locale', () => {
-    for (const locale of ['pt-BR', 'es']) {
+  it('has no empty-string value for any pets.* key in any locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
       setLocale(locale);
       for (const key of petsKeys(locale)) {
         const value = t(key);
@@ -83,6 +87,56 @@ describe('pets.* dictionary — pt-BR/es parity', () => {
       const es = t(key);
       expect(es, `${key} must be translated, not identical`).not.toBe(pt);
     }
+  });
+
+  // INTL M6.3 — the en-US drafting gate (honors D7: never machine-translate
+  // dignity-sensitive copy; ship it only after human review).
+  it('en-US dignity-sensitive pets copy is DRAFTED, marked [REVISAR-HUMANO]', () => {
+    setLocale('en-US');
+    // The M6.3 sensitive set: status hints, consent/privacy, reunite/close
+    // confirms + done, the safe-contact note, the match "could be" lines, the
+    // publish-failure/throttle copy, the closure reassurance, and the flag copy.
+    const mustReview = [
+      'pets.status.perdido.hint',
+      'pets.report.freetext.warning',
+      'pets.report.consent.post',
+      'pets.report.photo.privacy',
+      'pets.detail.privacy.note',
+      'pets.detail.match.lead.lost',
+      'pets.detail.lifecycle.confirmReunido.note',
+      'pets.detail.lifecycle.confirmEncerrado.note',
+      'pets.detail.lifecycle.done.reunido',
+      'pets.detail.lifecycle.done.encerrado',
+      'pets.publish.failed.out_of_bounds',
+      'pets.publish.throttle.identical',
+      'pets.closure.lead',
+      'pets.detail.flag.note',
+    ];
+    for (const key of mustReview) {
+      expect(t(key), `${key} must stay [REVISAR-HUMANO] until human-approved`)
+        .toMatch(/^\[REVISAR-HUMANO\] /);
+    }
+  });
+
+  it('en-US mechanical pets labels are FINAL (no [REVISAR-HUMANO] marker)', () => {
+    setLocale('en-US');
+    // Mechanical labels (petDomain LABELS, view toggles, button labels) ship as
+    // direct translations.
+    const mustBeFinal = [
+      'pets.status.perdido.label',
+      'pets.species.cao.label',
+      'pets.size.medio.label',
+      'pets.view.list',
+      'pets.report.btn.publish',
+      'pets.detail.close',
+      'pets.filter.clear',
+    ];
+    for (const key of mustBeFinal) {
+      expect(t(key), `${key} is mechanical and should be final`)
+        .not.toMatch(/\[REVISAR-HUMANO\]/);
+    }
+    expect(t('pets.status.perdido.label')).toBe('Lost');
+    expect(t('pets.species.cao.label')).toBe('Dog');
   });
 });
 

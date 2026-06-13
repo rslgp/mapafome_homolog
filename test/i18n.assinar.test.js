@@ -16,7 +16,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { t, setLocale, localeKeys } from
+import { t, setLocale, localeKeys, SUPPORTED_LOCALES } from
   '../src/app/components/compatibility/components/ux/strings.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -30,19 +30,23 @@ const assinarKeys = (locale) => localeKeys(locale).filter((k) => k.startsWith(PR
 beforeEach(() => { setLocale('pt-BR'); });
 afterEach(() => { setLocale('pt-BR'); });
 
-describe('assinar.* dictionary — pt-BR/es parity', () => {
-  it('exposes the exact same assinar.* key set in both locales (no orphans)', () => {
-    const pt = assinarKeys('pt-BR');
-    const es = assinarKeys('es');
-    expect(es).toEqual(pt); // both sorted; deep-equal proves 1:1 parity
+describe('assinar.* dictionary — parity across all locales', () => {
+  // INTL M6.4: data-driven over SUPPORTED_LOCALES (was a hard-coded pt-BR/es
+  // deep-equal). en-US (all-mechanical for /assinar) is covered automatically.
+  it('exposes the exact same assinar.* key set in every locale (no orphans)', () => {
+    const reference = assinarKeys('pt-BR');
+    expect(reference.length).toBeGreaterThan(0);
+    for (const locale of SUPPORTED_LOCALES) {
+      expect(assinarKeys(locale), `${locale} assinar.* key set must equal pt-BR 1:1`).toEqual(reference);
+    }
   });
 
   it('actually has assinar.* keys (guards against an empty filter passing)', () => {
     expect(assinarKeys('pt-BR').length).toBeGreaterThan(0);
   });
 
-  it('has no empty-string value for any assinar.* key in either locale', () => {
-    for (const locale of ['pt-BR', 'es']) {
+  it('has no empty-string value for any assinar.* key in any locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
       setLocale(locale);
       for (const key of assinarKeys(locale)) {
         const value = t(key);
@@ -52,6 +56,16 @@ describe('assinar.* dictionary — pt-BR/es parity', () => {
         expect(value, `${locale} / ${key} resolved to the key (missing)`).not.toBe(key);
       }
     }
+  });
+
+  it('the en-US /assinar copy is finalized (mechanical/payment, no [REVISAR-HUMANO])', () => {
+    setLocale('en-US');
+    for (const key of assinarKeys('en-US')) {
+      expect(t(key), `${key} should be final (no review marker)`).not.toMatch(/\[REVISAR-HUMANO\]/);
+    }
+    // Spot-check a finalized rail label + the {value} placeholder survives.
+    expect(t('assinar.rail.cartao.label')).toBe('Credit card');
+    expect(t('assinar.cta.support')).toContain('{value}');
   });
 });
 

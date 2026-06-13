@@ -25,4 +25,10 @@ export {
   // (endonym label + flag) from here. The data lives next to SUPPORTED_LOCALES
   // in the engine; this barrel keeps the consumer import path stable.
   LOCALE_LABELS,
+  // INTL M6 — en-US locale wiring. detectLocale is the pure browser-tag matcher;
+  // useAutoDetectLocale is the first-session mount-effect (R12, NOT module-load);
+  // applyDocumentLang is the single <html lang> writer (R14).
+  detectLocale,
+  useAutoDetectLocale,
+  applyDocumentLang,
 } from './i18n/engine.js';

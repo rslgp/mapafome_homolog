@@ -4,6 +4,14 @@
 // touch base map copy edit ONLY this file. See ./engine.js for the runtime and
 // ../strings.js for the stable public barrel. pt-BR is the primary language;
 // es parity is human-authored (dignity-sensitive copy is never machine-translated).
+//
+// INTL M6 — en-US (`enUS`) is the third UI locale. MECHANICAL/neutral strings
+// (button labels, view toggles, plain validation prompts) are finalized. Copy
+// that carries dignity/tone (the hunger-need prompts in report.*, the reassuring
+// offline/slow/failed status copy, the geofence-rejection note, the empty-view
+// note) is DRAFTED and prefixed `[REVISAR-HUMANO] ` so a human approves the tone
+// before it ships (honors plan D7 — never machine-translate sensitive copy).
+// New en-US strings avoid the em-dash on purpose (use commas/parentheses).
 
 export const pt = {
   'report.title':      'O que a pessoa precisa agora?',
@@ -89,4 +97,52 @@ export const es = {
   'lang.button':         'Idioma: {name}',
   'lang.open':           'Cambiar el idioma del sitio',
   'lang.title':          'Elige el idioma',
+};
+
+export const enUS = {
+  // report.* — hunger-need prompts. DIGNITY-SENSITIVE: the tone (ask gently,
+  // never command, never accuse) must be human-reviewed before shipping.
+  'report.title':      '[REVISAR-HUMANO] What does this person need right now?',
+  'report.subtitle':   '[REVISAR-HUMANO] You can choose more than one.',
+  'report.button':     '[REVISAR-HUMANO] Publish point',
+  'report.publishing': 'Publishing…',
+  'report.success':    'Published ✓',
+  'report.retry':      'Try again',
+  // Plain validation prompt — mechanical, finalized.
+  'errors.at_least_one_category': 'Choose at least one need.',
+  // Failure/status copy carries reassurance tone (it must calm, not alarm), so
+  // it is drafted for human review.
+  'errors.publish_failed':        '[REVISAR-HUMANO] We could not publish. Check your connection and try again.',
+  'errors.offline':               '[REVISAR-HUMANO] You are offline. The point was saved and will be sent when the connection comes back.',
+  'errors.server_slow':           '[REVISAR-HUMANO] The server was slow to respond. Your point may have been saved, wait 30s and reload before trying again.',
+  // INTL M3 (UX-1/UX-2): geofence-rejection copy for the FOME map. Country-neutral,
+  // names the SELECTED country via {pais}, points at the fix (move the pin or
+  // switch the flag). DIGNITY-SENSITIVE (where you may mark): human-reviewed.
+  'errors.out_of_country':        '[REVISAR-HUMANO] That point is outside {pais}. Tap on the map, inside the selected country, to publish here, or switch the country in the flag picker.',
+  // pin.* — status labels and the action button. Mechanical, finalized.
+  'pin.waiting':        'Waiting',
+  'pin.someone_going':  'Someone on the way',
+  'pin.attended_today': 'Helped today',
+  'pin.going_button':   'I am on my way now',
+  'pin.directions':     'Directions',
+  'pin.mark_attended':  'Mark as helped',
+  'pin.after_attended': 'Thank you. The point has been archived.',
+  // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
+  'empty.no_pins_in_view':  '[REVISAR-HUMANO] No one has been mapped in this area yet. If you saw someone in need, tap Report.',
+  // cta.* — navigation/action labels. Mechanical, finalized.
+  'cta.report': 'Report',
+  'cta.list':   'List',
+  'cta.help':   'How it works',
+  'cta.pets':   'Lost pets',
+  // ── CountryFlagControl (INTL) — flag-driven geocoder scope. Mechanical. ──
+  'country.button':      'Search country: {name}',
+  'country.open':        'Change the address-search country',
+  'country.title':       'Search an address in which country?',
+  'country.search':      'Search country',
+  'country.empty':       'No country found.',
+  'country.close':       'Close the country list',
+  // ── LanguageControl (INTL) — UI language picker. Mechanical. ──
+  'lang.button':         'Language: {name}',
+  'lang.open':           'Change the site language',
+  'lang.title':          'Choose the language',
 };
