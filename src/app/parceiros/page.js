@@ -9,7 +9,7 @@ import './parceiros.css';
 // project's inbox. Keeps the /parceiros surface stateless and deployable as
 // pure static output.
 
-const RECIPIENT = 'contato@mapafome.com.br';
+const RECIPIENT = 'dev.rafaelleao+mapafome_imprensa@gmail.com';
 
 const TIERS = [
   {
