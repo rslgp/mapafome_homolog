@@ -21,6 +21,7 @@ import 'react-leaflet-markercluster/styles';
 import PropTypes from 'prop-types';
 
 import SearchField from './SearchField';
+import CountryFlagControl from './CountryFlagControl';
 import MarkerGroup from './MarkerGroup';
 import ReporterMarkers from './ReporterMarkers';
 import {
@@ -390,6 +391,9 @@ const CoffeeMap = ({
                 <TileLayersControl />
 
                 <SearchField />
+
+                {/* INTL: flag selector that re-scopes the address search to any country */}
+                <CountryFlagControl />
 
                 {/* Pans map when GPS location arrives — MapContainer.center is not reactive */}
                 <MapViewUpdater center={center} />

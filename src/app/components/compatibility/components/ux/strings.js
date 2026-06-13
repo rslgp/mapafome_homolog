@@ -40,6 +40,13 @@ const DICT = {
     // PET-M23; this navigational label is wired under a stable shared key now
     // (both locales) so it never renders the raw key string.
     'cta.pets':   'Pets perdidos',
+    // ── CountryFlagControl (INTL) — flag-driven geocoder scope ──────────────
+    'country.button':      'País da busca: {name}',
+    'country.open':        'Trocar o país da busca de endereço',
+    'country.title':       'Buscar endereço em qual país?',
+    'country.search':      'Buscar país',
+    'country.empty':       'Nenhum país encontrado.',
+    'country.close':       'Fechar a lista de países',
     // ── /assinar — recurring support subscription (Asaas) ──────────────────
     'assinar.back':            '← Voltar ao mapa',
     'assinar.title':           'Apoie o MAPA FOME',
@@ -333,6 +340,13 @@ const DICT = {
     // PET-M22 — see the pt-BR note; es value is a provisional twin so the label
     // is never the raw key. PET-M23 owns the human-authored /pets es parity.
     'cta.pets':   'Mascotas perdidas',
+    // ── CountryFlagControl (INTL) — flag-driven geocoder scope ──────────────
+    'country.button':      'País de búsqueda: {name}',
+    'country.open':        'Cambiar el país de la búsqueda de dirección',
+    'country.title':       '¿Buscar dirección en qué país?',
+    'country.search':      'Buscar país',
+    'country.empty':       'No se encontró ningún país.',
+    'country.close':       'Cerrar la lista de países',
     // ── /assinar — suscripción de apoyo recurrente (Asaas) ─────────────────
     'assinar.back':            '← Volver al mapa',
     'assinar.title':           'Apoya MAPA FOME',
