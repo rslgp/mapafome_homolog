@@ -99,7 +99,7 @@ export const pt = {
   'pets.report.btn.retry':     'Tentar de novo',
   'pets.report.btn.publish':   'Publicar pet',
   // ── Publish-failure copy (resolved by reasonCode; pt-BR == petDomain SOT) ──
-  'pets.publish.failed.out_of_bounds': 'Esse ponto está fora da área que a gente atende por aqui. Toque no mapa, dentro da região, para marcar onde o pet foi visto.',
+  'pets.publish.failed.out_of_bounds': 'Esse ponto está fora do país selecionado. Toque no mapa, dentro do país escolhido, para marcar onde o pet foi visto, ou troque o país no seletor de bandeira.',
   'pets.publish.failed.offline':       'Você está sem internet agora. Seu relato foi guardado com segurança e vai ser publicado sozinho assim que a conexão voltar.',
   'pets.publish.failed.server_slow':   'A conexão está lenta e seu relato pode já ter sido salvo. Aguarde um instante e recarregue antes de publicar de novo, para não duplicar.',
   'pets.publish.failed.generic':       'Não deu para publicar agora. Seu relato não se perdeu — confira a conexão e tente de novo com calma.',
@@ -312,7 +312,7 @@ export const es = {
   'pets.report.btn.retry':     'Reintentar',
   'pets.report.btn.publish':   'Publicar mascota',
   // ── Publish-failure copy (calm, reassuring; never accusatory) ──
-  'pets.publish.failed.out_of_bounds': 'Ese punto está fuera del área que cubrimos por aquí. Toca en el mapa, dentro de la región, para marcar dónde viste a la mascota.',
+  'pets.publish.failed.out_of_bounds': 'Ese punto está fuera del país seleccionado. Toca en el mapa, dentro del país elegido, para marcar dónde viste a la mascota, o cambia el país en el selector de bandera.',
   'pets.publish.failed.offline':       'Ahora estás sin conexión. Tu reporte se guardó con seguridad y se publicará solo en cuanto vuelva la conexión.',
   'pets.publish.failed.server_slow':   'La conexión está lenta y tu reporte quizá ya se guardó. Espera un momento y recarga antes de publicar de nuevo, para no duplicar.',
   'pets.publish.failed.generic':       'No se pudo publicar ahora. Tu reporte no se perdió — revisa la conexión e inténtalo de nuevo con calma.',

@@ -7,6 +7,7 @@
 // (todo `import { classifyPublishFailure, … } from './petDomain'` segue casando).
 
 import { t } from '../components/compatibility/components/ux/strings';
+import { OUT_OF_COUNTRY_BBOX } from '../components/compatibility/components/googlesheets/sheetsClient';
 
 // ─── Classificação de FALHA de publicação (SOT) ──────────────────────────────
 // PET-M1. Antes existia UMA única string genérica ('publish_failed'). Agora a
@@ -56,9 +57,15 @@ const NETWORK_RE = /network|failed to fetch|networkerror|offline/i;
 // Ordem de precedência: out-of-bounds (regra de negócio) > offline (estado de
 // rede explícito) > lento/timeout (write pode ter saído) > rede caída > genérico.
 export function classifyPublishFailure(error, { isOffline = false } = {}) {
-  // SheetsValidationError carrega .reason 'outside Brazil bbox' (ver sheetsClient).
-  // Detecta por shape (não por instanceof — sobrevive a fronteiras de módulo/bundle).
-  if (error && (error.reason === 'outside Brazil bbox' || error.name === 'SheetsValidationError')) {
+  // INTL M3 (SCOPE-2/FACT-2): classifica out_of_bounds pelo CÓDIGO ESTÁVEL de
+  // geofence (.reason === OUT_OF_COUNTRY_BBOX) APENAS. Detecta por shape (não por
+  // instanceof — sobrevive a fronteiras de módulo/bundle), mas NÃO mais pelo
+  // `error.name === 'SheetsValidationError'` genérico: aquele catch-all bucketava
+  // QUALQUER SheetsValidationError (telefone/rating) como out_of_bounds, uma
+  // mis-classificação latente que também mascarava esta própria migração de reason
+  // (o ramo do name "passava" mesmo se o reason mudasse). Erros de telefone/rating
+  // agora caem nos ramos seguintes (offline/rede/genérico), não em "fora do país".
+  if (error && error.reason === OUT_OF_COUNTRY_BBOX) {
     return PET_PUBLISH_FAILURE.OUT_OF_BOUNDS;
   }
   if (isOffline) {

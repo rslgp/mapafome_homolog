@@ -13,14 +13,32 @@ import {
   PET_PUBLISH_FAILURE,
   PET_PUBLISH_FAILURE_COPY,
 } from './petDomain';
-import { SheetsValidationError } from '../components/compatibility/components/googlesheets/sheetsClient';
+import { SheetsValidationError, OUT_OF_COUNTRY_BBOX } from '../components/compatibility/components/googlesheets/sheetsClient';
 
 describe('classifyPublishFailure — classes de falha', () => {
-  it('SheetsValidationError de bbox → out_of_bounds (fora da área atendida)', () => {
-    const err = new SheetsValidationError('Coordinates', 'outside Brazil bbox', [0, 0]);
+  it('SheetsValidationError de bbox → out_of_bounds (fora do país selecionado)', () => {
+    // INTL M3: classifica pelo CÓDIGO ESTÁVEL .reason === OUT_OF_COUNTRY_BBOX.
+    const err = new SheetsValidationError('Coordinates', OUT_OF_COUNTRY_BBOX, [0, 0]);
     expect(classifyPublishFailure(err, { isOffline: false })).toBe(PET_PUBLISH_FAILURE.OUT_OF_BOUNDS);
     // out_of_bounds tem precedência mesmo se offline (é regra de negócio).
     expect(classifyPublishFailure(err, { isOffline: true })).toBe(PET_PUBLISH_FAILURE.OUT_OF_BOUNDS);
+  });
+
+  it('INTL M3 (SCOPE-2/FACT-2): um SheetsValidationError NÃO-bbox (telefone) NÃO vira out_of_bounds', () => {
+    // Antes, o ramo `|| error.name === 'SheetsValidationError'` bucketava QUALQUER
+    // SheetsValidationError como out_of_bounds — mascarando a migração de reason e
+    // mis-classificando erros de telefone/rating. Agora a classificação é pelo
+    // RAMO DO REASON apenas: um erro de telefone cai em generic (sem isOffline),
+    // não em "fora do país". Este teste distingue bbox de telefone para que a
+    // migração não fique mascarada (o que o plano §5 M3 exige explicitamente).
+    const telErr = new SheetsValidationError('Telefone', 'must be 10 or 11 BR digits (DDD + number)', '123');
+    expect(telErr.name).toBe('SheetsValidationError'); // mesmo .name do erro de bbox
+    expect(telErr.reason).not.toBe(OUT_OF_COUNTRY_BBOX); // mas reason distinto
+    expect(classifyPublishFailure(telErr, { isOffline: false })).toBe(PET_PUBLISH_FAILURE.GENERIC);
+    // E o de bbox continua classificando pelo reason — prova que a discriminação
+    // é pelo CÓDIGO, não pelo name compartilhado.
+    const bboxErr = new SheetsValidationError('Coordinates', OUT_OF_COUNTRY_BBOX, [0, 0]);
+    expect(classifyPublishFailure(bboxErr, { isOffline: false })).toBe(PET_PUBLISH_FAILURE.OUT_OF_BOUNDS);
   });
 
   it('isOffline injetado → offline (mesmo com erro de rede genérico)', () => {
@@ -60,8 +78,9 @@ describe('classifyPublishFailure — classes de falha', () => {
     expect(PET_PUBLISH_FAILURE_COPY[PET_PUBLISH_FAILURE.SERVER_SLOW]).toMatch(/de novo|duplicar/i);
     // A de offline reassegura que foi guardado.
     expect(PET_PUBLISH_FAILURE_COPY[PET_PUBLISH_FAILURE.OFFLINE]).toMatch(/guardad/i);
-    // A de out_of_bounds fala da área.
-    expect(PET_PUBLISH_FAILURE_COPY[PET_PUBLISH_FAILURE.OUT_OF_BOUNDS]).toMatch(/área/i);
+    // INTL M3: a de out_of_bounds é COUNTRY-NEUTRAL — fala do "país", não de uma
+    // "área que a gente atende" (que implicava cobertura Brasil-only).
+    expect(PET_PUBLISH_FAILURE_COPY[PET_PUBLISH_FAILURE.OUT_OF_BOUNDS]).toMatch(/país/i);
   });
 });
 
@@ -86,6 +105,10 @@ vi.mock('../components/compatibility/components/googlesheets/sheetsClient', () =
   validateCoordinatePair: vi.fn((coords) => coords),
   appendRow: mockAppendRow,
   getSheet: vi.fn(),
+  // INTL M3: petPublishGuards (re-exportado por petDomain) importa o código
+  // estável; o mock precisa expô-lo com o MESMO valor do real, senão o ramo do
+  // reason nunca casa (e a classificação cai para generic). Mantém o byte-valor.
+  OUT_OF_COUNTRY_BBOX: 'OUT_OF_COUNTRY_BBOX',
   SheetsValidationError: class SheetsValidationError extends Error {
     constructor(field, reason, value) { super(`${field} ${reason}`); this.field = field; this.reason = reason; this.value = value; this.name = 'SheetsValidationError'; }
   },

@@ -6,7 +6,8 @@
 // their module-level collaborators (doc, envVariables, aes, sheetsGetSheet) as
 // explicit arguments so the file remains a pure function of its inputs.
 
-import { isInsideCountry } from './components/countries';
+import { isInsideCountry, getCountry } from './components/countries';
+import { t } from './components/ux/strings';
 // INTL M2.5 (§4.6.1 / DEST-1): the read-back path becomes country-aware so non-BR
 // rows on the single shared sheet 0 are attributed to their country instead of
 // collapsing into the BR view. activeCountryFor resolves the active country the
@@ -87,7 +88,13 @@ export function runMain(self, deps) {
       regiao = 0;
     }
     else {
-      alert("Região ainda não suportada");
+      // INTL M3 (UX-1): localized via t('errors.out_of_country') (was the
+      // pt-BR-only alert("Região ainda não suportada")). This load-gate is
+      // BR-explicit by design (§4.3), so the named country is Brazil; with the
+      // flag OFF activeCountryFor → 'br' too, so the resolved name is "Brasil".
+      // Still an alert() for now — alert→toast migration is DEFERRED per §9.
+      const name = getCountry(activeCountryFor(INTL_ENABLED, countryStore)).name;
+      alert(t('errors.out_of_country').replace('{pais}', name));
       return;
     }
     const sheet = doc.sheetsByIndex[regiao];

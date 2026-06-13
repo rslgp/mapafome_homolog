@@ -90,8 +90,14 @@ export class SheetsValidationError extends Error {
 // Absent `code` defaults to 'br' so the legacy pets path stays Brazil-only until
 // it is internationalized on purpose (M4).
 //
-// NOTE: the `reason` string stays 'outside Brazil bbox' for M2 — only the bounds
-// SOURCE changes here; the stable-error-code rename to OUT_OF_COUNTRY_BBOX is M3.
+// INTL M3 (§5 M3 / R4): the geofence-rejection reason is a STABLE CODE,
+// OUT_OF_COUNTRY_BBOX, NOT the old country-specific literal 'outside Brazil bbox'.
+// The code is country-neutral (the box is now the SELECTED country's, not only
+// Brazil) and is the single coupling key the classifier (petPublishGuards) and the
+// barricade tests branch on. Renaming the literal to a code also lets the classifier
+// match by .reason ALONE without the over-broad `name === 'SheetsValidationError'`
+// catch-all that wrongly bucketed telefone/rating errors as out-of-bounds.
+export const OUT_OF_COUNTRY_BBOX = 'OUT_OF_COUNTRY_BBOX';
 export function validateCoordinatePair(coords, field = 'Coordinates', code = 'br') {
     if (!Array.isArray(coords) || coords.length !== 2) {
         throw new SheetsValidationError(field, 'must be a [lat,lng] tuple', coords);
@@ -101,7 +107,7 @@ export function validateCoordinatePair(coords, field = 'Coordinates', code = 'br
         throw new SheetsValidationError(field, 'lat/lng must be finite numbers', coords);
     }
     if (!isInsideCountry(coords, code)) {
-        throw new SheetsValidationError(field, 'outside Brazil bbox', coords);
+        throw new SheetsValidationError(field, OUT_OF_COUNTRY_BBOX, coords);
     }
     return coords;
 }

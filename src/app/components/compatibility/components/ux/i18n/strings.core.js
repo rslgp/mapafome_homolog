@@ -16,6 +16,10 @@ export const pt = {
   'errors.publish_failed':        'Não foi possível publicar. Verifique sua conexão e tente de novo.',
   'errors.offline':               'Você está sem internet. O ponto foi salvo e será enviado quando a conexão voltar.',
   'errors.server_slow':           'O servidor demorou a responder. Seu ponto pode ter sido salvo, espere 30s e recarregue antes de tentar de novo.',
+  // INTL M3 (UX-1/UX-2): geofence-rejection copy for the FOME map. Country-neutral,
+  // names the SELECTED country via {pais}, and points at the fix (move the pin or
+  // switch the flag) instead of the old pt-BR-only "Região não suportada".
+  'errors.out_of_country':        'Esse ponto está fora de {pais}. Toque no mapa, dentro do país selecionado, para publicar aqui, ou troque o país no seletor de bandeira.',
   'pin.waiting':        'Aguardando',
   'pin.someone_going':  'Alguém a caminho',
   'pin.attended_today': 'Atendido hoje',
@@ -56,6 +60,10 @@ export const es = {
   'errors.publish_failed':        'No se pudo publicar. Verifica tu conexión y vuelve a intentarlo.',
   'errors.offline':               'Estás sin conexión. El punto fue guardado y se enviará cuando vuelva la conexión.',
   'errors.server_slow':           'El servidor tardó en responder. Tu punto puede haberse guardado, espera 30s y recarga antes de reintentar.',
+  // INTL M3 (UX-1/UX-2): copia de rechazo del geofence para el mapa de FOME. Neutral
+  // respecto al país, nombra el país SELECCIONADO con {pais} y apunta al arreglo
+  // (mover el pin o cambiar la bandera) en vez del antiguo "Región no admitida".
+  'errors.out_of_country':        'Ese punto está fuera de {pais}. Toca en el mapa, dentro del país seleccionado, para publicar aquí, o cambia el país en el selector de bandera.',
   'pin.waiting':        'Esperando',
   'pin.someone_going':  'Alguien en camino',
   'pin.attended_today': 'Atendido hoy',

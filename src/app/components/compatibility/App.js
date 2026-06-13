@@ -30,6 +30,7 @@ import CreatorsMapaFome from './components/CreatorsMapaFome.js'
 
 import envVariables, { setActiveCountryResolver } from './components/variaveisAmbiente';
 import { activeCountryFor } from './components/geofence';
+import { getCountry } from './components/countries';
 import * as countryStore from './components/countryStore';
 import { INTL_ENABLED } from './components/intlConfig';
 
@@ -59,6 +60,17 @@ import AppOverlays from './AppOverlays';
 
 const EXPIRE_DAY = 7;
 const aes = new AesEncryption();
+
+// INTL M3 (UX-1/UX-2): localized geofence-rejection copy for the FOME map. Routes
+// the old pt-BR-only alert('Região não suportada') through t('errors.out_of_country')
+// with the ACTIVE country's name. Flag OFF → activeCountryFor returns 'br', so the
+// name resolves to "Brasil"; with OFF, BR-passing marks never trip this surface, so
+// behavior is identical to today (the message is computed but never shown).
+function outOfCountryMessage() {
+  const code = activeCountryFor(INTL_ENABLED, countryStore);
+  const name = getCountry(code).name;
+  return t('errors.out_of_country').replace('{pais}', name);
+}
 
 // Google Analytics
 /*
@@ -371,7 +383,10 @@ class App extends Component {
     }
 
     if (!envVariables.dentroLimites(latlng)) {
-      alert('Região não suportada');
+      // INTL M3 (UX-1): localized via t('errors.out_of_country') with the active
+      // country name (was the pt-BR-only alert('Região não suportada')). Still an
+      // alert() for now — the alert→toast migration is DEFERRED per §9.
+      alert(outOfCountryMessage());
       return;
     }
 
@@ -379,7 +394,19 @@ class App extends Component {
     // The async Sheets write lives in appPinActions.publishPinFromMap (deps-
     // injected like appMainBootstrap). The synchronous coordinate resolution +
     // bounds check above stays here because it reads DOM/env + component state.
-    pinActions.publishPinFromMap(this, this._pinDeps, latlng);
+    // INTL M3 (UX-2): the call was fire-and-forget (no await/.catch), so a
+    // rejection was silently swallowed. Add a .catch that classifies an
+    // out-of-country geofence failure (the 'out_of_bounds' Error or the stable
+    // OUT_OF_COUNTRY_BBOX reason) and surfaces the SAME localized copy via the
+    // existing offlineToast surface, instead of leaving the user with a spinner.
+    pinActions.publishPinFromMap(this, this._pinDeps, latlng).catch((err) => {
+      const reason = err && (err.reason || err.message || String(err));
+      const isOutOfCountry = reason === 'OUT_OF_COUNTRY_BBOX' || reason === 'out_of_bounds';
+      this.setState({
+        isLoading: false,
+        offlineToast: isOutOfCountry ? outOfCountryMessage() : t('errors.publish_failed'),
+      });
+    });
   }
 
   handleStartTour() {

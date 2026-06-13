@@ -3,6 +3,13 @@ import React, { Component } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
 
 import envVariables from '../variaveisAmbiente';
+// INTL M3 (UX-1): localize the GPS-publish geofence-rejection alert via
+// t('errors.out_of_country') with the active country name.
+import { t } from '../ux/strings';
+import { getCountry } from '../countries';
+import { activeCountryFor } from '../geofence';
+import * as countryStore from '../countryStore';
+import { INTL_ENABLED } from '../intlConfig';
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 
@@ -115,7 +122,11 @@ class NameForm extends Component {
                   regiao=0;
                 }
                 else{
-                  alert("Região não suportada");
+                  // INTL M3 (UX-1): localized via t('errors.out_of_country') with the
+                  // active country name (was the pt-BR-only "Região não suportada").
+                  // Still an alert() for now — alert→toast migration is DEFERRED per §9.
+                  const name = getCountry(activeCountryFor(INTL_ENABLED, countryStore)).name;
+                  alert(t('errors.out_of_country').replace('{pais}', name));
                   return;
                 }
                 const sheet = doc.sheetsByIndex[regiao];

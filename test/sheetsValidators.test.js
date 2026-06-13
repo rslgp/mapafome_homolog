@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     SheetsValidationError,
+    OUT_OF_COUNTRY_BBOX,
     validateCoordinatePair,
     validateRating,
     validateTelefoneBR,
@@ -12,9 +13,10 @@ import {
 describe('validateCoordinatePair', () => {
     // INTL M2 (§4.4/§4.6): the barricade now routes through the publish geofence
     // SOT (isInsideCountry over countries.COUNTRY_PUBLISH_BOUNDS) instead of a
-    // local BR_BBOX literal. `code` defaults to 'br'. The `reason` STRING stays
-    // 'outside Brazil bbox' for M2 (the OUT_OF_COUNTRY_BBOX rename is M3) — only
-    // the bounds SOURCE changed here.
+    // local BR_BBOX literal. `code` defaults to 'br'. INTL M3 (R4): the rejection
+    // `reason` is now the STABLE CODE OUT_OF_COUNTRY_BBOX (country-neutral), no
+    // longer the literal 'outside Brazil bbox' — the four consumers were renamed
+    // together (grep) so the coupling is a code, not a string.
     it('accepts a valid Brazil coord (default code br)', () => {
         // João Pessoa-ish: inside Brazil rect1 of the two-rectangle publish shape.
         expect(validateCoordinatePair([-7.1, -34.8])).toEqual([-7.1, -34.8]);
@@ -26,7 +28,7 @@ describe('validateCoordinatePair', () => {
         expect(() => validateCoordinatePair([NaN, -34.8])).toThrow(SheetsValidationError);
     });
     it('rejects coord outside BR bbox', () => {
-        expect(() => validateCoordinatePair([0, 0])).toThrow(/outside Brazil bbox/);
+        expect(() => validateCoordinatePair([0, 0])).toThrow(new RegExp(OUT_OF_COUNTRY_BBOX));
     });
     it('PARSE-1: does NOT drop a legitimate ZERO component', () => {
         // [0, -45] has a 0 lat that is a REAL, in-Brazil coordinate (rect1). The
@@ -40,7 +42,7 @@ describe('validateCoordinatePair', () => {
         expect(validateCoordinatePair([40.42, -3.70], 'Coordinates', 'es'))
             .toEqual([40.42, -3.70]);
         expect(() => validateCoordinatePair([40.42, -3.70], 'Coordinates', 'br'))
-            .toThrow(/outside Brazil bbox/);
+            .toThrow(new RegExp(OUT_OF_COUNTRY_BBOX));
     });
 });
 
@@ -81,7 +83,7 @@ describe('validatePinPayload', () => {
         expect(() => validatePinPayload(null)).toThrow(SheetsValidationError);
     });
     it('rejects payload with bad coords', () => {
-        expect(() => validatePinPayload({ Coordinates: '[0,0]' })).toThrow(/outside Brazil/);
+        expect(() => validatePinPayload({ Coordinates: '[0,0]' })).toThrow(new RegExp(OUT_OF_COUNTRY_BBOX));
     });
     it('PARSE-1: a payload whose parsed coord has a 0 component is NOT dropped', () => {
         const payload = { Coordinates: '[0,-45]' };
@@ -92,6 +94,6 @@ describe('validatePinPayload', () => {
         // With code 'es' Madrid passes; with the default 'br' it would not.
         expect(validatePinPayload(payload, 'es')).toBe(payload);
         expect(() => validatePinPayload({ Coordinates: '[40.42,-3.70]' }))
-            .toThrow(/outside Brazil/);
+            .toThrow(new RegExp(OUT_OF_COUNTRY_BBOX));
     });
 });
