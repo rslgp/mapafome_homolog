@@ -19,6 +19,7 @@
 
 import React, { useEffect, useState } from 'react';
 import './VersionFooter.css';
+import { rememberBuildVersion } from './ux/intlAnalytics';
 
 const VersionFooter = () => {
     const [version, setVersion] = useState(null);
@@ -27,7 +28,15 @@ const VersionFooter = () => {
         if (typeof fetch !== 'function') return;
         fetch('/version.json', { cache: 'no-store' })
             .then((r) => (r.ok ? r.json() : null))
-            .then((j) => { if (j && j.version) setVersion(j.version); })
+            .then((j) => {
+                if (j && j.version) {
+                    setVersion(j.version);
+                    // INTL M5 (MISS-2, build id on the event): REUSE this existing
+                    // fetch to warm the build-version cache the publish_intl event
+                    // reads — no second network call, no new infra.
+                    rememberBuildVersion(j.version);
+                }
+            })
             .catch(() => { /* dev / pre-stamp — render nothing */ });
     }, []);
 

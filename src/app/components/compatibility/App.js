@@ -204,6 +204,13 @@ class App extends Component {
       envVariables, EXPIRE_DAY,
       sheetsAppendRow, updatePinDadosByCoords, trackError,
       getCookie, setCookie, coordsFromPin,
+      // INTL M5 (MISS-2): the country a publish/moderation is attributed to, the
+      // SAME resolution the geofence gate uses (activeCountryFor, OFF → 'br').
+      // Always present (NOT flag-gated) so the publish_intl event always carries a
+      // country; with the flag OFF it is 'br', so OFF behavior is unchanged. Passed
+      // as an accessor so appPinActions stays a pure function of its deps and never
+      // imports the store/flag itself.
+      activeCountry: () => activeCountryFor(INTL_ENABLED, countryStore),
       // INTL M4.5 (DATA-3) offshore guard — present only when INTL is ON (see
       // intlPinGuardDeps); OFF → {} so the Brazil path is byte-identical to today.
       ...intlPinGuardDeps(),

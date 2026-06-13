@@ -34,24 +34,38 @@ import { getSheet } from './components/googlesheets/sheetsClient';
 // keeps the gate keyed on the payload, so the offline flush can never re-read
 // getSelectedCountry() and invalidate an already-queued pin.
 import { isInsideCountry, DEFAULT_COUNTRY } from './components/countries';
+// INTL M5 (MISS-2): the publish funnel event. Layered over the existing
+// analytics.track seam (zero new infra; the sink may be inert in prod — see
+// intlAnalytics.js header). Imported here so the publish path emits one
+// structured event per mark BEFORE the reload (the dispatch must run synchronously
+// before navigation). No-op-safe: track() guards SSR + the helper allow-lists.
+import { trackPublishIntl, trackModerationIntl } from './components/ux/intlAnalytics';
 
 export function removerPonto(self, deps, coords, categoriaPonto) {
-    const { sheetsAppendRow } = deps;
+    const { sheetsAppendRow, activeCountry } = deps;
     const motivo = prompt("por qual motivo (em resumo) gostaria de deletar esse ponto?");
     if (motivo === null) return;
     const row = { Motivo: motivo, Ponto: JSON.stringify(coords), DateISO: new Date().toISOString(), CategoriaPonto: categoriaPonto };
     sheetsAppendRow(4, row)
-        .then(() => alert("pedido de deletar enviado com sucesso"))
+        .then(() => {
+            // INTL M5 (MOD-1): instrument the moderation channel per-country so the
+            // rollout's VOLUME axis (R16) is observable. No-op-safe; country 'br' OFF.
+            trackModerationIntl({ country: (typeof activeCountry === 'function' ? activeCountry() : null) || DEFAULT_COUNTRY, kind: 'delete' });
+            alert("pedido de deletar enviado com sucesso");
+        })
         .catch(() => alert("ERRO, tente novamente"));
 }
 
 export function verificarPonto(self, deps, coords, categoriaPonto) {
-    const { sheetsAppendRow } = deps;
+    const { sheetsAppendRow, activeCountry } = deps;
     const motivo = prompt("Insira o CNPJ da entidade, nome da entidade, nome do responsável, email, telefone e se é credenciada para receber recurso do governo");
     if (motivo === null) return;
     const row = { Motivo: motivo, Ponto: JSON.stringify(coords), DateISO: new Date().toISOString(), CategoriaPonto: categoriaPonto };
     sheetsAppendRow(3, row)
-        .then(() => alert("pedido de cnpj enviado com sucesso"))
+        .then(() => {
+            trackModerationIntl({ country: (typeof activeCountry === 'function' ? activeCountry() : null) || DEFAULT_COUNTRY, kind: 'verify' });
+            alert("pedido de cnpj enviado com sucesso");
+        })
         .catch(() => alert("ERRO, tente novamente"));
 }
 
@@ -236,7 +250,20 @@ export async function writePinToSheets(self, deps, { coords, categories, detail,
 // `(async function main(self){ ... })(this)`. `latlng` is passed in because it
 // was a closure variable computed by the synchronous prelude.
 export async function publishPinFromMap(self, deps, latlng) {
-    const { envVariables, offshoreGuard } = deps;
+    const { envVariables, offshoreGuard, activeCountry } = deps;
+
+    // INTL M5 (MISS-2): resolve the country this mark is published IN, the same
+    // way the upstream geofence gated it (activeCountryFor, OFF → 'br'). Passed in
+    // as a `deps.activeCountry` accessor so this module stays a pure function of
+    // its inputs and never imports the store/flag (same precedent as the offshore
+    // guard). Absent (legacy caller) → DEFAULT_COUNTRY ('br'), the OFF behavior.
+    const country = (typeof activeCountry === 'function' ? activeCountry() : null) || DEFAULT_COUNTRY;
+    // Verdict of the M4.5 offshore guard for THIS pin. The guard only resolves
+    // (allow) or throws (confident mismatch — which exits before this point), so
+    // reaching the event means: 'passed' when the guard ran and allowed, or
+    // 'not_run' when no guard is wired (flag OFF / dark-ship). Recorded honestly,
+    // not inferred — a thrown mismatch never emits a publish_intl event.
+    let offshoreHeuristic = 'not_run';
 
     // INTL M4.5 (DATA-3): offshore-integrity guard. The bbox upstream
     // (handleClickMap's dentroLimites check) already gated this pin to the
@@ -253,6 +280,9 @@ export async function publishPinFromMap(self, deps, latlng) {
     // data HYGIENE, not security (R6: client validation is bypassable anyway).
     if (typeof offshoreGuard === 'function') {
         await offshoreGuard(latlng);
+        // Reached only if the guard RESOLVED (a confident mismatch throws above
+        // and never publishes). 'passed' = guard ran and allowed this pin.
+        offshoreHeuristic = 'passed';
     }
 
     // Auth + loadInfo + worksheet handle now come from sheetsClient.getSheet(0)
@@ -311,5 +341,20 @@ export async function publishPinFromMap(self, deps, latlng) {
 
     const result = await sheet.addRow(row);
     // console.log(result);
+
+    // INTL M5 (MISS-2): emit the publish funnel event AFTER the successful write
+    // and BEFORE the reload, so the gtag/dataLayer dispatch (when wired) runs
+    // synchronously before navigation discards the page. in_selected_bbox is
+    // computed with the SAME pure predicate the gate used (true on this path: the
+    // upstream dentroLimites already passed, but we recompute rather than assume).
+    // No-op-safe: trackPublishIntl → track() guards SSR + an inert sink only
+    // buffers. With the flag OFF this fires with country='br'/'not_run' and does
+    // not change any OFF behavior.
+    trackPublishIntl({
+        country,
+        inSelectedBbox: isInsideCountry(latlng, country),
+        offshoreHeuristic,
+    });
+
     window.location.reload();
 }
