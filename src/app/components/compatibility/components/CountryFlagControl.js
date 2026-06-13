@@ -45,8 +45,9 @@ const hasDocument = () => typeof document !== 'undefined';
 
 // Create the (static) DOM tree for the control and return the nodes the wiring
 // needs. No behavior is attached here. Built imperatively because this is a
-// Leaflet L.Control, not React-rendered.
-function createFlagDom() {
+// Leaflet L.Control, not React-rendered. Exported for unit tests (the map
+// instance is imperative, so we test the DOM + wiring directly).
+export function createFlagDom() {
   const wrap = L.DomUtil.create('div', 'leaflet-bar mdf-flag');
 
   const button = L.DomUtil.create('button', 'mdf-flag__btn', wrap);
@@ -98,7 +99,8 @@ function createFlagDom() {
 // Attach all behavior (render, filter, open/close, pick, listeners) to a DOM
 // tree from createFlagDom. Returns the teardown for resources that outlive the
 // Leaflet container (the store subscription + the document outside-click hook).
-function wireFlagControl(map, dom) {
+// Exported for unit tests (open/close/pick exercised on the real DOM in jsdom).
+export function wireFlagControl(map, dom) {
   const { wrap, button, panel, closeBtn, input, list, empty } = dom;
 
   const renderButton = () => {
@@ -112,7 +114,8 @@ function wireFlagControl(map, dom) {
 
   // Outside-click dismissal, bound to the document only while open. capture-phase
   // sees the original target even though disableClickPropagation stops bubbling,
-  // so we test containment explicitly.
+  // so we test containment explicitly. A click INSIDE the control is left for the
+  // control's own handlers; only a click outside closes.
   const onOutsidePointer = (ev) => {
     if (!wrap.contains(ev.target)) closePanel(false);
   };
@@ -145,6 +148,28 @@ function wireFlagControl(map, dom) {
     closePanel(true);
   };
 
+  // Activate a control button reliably. disableClickPropagation(wrap) binds
+  // stopPropagation to mousedown/touchstart on the wrapper, which in some
+  // browsers prevents an inner <button> from focusing and can swallow its
+  // synthesized click. So we act on BOTH pointerup and click and de-dupe within
+  // a tick: whichever fires first runs the action, the other is a no-op. This is
+  // why the close (X) button previously did nothing in the browser while it
+  // worked in jsdom (jsdom does not reproduce the focus/click suppression).
+  const onActivate = (el, action) => {
+    let firing = false;
+    const run = (ev) => {
+      L.DomEvent.stop(ev);
+      if (firing) return;
+      firing = true;
+      action();
+      // Release on the next macrotask so the paired pointerup/click for the
+      // SAME physical press is swallowed, but a later press fires again.
+      setTimeout(() => { firing = false; }, 0);
+    };
+    L.DomEvent.on(el, 'pointerup', run);
+    L.DomEvent.on(el, 'click', run);
+  };
+
   // Build the option list once; filtering toggles <li> visibility (no per-key
   // DOM rebuild).
   const optionEls = COUNTRIES.map((c) => {
@@ -155,7 +180,7 @@ function wireFlagControl(map, dom) {
     opt.innerHTML =
       '<span class="mdf-flag__glyph" aria-hidden="true">' + c.flag + '</span>' +
       '<span class="mdf-flag__name">' + c.name + '</span>';
-    L.DomEvent.on(opt, 'click', (ev) => { L.DomEvent.stop(ev); pick(c.code); });
+    onActivate(opt, () => pick(c.code));
     return { li, name: c.name.toLowerCase() };
   });
   function applyFilter() {
@@ -175,8 +200,8 @@ function wireFlagControl(map, dom) {
     if (ev.key === 'Escape') { L.DomEvent.stop(ev); closePanel(true); }
   });
   L.DomEvent.on(input, 'input', applyFilter);
-  L.DomEvent.on(button, 'click', (ev) => { L.DomEvent.stop(ev); togglePanel(); });
-  L.DomEvent.on(closeBtn, 'click', (ev) => { L.DomEvent.stop(ev); closePanel(true); });
+  onActivate(button, togglePanel);
+  onActivate(closeBtn, () => closePanel(true));
 
   renderButton();
   const unsubscribe = subscribe(renderButton);
