@@ -156,10 +156,18 @@ describe('dictionary — P8: parity + zero dead keys', () => {
     function walk(dir) {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const full = join(dir, entry.name);
-        if (entry.isDirectory()) { walk(full); continue; }
+        if (entry.isDirectory()) {
+          // Skip the i18n shard directory wholesale: engine.js, dictionary.js and
+          // the per-feature strings.*.js shards live here and each key appears as a
+          // DICT property literal — walking them would make EVERY key self-satisfy
+          // and the no-dead-key assertion pass vacuously. (Previously only the
+          // single strings.js dictionary file was skipped; the shards replace it.)
+          if (entry.name === 'i18n') continue;
+          walk(full); continue;
+        }
         if (!/\.(js|jsx)$/.test(entry.name)) continue;
         if (entry.name.endsWith('.test.js')) continue;
-        if (entry.name === 'strings.js') continue; // the dictionary itself
+        if (entry.name === 'strings.js') continue; // the public barrel (re-exports only)
         files.push(full);
       }
     }

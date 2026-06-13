@@ -1,0 +1,103 @@
+// strings.assinar.js — /assinar (recurring support subscription, Asaas) copy.
+// Pure data; consumed only by ./dictionary.js. /assinar feature branches edit
+// ONLY this file. assinar.rail.* keys are read in page.js by rail id; the RAILS
+// id/structure SOT stays in asaasSubscriptionClient. See ../strings.js (barrel)
+// and ./engine.js (runtime). pt-BR primary; es parity is human-authored.
+
+export const pt = {
+  // ── /assinar — recurring support subscription (Asaas) ──────────────────
+  'assinar.back':            '← Voltar ao mapa',
+  'assinar.title':           'Apoie o MAPA FOME',
+  'assinar.sub':             'Uma contribuição mensal ajuda a manter o mapa no ar. Escolha a forma que preferir.',
+  'assinar.legend.rail':     'Forma de pagamento',
+  'assinar.legend.value':    'Valor mensal',
+  'assinar.value.presets':   'Valores sugeridos',
+  'assinar.value.other':     'Outro valor (R$)',
+  'assinar.field.name':      'Nome completo',
+  'assinar.field.email':     'E-mail',
+  'assinar.field.cpfcnpj':   'CPF ou CNPJ',
+  'assinar.field.phone':     'Celular (opcional)',
+  'assinar.cta.submitting':  'Processando…',
+  'assinar.cta.support':     'Apoiar com R$ {value}/mês',
+  'assinar.note':            'Pagamento processado pela Asaas. Você pode cancelar quando quiser.',
+  'assinar.error.fallback':  'Não foi possível concluir. Tente novamente.',
+  'assinar.success.title':   'Obrigado pelo apoio 💛',
+  'assinar.success.sub':     'Sua assinatura de {value} por mês foi criada.',
+  'assinar.success.active':  'A cobrança recorrente já está ativa.',
+  // Inline payment screen (Pix QR / boleto / card redirect).
+  'assinar.pay.loading':       'Gerando seu pagamento…',
+  'assinar.pay.error':         'Não foi possível carregar o pagamento.',
+  'assinar.pay.retry':         'Tentar novamente',
+  'assinar.pay.pix.title':     'Pague com Pix',
+  'assinar.pay.pix.help':      'Abra o app do seu banco, escaneie o QR Code ou use o Pix copia e cola.',
+  'assinar.pay.pix.copy':      'Copiar código Pix',
+  'assinar.pay.pix.copied':    'Código copiado!',
+  'assinar.pay.pix.qrAlt':     'QR Code do Pix para pagamento',
+  'assinar.pay.boleto.title':  'Pague com boleto',
+  'assinar.pay.boleto.help':   'Copie a linha digitável ou abra o boleto em PDF para pagar no seu banco.',
+  'assinar.pay.boleto.line':   'Linha digitável',
+  'assinar.pay.boleto.copy':   'Copiar linha digitável',
+  'assinar.pay.boleto.copied': 'Linha copiada!',
+  'assinar.pay.boleto.open':   'Abrir boleto (PDF)',
+  'assinar.pay.card.title':    'Pague com cartão',
+  'assinar.pay.card.help':     'Você será levado ao ambiente seguro da Asaas para informar os dados do cartão.',
+  'assinar.pay.card.cta':      'Ir para o pagamento seguro',
+  'assinar.pay.pending':       'Seu pagamento está sendo gerado. Recarregue em instantes.',
+  // Rail display copy — RAILS (asaasSubscriptionClient) stays the id/structure
+  // SOT; these are pulled in page.js via t() keyed by rail id.
+  'assinar.rail.pix.label':     'Pix',
+  'assinar.rail.pix.hint':      'Pix Automático — débito recorrente, sem taxa de cartão',
+  'assinar.rail.cartao.label':  'Cartão de crédito',
+  'assinar.rail.cartao.hint':   'Assinatura no cartão, renovação automática',
+  'assinar.rail.boleto.label':  'Boleto',
+  'assinar.rail.boleto.hint':   'Um boleto por mês — você paga cada um',
+};
+
+export const es = {
+  // ── /assinar — suscripción de apoyo recurrente (Asaas) ─────────────────
+  'assinar.back':            '← Volver al mapa',
+  'assinar.title':           'Apoya MAPA FOME',
+  'assinar.sub':             'Una contribución mensual ayuda a mantener el mapa en línea. Elige la forma que prefieras.',
+  'assinar.legend.rail':     'Forma de pago',
+  'assinar.legend.value':    'Importe mensual',
+  'assinar.value.presets':   'Importes sugeridos',
+  'assinar.value.other':     'Otro importe (R$)',
+  'assinar.field.name':      'Nombre completo',
+  'assinar.field.email':     'Correo electrónico',
+  'assinar.field.cpfcnpj':   'CPF o CNPJ',
+  'assinar.field.phone':     'Celular (opcional)',
+  'assinar.cta.submitting':  'Procesando…',
+  'assinar.cta.support':     'Apoyar con R$ {value}/mes',
+  'assinar.note':            'Pago procesado por Asaas. Puedes cancelar cuando quieras.',
+  'assinar.error.fallback':  'No se pudo completar. Vuelve a intentarlo.',
+  'assinar.success.title':   'Gracias por tu apoyo 💛',
+  'assinar.success.sub':     'Tu suscripción de {value} al mes fue creada.',
+  'assinar.success.active':  'El cobro recurrente ya está activo.',
+  // Pantalla de pago en línea (QR Pix / boleto / redirección de tarjeta).
+  'assinar.pay.loading':       'Generando tu pago…',
+  'assinar.pay.error':         'No se pudo cargar el pago.',
+  'assinar.pay.retry':         'Reintentar',
+  'assinar.pay.pix.title':     'Paga con Pix',
+  'assinar.pay.pix.help':      'Abre la app de tu banco, escanea el QR o usa el Pix copia y pega.',
+  'assinar.pay.pix.copy':      'Copiar código Pix',
+  'assinar.pay.pix.copied':    '¡Código copiado!',
+  'assinar.pay.pix.qrAlt':     'Código QR de Pix para el pago',
+  'assinar.pay.boleto.title':  'Paga con boleto',
+  'assinar.pay.boleto.help':   'Copia la línea digitable o abre el boleto en PDF para pagar en tu banco.',
+  'assinar.pay.boleto.line':   'Línea digitable',
+  'assinar.pay.boleto.copy':   'Copiar línea digitable',
+  'assinar.pay.boleto.copied': '¡Línea copiada!',
+  'assinar.pay.boleto.open':   'Abrir boleto (PDF)',
+  'assinar.pay.card.title':    'Paga con tarjeta',
+  'assinar.pay.card.help':     'Te llevaremos al entorno seguro de Asaas para ingresar los datos de la tarjeta.',
+  'assinar.pay.card.cta':      'Ir al pago seguro',
+  'assinar.pay.pending':       'Tu pago se está generando. Recarga en unos instantes.',
+  // Copia de los medios de pago — RAILS (asaasSubscriptionClient) sigue siendo
+  // la fuente de ids/estructura; estos textos se leen en page.js vía t().
+  'assinar.rail.pix.label':     'Pix',
+  'assinar.rail.pix.hint':      'Pix Automático — débito recurrente, sin tarifa de tarjeta',
+  'assinar.rail.cartao.label':  'Tarjeta de crédito',
+  'assinar.rail.cartao.hint':   'Suscripción con tarjeta, renovación automática',
+  'assinar.rail.boleto.label':  'Boleto',
+  'assinar.rail.boleto.hint':   'Un boleto por mes — pagas cada uno',
+};
