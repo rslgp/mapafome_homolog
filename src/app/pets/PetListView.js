@@ -30,33 +30,17 @@ import { formatRelativeTime } from '../components/compatibility/components/mapUt
 import {
   PET_STATUS_MAP,
   PET_SPECIES,
-  PET_SIZES,
   petCoordsKey,
   sortPetsForList,
   petDistanceKm,
+  describePet,
 } from './petDomain';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
-// Lookups O(1) das listas SOT (espelha PetDetailSheet — uma só verdade da forma
-// de espécie/porte). Nenhum label é escrito aqui; tudo vem do petDomain.
+// Lookup O(1) da espécie para o ícone/emoji da linha (abaixo). A linha descritora
+// "Cão · Médio · caramelo" vem de describePet (SOT em petDomain/petTaxonomy) —
+// antes duplicada aqui; agora há uma só verdade, importada acima.
 const SPECIES_MAP = PET_SPECIES.reduce((map, s) => { map[s.id] = s; return map; }, {});
-const SIZE_MAP = PET_SIZES.reduce((map, s) => { map[s.id] = s; return map; }, {});
-
-// "Cão · Médio · caramelo" — só as partes que existem, juntas por · (MESMA regra
-// da PetDetailSheet.describePet; mantida aqui local porque a sheet não a exporta —
-// uma duplicação pequena e deliberada, não vale acoplar a sheet à lista só por
-// isto; ambas leem a mesma SOT, então não há risco de divergência de verdade).
-function describePet(pet) {
-  // Species/size labels resolve by id via t() (i18n), in the ACTIVE locale.
-  const parts = [];
-  const sp = SPECIES_MAP[pet.species];
-  if (sp) parts.push(t(`pets.species.${sp.id}.label`));
-  const sz = SIZE_MAP[pet.size];
-  if (sz) parts.push(t(`pets.size.${sz.id}.label`));
-  const color = (pet.color || '').trim();
-  if (color) parts.push(color);
-  return parts.join(' · ');
-}
 
 // Distância humana e calma: <1 km em metros, senão km com 1 casa e vírgula pt-BR
 // (espelha a ListView de fome). null/Infinity → '' (a distância só aparece quando

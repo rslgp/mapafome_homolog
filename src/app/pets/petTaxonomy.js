@@ -342,3 +342,23 @@ export function isPetArchivedByAge(pet, nowMs, windowDays = PET_ARCHIVE_WINDOW_D
   if (isPetResolved(pet)) return false; // resolvido sai por outro eixo, não por idade
   return petAgeDays(pet, nowMs) >= windowDays;
 }
+
+// ─── describePet — linha descritora compartilhada (SOT, mata a duplicação 3x) ──
+// "Cão · Médio · caramelo" — só as partes que existem, juntas por · . Os rótulos
+// de espécie/porte resolvem por id via t() no idioma ATIVO (i18n); a cor é texto
+// livre já higienizado. Era duplicada palavra-por-palavra em TRÊS lugares
+// (PetDetailSheet, PetListView, petShare) — agora há UMA verdade aqui, na folha
+// que já declara as chaves pets.species/size.*. Re-exportada pelo barrel petDomain.
+const SPECIES_MAP = PET_SPECIES.reduce((map, s) => { map[s.id] = s; return map; }, {});
+const SIZE_MAP = PET_SIZES.reduce((map, s) => { map[s.id] = s; return map; }, {});
+
+export function describePet(pet) {
+  const parts = [];
+  const sp = pet && SPECIES_MAP[pet.species];
+  if (sp) parts.push(t(`pets.species.${sp.id}.label`));
+  const sz = pet && SIZE_MAP[pet.size];
+  if (sz) parts.push(t(`pets.size.${sz.id}.label`));
+  const color = (pet && pet.color || '').trim();
+  if (color) parts.push(color);
+  return parts.join(' · ');
+}

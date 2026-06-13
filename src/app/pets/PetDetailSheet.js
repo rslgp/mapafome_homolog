@@ -5,7 +5,7 @@ import '../components/compatibility/components/ux/PinDetailSheet.css';
 import './pets.css';
 import { createDirectionUrl, formatRelativeTime } from '../components/compatibility/components/mapUtils';
 import { resolveContact } from '../components/compatibility/components/ux/contactLink';
-import { PET_STATUS_MAP, PET_SPECIES, PET_SIZES, petCoordsKey, PET_DEEPLINK_PARAM, PET_CLOSURE_REASON } from './petDomain';
+import { PET_STATUS_MAP, PET_SPECIES, petCoordsKey, PET_DEEPLINK_PARAM, PET_CLOSURE_REASON, describePet } from './petDomain';
 import { looksLikeDirectImageUrl } from './petPhoto';
 import { buildPetShareMessage, sharePet } from './petShare';
 import { flagPet, resolvePet } from './petsData';
@@ -41,34 +41,15 @@ const LC_DONE_REUNIDO = 'done_reunido';
 const LC_DONE_ENCERRADO = 'done_encerrado';
 const LC_ERROR = 'error';
 
-// Mapeia o estado de confirmação → o motivo de fechamento da SOT, para o handler
-// gravar o motivo certo sem reimplementar a regra em cada botão (lookup, não
-// condicional espalhada). Cada confirmação sabe qual motivo está pendente.
-const CONFIRM_TO_REASON = {
-  [LC_CONFIRM_REUNIDO]: PET_CLOSURE_REASON.REUNIDO,
-  [LC_CONFIRM_ENCERRADO]: PET_CLOSURE_REASON.ENCERRADO,
-};
-
 // /pets — read-only detail sheet, forked from PinDetailSheet. Shows the report a
 // person published: status badge, species/size/color line, name (or fallback),
 // detail text, relative time, a tap-to-act contact link, and "Como chegar".
 // No claim/attend actions — a lost pet has no "I'm going now" verb.
-
+//
+// A linha descritora (describePet) é a SOT compartilhada em petDomain (petTaxonomy)
+// — antes duplicada aqui, na lista e no share. Só o SPECIES_MAP local permanece:
+// a sheet ainda lê o ícone/emoji da espécie (speciesMeta) abaixo.
 const SPECIES_MAP = PET_SPECIES.reduce((map, s) => { map[s.id] = s; return map; }, {});
-const SIZE_MAP = PET_SIZES.reduce((map, s) => { map[s.id] = s; return map; }, {});
-
-function describePet(pet) {
-  // "Cão · Médio · caramelo" — only the parts we actually have, joined by · .
-  // Species/size labels resolve by id via t() (i18n), in the ACTIVE locale.
-  const parts = [];
-  const sp = SPECIES_MAP[pet.species];
-  if (sp) parts.push(t(`pets.species.${sp.id}.label`));
-  const sz = SIZE_MAP[pet.size];
-  if (sz) parts.push(t(`pets.size.${sz.id}.label`));
-  const color = (pet.color || '').trim();
-  if (color) parts.push(color);
-  return parts.join(' · ');
-}
 
 export default function PetDetailSheet({ open, pet, matches = [], onOpenMatch, onResolved, onClose }) {
   // PET-M23 — re-render the sheet on a locale switch so every t() re-reads.

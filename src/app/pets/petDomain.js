@@ -62,6 +62,7 @@ export {
   PET_ARCHIVE_WINDOW_DAYS,
   petAgeDays,
   isPetArchivedByAge,
+  describePet,
 } from './petTaxonomy';
 export {
   // petFilterDomain — PET-M7 estado do filtro + predicado
