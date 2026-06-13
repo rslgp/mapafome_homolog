@@ -1003,6 +1003,48 @@ Commits via o agente `git-commit-specialist` (Conventional Commits, corpo com o 
 - **Rotação das credenciais expostas + escrita server-side:** problema de segurança real (R6),
   mas é outra tarefa, pré-requisito a pesar antes do endurecimento de integridade.
 
+### 9.1 M5: estado implementado nesta passagem (dark-ship; a flag NÃO foi ligada)
+
+Esta passagem implementou o **wiring de analytics (MISS-2)** e o **DRILL de rollback (MISS-1)**,
+mas **NÃO** ligou a flag: `intlConfig.DEV_DEFAULT` permanece `false` na fonte commitada (decisão do
+mantenedor; o flip fica para uma passagem futura). O que aterrou:
+
+- **Evento `publish_intl`** emitido em `appPinActions.publishPinFromMap` (após o `sheet.addRow`,
+  ANTES do `window.location.reload()`), via uma camada fina `components/ux/intlAnalytics.js` sobre o
+  seam `analytics.track` EXISTENTE (zero infra nova). Forma:
+  `track('publish_intl', { country, in_selected_bbox, offshore_heuristic, build })`. `moderation_intl`
+  (`{ country, kind:'delete'|'verify', build }`) instrumenta `removerPonto`/`verificarPonto` (MOD-1).
+  O `country` é resolvido pelo MESMO `activeCountryFor(INTL_ENABLED, countryStore)` do geofence
+  (OFF → `'br'`), passado por um acessor `deps.activeCountry` (mantém `appPinActions` puro). O `build`
+  vem do cache fail-soft alimentado pelo fetch que `VersionFooter` já faz de `/version.json` (nenhum
+  fetch novo). As chamadas são **no-op-safe** (try/catch no emissor + `track()` guarda SSR/nome
+  vazio): um sink quebrado nunca custa a publicação ao usuário.
+- **SINK PODE ESTAR INERTE (honestidade, M5-publish-intl-analytics-pipeline):** verificado que o
+  único bootstrap de GA (`G-DHZR5VH2Q7`) vive em `public/index.html` (shell CRA morto), NÃO no head
+  do App Router (`layout.js`). Em produção `window.gtag`/`window.dataLayer` não existem, então
+  `track()` cai sempre no buffer volátil de `sessionStorage`. O wiring está correto e com a forma
+  certa, mas a métrica de POPULAÇÃO ainda **não é agregável** até portar o gtag para `layout.js` como
+  `next/script` (passo M5 (a), fora desta passagem) OU derivar a rejeição offshore server-side. Não
+  se alega "analytics funciona" ponta-a-ponta neste estado.
+- **DRILL de rollback (MISS-1)** como procedimento reproduzível + execução: `scripts/rollback-drill.mjs`
+  (`npm run drill:rollback`) prova que, sob `NEXT_PUBLIC_INTL=off`, `INTL_ENABLED` resolve `false`, e
+  o corpus M0 (`geofence.characterization`) + `test/rollbackDrill.test.js` confirmam que o geofence OFF
+  **REJEITA um pin internacional (Lisboa)** e aceita um pin BR (São Paulo). Com `--build` reconstrói o
+  artefato OFF e cronometra. A janela de exposição = wall-clock de build+deploy MAIS o lag de adoção do
+  cliente (`reg.update()` por load + `FORCE_RELOAD_MS=30000`; aba dormente é o único coorte ilimitado).
+
+### 9.2 Previsão falsificável de rollout (MISS-2, registrada ANTES da janela de dados)
+
+> **Quando a flag for ligada (passagem futura) E o sink gtag estiver wired (M5 (a)):** "na semana 1
+> do build ON, eventos `publish_intl` com `country !== 'br'` somam **> 50**, E a fatia offshore
+> (`offshore_heuristic` de rejeição, derivada server-side / do guard M4.5) fica **< 5%** das
+> publicações intl, E o volume de escrita por país + a taxa de delete/verify (`moderation_intl`)
+> ficam dentro do teto do subconjunto curado (R16). **Senão: ROLLBACK** (rebuild OFF + redeploy, o
+> drill MISS-1)." Se o sink gtag NÃO estiver wired, re-ancorar o gatilho na **contagem server-side de
+> rejeição offshore** do guard de M4.5 (NÃO em `peekBufferedEvents()`, que é leitura por-testador,
+> nunca métrica de população). A mesma previsão vive como comentário ao lado do wiring em
+> `components/ux/intlAnalytics.js` (knowledge in the world: a previsão mora junto do código que mede).
+
 ---
 
 ## 10. Changelog desta revisão (multiagentes)
