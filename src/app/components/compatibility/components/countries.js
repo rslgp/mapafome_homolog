@@ -13,9 +13,32 @@
 // optional and live in COUNTRY_BOUNDS; when absent the search is country-
 // restricted but not bounds-clamped (Nominatim's countrycodes alone is enough
 // to keep results inside the country).
+//
+// ── INTL M3.5 — country catalog follows the UI locale (I18N-1) ──
+//
+// The eager COUNTRY_NAMES map below is pt-BR ONLY, and the eager COUNTRIES list
+// sorts with localeCompare(..., 'pt-BR'). So an `es` user opened the flag picker
+// and read a Portuguese list sorted for Portuguese — the exact country/language
+// mismatch this feature removes. M3.5 adds countriesForLocale(locale): names are
+// rendered via Intl.DisplayNames in the ACTIVE UI language and sorted with that
+// locale, with COUNTRY_NAMES as a fallback. getLocale() is the i18n READ function
+// (not the country STORE) so importing it does NOT create the countryStore cycle
+// §4.1/ARCH-5 warns about (the i18n subtree imports neither countries nor
+// countryStore — verified acyclic). It is a DEFAULT arg only; the resolver takes
+// an explicit locale so it stays pure-testable without the engine.
+
+import { getLocale } from './ux/strings';
 
 // ISO-3166-1 alpha-2 -> pt-BR short name. Sorted by name at module load for the
 // picker. This is the full UN/ISO set; editing it is just adding a `code: name`.
+//
+// This map is ALSO the authoritative pt-BR override (see countriesForLocale): for
+// the pt-BR locale these hand-curated names WIN over Intl.DisplayNames, so the
+// default-locale picker stays byte-for-byte identical to today (the dark-ship
+// invariant). Intl.DisplayNames' pt-BR CLDR names diverge from these for ~20 codes
+// (e.g. "Holanda"→"Países Baixos", "Macau"→"Macau, RAE da China"); we keep the
+// curated forms. For OTHER locales Intl.DisplayNames is the source and this map is
+// the fallback when the API is unavailable or yields nothing.
 const COUNTRY_NAMES = {
   af: 'Afeganistão', za: 'África do Sul', al: 'Albânia', de: 'Alemanha',
   ad: 'Andorra', ao: 'Angola', ai: 'Anguilla', aq: 'Antártida',
@@ -215,6 +238,85 @@ export function getCountry(code) {
 }
 
 // Full picker list, sorted by pt-BR name (locale-aware, case/diacritic-folding).
+// This is the SSR/default-locale value: it is built eagerly at module load in
+// pt-BR so the server render and the first client paint are stable, and so the
+// existing pt-BR consumers (and country.test.js) keep their exact shape. The
+// LOCALE-AWARE list lives in countriesForLocale() below; COUNTRIES === the pt-BR
+// entry of that resolver's cache.
 export const COUNTRIES = Object.keys(COUNTRY_NAMES)
   .map((code) => ({ code, name: COUNTRY_NAMES[code], flag: flagEmoji(code) }))
   .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+// ── INTL M3.5 — locale-aware country names + sort (I18N-1) ──
+//
+// countryNameFor(code, locale): the active UI language's name for a country,
+// via Intl.DisplayNames, with the curated pt-BR COUNTRY_NAMES map as fallback.
+// Precedence is forced by two requirements that pull in opposite directions:
+//   • pt-BR MUST read exactly as today (dark-ship): the curated map is the pt-BR
+//     SOT and WINS for any pt-* locale (CLDR diverges for ~20 codes).
+//   • es / en-US / … MUST read in their own language: only Intl.DisplayNames
+//     supplies those, so it wins for non-pt locales, falling back to the curated
+//     map only when the API is missing (old/odd runtime) or returns nothing.
+// Guarded for SSR / static-export (output:'export'): Intl.DisplayNames runs
+// CLIENT-SIDE; if it is unavailable we silently use the fallback map and never
+// throw. Codes are upper-cased (Intl.DisplayNames echoes a lowercase input back
+// unchanged) and the .of() call is try/catch-wrapped (a 1-char code throws
+// invalid_argument). A result equal to the input code is treated as "no name".
+function isPtLocale(locale) {
+  return typeof locale === 'string' && locale.toLowerCase().indexOf('pt') === 0;
+}
+
+function makeRegionNamer(locale) {
+  if (typeof Intl === 'undefined' || typeof Intl.DisplayNames !== 'function') return null;
+  try {
+    return new Intl.DisplayNames([locale], { type: 'region' });
+  } catch (_e) {
+    return null; // unsupported locale tag → caller falls back to the curated map
+  }
+}
+
+function countryNameFor(code, namer, locale) {
+  const cc = typeof code === 'string' ? code.trim().toLowerCase() : '';
+  const fallback = COUNTRY_NAMES[cc] || cc;
+  // pt-* keeps the hand-curated SOT (today, byte-for-byte). Other locales prefer
+  // Intl.DisplayNames and only fall back when it yields nothing usable.
+  if (isPtLocale(locale)) return fallback;
+  if (!namer) return fallback;
+  try {
+    const display = namer.of(cc.toUpperCase());
+    if (display && display.toLowerCase() !== cc) return display;
+  } catch (_e) { /* invalid code → fallback */ }
+  return fallback;
+}
+
+// Per-locale memo: build+sort runs at most ONCE per locale tag, never per render.
+// Keyed by the locale string; switching language re-reads the cache (a different
+// key) so the new list is correct without ever mutating the COUNTRIES singleton.
+// Seeded with the eager pt-BR COUNTRIES so the default locale reuses that exact
+// array (no rebuild, identical to today).
+const _countriesByLocale = new Map([['pt-BR', COUNTRIES]]);
+
+// countriesForLocale(locale=getLocale()) — the full picker list with names in the
+// given locale and sorted with that locale's collation. Memoized per locale tag.
+// getLocale() is the DEFAULT (server returns DEFAULT_LOCALE 'pt-BR'); pass an
+// explicit tag in tests. The pt-BR entry IS the COUNTRIES singleton, so the
+// default-locale path is byte-identical to before M3.5.
+export function countriesForLocale(locale = getLocale()) {
+  const tag = typeof locale === 'string' && locale ? locale : 'pt-BR';
+  const cached = _countriesByLocale.get(tag);
+  if (cached) return cached;
+  const namer = makeRegionNamer(tag);
+  const list = Object.keys(COUNTRY_NAMES)
+    .map((code) => ({ code, name: countryNameFor(code, namer, tag), flag: flagEmoji(code) }))
+    .sort((a, b) => a.name.localeCompare(b.name, tag));
+  _countriesByLocale.set(tag, list);
+  return list;
+}
+
+// Test seam: drop every memoized list EXCEPT the pt-BR singleton, so a test can
+// re-derive a locale's list under a stubbed Intl.DisplayNames. Never called in
+// production.
+export function __resetCountriesForLocaleCache() {
+  _countriesByLocale.clear();
+  _countriesByLocale.set('pt-BR', COUNTRIES);
+}

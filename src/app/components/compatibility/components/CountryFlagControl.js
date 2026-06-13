@@ -32,8 +32,8 @@ import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import './CountryFlagControl.css';
-import { t } from './ux/strings';
-import { COUNTRIES, getCountry } from './countries';
+import { t, getLocale } from './ux/strings';
+import { countriesForLocale, getCountry } from './countries';
 import { getSelectedCountry, setSelectedCountry, subscribe } from './countryStore';
 
 // Zoom used when recentering on a freshly chosen country that has no bounds: a
@@ -103,13 +103,23 @@ export function createFlagDom() {
 export function wireFlagControl(map, dom) {
   const { wrap, button, panel, closeBtn, input, list, empty } = dom;
 
+  // The active country's name in the ACTIVE UI locale (M3.5/I18N-1). getCountry
+  // only carries the pt-BR curated name; the locale-aware name comes from the
+  // current locale's list (countriesForLocale), falling back to the pt-BR name
+  // when the code is somehow absent from the list (it never is in practice).
+  const localeName = (code) => {
+    const hit = countriesForLocale(getLocale()).find((c) => c.code === code);
+    return hit ? hit.name : getCountry(code).name;
+  };
+
   const renderButton = () => {
     const c = getCountry(getSelectedCountry());
-    button.setAttribute('aria-label', t('country.button').replace('{name}', c.name));
+    const name = localeName(c.code);
+    button.setAttribute('aria-label', t('country.button').replace('{name}', name));
     button.title = t('country.open');
     button.innerHTML =
       '<span class="mdf-flag__glyph" aria-hidden="true">' + c.flag + '</span>' +
-      '<span class="mdf-flag__name">' + c.name + '</span>';
+      '<span class="mdf-flag__name">' + name + '</span>';
   };
 
   // Outside-click dismissal, bound to the document only while open. capture-phase
@@ -170,19 +180,26 @@ export function wireFlagControl(map, dom) {
     L.DomEvent.on(el, 'click', run);
   };
 
-  // Build the option list once; filtering toggles <li> visibility (no per-key
-  // DOM rebuild).
-  const optionEls = COUNTRIES.map((c) => {
-    const li = L.DomUtil.create('li', 'mdf-flag__item', list);
-    const opt = L.DomUtil.create('button', 'mdf-flag__option', li);
-    opt.type = 'button';
-    opt.dataset.code = c.code;
-    opt.innerHTML =
-      '<span class="mdf-flag__glyph" aria-hidden="true">' + c.flag + '</span>' +
-      '<span class="mdf-flag__name">' + c.name + '</span>';
-    onActivate(opt, () => pick(c.code));
-    return { li, name: c.name.toLowerCase() };
-  });
+  // Build the option list for the ACTIVE locale (M3.5/I18N-1): names + sort come
+  // from countriesForLocale(getLocale()), not the eager pt-BR COUNTRIES. The list
+  // is rebuilt (not just re-filtered) on a locale change — see the second
+  // subscription below; within a locale, filtering toggles <li> visibility with
+  // no DOM rebuild. optionEls is rebound on each rebuild.
+  let optionEls = [];
+  function rebuildList() {
+    list.innerHTML = ''; // drop the previous locale's <li>s (their listeners GC with them)
+    optionEls = countriesForLocale(getLocale()).map((c) => {
+      const li = L.DomUtil.create('li', 'mdf-flag__item', list);
+      const opt = L.DomUtil.create('button', 'mdf-flag__option', li);
+      opt.type = 'button';
+      opt.dataset.code = c.code;
+      opt.innerHTML =
+        '<span class="mdf-flag__glyph" aria-hidden="true">' + c.flag + '</span>' +
+        '<span class="mdf-flag__name">' + c.name + '</span>';
+      onActivate(opt, () => pick(c.code));
+      return { li, name: c.name.toLowerCase() };
+    });
+  }
   function applyFilter() {
     const q = input.value.trim().toLowerCase();
     let shown = 0;
@@ -203,8 +220,25 @@ export function wireFlagControl(map, dom) {
   onActivate(button, togglePanel);
   onActivate(closeBtn, () => closePanel(true));
 
+  rebuildList();
   renderButton();
   const unsubscribe = subscribe(renderButton);
+
+  // M3.5 stale-list fix (the real M3.5 bug, not hydration): COUNTRIES was read
+  // ONCE at onAdd, and the control only subscribed renderButton to the COUNTRY
+  // store — never the LIST to a LOCALE change. So switching the UI language left
+  // the picker showing the old language's names/sort. Mirror how renderButton
+  // already rebuilds on a country change: a second subscription rebuilds the list
+  // (and re-labels the button) on 'mdf-locale-change' (strings.setLocale dispatches
+  // it). Preserve the current filter text across the rebuild so an open, filtered
+  // panel does not reset. Guarded for SSR/no-window.
+  const onLocaleChange = () => {
+    rebuildList();
+    renderButton();
+    applyFilter();
+  };
+  const hasWindow = typeof window !== 'undefined';
+  if (hasWindow) window.addEventListener('mdf-locale-change', onLocaleChange);
 
   // A click/scroll on the control must not reach the map (pin drop / pan).
   L.DomEvent.disableClickPropagation(wrap);
@@ -214,6 +248,7 @@ export function wireFlagControl(map, dom) {
   // when Leaflet removes the container).
   return () => {
     if (hasDocument()) document.removeEventListener('pointerdown', onOutsidePointer, true);
+    if (hasWindow) window.removeEventListener('mdf-locale-change', onLocaleChange);
     unsubscribe();
   };
 }
