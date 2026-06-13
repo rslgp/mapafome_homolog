@@ -33,6 +33,9 @@ import {
   readFirstRunHintSeen,
   markFirstRunHintSeen,
   resolveClosurePin,
+  PET_VIEW,
+  PET_VIEW_STORAGE_KEY,
+  readStoredView,
 } from './petMapLoadState';
 import {
   classifyPublishFailure,
@@ -51,6 +54,8 @@ import {
 import {
   enqueue as enqueuePetPublish,
   bindOnlineFlush as bindPetOnlineFlush,
+  PetPublishError,
+  isOfflineNow,
 } from './petPublishQueue';
 import { trackError } from '../components/compatibility/components/ux/analytics';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
@@ -70,45 +75,10 @@ import {
 // Mesmo centro padrão do mapa de fome (Recife) até o GPS responder.
 const DEFAULT_CENTER = [-8.0671132, -34.8766719];
 
-// PET-M8 — as DUAS visões alternáveis do /pets (mapa | lista). Ids estáveis (vão
-// pro localStorage); a SOT da forma da preferência mora aqui.
-const PET_VIEW = { MAP: 'map', LIST: 'list' };
-// Chave do localStorage onde a visão escolhida persiste entre sessões — um usuário
-// que prefere a lista (ex.: leitor de tela) não reescolhe a cada visita.
-const PET_VIEW_STORAGE_KEY = 'mapapet:view';
-
-// Lê a visão persistida (uma vez, no boundary client). Guarda de SSR/no-window
-// (/pets é ssr:false, mas defensivo, custo zero) e de localStorage indisponível
-// (modo privado/quota). Default = MAPA (a visão primária). PURO o suficiente para
-// rodar num inicializador lazy de useState (não num effect).
-function readStoredView() {
-  if (typeof window === 'undefined') return PET_VIEW.MAP;
-  try {
-    const v = window.localStorage.getItem(PET_VIEW_STORAGE_KEY);
-    return v === PET_VIEW.LIST ? PET_VIEW.LIST : PET_VIEW.MAP;
-  } catch (_e) {
-    return PET_VIEW.MAP;
-  }
-}
-
-// Erro classificado de publicação (PET-M1). Carrega o `reasonCode` estável
-// (PET_PUBLISH_FAILURE.*) para o PetReportSheet escolher a cópia calma certa —
-// sem o sheet ter de re-classificar a causa. `queued:true` quando o relato já
-// foi guardado na fila offline, então a cópia pode reassegurar em vez de pedir
-// "tente de novo".
-class PetPublishError extends Error {
-  constructor(reasonCode, queued, cause) {
-    super(`pet publish failed: ${reasonCode}`);
-    this.name = 'PetPublishError';
-    this.reasonCode = reasonCode;
-    this.queued = queued;
-    this.cause = cause;
-  }
-}
-
-function isOfflineNow() {
-  return typeof navigator !== 'undefined' && navigator.onLine === false;
-}
+// PET-M8 — PET_VIEW/PET_VIEW_STORAGE_KEY/readStoredView foram lifted para
+// petMapLoadState (junto da disciplina readFirstRunHintSeen, agora unit-testável);
+// PetPublishError/isOfflineNow para petPublishQueue (infra do fluxo de publicação).
+// PetsApp só os WIRES — ver os imports acima.
 
 export default function PetsApp() {
   // PET-M23 — subscribe to locale changes so every t() call below re-reads the

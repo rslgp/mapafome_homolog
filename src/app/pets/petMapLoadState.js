@@ -97,3 +97,29 @@ export function resolveClosurePin(coords, pets) {
   const pet = findPetByCoordsKey(list, coordsKey);
   return { coordsKey, coords, pet: pet || null };
 }
+
+// ─── PET-M8 — preferência de visão (mapa | lista), persistida ─────────────────
+// As DUAS visões alternáveis do /pets. Ids estáveis (vão pro localStorage); a SOT
+// da forma da preferência mora aqui (lifted de PetsApp). Vive neste módulo junto
+// do readFirstRunHintSeen/markFirstRunHintSeen porque é a MESMA disciplina —
+// leitura window-guarded de uma preferência persistida — e PetsApp (excluído da
+// cobertura por montar Leaflet) só fica com o wiring. readStoredView agora é
+// unit-testável aqui.
+export const PET_VIEW = { MAP: 'map', LIST: 'list' };
+// Chave do localStorage onde a visão escolhida persiste entre sessões — um usuário
+// que prefere a lista (ex.: leitor de tela) não reescolhe a cada visita.
+export const PET_VIEW_STORAGE_KEY = 'mapapet:view';
+
+// Lê a visão persistida (uma vez, no boundary client). Guarda de SSR/no-window
+// (/pets é ssr:false, mas defensivo, custo zero) e de localStorage indisponível
+// (modo privado/quota). Default = MAPA (a visão primária). PURO o suficiente para
+// rodar num inicializador lazy de useState (não num effect).
+export function readStoredView() {
+  if (typeof window === 'undefined') return PET_VIEW.MAP;
+  try {
+    const v = window.localStorage.getItem(PET_VIEW_STORAGE_KEY);
+    return v === PET_VIEW.LIST ? PET_VIEW.LIST : PET_VIEW.MAP;
+  } catch (_e) {
+    return PET_VIEW.MAP;
+  }
+}

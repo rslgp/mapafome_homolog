@@ -131,3 +131,27 @@ export async function queueSize() {
     return 0;
   }
 }
+
+// ─── Erro classificado de publicação + sonda de conexão (lifted de PetsApp) ────
+// Erro classificado de publicação (PET-M1). Carrega o `reasonCode` estável
+// (PET_PUBLISH_FAILURE.*) para o PetReportSheet escolher a cópia calma certa —
+// sem o sheet ter de re-classificar a causa. `queued:true` quando o relato já
+// foi guardado na fila offline (acima), então a cópia pode reassegurar em vez de
+// pedir "tente de novo". Mora aqui, junto da fila offline cujo enqueue produz o
+// `queued:true` — é a infra do fluxo de publicação, não estado de UI.
+export class PetPublishError extends Error {
+  constructor(reasonCode, queued, cause) {
+    super(`pet publish failed: ${reasonCode}`);
+    this.name = 'PetPublishError';
+    this.reasonCode = reasonCode;
+    this.queued = queued;
+    this.cause = cause;
+  }
+}
+
+// Sonda síncrona de "estou offline agora?" — lida no boundary (PetsApp) para
+// injetar isOffline nos classificadores puros (classifyPublishFailure). Defensiva
+// quanto a navigator ausente (SSR/runtime estranho) → trata como ONLINE.
+export function isOfflineNow() {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
