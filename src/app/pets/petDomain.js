@@ -74,15 +74,18 @@ export {
   setPetFilterRecency,
 } from './petFilterDomain';
 export {
-  // petMatch — PET-M9b match + PET-M12b de-dup
+  // petMatch — PET-M9b match possível (perdido ↔ encontrado/avistado)
   PET_MATCH_DEFAULTS,
   PET_MATCH_STRENGTH,
   petMatchStrength,
   findPossibleMatches,
+} from './petMatch';
+export {
+  // petDedup — PET-M12b de-dup near-duplicate (soft-merge visual)
   PET_DEDUP_DEFAULTS,
   isNearDuplicate,
   groupNearDuplicates,
-} from './petMatch';
+} from './petDedup';
 export {
   // petHygiene — PET-M3 higiene de entrada (sanitize texto livre + URL de fotos)
   sanitizePhotosUrl,

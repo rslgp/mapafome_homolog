@@ -138,6 +138,16 @@ export function isValidSpecies(id) {
   return SPECIES_IDS.has(id);
 }
 
+// Espécie é CORINGA (não classifica o bicho)? `outro` OU vazia/ausente = "não sei
+// classificar" → incerteza, não contradição. PURA. Promovida à folha porque o match
+// (PET-M9b, enfraquece o par) E o dedup (PET-M12b, BLOQUEIA o merge) precisam da
+// MESMA verdade — uma só definição, lida pelos dois, sem ciclo (ambos já importam
+// daqui). 'outro' é o único id de PET_SPECIES que não é uma classe concreta.
+export function isWildcardSpecies(species) {
+  const s = String(species || '').trim();
+  return s === '' || s === 'outro';
+}
+
 export function isValidSize(id) {
   return SIZE_IDS.has(id);
 }
