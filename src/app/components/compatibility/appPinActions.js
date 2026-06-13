@@ -28,6 +28,12 @@
 //   { envVariables, EXPIRE_DAY, sheetsAppendRow, updatePinDadosByCoords,
 //     trackError, getCookie, setCookie, coordsFromPin }
 import { getSheet } from './components/googlesheets/sheetsClient';
+// INTL M4b (STATE-1): the publish/flush write gate validates against the country
+// CAPTURED IN THE PAYLOAD (stamped at enqueue time), via the same pure predicate
+// M1 unified — NOT the live selected country. Importing isInsideCountry here
+// keeps the gate keyed on the payload, so the offline flush can never re-read
+// getSelectedCountry() and invalidate an already-queued pin.
+import { isInsideCountry, DEFAULT_COUNTRY } from './components/countries';
 
 export function removerPonto(self, deps, coords, categoriaPonto) {
     const { sheetsAppendRow } = deps;
@@ -147,9 +153,21 @@ export async function persistPinPatch(self, deps, pin, mutate) {
 //     so the caller can distinguish from generic failures.
 //   • idempotency guard: if the payload carries an idempotency_key and the
 //     client-side idempotency cache already has it, skip the write.
-export async function writePinToSheets(self, deps, { coords, categories, detail, contact, idempotency_key }) {
+export async function writePinToSheets(self, deps, { coords, categories, detail, contact, idempotency_key, country }) {
     const { envVariables } = deps;
-    if (!coords || !envVariables.dentroLimites(coords)) {
+    // INTL M4b (STATE-1, point b): gate against the country CAPTURED IN THE
+    // PAYLOAD at enqueue time, NOT the live selected country. The old gate
+    // (envVariables.dentroLimites) resolves the country through the injected
+    // resolver, which reads getSelectedCountry() — so a pin queued offline under
+    // country A would be re-validated against a later-selected country B at
+    // flush and throw forever, freezing the whole queue. Keying the predicate to
+    // `country` makes the interactive AND flush paths consistent automatically
+    // (both go through this one function). `country || DEFAULT_COUNTRY` ('br')
+    // covers legacy queued items from before this field existed (same default as
+    // M2.5's missing-Pais). With the flag OFF the stamp is always 'br', so this
+    // reproduces the Brazil-only gate byte-for-byte (isInsideCountry('br', …)
+    // IS what dentroLimites delegates to under the OFF resolver).
+    if (!coords || !isInsideCountry(coords, country || DEFAULT_COUNTRY)) {
         throw new Error('out_of_bounds');
     }
     if (idempotency_key && self._idempotencyCache && self._idempotencyCache.has(idempotency_key)) {
@@ -179,6 +197,12 @@ export async function writePinToSheets(self, deps, { coords, categories, detail,
         horario: '',
         mes: '',
         redesocial: contact || '',
+        // INTL M4b: persist the CAPTURED country (not the live resolver) so a pin
+        // queued offline under country A and flushed in a later country-B session
+        // is still attributed to A on read-back (criarRow honors dadosRow.pais
+        // over the resolver). Omitted/undefined falls back to the resolver, which
+        // is 'br' with the flag OFF — identical to today.
+        pais: country || undefined,
     };
     const row = envVariables.criarRow(dadosRow);
     const dadosJSON = JSON.parse(row.Dados);

@@ -19,6 +19,14 @@
 //      A refactor that drops the stamp would silently re-collapse all marks into
 //      the BR view; this asserts the assignment survives. Structural grep (the FF6
 //      pattern); the data-flow correctness is covered by test/intlReadback.test.js.
+// FF8: offline-queue country-capture invariant (INTERNATIONAL_PLAN M4b / STATE-1
+//      / R3b) — the publish payload built in ReportSheet (the single object BOTH
+//      the interactive write AND the offline enqueue inherit) MUST carry a
+//      `country` field, captured at publish time. Without it the offline flush
+//      would re-validate a queued pin against the LIVE selected country and a
+//      flag-control switch could freeze the whole queue (STATE-1). Structural
+//      grep; the freeze-prevention + payload-keyed validation behavior is covered
+//      by test/publishQueue.test.js.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -186,6 +194,36 @@ const FF7_PAIS_STAMP_TOKEN = /dadosJSON\.Pais\s*=/;
     }
 }
 
+// FF8: offline-queue country-capture invariant. ReportSheet's publish payload
+// (the single object both the interactive write and the offline enqueue inherit)
+// must include a `country` field captured at publish time. If it disappears, a
+// pin queued offline would be re-validated against the LIVE selected country at
+// flush — the STATE-1 freeze this milestone removed. We match the literal field
+// in the payload built at the publish call; the freeze-prevention + payload-keyed
+// validation behavior is proven in test/publishQueue.test.js.
+const FF8_QUEUE_CAPTURE_FILE =
+    'src/app/components/compatibility/components/ux/ReportSheet.js';
+const FF8_COUNTRY_FIELD_TOKEN = /country\s*:\s*activeCountryFor\s*\(/;
+{
+    const capturePath = path.join(ROOT, FF8_QUEUE_CAPTURE_FILE);
+    if (!fs.existsSync(capturePath)) {
+        failures.push(
+            `FF8: queue-country-capture — ${FF8_QUEUE_CAPTURE_FILE} not found ` +
+            `(cannot verify the publish payload captures \`country\`). ` +
+            `INTERNATIONAL_PLAN M4b / STATE-1.`);
+    } else {
+        const captureSrc = fs.readFileSync(capturePath, 'utf8');
+        if (!FF8_COUNTRY_FIELD_TOKEN.test(captureSrc)) {
+            failures.push(
+                `FF8: queue-country-capture — \`country: activeCountryFor(…)\` not ` +
+                `found in ${FF8_QUEUE_CAPTURE_FILE}. The publish payload must capture ` +
+                `the active country at publish time so the offline flush validates ` +
+                `against it, not the live selected country (else the queue can freeze ` +
+                `on a flag-control switch). INTERNATIONAL_PLAN M4b / STATE-1.`);
+        }
+    }
+}
+
 // FF5: token-level WCAG contrast forcing-function.
 // WHY: the browser axe gate is render-state-flaky — it has missed real AA
 // regressions and caught them only by render-timing luck. A `--mdf-*` token
@@ -333,7 +371,7 @@ if (failures.length > 0) {
     process.exit(1);
 }
 
-console.log(`[fitness] OK — file-loc, function-loc, todo-density, bbox-SOT, Pais-stamp, token-contrast all within v5 hard limits.`);
+console.log(`[fitness] OK — file-loc, function-loc, todo-density, bbox-SOT, Pais-stamp, queue-country-capture, token-contrast all within v5 hard limits.`);
 if (ff2BaselineHits > 0) {
     console.log(`[fitness] note: ${ff2BaselineHits} FF2 baseline-allowlisted long function(s) (pre-existing debt — see FF2_BASELINE).`);
 }

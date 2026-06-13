@@ -5,6 +5,17 @@ import './ReportSheet.css';
 import { track } from './analytics';
 import { t, useLocale } from './strings';
 import { NEED_CATEGORIES } from './needCategories';
+// INTL M4b (STATE-1, point a): capture the active publish country into the
+// payload AT PUBLISH TIME. This is the single stamp point BOTH publish paths
+// inherit — the object flows unchanged into the interactive write AND into the
+// offline queue (App.handlePublishFromSheet enqueues this very object before any
+// write). The flush later validates against THIS captured country, so switching
+// the flag-control after queueing can no longer invalidate the pin (STATE-1).
+// activeCountryFor(INTL_ENABLED, …) — not raw getSelectedCountry() — so with the
+// flag OFF the stamp is always 'br' (identical to M2.5's Pais stamp / today).
+import { activeCountryFor } from '../geofence';
+import * as countryStore from '../countryStore';
+import { INTL_ENABLED } from '../intlConfig';
 
 // M1 — three-step reporter flow (design_brief § three_step_promise).
 // Step 1 (map click) happens outside; this sheet hosts Steps 2 and 3.
@@ -136,6 +147,9 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
         detail: detail.trim(),
         contact: contact.trim(),
         idempotency_key: idempotencyKey,
+        // INTL M4b: country captured HERE, at publish time. Flows unchanged into
+        // both the interactive write and the offline queue (STATE-1 fix).
+        country: activeCountryFor(INTL_ENABLED, countryStore),
       });
 
       track('pin_report_published', {
