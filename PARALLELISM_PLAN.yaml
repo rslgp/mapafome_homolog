@@ -1,0 +1,100 @@
+# PARALLELISM_PLAN.yaml — coordination contract for running 2 Claude sessions on MapaFome.
+# Human-readable companion: PARALLELISM_PLAN.md (same folder).
+# Generated 2026-06-13. The binding question answered here: HOW MANY sessions in parallel,
+# and how to split work so two sessions never corrupt each other's edits/commits/builds.
+
+meta:
+  repo: mapafome_homolog
+  primary_branch: feat/intl-marking
+  generated: "2026-06-13"
+  intl_status: code-complete in working tree; M6 (en-US + auto-detect) uncommitted; flag OFF
+  flag_invariant: "DEV_DEFAULT = false  (intlConfig.js) — no lane flips it"
+
+# ── How many sessions can run in parallel ───────────────────────────────────────
+capacity:
+  recommended_writer_sessions: 2          # one per git worktree, disjoint files
+  hard_ceiling_writer_sessions: 2         # binding constraint is DISK, not CPU
+  binding_constraint: "slow 1TB HDD, ~13GB free — two simultaneous next build + test runs saturate I/O; a 3rd writer mostly waits on disk"
+  cpu_cores: 8                            # CPU could do more; disk cannot
+  by_setup:
+    same_working_tree:
+      safe_writers: 1                     # plus any number of READ-ONLY sessions
+      reason: "two writers share files + .git/index + out/ + the smoke200 port → lost edits, index.lock failures, clobbered builds"
+    separate_worktrees:
+      safe_writers: 2                     # one branch per worktree
+      reason: "each worktree owns its own checkout, index, and out/; they share only the append-only .git object store, which is concurrency-safe for commits"
+
+# ── What actually breaks if you ignore this (collision model) ───────────────────
+shared_mutable_resources:
+  - working_tree_files: "two Edit/Write to same path → last writer wins silently; old_string match can fail mid-task"
+  - git_index: "concurrent git add → half-staged commit"
+  - index_lock: "concurrent commit/add in SAME worktree → 'Unable to create index.lock: File exists'"
+  - out_dir: "two npm run build / smoke200 in same tree clobber out/ and reuse the same port"
+  - pwa_stamp: "public/sw.js + public/version.json rewritten every commit → wrong SHA / merge churn if two lanes stamp"
+worktrees_safe_because: "separate worktrees make all of the above disjoint; only the immutable .git object DB is shared, and that is safe under concurrency"
+
+# ── Existing worktrees — do not stomp ───────────────────────────────────────────
+existing_worktrees:
+  - { path: mapafome_homolog,       branch: feat/intl-marking }     # THIS session
+  - { path: mapafome_decouple_wt,   branch: refactor/decouple-app }
+  - { path: mapafome_pets_wt,       branch: pets }
+  - { path: mapafome_srp_wt,        branch: refactor/srp-decouple-2 }
+  - { path: .claude/worktrees/pets-milestones, branch: pets-milestones }
+
+# ── The two work lanes (disjoint file ownership) ────────────────────────────────
+lanes:
+  A:
+    name: FINISH-INTL
+    session: this one (primary writer)
+    worktree: mapafome_homolog
+    branch: feat/intl-marking
+    tasks:
+      - "verify M6 gate green: lint -> test -> fitness -> build -> smoke200 -> a11y"
+      - "commit M6 working tree via agent_git-commit-specialist (SPLIT_PLAN: en-US locale + auto-detect feature; data-driven parity tests; PWA stamp)"
+      - "final what/why table across M0..M6; flag stays OFF; en-US [REVISAR-HUMANO] copy left for user approval"
+    owns_files_glob:
+      - "src/app/components/compatibility/components/ux/i18n/**"
+      - "src/app/components/compatibility/components/ux/strings.js"
+      - "src/app/components/LocaleAutoDetect.js"
+      - "src/app/layout.js"
+      - "test/i18n*.test.js"
+      - "public/sw.js"
+      - "public/version.json"
+      - "INTERNATIONAL_PLAN.md"
+    must_not_touch: "any file listed under lanes.B.owns_files_glob"
+
+  B:
+    name: TIME-FILTER
+    session: second session (NEW worktree)
+    setup_command: "git worktree add ../mapafome_filtro_wt -b feat/filtro-tempo feat/intl-marking"
+    worktree: ../mapafome_filtro_wt
+    branch: feat/filtro-tempo
+    branches_from: feat/intl-marking   # inherits finished INTL read-only; never edits it
+    source_plan: FILTRO_TEMPO_PLAN.md
+    rationale: "the one independent, not-yet-started stream; zero file overlap with INTL (pin time-window filtering, not i18n)"
+    owns_files_glob:
+      - "the time-filter component(s) named in FILTRO_TEMPO_PLAN.md"
+      - "FILTRO_TEMPO_PLAN.md"
+      - "Lane-B-only tests"
+    must_not_touch: "any file listed under lanes.A.owns_files_glob"
+
+# ── Files both lanes might need — append-only, coordinate by convention ─────────
+shared_low_contention:
+  files: [ "scripts/fitness-functions.mjs", "package.json", "ROADMAP.md" ]
+  rule: "if BOTH lanes must edit one, announce in chat, edit in ONE lane, the other rebases. Never edit a shared file in two lanes in the same window."
+
+# ── Non-negotiable rules for the second session ─────────────────────────────────
+rules:
+  - "NEVER two writers in one worktree. No worktree => second session is read-only (review/search/plan)."
+  - "Disjoint file sets per the ownership lists. A merge is cheap; a lost edit is invisible until it ships."
+  - "Each lane runs its OWN full gate in its OWN worktree before committing. Do not trust the other lane's green."
+  - "Stagger heavy steps: next build + smoke200 are disk-bound. Whoever starts build announces it; the other waits or runs --only lint,test."
+  - "smoke200 port: if both lanes serve out/ at once, second lane uses a different port, or run sequentially (default port collides)."
+  - "Commits route through agent_git-commit-specialist in EACH lane."
+  - "INTL flag stays OFF (DEV_DEFAULT=false) in every lane; nobody flips it."
+
+# ── Sync points ──────────────────────────────────────────────────────────────
+sync_points:
+  SP1_before_B_starts: "Lane A confirms feat/intl-marking tip is stable (M6 committed); Lane B branches from it."
+  SP2_before_merge:     "both gates green; rebase Lane B onto latest Lane A tip; resolve any package.json / fitness overlap; re-run gate once post-rebase."
+  SP3_final:            "one combined what/why table; verify DEV_DEFAULT = false still holds."
