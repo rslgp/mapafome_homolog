@@ -79,11 +79,20 @@ function matchCountLabel(count, total) {
   return t(key).replace('{count}', String(count)).replace('{total}', String(total));
 }
 
-export default function PetFilterBar({ filter, total, matchCount, onToggle, onSetRecency, onClear }) {
+export default function PetFilterBar({ filter, total, matchCount, expanded, onToggleOpen, onToggle, onSetRecency, onClear }) {
   // PET-M23 — re-render on a locale switch so every t() re-reads.
   useLocale();
   const activeFacets = countActivePetFilterFacets(filter);
   const hasActive = activeFacets > 0;
+
+  // DISCLOSURE (toggle): a barra inteira colapsa atrás de um botão "Filtros 🐾".
+  // O painel CONTINUA MONTADO (só escondido com `hidden`) — o estado de filtro
+  // do dono que procura o pet sobrevive ao colapsar/expandir, e o aria-live da
+  // contagem não reanuncia do zero. `expanded` é controlado pelo pai (PetsApp);
+  // se o pai não passar a prop (uso legado), assume ABERTO para não esconder os
+  // filtros por engano (degradação segura). aria-expanded/aria-controls ligam o
+  // botão ao corpo para o leitor de tela anunciar o estado.
+  const isOpen = expanded !== false; // undefined (legado) → aberto
 
   // Lê o array de ids selecionados de uma faceta com defesa (faceta ausente → []).
   const selectedFor = (key) => (filter && Array.isArray(filter[key]) ? filter[key] : []);
@@ -93,10 +102,31 @@ export default function PetFilterBar({ filter, total, matchCount, onToggle, onSe
   return (
     <section className="pet-filter" aria-labelledby="pet-filter-heading">
       <div className="pet-filter__head">
-        <h2 id="pet-filter-heading" className="pet-filter__heading">
-          {t('pets.filter.heading')}
-        </h2>
-        {hasActive && (
+        {/* Botão DISCLOSURE — alterna o painel. 🐾 + "Filtros" + (se houver faceta
+            ativa) um badge com a contagem, para o dono saber que filtros estão
+            ligados mesmo com o painel fechado. Alvo >=44px (geometria do chip).
+            aria-expanded reflete o estado; aria-controls aponta o corpo. */}
+        <button
+          type="button"
+          className={`pet-filter__toggle${isOpen ? ' pet-filter__toggle--open' : ''}`}
+          aria-expanded={isOpen}
+          aria-controls="pet-filter-body"
+          aria-label={isOpen ? t('pets.filter.toggle.hide') : t('pets.filter.toggle.show')}
+          onClick={onToggleOpen}
+        >
+          <span className="pet-filter__toggle-icon" aria-hidden="true">🐾</span>
+          <span className="pet-filter__toggle-label">{t('pets.filter.toggle')}</span>
+          {hasActive && (
+            <span
+              className="pet-filter__toggle-badge"
+              aria-label={t('pets.filter.toggle.active').replace('{count}', String(activeFacets))}
+            >
+              {activeFacets}
+            </span>
+          )}
+          <span className="pet-filter__toggle-caret" aria-hidden="true">{isOpen ? '▴' : '▾'}</span>
+        </button>
+        {isOpen && hasActive && (
           <button
             type="button"
             className="pet-filter__clear"
@@ -107,6 +137,13 @@ export default function PetFilterBar({ filter, total, matchCount, onToggle, onSe
         )}
       </div>
 
+      <h2 id="pet-filter-heading" className="mdf-sr-only">
+        {t('pets.filter.heading')}
+      </h2>
+
+      {/* CORPO colapsável — montado sempre (estado preservado), escondido com
+          `hidden` quando fechado. id casa com o aria-controls do botão acima. */}
+      <div id="pet-filter-body" className="pet-filter__body" hidden={!isOpen}>
       {FACETS.map((facet) => {
         const selected = selectedFor(facet.key);
         return (
@@ -200,6 +237,7 @@ export default function PetFilterBar({ filter, total, matchCount, onToggle, onSe
           </button>
         )}
       </p>
+      </div>
     </section>
   );
 }
@@ -214,6 +252,10 @@ PetFilterBar.propTypes = {
   }),
   total: PropTypes.number,
   matchCount: PropTypes.number,
+  // DISCLOSURE: `expanded` controla o colapso (undefined → aberto, p/ uso legado);
+  // `onToggleOpen` é chamado ao tocar o botão "Filtros" (o pai inverte o estado).
+  expanded: PropTypes.bool,
+  onToggleOpen: PropTypes.func,
   onToggle: PropTypes.func,
   onSetRecency: PropTypes.func,
   onClear: PropTypes.func,

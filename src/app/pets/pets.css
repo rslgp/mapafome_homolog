@@ -236,6 +236,76 @@
   margin: 0;
 }
 
+/* DISCLOSURE — botão "Filtros 🐾" que mostra/oculta o painel de busca. Pílula
+ * neutra com alvo >=44px (mesma geometria de toque dos chips). Reusa os tokens
+ * --mdf-* (sem hex cru). O badge de contagem só aparece quando há faceta ativa,
+ * para o dono saber que filtros seguem ligados mesmo com o painel fechado. */
+.pet-filter__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  min-height: var(--mdf-touch-target);
+  padding: var(--mdf-space-1) var(--mdf-space-4);
+  background: var(--mdf-surface, transparent);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-ink-subtle);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color var(--mdf-dur-fast) var(--mdf-ease-out),
+              background-color var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.pet-filter__toggle:hover {
+  border-color: var(--mdf-ink);
+}
+
+.pet-filter__toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--mdf-focus-ring);
+}
+
+/* Estado ABERTO: realce sutil para confirmar que o painel está expandido. */
+.pet-filter__toggle--open {
+  border-color: var(--mdf-ink);
+}
+
+.pet-filter__toggle-icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+/* Badge com a contagem de facetas ativas — pílula pequena, tom de realce neutro,
+ * nunca alarme (o público está em estresse). Números tabulares p/ não dançar. */
+.pet-filter__toggle-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4em;
+  height: 1.4em;
+  padding: 0 var(--mdf-space-1);
+  border-radius: var(--mdf-radius-pill);
+  background: var(--mdf-ink);
+  color: var(--mdf-surface, #fff);
+  font-size: var(--mdf-fs-caption);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pet-filter__toggle-caret {
+  margin-left: auto;
+  font-size: 0.85em;
+  color: var(--mdf-ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-filter__toggle {
+    transition: none;
+  }
+}
+
 /* "Limpar filtros" — discreto mas com alvo de toque pleno (>=44px). Texto ink
  * sobre superfície neutra; nunca os tokens de alarme. */
 .pet-filter__clear {

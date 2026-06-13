@@ -240,6 +240,10 @@ const DICT = {
     'pets.detail.directions':    'Como chegar',
     // ── PetFilterBar ──
     'pets.filter.heading':       'Filtrar pets no mapa',
+    'pets.filter.toggle':        'Filtros',
+    'pets.filter.toggle.show':   'Mostrar filtros de busca',
+    'pets.filter.toggle.hide':   'Ocultar filtros de busca',
+    'pets.filter.toggle.active': '{count} filtro(s) ativo(s)',
     'pets.filter.clear':         'Limpar filtros',
     'pets.filter.legend.status': 'Situação',
     'pets.filter.legend.species':'Espécie',
@@ -524,6 +528,10 @@ const DICT = {
     'pets.detail.directions':    'Cómo llegar',
     // ── PetFilterBar ──
     'pets.filter.heading':       'Filtrar mascotas en el mapa',
+    'pets.filter.toggle':        'Filtros',
+    'pets.filter.toggle.show':   'Mostrar filtros de búsqueda',
+    'pets.filter.toggle.hide':   'Ocultar filtros de búsqueda',
+    'pets.filter.toggle.active': '{count} filtro(s) activo(s)',
     'pets.filter.clear':         'Limpiar filtros',
     'pets.filter.legend.status': 'Situación',
     'pets.filter.legend.species':'Especie',

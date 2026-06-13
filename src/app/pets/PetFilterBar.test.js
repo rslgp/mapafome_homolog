@@ -48,7 +48,11 @@ describe('PetFilterBar — render + a11y do contrato de superfície', () => {
     // a recência usa role=radio EXPLÍCITO (sobrepõe o button implícito), então não
     // entra em getAllByRole('button'). Filtro vazio → NENHUM "limpar" (sem faceta
     // ativa → sem limpar de topo nem inline). Os dois roles somados = todos os chips.
-    const multiChips = screen.getAllByRole('button');
+    // O botão DISCLOSURE ("Filtros 🐾") também é um <button>; ele é excluído da
+    // contagem de chips pelo seu nome acessível (aria-label de mostrar/ocultar).
+    const multiChips = screen
+      .getAllByRole('button')
+      .filter((b) => !/filtros de busca/i.test(b.getAttribute('aria-label') || ''));
     expect(multiChips).toHaveLength(MULTI_CHIPS);
     const recencyChips = screen.getAllByRole('radio');
     expect(recencyChips).toHaveLength(PET_RECENCY_OPTIONS.length);
@@ -235,5 +239,69 @@ describe('PetFilterBar — render + a11y do contrato de superfície', () => {
     render(<PetFilterBar filter={EMPTY} total={0} matchCount={0} onToggle={() => {}} onSetRecency={() => {}} onClear={() => {}} />);
     const live = screen.getByRole('status');
     expect(within(live).queryByRole('button')).toBeNull();
+  });
+
+  // ── DISCLOSURE (toggle) — mostrar/ocultar o painel de busca ──
+  // O dono que procura o pet abre/fecha os filtros num toque; fechar PRESERVA o
+  // predicado (só esconde os controles). aria-expanded/aria-controls amarram o
+  // botão ao corpo; o badge avisa quando há faceta ativa com o painel fechado.
+  describe('DISCLOSURE — botão "Filtros" que mostra/oculta o painel', () => {
+    const toggleBtn = () => screen.getByRole('button', { name: /filtros de busca/i });
+
+    it('expanded=false esconde o corpo (hidden) e o botão diz aria-expanded=false', () => {
+      render(<PetFilterBar filter={EMPTY} total={5} matchCount={5} expanded={false} onToggleOpen={() => {}} onToggle={() => {}} onSetRecency={() => {}} onClear={() => {}} />);
+      const btn = toggleBtn();
+      expect(btn.getAttribute('aria-expanded')).toBe('false');
+      const body = document.getElementById('pet-filter-body');
+      expect(body).toBeTruthy();
+      // Corpo MONTADO mas escondido → o estado do filtro sobrevive ao colapsar.
+      expect(body.hidden).toBe(true);
+      // O botão aponta o corpo que controla (a11y disclosure).
+      expect(btn.getAttribute('aria-controls')).toBe('pet-filter-body');
+    });
+
+    it('expanded=true mostra o corpo e o botão diz aria-expanded=true', () => {
+      render(<PetFilterBar filter={EMPTY} total={5} matchCount={5} expanded onToggleOpen={() => {}} onToggle={() => {}} onSetRecency={() => {}} onClear={() => {}} />);
+      expect(toggleBtn().getAttribute('aria-expanded')).toBe('true');
+      expect(document.getElementById('pet-filter-body').hidden).toBe(false);
+    });
+
+    it('tocar o botão chama onToggleOpen (o pai inverte o estado)', () => {
+      const onToggleOpen = vi.fn();
+      render(<PetFilterBar filter={EMPTY} total={5} matchCount={5} expanded={false} onToggleOpen={onToggleOpen} onToggle={() => {}} onSetRecency={() => {}} onClear={() => {}} />);
+      fireEvent.click(toggleBtn());
+      expect(onToggleOpen).toHaveBeenCalledTimes(1);
+    });
+
+    it('sem a prop `expanded` (uso legado) o painel arranca ABERTO — não esconde filtros por engano', () => {
+      render(<PetFilterBar filter={EMPTY} total={5} matchCount={5} onToggle={() => {}} onSetRecency={() => {}} onClear={() => {}} />);
+      expect(toggleBtn().getAttribute('aria-expanded')).toBe('true');
+      expect(document.getElementById('pet-filter-body').hidden).toBe(false);
+    });
+
+    it('o badge de contagem só aparece com faceta ativa (avisa filtros ligados com o painel fechado)', () => {
+      // Sem faceta ativa → sem badge.
+      const { rerender } = render(
+        <PetFilterBar filter={EMPTY} total={5} matchCount={5} expanded={false} onToggleOpen={() => {}} onToggle={() => {}} onSetRecency={() => {}} onClear={() => {}} />,
+      );
+      expect(document.querySelector('.pet-filter__toggle-badge')).toBeNull();
+
+      // Duas facetas ativas (status + cor) → badge mostra "2".
+      rerender(
+        <PetFilterBar
+          filter={{ ...defaultPetFilter(), statuses: [PET_STATUSES[0].id], colors: [PET_COLORS[0].id] }}
+          total={5}
+          matchCount={2}
+          expanded={false}
+          onToggleOpen={() => {}}
+          onToggle={() => {}}
+          onSetRecency={() => {}}
+          onClear={() => {}}
+        />,
+      );
+      const badge = document.querySelector('.pet-filter__toggle-badge');
+      expect(badge).toBeTruthy();
+      expect(badge.textContent).toBe('2');
+    });
   });
 });

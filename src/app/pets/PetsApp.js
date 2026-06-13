@@ -152,6 +152,13 @@ export default function PetsApp() {
   // filtro só reporta toggles e a contagem é derivada por filterPets. Estado
   // inicial = filtro vazio (defaultPetFilter) → todos os pets aparecem.
   const [filter, setFilter] = useState(defaultPetFilter);
+  // DISCLOSURE do filtro — o painel de busca arranca FECHADO atrás do botão
+  // "Filtros 🐾" (Hick: menos ruído no primeiro paint; o dono que só quer olhar
+  // o mapa não leva os cinco grupos de chips na cara). Quem PROCURA o próprio pet
+  // toca o botão e abre os filtros. O estado mora aqui (dono de `filter`); a barra
+  // só reporta o toque. Fechar NÃO limpa o filtro — o painel só some da vista, o
+  // predicado segue ativo (e o badge na contagem do botão avisa).
+  const [filterOpen, setFilterOpen] = useState(false);
   // PET-M12 — relógio para a EXCLUSÃO por idade. Date.now() é IMPURO e não pode
   // rodar no corpo do render (react-hooks/purity), então o relógio entra por um
   // effect/ref — exatamente o que o comentário do nowMs do M7 já prometia. Iniciado
@@ -422,6 +429,9 @@ export default function PetsApp() {
     setFilter((prev) => setPetFilterRecency(prev, daysOrNull));
   }, []);
   const handleClearFilter = useCallback(() => setFilter(defaultPetFilter()), []);
+  // DISCLOSURE — alterna o painel de filtros (mostrar/ocultar). NÃO mexe no
+  // `filter`: ocultar preserva o predicado; só esconde os controles da vista.
+  const handleToggleFilterOpen = useCallback(() => setFilterOpen((open) => !open), []);
 
   // Pets VISÍVEIS no mapa ativo = pets → filtro de facetas (PET-M7) → EXCLUSÃO por
   // idade (PET-M12). A faceta de RECÊNCIA do M7 agora CONSULTA o tempo (matchesRecency
@@ -574,6 +584,8 @@ export default function PetsApp() {
           filter={filter}
           total={pets.length}
           matchCount={visiblePets.length}
+          expanded={filterOpen}
+          onToggleOpen={handleToggleFilterOpen}
           onToggle={handleToggleFilter}
           onSetRecency={handleSetRecency}
           onClear={handleClearFilter}
