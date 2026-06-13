@@ -11,7 +11,7 @@ import './imprensa.css';
 // navigator.clipboard with a manual-selection fallback. Brand voice is
 // dignity-first and anti-surveillance — never savior/pity framing.
 
-const RECIPIENT = 'contato@mapafome.com.br';
+const RECIPIENT = 'dev.rafaelleao+mapafome_imprensa@gmail.com';
 const LAST_UPDATED = 'junho de 2026';
 const CREDIT = 'MAPA FOME / mapafome.com.br';
 
@@ -100,7 +100,7 @@ const BOILERPLATE = [
   {
     id: 'long',
     label: 'Longa (~1 parágrafo)',
-    text: 'O MAPA FOME (mapafome.com.br) é um mapa colaborativo, público, gratuito e anônimo que permite a qualquer pessoa, em três toques, sinalizar alguém em situação de fome para que voluntários por perto levem ajuda em tempo real. A plataforma conecta cidadãos e voluntários de forma direta, sem burocracia e sem intermediário — sem substituir política pública nem as organizações que já atuam no território. Construída com tecnologia livre (React, Material-UI, LeafletJS e Next.js) e conectada a planilhas abertas que a própria comunidade edita e cura, trabalha com dados abertos e em tempo real. Dignidade é inegociável: o MAPA FOME não rastreia indivíduos, não usa pixel, device id nem cookie de retargeting; suas métricas são agregadas apenas por território e tempo. Nascido em Recife, com origem acadêmica no CIn UFPE, está em expansão por todo o Brasil. Como resume o próprio projeto: "Não substitui ninguém. Conecta todo mundo." Slogan: "Um mapa colaborativo. Aberto. Em tempo real."',
+    text: 'O MAPA FOME (mapafome.com.br) é um mapa colaborativo, público, gratuito e anônimo que permite a qualquer pessoa, em três toques, sinalizar alguém em situação de fome para que voluntários por perto levem ajuda em tempo real. A plataforma conecta cidadãos e voluntários de forma direta, sem burocracia e sem intermediário — sem substituir política pública nem as organizações que já atuam no território. Construída com tecnologia livre (React, Material-UI, LeafletJS e Next.js) e conectada a planilhas abertas que a própria comunidade edita e cura, trabalha com dados abertos e em tempo real. Dignidade é inegociável: o MAPA FOME não rastreia indivíduos, não usa pixel, device id nem cookie de retargeting; suas métricas são agregadas apenas por território e tempo. Criado por Rafael Leão, o projeto teve origem em 2022 durante sua graduação em Ciência da Computação no CIn UFPE (formado em 2025, hoje engenheiro de software); nascido em Recife, está em expansão por todo o Brasil. Como resume o próprio projeto: "Não substitui ninguém. Conecta todo mundo." Slogan: "Um mapa colaborativo. Aberto. Em tempo real."',
   },
 ];
 
@@ -109,7 +109,8 @@ const FACTS = [
   ['O que é', 'Mapa colaborativo público, gratuito e anônimo para combater a fome em tempo real. Em três toques, qualquer pessoa mapeia alguém em situação de insegurança alimentar para que voluntários próximos levem ajuda.'],
   ['Como funciona', 'Três toques para mapear um ponto de necessidade; voluntários por perto veem em tempo real e levam ajuda. Dados abertos, editáveis e curados pela comunidade.'],
   ['Quem', 'Iniciativa cívica de código aberto, mantida pela comunidade e por parceiros. Cidadãos reportam, voluntários atendem; o projeto apenas conecta.'],
-  ['Onde / Origem', 'Recife, Brasil (origem acadêmica no CIn UFPE); em expansão por todo o país. Acesso pela web.'],
+  ['Fundador', 'Rafael Leão, criador do MAPA FOME. O projeto teve origem em 2022, durante a graduação em Ciência da Computação no CIn UFPE; formado em 2025, hoje é engenheiro de software.'],
+  ['Onde / Origem', 'Recife, Brasil; origem em 2022 durante a graduação no CIn UFPE; em expansão por todo o país. Acesso pela web.'],
   ['Tecnologia', "App web estático (Next.js, output:'export') com React, Material-UI e LeafletJS, conectado ao Google Sheets para curadoria comunitária. Hospedado no GitHub Pages."],
   ['Privacidade', 'Sem rastreamento individual: nenhum pixel, device id ou cookie de retargeting. Métricas agregadas apenas por território × tempo.'],
   ['Licença / dados', 'Software livre; dados abertos e em tempo real. Ativos de marca liberados para uso editorial e divulgação com crédito (ver Termos de uso dos ativos).'],
@@ -154,6 +155,32 @@ const QUOTES = [
   'A gente mapeia a fome para encurtá-la — nunca para vigiar quem a sente.',
   'Dignidade não se rastreia: nenhum pixel, nenhum cookie, nenhum device id.',
   'Combater a fome não é caridade de cima para baixo — é vizinho conectando vizinho.',
+];
+
+// Press coverage / traction, oldest first. `outlet` + `when` head each item; the
+// optional `href` links the original matéria. Years follow the project's own
+// timeline; the RS-floods coverage spans 2023-2024 across sources.
+const MEDIA = [
+  {
+    outlet: 'TV Globo — Jornal Hoje',
+    when: '2022',
+    text: 'Reportagem em rede nacional logo após o lançamento, em plena pandemia. A repercussão fez a base de usuários crescer em massa.',
+  },
+  {
+    outlet: 'Enchentes do Rio Grande do Sul',
+    when: '2023-2024',
+    text: 'O MAPA FOME foi acionado por moradores e voluntários durante a catástrofe das enchentes no RS, validando o canal de uso emergencial além do cotidiano.',
+  },
+  {
+    outlet: 'CIn / UFPE',
+    when: '20 de maio de 2026',
+    text: 'Nota institucional do Centro de Informática da UFPE sobre os quatro anos de operação e a abertura da frente de captação a parlamentares, gestores públicos, universidades e empresas com agenda ESG.',
+  },
+  {
+    outlet: 'UNIFOR',
+    when: '14 de maio de 2026',
+    text: 'Matéria no Ceará sobre a articulação do projeto no Estado e a visita à Assembleia Legislativa, no contexto da expansão para o Nordeste.',
+  },
 ];
 
 const RELATED = [
@@ -249,9 +276,9 @@ export default function ImprensaPage() {
               O MAPA FOME é um mapa colaborativo, público, gratuito e anônimo. Em três
               toques, qualquer pessoa marca no mapa alguém em situação de fome para que
               voluntários por perto levem ajuda em tempo real. É software livre, com
-              dados abertos, nascido em Recife (origem acadêmica no CIn UFPE) e em
-              expansão pelo Brasil. Princípio inegociável: ajudamos pessoas, não
-              vigiamos pessoas.
+              dados abertos, nascido em Recife, com origem em 2022 durante a graduação em
+              Ciência da Computação no CIn UFPE, e em expansão pelo Brasil. Princípio
+              inegociável: ajudamos pessoas, não vigiamos pessoas.
             </p>
             <p className="mdf-press__framing">
               Sugestão de enquadramento: tecnologia cívica e solidariedade entre
@@ -438,6 +465,22 @@ export default function ImprensaPage() {
           Pode usar com ou sem atribuição. Se atribuir: “— MAPA FOME”. Para citar uma
           pessoa nominalmente, fale com a gente.
         </p>
+      </section>
+
+      {/* Press coverage / traction */}
+      <section className="mdf-press__section" aria-labelledby="h-midia">
+        <h2 id="h-midia">Na mídia</h2>
+        <p>
+          Quatro anos de operação contínua, do cotidiano à calamidade. Para entrevista
+          ou um dado atualizado, fale com a gente.
+        </p>
+        <ul className="mdf-press__refusals">
+          {MEDIA.map((m) => (
+            <li key={m.outlet}>
+              <strong>{m.outlet} ({m.when}).</strong> {m.text}
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Related links */}
