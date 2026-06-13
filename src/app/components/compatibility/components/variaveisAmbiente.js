@@ -1,27 +1,38 @@
+// INTL M1 — this module is a PURE POJO with ~10 unrelated importers, so it must
+// NOT import countryStore/intlConfig (§4.2: that would inject a localStorage
+// singleton + a build flag into 10 unrelated modules and make dentroLimites
+// depend on global state/time). It DOES import the PURE predicate isInsideCountry
+// (countries.js is a leaf with zero store/flag imports — safe, no cycle), and it
+// learns WHICH country is active through a single INJECTED accessor wired by the
+// composition root (App.componentDidMount → setActiveCountryResolver). Default:
+// when nothing is injected the resolver returns 'br', so unit tests and SSR get
+// Brazil — i.e. the legacy two-rectangle behavior, byte-identical to today.
+import { isInsideCountry } from './countries';
+
+// The single injected accessor. Defaults to Brazil so the POJO is correct with
+// zero wiring (tests / SSR / pre-bootstrap). The bootstrap replaces it with one
+// that resolves INTL_ENABLED ? getSelectedCountry() : 'br' (see geofence.js).
+let activeCountryResolver = () => 'br';
+
+// Composition-root seam: wire how the POJO learns the active country WITHOUT a
+// hard import of the store/flag (§4.2). Idempotent and reversible (pass the
+// default back to restore Brazil-only).
+export function setActiveCountryResolver(fn) {
+    activeCountryResolver = typeof fn === 'function' ? fn : (() => 'br');
+}
+
 const envVariables = {
-    "mapArea": {
-        "teto":2.20,
-        "chao":-14.09,
-        "paredeEsquerda":-52.42,
-        "paredeDireita":-34.32
-    },
+    // NOTE (INTL M1): the former `mapArea` rect1 constant was removed — it had
+    // ZERO readers outside the old dentroLimites body (grep confirmed), whose
+    // numbers now live in countries.COUNTRY_PUBLISH_BOUNDS.br[0] as the SOT.
     "lastMarked":undefined,
+    // INTL M1 — delegates to the single country-aware predicate, keeping the
+    // (coords) => boolean signature so the 4 callsites are unchanged in shape.
+    // The active country comes from the injected resolver (default 'br'); with
+    // the INTL flag OFF the resolver yields 'br' and isInsideCountry('br', …)
+    // reproduces the legacy two-rectangle OR bit-for-bit (M0 net / D5 / §4.0).
     "dentroLimites": (localizacao) => {
-        let permissao = false;
-        permissao = 
-            //cima baixo
-            (localizacao[0]< envVariables.mapArea.teto && localizacao[0] > envVariables.mapArea.chao
-            &&
-            //esquerda direita
-            localizacao[1]>envVariables.mapArea.paredeEsquerda && localizacao[1] < envVariables.mapArea.paredeDireita        
-            ) || (
-              //cima baixo
-              localizacao[0]<-14.18 && localizacao[0] > -32.66
-              &&
-              //esquerda direita
-              localizacao[1]>-55.55 && localizacao[1] < -38.06        
-            );
-        return permissao;
+        return isInsideCountry(localizacao, activeCountryResolver());
     },
     "telefoneFilter":false,
     "distanceInKmBetweenEarthCoordinates": ( lat1, lon1, lat2, lon2 ) => {

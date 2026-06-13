@@ -28,7 +28,10 @@ import { enqueue as enqueuePublish, bindOnlineFlush, queueSize } from './compone
 //call to action content creators
 import CreatorsMapaFome from './components/CreatorsMapaFome.js'
 
-import envVariables from './components/variaveisAmbiente';
+import envVariables, { setActiveCountryResolver } from './components/variaveisAmbiente';
+import { activeCountryFor } from './components/geofence';
+import * as countryStore from './components/countryStore';
+import { INTL_ENABLED } from './components/intlConfig';
 
 import qr from './images/qr.svg';
 
@@ -535,6 +538,15 @@ class App extends Component {
   }
 
   componentDidMount() {
+
+    // INTL M1 (§4.2) — composition root: wire the POJO's injected country
+    // accessor here (client-only, after mount, where window/localStorage exist).
+    // variaveisAmbiente stays import-free of the store/flag; it learns the active
+    // publish country through this single resolver. With INTL_ENABLED OFF (the
+    // dark-ship default) activeCountryFor returns 'br', so dentroLimites is
+    // byte-identical to today. This is the only place the store+flag meet the
+    // pure POJO.
+    setActiveCountryResolver(() => activeCountryFor(INTL_ENABLED, countryStore));
 
     // M2 — tick once a minute so the context bar and marker urgency re-derive
     // without any backend push. Client clock is the source of truth here; a

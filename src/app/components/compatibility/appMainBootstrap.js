@@ -6,6 +6,8 @@
 // their module-level collaborators (doc, envVariables, aes, sheetsGetSheet) as
 // explicit arguments so the file remains a pure function of its inputs.
 
+import { isInsideCountry } from './components/countries';
+
 // Loads the Google Sheet, decrypts/flattens each row's Dados blob into the row
 // object, and pushes the result into the component state. Called once geolocation
 // resolves (success or failure) so the map has data to render.
@@ -35,8 +37,21 @@ export function runMain(self, deps) {
       -38.0566406, -32.8426736
     */
     //limitar regiao
+    // INTL M1 (§4.3, ARCH-1-solone): this is a READ/LOAD-gate + sheet-region
+    // router, NOT a publish write-gate. It must stay DECOUPLED from the
+    // country-aware publish geofence: otherwise, with the INTL flag ON and a
+    // non-BR country selected, the BR default map-center would be judged against
+    // the wrong country and the app would REFUSE TO LOAD (the regression §4.3
+    // forbids). So we evaluate the load-gate against Brazil EXPLICITLY via the
+    // pure isInsideCountry('br', …) — NOT envVariables.dentroLimites (which now
+    // tracks the active publish country). With the flag OFF this is identical to
+    // today (dentroLimites resolved to 'br' too). Region routing itself stays
+    // single-sheet (regiao=0) for M1; the real per-country read-back attribution
+    // (Dados.Pais stamping + read-back filter) is deferred to §4.6.1/M2.5 — see
+    // the deferred note in the M1 report. Do NOT couple this gate to the active
+    // country here.
     let regiao;
-    if (envVariables.dentroLimites(self.state.center)) {
+    if (isInsideCountry(self.state.center, 'br')) {
       regiao = 0;
     }
     else {

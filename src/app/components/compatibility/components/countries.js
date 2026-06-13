@@ -86,6 +86,55 @@ export const COUNTRY_BOUNDS = {
 
 export const DEFAULT_COUNTRY = 'br';
 
+// ── INTL M1 — publish geofence bounds (DISTINCT from the search viewport above) ──
+//
+// COUNTRY_BOUNDS (above) is the SEARCH VIEWPORT: a single [NORTH, SOUTH] corner
+// pair consumed by getCountry().bounds / SearchField.buildCountryProvider. It is
+// NOT the publish geofence and must not be conflated with it (INTERNATIONAL_PLAN
+// §4.0 / §4.6: the viewport's role stays separate).
+//
+// The PUBLISH geofence is a SET of rectangles per country. Brazil's publish shape
+// is the TWO rectangles historically hard-coded in variaveisAmbiente.dentroLimites
+// (NOT the viewport, NOT BR_BBOX). Representing Brazil as exactly these two rects,
+// with the SAME strict (< / >) comparison semantics, makes
+// isInsideCountry(coords, 'br') reproduce the legacy dentroLimites(coords) output
+// bit-for-bit — the dark-ship invariant the M0 characterization net (D5/§4.0)
+// proves. A rectangle is { N, S, W, E } (lat upper/lower, lng west/east).
+//
+// M2 populates this map with the curated launch subset (D4). Until then only 'br'
+// has a publish shape; isInsideCountry returns false for any country without one
+// (D6: no bounds → blocked, never "allow without clamp"). M2 folds this into the
+// COUNTRY_BOUNDS SOT (§4.6 row 1); kept separate here so M1 does not corrupt the
+// viewport corner-pair shape its existing consumers read.
+export const COUNTRY_PUBLISH_BOUNDS = {
+  // Brazil: rect1 (wider-north) OR rect2 (lower-west). Verbatim from
+  // variaveisAmbiente.dentroLimites:13-22, frozen by the M0 net (RECT1/RECT2).
+  br: [
+    { N: 2.20, S: -14.09, W: -52.42, E: -34.32 }, // rect1
+    { N: -14.18, S: -32.66, W: -55.55, E: -38.06 }, // rect2
+  ],
+};
+
+// isInsideCountry(coords, code) — PURE publish-geofence predicate. Reads ONLY
+// COUNTRY_PUBLISH_BOUNDS (no countryStore, no intlConfig — country resolution is
+// the consumer's job, §4.1/§4.2/ARCH-5: countryStore already imports this module,
+// so a reverse import would risk a temporal-dead-zone cycle). `code` is always
+// explicit. coords is [lat, lng]. A point is inside iff it falls strictly within
+// ANY of the country's rectangles (OR-union), matching dentroLimites' strict
+// edges: a point exactly ON an edge is REJECTED.
+export function isInsideCountry(coords, code) {
+  if (!Array.isArray(coords) || coords.length < 2) return false;
+  const cc = typeof code === 'string' ? code.trim().toLowerCase() : '';
+  const rects = COUNTRY_PUBLISH_BOUNDS[cc];
+  if (!Array.isArray(rects)) return false; // no publish shape → blocked (D6)
+  const lat = coords[0];
+  const lng = coords[1];
+  for (const r of rects) {
+    if (lat < r.N && lat > r.S && lng > r.W && lng < r.E) return true;
+  }
+  return false;
+}
+
 // flagEmoji('br') -> 🇧🇷. A two-letter code maps to two Unicode regional-
 // indicator symbols (A..Z -> U+1F1E6..U+1F1FF). Returns a globe for any input
 // that is not exactly two A-Z letters, so a bad code never renders blank.
