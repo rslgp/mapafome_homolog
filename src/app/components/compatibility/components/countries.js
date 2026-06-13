@@ -139,15 +139,23 @@ export const COUNTRY_PUBLISH_BOUNDS = {
     { N: -14.18, S: -32.66, W: -55.55, E: -38.06 }, // rect2
   ],
 
-  // ── INTL M2 — curated launch-country subset (D4 / §4.4 / §5 M2a) ──
+  // ── INTL M2 / M4.5 — curated launch-country subset (D4 / §4.4 / §5 M2a) ──
   //
-  // [Inference] These are LAUNCH-APPROXIMATE mainland bounding boxes, hand-
-  // picked to be SANE (no ocean-only box, no Antarctica) but deliberately rough.
-  // They are NOT coast-tightened — M4.5 (DATA-3) tightens the offshore margins.
+  // [Inference] These are LAUNCH-APPROXIMATE bounding boxes, hand-picked to be
+  // SANE (no ocean-only box, no Antarctica). M4.5 (DATA-3) HAND-TIGHTENED them to
+  // hug coastlines better than the original M2 boxes — pulling the Atlantic /
+  // Pacific / Mediterranean edges in toward the mainland coast so a single box
+  // admits far less open sea. They are STILL APPROXIMATE rectangles, NOT
+  // surveyor-precise polygons: a box can never perfectly hug a coast, so a pin in
+  // a coastal bay or just offshore inside the rectangle still passes the bbox. The
+  // reverse-geocode guard (reverseGeocodeGuard.js, M4.5) is the second, best-effort
+  // hygiene layer for that residual; it REDUCES but does NOT eliminate ocean pins,
+  // and is hygiene not security (R6: client validation is bypassable anyway).
+  //
   // Shape matches Brazil's: { N, S, W, E } with the SAME strict (< / >) edges
   // isInsideCountry enforces. A box can be multi-rectangle (an array of rects)
-  // when a single box would be absurd (e.g. the continental US is split so the
-  // box does not swallow the whole mid-Atlantic + mid-Pacific).
+  // when a single rectangle would swallow a lot of open sea (e.g. Italy is split
+  // mainland+Sicily vs Sardinia so the box does not engulf the whole Tyrrhenian).
   //
   // FAR-FLUNG TERRITORY POLICY (launch): mainland box ONLY. Where a country has
   // non-contiguous territory it is EXCLUDED for now and called out inline:
@@ -161,27 +169,33 @@ export const COUNTRY_PUBLISH_BOUNDS = {
   // namespace from the 'es' UI-locale code used by the i18n layer. Do not conflate.
 
   // Iberia / Western Europe
-  pt: [{ N: 42.20, S: 36.90, W: -9.60, E: -6.15 }], // mainland Portugal (Azores/Madeira excluded)
-  es: [{ N: 43.85, S: 36.00, W: -9.40, E: 3.40 }], // mainland Spain (Canary Is. excluded by box)
-  fr: [{ N: 51.15, S: 41.30, W: -5.20, E: 9.70 }], // metropolitan France (overseas excluded)
-  de: [{ N: 55.10, S: 47.20, W: 5.85, E: 15.05 }], // Germany
-  it: [{ N: 47.10, S: 36.60, W: 6.60, E: 18.55 }], // Italy (incl. Sicily/Sardinia, in-box)
-  gb: [{ N: 60.90, S: 49.85, W: -8.70, E: 1.80 }], // United Kingdom (GB + NI)
+  pt: [{ N: 42.15, S: 36.95, W: -9.52, E: -6.19 }], // mainland Portugal — W pulled off the Atlantic to Cabo da Roca (Azores/Madeira excluded)
+  es: [{ N: 43.80, S: 36.00, W: -9.32, E: 3.34 }], // mainland Spain — W off the Atlantic, E off the Med past Cap de Creus (Canary Is. excluded)
+  fr: [{ N: 51.10, S: 41.35, W: -5.15, E: 9.66 }], // metropolitan France — W off the Bay of Biscay, E hugs the Côte d'Azur/Corsica (overseas excluded)
+  de: [{ N: 55.06, S: 47.27, W: 5.87, E: 15.04 }], // Germany — N pulled off the North/Baltic Sea to the Sylt coast
+  it: [
+    // Italy split so a single box does not swallow the Ligurian/Tyrrhenian/Ionian
+    // open sea. rect1 = peninsular mainland + Sicily; rect2 = Sardinia.
+    { N: 47.10, S: 36.60, W: 8.40, E: 18.55 }, // mainland + Sicily (W pulled in off the Ligurian Sea + Corsica)
+    { N: 41.30, S: 38.82, W: 8.10, E: 9.86 }, // Sardinia
+  ],
+  gb: [{ N: 60.90, S: 49.86, W: -8.20, E: 1.78 }], // United Kingdom (GB + NI) — W pulled in off the Atlantic to the NI/Donegal-facing coast
 
   // South America (launch demand)
-  ar: [{ N: -21.75, S: -55.10, W: -73.60, E: -53.60 }], // Argentina (incl. Tierra del Fuego)
-  uy: [{ N: -30.05, S: -35.05, W: -58.50, E: -53.05 }], // Uruguay
-  py: [{ N: -19.25, S: -27.65, W: -62.70, E: -54.20 }], // Paraguay
-  cl: [{ N: -17.45, S: -56.00, W: -75.80, E: -66.30 }], // Chile (long-thin mainland)
-  co: [{ N: 13.55, S: -4.30, W: -79.10, E: -66.80 }], // Colombia
-  pe: [{ N: 0.10, S: -18.40, W: -81.40, E: -68.60 }], // Peru
-  bo: [{ N: -9.60, S: -22.95, W: -69.70, E: -57.40 }], // Bolivia
+  ar: [{ N: -21.75, S: -55.10, W: -73.60, E: -53.62 }], // Argentina (incl. Tierra del Fuego) — E off the South Atlantic
+  uy: [{ N: -30.08, S: -35.05, W: -58.48, E: -53.08 }], // Uruguay — E off the Atlantic to Barra del Chuy
+  py: [{ N: -19.25, S: -27.65, W: -62.70, E: -54.20 }], // Paraguay (landlocked — no ocean to trim)
+  cl: [{ N: -17.45, S: -56.00, W: -75.72, E: -66.30 }], // Chile (long-thin mainland) — W off the Pacific to the Taitao peninsula
+  co: [{ N: 13.52, S: -4.30, W: -79.06, E: -66.80 }], // Colombia — W off the Pacific
+  pe: [{ N: 0.10, S: -18.40, W: -81.36, E: -68.60 }], // Peru — W off the Pacific to Punta Pariñas
+  bo: [{ N: -9.60, S: -22.95, W: -69.70, E: -57.40 }], // Bolivia (landlocked — no ocean to trim)
 
   // North America
-  ca: [{ N: 83.20, S: 41.60, W: -141.10, E: -52.50 }], // Canada
+  ca: [{ N: 83.15, S: 41.66, W: -141.05, E: -52.58 }], // Canada — edges nudged toward the mainland extremes
   us: [
     // Contiguous lower-48 (Alaska + Hawaii EXCLUDED — far-flung, launch scope).
-    { N: 49.40, S: 24.40, W: -125.10, E: -66.90 },
+    // W pulled off the Pacific to Cape Alava, E to West Quoddy Head, S to Key West.
+    { N: 49.38, S: 24.46, W: -124.79, E: -66.93 },
   ],
 };
 

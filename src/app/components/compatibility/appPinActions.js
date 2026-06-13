@@ -212,7 +212,25 @@ export async function writePinToSheets(self, deps, { coords, categories, detail,
 // `(async function main(self){ ... })(this)`. `latlng` is passed in because it
 // was a closure variable computed by the synchronous prelude.
 export async function publishPinFromMap(self, deps, latlng) {
-    const { envVariables } = deps;
+    const { envVariables, offshoreGuard } = deps;
+
+    // INTL M4.5 (DATA-3): offshore-integrity guard. The bbox upstream
+    // (handleClickMap's dentroLimites check) already gated this pin to the
+    // selected country's RECTANGLE, but a rectangle still admits open ocean
+    // inside it (e.g. a pin 200 km off the coast). Since FOOD has no Layer-B
+    // barricade (DATA-1), reverse-geocode the pin via Nominatim (the same OSM
+    // service the search uses) and reject a CONFIDENT country mismatch.
+    //
+    // INTL-ONLY + FAIL-OPEN: offshoreGuard is only present in deps when
+    // INTL_ENABLED (the composition root omits it when the flag is OFF), so the
+    // Brazil/dark-ship path is byte-identical to today. The guard throws ONLY on a
+    // confident country mismatch; ocean / network failure / throttle all RESOLVE
+    // (allow) — a Nominatim hiccup must never cost a legitimate publish. This is
+    // data HYGIENE, not security (R6: client validation is bypassable anyway).
+    if (typeof offshoreGuard === 'function') {
+        await offshoreGuard(latlng);
+    }
+
     // Auth + loadInfo + worksheet handle now come from sheetsClient.getSheet(0)
     // (the single auth/loadInfo entry point); regiao 0 preserved as sheet idx 0.
     const sheet = await getSheet(0);

@@ -33,6 +33,7 @@ import { activeCountryFor } from './components/geofence';
 import { getCountry } from './components/countries';
 import * as countryStore from './components/countryStore';
 import { INTL_ENABLED } from './components/intlConfig';
+import { assertPublishCountryMatches } from './components/reverseGeocodeGuard';
 
 import qr from './images/qr.svg';
 
@@ -70,6 +71,22 @@ function outOfCountryMessage() {
   const code = activeCountryFor(INTL_ENABLED, countryStore);
   const name = getCountry(code).name;
   return t('errors.out_of_country').replace('{pais}', name);
+}
+
+// INTL M4.5 (DATA-3): the offshore reverse-geocode guard is wired into the pin
+// deps ONLY when the INTL flag is ON, so the dark-ship / Brazil path is byte-
+// identical to today (with OFF this returns {} and publishPinFromMap skips the
+// guard entirely). The closure resolves the active country at PUBLISH time (not
+// at construction), so it tracks a flag-control country change; it is the SAME
+// country publish is gated to (activeCountryFor(INTL_ENABLED, countryStore)).
+// assertPublishCountryMatches fails open on ocean/network/throttle (hygiene, not
+// security — R6: client validation is bypassable anyway).
+function intlPinGuardDeps() {
+  if (!INTL_ENABLED) return {};
+  return {
+    offshoreGuard: (coords) =>
+      assertPublishCountryMatches(coords, activeCountryFor(INTL_ENABLED, countryStore)),
+  };
 }
 
 // Google Analytics
@@ -187,6 +204,9 @@ class App extends Component {
       envVariables, EXPIRE_DAY,
       sheetsAppendRow, updatePinDadosByCoords, trackError,
       getCookie, setCookie, coordsFromPin,
+      // INTL M4.5 (DATA-3) offshore guard — present only when INTL is ON (see
+      // intlPinGuardDeps); OFF → {} so the Brazil path is byte-identical to today.
+      ...intlPinGuardDeps(),
     };
   }
 
