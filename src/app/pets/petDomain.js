@@ -4,6 +4,22 @@
 // vive AQUI e em nenhum outro lugar. Nunca escreva a string 'perdido' (ou qualquer
 // id/label) hardcoded em outro arquivo — importe da lista/mapa deste módulo.
 //
+// ─── ESTRUTURA (PET-M: split FF1) ────────────────────────────────────────────
+// Este módulo cresceu além do limite FF1 (1000 LOC) e foi dividido em quatro peças
+// numa DAG limpa (sem ciclos), mantendo a API PÚBLICA IDÊNTICA: este arquivo é o
+// BARREL — re-exporta tudo que não define mais, então todo `import { X } from
+// './petDomain'` (app E testes) segue funcionando sem nenhuma edição no chamador.
+//   • petTaxonomy.js     — CAMADA-FOLHA: constantes/validadores SOT + cor + as
+//       primitivas compartilhadas (MS_PER_DAY/isFiniteCoordPair/haversineKm) + os
+//       predicados de ciclo de vida por idade/resolução (PET-M2/M12) de que o
+//       match precisa. Não importa nenhum outro módulo de pet.
+//   • petFilterDomain.js — PET-M7: estado do filtro + predicado puro. → petTaxonomy.
+//   • petMatch.js        — PET-M9b match + PET-M12b de-dup. → petTaxonomy.
+//   • petDomain.js (este)— o REMANESCENTE: parse/build do blob, higiene de texto
+//       livre, motivo de fechamento, falha+throttle de publicação, identidade por
+//       coords + deep link, flag de denúncia, exclusão por idade (wrappers M12) e
+//       distância+ordenação da lista (M8). → petTaxonomy. E re-exporta os 3 acima.
+//
 // Disciplina de fronteira (v5 § defensive_programming.barricade_pattern):
 //   • buildPetDados é PURA: valida, mas NÃO carimba data nem chama Date.now() —
 //     quem chama (petsData.publishPet) injeta `dateIso`. Mantém o módulo testável
@@ -16,411 +32,68 @@
 // invisíveis a todas as superfícies de fome (ver análise no PetMarkers/relatório).
 
 import { t } from '../components/compatibility/components/ux/strings';
+import {
+  PET_KIND,
+  isPetRow,
+  isValidStatus,
+  isFiniteCoordPair,
+  haversineKm,
+  PET_RESOLVED_AT_KEY,
+  PET_FRESHNESS_AT_KEY,
+  isPetArchivedByAge,
+  PET_ARCHIVE_WINDOW_DAYS,
+} from './petTaxonomy';
 
-export const PET_KIND = 'pet';
-
-// Status do pet. id = chave estável (vai pra planilha); icon = glifo de fallback;
-// colorVar = nome da CSS var (definida em petPalette.css). PET-M23: label/hint NÃO
-// são mais strings inline — resolvem via t('pets.status.<id>.label|hint') no idioma
-// ATIVO (getters reavaliam a cada acesso). O id continua sendo a SOT; a CÓPIA mora
-// em strings.js. Quem lê s.label/s.hint (UI ou teste-fixture em pt-BR) recebe o
-// texto traduzido do idioma corrente.
-function withLabelHint(entry, labelKey, hintKey) {
-  const props = { label: { enumerable: true, get: () => t(labelKey) } };
-  if (hintKey) props.hint = { enumerable: true, get: () => t(hintKey) };
-  return Object.defineProperties({ ...entry }, props);
-}
-
-export const PET_STATUSES = [
-  withLabelHint({ id: 'perdido',    icon: '😿', colorVar: '--pet-perdido' },    'pets.status.perdido.label',    'pets.status.perdido.hint'),
-  withLabelHint({ id: 'encontrado', icon: '🏠', colorVar: '--pet-encontrado' }, 'pets.status.encontrado.label', 'pets.status.encontrado.hint'),
-  withLabelHint({ id: 'avistado',   icon: '👀', colorVar: '--pet-avistado' },   'pets.status.avistado.label',   'pets.status.avistado.hint'),
-];
-
-// id → entrada, para lookup O(1) (v5 § replace_conditional_with_lookup).
-export const PET_STATUS_MAP = PET_STATUSES.reduce((map, s) => {
-  map[s.id] = s;
-  return map;
-}, {});
-
-export const PET_SPECIES = [
-  withLabelHint({ id: 'cao',   icon: '🐕' }, 'pets.species.cao.label'),
-  withLabelHint({ id: 'gato',  icon: '🐈' }, 'pets.species.gato.label'),
-  withLabelHint({ id: 'outro', icon: '🐾' }, 'pets.species.outro.label'),
-];
-
-export const PET_SIZES = [
-  withLabelHint({ id: 'pequeno' }, 'pets.size.pequeno.label'),
-  withLabelHint({ id: 'medio' },   'pets.size.medio.label'),
-  withLabelHint({ id: 'grande' },  'pets.size.grande.label'),
-];
-
-// ─── COR — BUCKETS canônicos (SOT) ───────────────────────────────────────────
-// Decisão do game-designer (NÃO reabrir): a COR é um CHIP de bucket FECHADO, não
-// texto livre. O dono ESCREVE a cor em texto livre (`pet.color`, ex.: "caramelo
-// claro", "pretinho", "tigrado") — mas quem PROCURA filtra por um conjunto
-// pequeno e estável de baldes ("preto", "caramelo", ...). Esta lista é a verdade
-// ÚNICA dos baldes; a UI itera ela pra desenhar os chips (igual faz com
-// PET_STATUSES/PET_SPECIES/PET_SIZES) e o normalizePetColorToBucket() abaixo
-// mapeia o texto livre armazenado pra um destes ids. Os labels NÃO são inline:
-// resolvem via t('pets.color.<id>.label') no idioma ativo (o agente de UI/i18n
-// preenche as strings em strings.js — aqui só declaramos as CHAVES, espelhando o
-// padrão dos outros SOTs). 'outro' é o balde-âncora: todo texto que não casa
-// nenhum bucket específico (e o vazio) cai aqui — nunca "sem cor", para o filtro
-// permanecer total e honesto.
-export const PET_COLORS = [
-  withLabelHint({ id: 'preto' },    'pets.color.preto.label'),
-  withLabelHint({ id: 'branco' },   'pets.color.branco.label'),
-  withLabelHint({ id: 'caramelo' }, 'pets.color.caramelo.label'),
-  withLabelHint({ id: 'marrom' },   'pets.color.marrom.label'),
-  withLabelHint({ id: 'cinza' },    'pets.color.cinza.label'),
-  withLabelHint({ id: 'rajado' },   'pets.color.rajado.label'),
-  withLabelHint({ id: 'claro' },    'pets.color.claro.label'),
-  withLabelHint({ id: 'outro' },    'pets.color.outro.label'),
-];
-
-// ─── RECÊNCIA — opções de janela (SOT, SINGLE-SELECT) ────────────────────────
-// Decisão do game-designer (NÃO reabrir): recência é um eixo ÚNICO. 7 ⊂ 30 ⊂ 90
-// dias são ANINHADOS — multi-seleção não teria significado ("≤7 OU ≤30" é só
-// "≤30"). Por isso o estado NÃO é um array de toggle como as outras facetas: é um
-// valor único `recencyDays` (number) ou `null` (= sem restrição, o DEFAULT).
-//
-// LIMITE de coerência com o mapa ativo: os baldes (7/30/90) são SUBCONJUNTOS da
-// janela de arquivo (PET_ARCHIVE_WINDOW_DAYS = 90, definida abaixo). Todos ≤ 90 →
-// nenhum balde pede um pet que o mapa ativo já teria escondido por idade (PET-M12),
-// então a recência só ESTREITA o que já está visível, nunca contradiz/excede o
-// arquivo. Se um dia o arquivo encolher abaixo de 90, o maior balde aqui precisa
-// encolher junto (por isso a referência explícita à constante na doc, não um 90
-// mágico solto). PET_MATCH_DEFAULTS.windowDays (30) já citava este staircase.
-export const PET_RECENCY_OPTIONS = [
-  withLabelHint({ id: '7',  days: 7  }, 'pets.recency.7.label'),
-  withLabelHint({ id: '30', days: 30 }, 'pets.recency.30.label'),
-  withLabelHint({ id: '90', days: 90 }, 'pets.recency.90.label'),
-];
-
-// id → entrada, lookup O(1) (espelha PET_STATUS_MAP; v5 § replace_conditional_
-// with_lookup). A UI lê o `days` de um id selecionado por aqui sem varrer a lista.
-export const PET_RECENCY_MAP = PET_RECENCY_OPTIONS.reduce((map, r) => {
-  map[r.id] = r;
-  return map;
-}, {});
-
-// Conjuntos de ids válidos — montados a partir das listas acima (sem duplicar a
-// verdade; se a lista muda, os validadores acompanham automaticamente).
-const STATUS_IDS  = new Set(PET_STATUSES.map((s) => s.id));
-const SPECIES_IDS = new Set(PET_SPECIES.map((s) => s.id));
-const SIZE_IDS    = new Set(PET_SIZES.map((s) => s.id));
-const COLOR_IDS   = new Set(PET_COLORS.map((c) => c.id));
-
-// Ms por dia — fator de conversão local (evita o número mágico 86400000 espalhado).
-// Declarado AQUI, no topo, porque agora tem consumidores ACIMA do bloco PET-M12
-// (matchesRecency, na faceta de recência do filtro) além dos de baixo (petAgeDays,
-// timeStrength, isNearDuplicate). Uma constante deve ser declarada antes de QUALQUER
-// referência em ordem de fonte — espelha a disciplina "locais no topo" do playbook
-// (evita o footgun de TDZ/ordem-de-declaração).
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-// Discrimina uma linha de pet pelo campo `kind`. É o único critério que torna a
-// linha visível ao /pets e invisível ao /fome.
-export function isPetRow(dados) {
-  return Boolean(dados && dados.kind === PET_KIND);
-}
-
-export function isValidStatus(id) {
-  return STATUS_IDS.has(id);
-}
-
-export function isValidSpecies(id) {
-  return SPECIES_IDS.has(id);
-}
-
-export function isValidSize(id) {
-  return SIZE_IDS.has(id);
-}
-
-// Um id de COR-BUCKET é válido (está na SOT PET_COLORS)? Defensivo, PURO. Usado
-// pelo filtro de cor para descartar ids-lixo numa faceta antes de comparar.
-export function isValidColor(id) {
-  return COLOR_IDS.has(id);
-}
-
-// ─── COR — normalizador de TEXTO LIVRE → BUCKET (PURO, nunca lança) ───────────
-// O campo `pet.color` é TEXTO LIVRE (sanitizado, mas acento/caixa/grafia variam:
-// "Caramelo", "caramelado", "pretinho", "tigrado"). O chip de filtro, porém,
-// trabalha com os baldes FECHADOS de PET_COLORS. Esta função é a PONTE: mapeia
-// uma string de cor crua para UM id de bucket, casando por palavra-chave de forma
-// insensível a acento e caixa (substring após normalizar). Determinística e PURA
-// (sem Date.now()/locale-dependente). NUNCA lança: entrada não-string/vazia/sem
-// casamento → 'outro' (o balde-âncora; nunca null/throw — o filtro precisa de um
-// id sempre).
-//
-// TABELA DE MAPEAMENTO (palavra-chave normalizada → bucket). A ORDEM importa:
-// a 1ª palavra-chave que casa (por substring) vence, então a tabela vai do mais
-// ESPECÍFICO/dominante para o mais GENÉRICO/fraco:
-//   1. 'rajado' PRIMEIRO — é um PADRÃO, não uma cor sólida; quando aparece, domina
-//      a percepção ("gato rajado preto" é rajado, não preto). Avaliá-lo antes das
-//      cores sólidas evita que "preto"/"branco" no meio da frase o sequestrem.
-//   2. as cores SÓLIDAS (preto/branco/caramelo/marrom/cinza) no meio.
-//   3. 'claro' por ÚLTIMO antes de 'outro' — é o balde mais genérico/fraco, só
-//      vence quando NENHUMA cor concreta apareceu ("marrom claro" → 'marrom', a cor
-//      dominante; "caramelo claro" → 'caramelo'; só "claro" sozinho → 'claro').
-// Sem casamento → 'outro'.
-const COLOR_KEYWORD_BUCKETS = [
-  // bucket 'rajado' — PADRÃO (tigrado/malhado/listrado/manchado/tricolor): PRIMEIRO,
-  //   o padrão domina a cor sólida que possa aparecer junto na mesma string.
-  { bucket: 'rajado',   keywords: ['rajado', 'rajada', 'tigrado', 'tigrada', 'malhado', 'malhada', 'listrado', 'listrada', 'manchado', 'manchada', 'tricolor', 'mesclado', 'mesclada', 'escaminha'] },
-  // bucket 'preto' — preto/pretinho/negro/dark.
-  { bucket: 'preto',    keywords: ['preto', 'pretinho', 'preta', 'negro', 'negra', 'dark'] },
-  // bucket 'branco' — branco/branquinho/albino.
-  { bucket: 'branco',   keywords: ['branco', 'branca', 'branquinho', 'branquinha', 'albino'] },
-  // bucket 'caramelo' — caramelo/caramelado/dourado/amarelo/laranja/ruivo/mel/bege.
-  { bucket: 'caramelo', keywords: ['caramelo', 'caramelado', 'caramelada', 'dourado', 'dourada', 'amarelo', 'amarela', 'laranja', 'ruivo', 'ruiva', 'mel', 'bege', 'loiro', 'loira'] },
-  // bucket 'marrom' — marrom/castanho/chocolate/cafe.
-  { bucket: 'marrom',   keywords: ['marrom', 'castanho', 'castanha', 'chocolate', 'cafe', 'marron'] },
-  // bucket 'cinza' — cinza/cinzento/grafite/prata/gray/grey.
-  { bucket: 'cinza',    keywords: ['cinza', 'cinzento', 'cinzenta', 'grafite', 'prata', 'prateado', 'gray', 'grey'] },
-  // bucket 'claro' — genérico/fraco (claro/clarinho), só vence se nada concreto casou.
-  { bucket: 'claro',    keywords: ['claro', 'clara', 'clarinho', 'clarinha'] },
-];
-
-// Normaliza uma string para casamento de palavra-chave: minúsculas + remoção de
-// diacríticos (NFD + strip da faixa combinante U+0300–U+036F). PURO. Defensivo:
-// não-string/null → ''. Espelha a disciplina Unicode-safe do sanitizeFreeText
-// (acento NUNCA corrompe pt-BR — aqui só o REMOVEMOS para comparar, sem alterar o
-// dado armazenado). normalize('NFD') é padrão ECMAScript (browser E Node).
-function normalizeColorText(raw) {
-  return String(raw == null ? '' : raw)
-    .toLowerCase()
-    .normalize('NFD')
-    // Remove a FAIXA de diacríticos combinantes (U+0300–U+036F) que o NFD separou
-    // da letra-base — escape unicode explícito (não um literal combinante no
-    // source, que seria invisível/frágil). Assim "ç"→"c", "ã"→"a", "é"→"e".
-    .replace(/[\u0300-\u036f]/g, '');
-}
-
-// Mapeia um texto livre de cor → id de bucket de PET_COLORS. PURO, nunca lança.
-// Empty/desconhecido → 'outro'. Acento/caixa-insensível por construção (via
-// normalizeColorText). 1ª palavra-chave que casa (por substring) vence — a ordem
-// de COLOR_KEYWORD_BUCKETS codifica a precedência (cor dominante > 'claro' fraco).
-export function normalizePetColorToBucket(rawColor) {
-  const text = normalizeColorText(rawColor);
-  if (!text) return 'outro';
-  for (const entry of COLOR_KEYWORD_BUCKETS) {
-    for (const kw of entry.keywords) {
-      if (text.indexOf(kw) !== -1) return entry.bucket;
-    }
-  }
-  return 'outro';
-}
-
-// ─── PET-M7 — filtro do mapa (SOT do estado + predicado PURO) ────────────────
-//
-// O filtro estreita os PINS por facetas: status / espécie / porte / COR / RECÊNCIA.
-// As OPÇÕES não vivem aqui como literais — são as MESMAS listas SOT acima
-// (PET_STATUSES / PET_SPECIES / PET_SIZES / PET_COLORS / PET_RECENCY_OPTIONS).
-// Mudar a SOT muda o filtro sem outra edição: a UI itera as listas para desenhar
-// os chips e o predicado valida contra os mesmos Sets/mapas. Ninguém escreve
-// 'perdido' (ou qualquer id) hardcoded — é tudo derivado.
-//
-// SEMÂNTICA (a regra de negócio do filtro, num só lugar):
-//   • faceta VAZIA = sem restrição (combina com tudo). O estado inicial é o
-//     filtro vazio → todos os pets aparecem.
-//   • DENTRO de uma faceta multi-seleção: OR (status perdido OU encontrado;
-//     cor preto OU caramelo).
-//   • ENTRE facetas: AND (status E espécie E porte E cor E recência).
-//   • RECÊNCIA é a exceção de FORMA: single-select (`recencyDays` number|null),
-//     não um array de toggle — 7⊂30⊂90 são aninhados (multi-seleção não teria
-//     significado). null = sem restrição.
-// É o mesmo modelo mental de um filtro de e-commerce — Jakob's Law: o usuário já
-// o conhece de outras superfícies, então não há custo de aprendizado.
-//
-// COR: a faceta guarda ids de BUCKET (de PET_COLORS); o pet armazena cor em TEXTO
-// LIVRE. A ponte é normalizePetColorToBucket(pet.color) — o predicado compara o
-// BUCKET do pet contra os buckets selecionados (não o texto cru). Assim "caramelo
-// claro" (texto) casa o chip 'caramelo'.
-
-// Fábrica do estado de filtro vazio (SOT da FORMA do filtro). Devolve uma cópia
-// NOVA a cada chamada (arrays próprios) para o React poder tratar como imutável
-// sem aliasing acidental entre montagens.
-//
-// FORMA (5 facetas; estado inicial = tudo vazio → todos os pets aparecem):
-//   • statuses/species/sizes/colors — ARRAYS de ids (multi-seleção, OR interno).
-//   • recencyDays — number | null. SINGLE-select (recência é eixo único, 7⊂30⊂90
-//     aninhados). `null` = SEM restrição (o DEFAULT). NÃO é um array.
-// `colors` parte vazio e `recencyDays` parte null (sem restrição) — um pet sem cor,
-// ou sem data legível, aparece enquanto essas facetas estão inativas. Filtros
-// antigos sem essas chaves leem como vazias (backward-compat, via facetIds/leituras
-// defensivas no predicado).
-export function defaultPetFilter() {
-  return { statuses: [], species: [], sizes: [], colors: [], recencyDays: null };
-}
-
-// Normaliza uma faceta para um array de ids (defensivo: aceita null/undefined/
-// não-array → []). PURA. Usada pelo predicado e por qualquer leitor de contagem.
-function facetIds(facet) {
-  return Array.isArray(facet) ? facet : [];
-}
-
-// Uma faceta "combina"? VAZIA → sempre (sem restrição). Não-vazia → o valor do
-// pet precisa estar na lista escolhida (OR dentro da faceta). PURA + defensiva:
-// um `value` undefined/'' só combina se a faceta estiver vazia (um pet sem porte
-// não some por engano enquanto NENHUM porte está filtrado, mas é excluído assim
-// que o usuário escolhe um porte específico — comportamento esperado).
-function facetMatches(selected, value) {
-  const ids = facetIds(selected);
-  if (ids.length === 0) return true; // faceta vazia = sem restrição
-  return ids.indexOf(value) !== -1;  // OR dentro da faceta
-}
-
-// Faceta de RECÊNCIA (PURA + DETERMINÍSTICA, `nowMs` injetado). Um pet "combina"
-// se foi publicado HÁ NO MÁXIMO `recencyDays` dias, medido contra o relógio
-// injetado. Regras:
-//   • recencyDays null/undefined/não-finito → SEM restrição (combina com tudo).
-//   • idade = (nowMs - Date.parse(dateIso)) / dia. Combina se idade <= janela.
-//   • dateIso AUSENTE ou ILEGÍVEL com a recência ATIVA → FAIL-CLOSED (exclui).
-//     Decisão documentada: não dá para PROVAR que um report sem data é recente, e
-//     o eixo de recência existe justamente para quem quer só os relatos novos —
-//     incluir um pet de idade desconhecida traíria a intenção do filtro. (Sem o
-//     filtro ativo, esse mesmo pet aparece normalmente — a exclusão é só quando o
-//     usuário PEDE recência.) Espelha o petAgeDays→Infinity do M12, mas aqui a
-//     consequência é "não combina" em vez de "arquiva".
-// Usa o DateISO de PUBLICAÇÃO (fato histórico de quando o relato entrou), não o
-// freshnessAt — "publicado nos últimos N dias" é o que o usuário lê como recência.
-function matchesRecency(dateIso, recencyDays, nowMs) {
-  if (!Number.isFinite(recencyDays)) return true; // null/undefined = sem restrição
-  if (!dateIso) return false;                      // fail-closed: idade indemonstrável
-  const then = Date.parse(dateIso);
-  if (Number.isNaN(then)) return false;            // fail-closed: data ilegível
-  const ageDays = (nowMs - then) / MS_PER_DAY;
-  return ageDays <= recencyDays;                   // dentro da janela (inclusive)
-}
-
-// Predicado PURO e DETERMINÍSTICO do filtro. Recebe UM pet (forma do parsePetRow),
-// o estado de filtro e `nowMs` INJETADO pelo chamador (nunca Date.now() aqui —
-// espelha buildPetDados/classifyPublishFailure). NUNCA lança: um pet malformado
-// (null, sem campos) é tratado como objeto vazio e simplesmente não combina com
-// nenhuma faceta ATIVA — some do mapa em vez de derrubar o render.
-//
-// ENTRE facetas é AND: todas precisam combinar. Com o filtro vazio, as cinco
-// facetas combinam (vazias / recência null) → true para todo pet (combina com tudo).
-//
-// `nowMs` AGORA É CONSULTADO pela faceta de recência (matchesRecency): a idade do
-// pet é medida contra o relógio INJETADO. As demais facetas (status/espécie/porte/
-// cor) são atemporais. A faceta de cor compara o BUCKET do pet (derivado do texto
-// livre por normalizePetColorToBucket) contra os buckets selecionados.
-export function matchesPetFilter(pet, filter, nowMs) {
-  const p = pet || {};
-  const f = filter || {};
-  // Cor: o pet guarda texto livre; comparamos pelo BUCKET derivado. Calculado só
-  // quando a faceta de cor está ATIVA (facetMatches já curto-circuita o vazio, mas
-  // evitamos a normalização desnecessária no caminho comum sem filtro de cor).
-  const colorIds = facetIds(f.colors);
-  const colorOk = colorIds.length === 0
-    ? true
-    : colorIds.indexOf(normalizePetColorToBucket(p.color)) !== -1;
-  return (
-    facetMatches(f.statuses, p.status)
-    && facetMatches(f.species, p.species)
-    && facetMatches(f.sizes, p.size)
-    && colorOk
-    && matchesRecency(p.dateIso, f.recencyDays, nowMs)
-  );
-}
-
-// Helper FINO de array: aplica o predicado a uma lista. PURO. `nowMs` injetado e
-// repassado (mesma disciplina). Defende contra `pets` não-array (→ []). É o que o
-// PetsApp chama para derivar os pets visíveis a partir de todos os pets + filtro.
-export function filterPets(pets, filter, nowMs) {
-  if (!Array.isArray(pets)) return [];
-  return pets.filter((pet) => matchesPetFilter(pet, filter, nowMs));
-}
-
-// Conta quantas facetas estão ATIVAS — usado pela UI para decidir se o botão
-// "limpar filtros" deve aparecer e para o resumo "filtrando por N". PURO. Uma
-// faceta de ARRAY é ativa quando não-vazia; a RECÊNCIA (single-select) é ativa
-// quando recencyDays é um número finito (null = inativa). Defensivo contra filtro
-// ausente / facetas não-array / recencyDays lixo.
-export function countActivePetFilterFacets(filter) {
-  const f = filter || {};
-  let n = 0;
-  if (facetIds(f.statuses).length) n += 1;
-  if (facetIds(f.species).length) n += 1;
-  if (facetIds(f.sizes).length) n += 1;
-  if (facetIds(f.colors).length) n += 1;
-  if (Number.isFinite(f.recencyDays)) n += 1; // recência ativa = janela escolhida
-  return n;
-}
-
-// Conjunto das facetas que são ARRAYS (multi-seleção, toggle-áveis). A recência
-// NÃO está aqui: é single-select e tem seu próprio setter (setPetFilterRecency).
-const TOGGLEABLE_FACET_KEYS = new Set(['statuses', 'species', 'sizes', 'colors']);
-
-// Clona a FORMA COMPLETA do filtro (todas as 5 facetas), sem mutar o original e
-// sem aliasing de array. PURO. É o ÚNICO ponto que conhece a forma do filtro para
-// os mutators — assim adicionar uma faceta no futuro é uma edição de uma linha.
-// Crucial: o clone preserva `colors` E `recencyDays`, então nenhum mutator
-// (toggle de array OU set de recência) DERRUBA a outra faceta (regressão clássica
-// de "esqueci de copiar o campo novo no spread").
-function clonePetFilter(filter) {
-  const base = filter || defaultPetFilter();
-  // recencyDays só sobrevive se for um número finito; qualquer lixo → null (default).
-  const recencyDays = Number.isFinite(base.recencyDays) ? base.recencyDays : null;
-  return {
-    statuses: facetIds(base.statuses).slice(),
-    species: facetIds(base.species).slice(),
-    sizes: facetIds(base.sizes).slice(),
-    colors: facetIds(base.colors).slice(),
-    recencyDays,
-  };
-}
-
-// Toggle PURO e IMUTÁVEL de um id dentro de uma faceta de ARRAY: devolve um filtro
-// NOVO com o id adicionado (se ausente) ou removido (se presente), sem mutar o
-// anterior. A UI lê daqui em vez de reimplementar a lógica de array em cada handler
-// — uma só verdade de "selecionar/desselecionar". `facetKey` é 'statuses'|'species'|
-// 'sizes'|'colors'. Defensivo: chave desconhecida (ou 'recencyDays', que NÃO é
-// toggle-ável aqui) devolve o filtro inalterado (clonado, preservando recência).
-export function togglePetFilterValue(filter, facetKey, id) {
-  const next = clonePetFilter(filter);
-  if (!TOGGLEABLE_FACET_KEYS.has(facetKey)) return next; // no-op seguro (recência usa o setter)
-  const arr = next[facetKey];
-  const at = arr.indexOf(id);
-  if (at === -1) {
-    arr.push(id);
-  } else {
-    arr.splice(at, 1);
-  }
-  return next;
-}
-
-// Setter PURO e IMUTÁVEL da faceta de RECÊNCIA (single-select). Recência NÃO é um
-// toggle de array: é um valor único `recencyDays` (number) ou `null`. A UI chama
-// isto ao tocar um chip de recência. SEMÂNTICA do clique:
-//   • passar um número (7/30/90) → define essa janela (substitui a anterior);
-//   • passar null/undefined/não-finito → LIMPA (volta a "sem restrição").
-//   • tocar o chip JÁ ATIVO de novo = limpar: a UI detecta isso e chama com null
-//     (este módulo não conhece "o chip atual"; ele só aplica o valor pedido). Por
-//     simetria/conveniência, repassar o MESMO valor já ativo também limpa (toggle-
-//     off idempotente), para a UI poder mandar sempre o id tocado sem checar antes.
-// Devolve um filtro NOVO preservando TODAS as outras facetas (via clonePetFilter).
-export function setPetFilterRecency(filter, recencyDaysOrNull) {
-  const next = clonePetFilter(filter);
-  const requested = Number.isFinite(recencyDaysOrNull) ? recencyDaysOrNull : null;
-  // Tocar o valor já ativo de novo desativa (toggle-off): clicar "7d" quando "7d"
-  // já está selecionado volta para null (sem restrição) — o gesto "desmarcar".
-  next.recencyDays = (requested !== null && requested === next.recencyDays) ? null : requested;
-  return next;
-}
-
-// Validação pura de um par [lat,lng]: ambos finitos. (O range Brasil é validado
-// no writer via validateCoordinatePair do sheetsClient — aqui só garantimos a
-// forma, mantendo o domínio independente de regras geográficas.)
-function isFiniteCoordPair(coords) {
-  return Array.isArray(coords)
-    && coords.length === 2
-    && Number.isFinite(coords[0])
-    && Number.isFinite(coords[1]);
-}
+// ─── BARREL — re-exporta os módulos extraídos para manter a API pública INTACTA ─
+// Re-export NOMEADO (não `export *`): preserva EXATAMENTE a superfície pública
+// original — cada `import { X } from './petDomain'` (app E testes) segue casando —
+// SEM vazar os helpers internos compartilhados que vivem na folha só para a DAG
+// (MS_PER_DAY/isFiniteCoordPair/haversineKm continuam privados ao domínio, como
+// eram antes do split). A ordem não cria ciclo: este arquivo importa só de
+// petTaxonomy (a folha); petFilterDomain/petMatch também só importam da folha —
+// nenhum deles importa de volta o petDomain.
+export {
+  // petTaxonomy — constantes/validadores SOT + cor + ciclo de vida por idade/resolução
+  PET_KIND,
+  PET_STATUSES,
+  PET_STATUS_MAP,
+  PET_SPECIES,
+  PET_SIZES,
+  PET_COLORS,
+  PET_RECENCY_OPTIONS,
+  PET_RECENCY_MAP,
+  isPetRow,
+  isValidStatus,
+  isValidSpecies,
+  isValidSize,
+  isValidColor,
+  normalizePetColorToBucket,
+  PET_RESOLVED_AT_KEY,
+  PET_FRESHNESS_AT_KEY,
+  isPetResolved,
+  PET_ARCHIVE_WINDOW_DAYS,
+  petAgeDays,
+  isPetArchivedByAge,
+} from './petTaxonomy';
+export {
+  // petFilterDomain — PET-M7 estado do filtro + predicado
+  defaultPetFilter,
+  matchesPetFilter,
+  filterPets,
+  countActivePetFilterFacets,
+  togglePetFilterValue,
+  setPetFilterRecency,
+} from './petFilterDomain';
+export {
+  // petMatch — PET-M9b match + PET-M12b de-dup
+  PET_MATCH_DEFAULTS,
+  PET_MATCH_STRENGTH,
+  petMatchStrength,
+  findPossibleMatches,
+  PET_DEDUP_DEFAULTS,
+  isNearDuplicate,
+  groupNearDuplicates,
+} from './petMatch';
 
 // Sanitiza a URL de fotos (ex.: link de pasta do Google Drive). PURA: aceita
 // SÓ http/https — qualquer outro esquema (javascript:, data:, ftp:, lixo) vira
@@ -490,12 +163,6 @@ export function sanitizeFreeText(raw, maxLen) {
   return out.join('').replace(/\s{2,}/g, ' ').trim();
 }
 
-// Chave ESTÁVEL do campo de ciclo-de-vida "reunido" dentro do blob Dados (SOT).
-// PET-M2. Ninguém fora deste módulo escreve a string literal 'resolvedAt' — o
-// writer (petsData.updatePetByCoords) e o parser leem por esta constante, então
-// uma renomeação do campo na planilha é uma edição de uma linha só, aqui.
-export const PET_RESOLVED_AT_KEY = 'resolvedAt';
-
 // ─── PET-M7b — DISCRIMINADOR de MOTIVO do fechamento (closureReason, SOT) ─────
 // `resolvedAt` (PET-M2) diz QUANDO o report saiu do mapa ativo. `closureReason`
 // diz POR QUÊ — e os dois desfechos do estágio E da curva (PET_CURVE §1-E) são
@@ -524,18 +191,6 @@ const CLOSURE_REASON_IDS = new Set(Object.values(PET_CLOSURE_REASON));
 export function isValidClosureReason(reason) {
   return CLOSURE_REASON_IDS.has(reason);
 }
-
-// ─── PET-M12 / PET-M13 — chave ESTÁVEL do carimbo de FRESCOR no blob Dados (SOT) ─
-// PET_FRESHNESS_SPEC.md §5.2: `freshnessAt` é o "fato vivo" — quando o dono
-// afirmou pela última vez que o report vale. É SEPARADO de `DateISO` (o fato
-// histórico imutável de 1ª publicação): sobrescrever DateISO apagaria a verdade
-// e violaria a Lens of Honesty (um report de 45 dias pareceria ter 2). M12 só
-// LÊ este campo (a idade-para-arquivo mede contra ele com fallback p/ DateISO);
-// M13 o ESCREVE quando o dono toca "ainda procurando" (reusa o writer do PET-M2,
-// rides updatePetByCoords). Linhas sem o campo (todas, hoje) leem como "nunca
-// renovado" → a idade cai no fallback DateISO. Ninguém escreve a string literal
-// 'freshnessAt' fora deste módulo — leem/gravam por esta constante.
-export const PET_FRESHNESS_AT_KEY = 'freshnessAt';
 
 // Monta o blob `Dados` de uma linha de pet. PURA: lança Error claro se status ou
 // coords forem inválidos; exige `dateIso` do chamador (sem Date.now() aqui).
@@ -738,14 +393,6 @@ export function parsePetRow(row) {
   };
 }
 
-// Discriminador resolvido/ativo (SOT). Lê a verdade de UM lugar — o campo
-// resolvedAt do pet parseado — para que o mapa/lista deixe de assumir que todo
-// pet é ativo. Aceita o objeto parseado (forma do parsePetRow) e nunca lança.
-// PET-M2.
-export function isPetResolved(pet) {
-  return Boolean(pet && pet[PET_RESOLVED_AT_KEY]);
-}
-
 // ─── PET-M18 — IDENTIDADE de report PII-FREE, coords-keyed (UMA SOT) ──────────
 //
 // A FORMA do reportId compartilhada por DOIS consumidores, definida aqui uma vez:
@@ -881,67 +528,11 @@ export function parsePetDeepLinkParam(search) {
   return trimmed || null;
 }
 
-// ─── PET-M12 — amortecedor MECÂNICO de staleness (age-archive, EXCLUSÃO de mapa) ─
-//
-// A TESE (PET_FRESHNESS_SPEC §0): passado um limiar de IDADE, um report some do
-// mapa ATIVO — arquivado *in place*, NUNCA deletado. É a camada cega/determinística
-// que age sozinha quando ninguém confirmou nada (o convite humano honesto é o
-// PET-M13). Fork do helper de idade da fome (mdfMarkers.hoursSince/isArchived):
-// mesma forma "idade desde um ISO cruza um limiar = arquivado", MAS endurecida em
-// dois pontos exigidos pela disciplina deste módulo:
-//   1. PURA + DETERMINÍSTICA — `nowMs` é INJETADO pelo chamador, nunca Date.now()
-//      aqui (o helper de fome chama Date.now() inline; aqui o relógio mora no
-//      boundary, igual a buildPetDados/matchesPetFilter). Testável sem fake timers.
-//   2. EXCLUSÃO de LEITURA, não escrita — o report NÃO é mutado nem deletado. O
-//      predicado deriva o estado "arquivado" da IDADE; o mapa ativo o exclui na
-//      leitura. A linha na planilha fica intacta (audit trail + isolação kind:'pet'
-//      preservados). É o que a acceptance line "no row is ever deleted" exige.
-//
-// ── O LIMIAR VIVE EM UMA SOT (a constante abaixo) ──
-// Lido pelo predicado E por qualquer teste — nunca espalhado. ~90 dias é o default
-// do spec (§2.1) e é DURO que seja MAIOR que o limiar de frescor do M13 (30 dias):
-// o convite humano (M13) precede o machado mecânico (M12), dando ao dono ~60 dias
-// de folga entre "fui convidado a confirmar" e "fui arquivado por idade".
-export const PET_ARCHIVE_WINDOW_DAYS = 90;
-
-// (MS_PER_DAY foi promovido ao bloco de constantes do topo — ver lá. Tem
-// consumidores acima E abaixo deste ponto, então mora antes de todos eles.)
-
-// Idade de um pet em DIAS, medida contra o carimbo de FRESCOR se presente, senão
-// contra o DateISO de publicação (PET_FRESHNESS_SPEC §2.1/§5.2). PURA: `nowMs`
-// injetado. Defensiva: ISO ausente/inválido → Infinity (um report sem data legível
-// conta como "infinitamente velho" e é arquivado, em vez de viver para sempre no
-// mapa por causa de um dado quebrado — espelha o hoursSince→Infinity da fome).
-//
-// O fallback DateISO→freshnessAt é o que torna o M13 capaz de ADIAR o M12: quando
-// o dono toca "ainda procurando" (M13 grava freshnessAt=agora), o relógio de idade
-// reseta legitimamente, porque o dono AFIRMOU que o report ainda vale. Hoje, sem
-// nenhuma linha carregando freshnessAt, a idade sempre cai no DateISO — o M13
-// alimenta este mesmo cálculo sem reescrever a assinatura (LSP).
-export function petAgeDays(pet, nowMs) {
-  const p = pet || {};
-  // freshnessAt (fato vivo) tem precedência sobre dateIso (fato histórico).
-  const iso = p[PET_FRESHNESS_AT_KEY] || p.dateIso;
-  if (!iso) return Infinity;
-  const then = Date.parse(iso);
-  if (Number.isNaN(then)) return Infinity;
-  return (nowMs - then) / MS_PER_DAY;
-}
-
-// Predicado PURO de "este report deve sair do mapa ativo por IDADE?". `nowMs`
-// injetado (determinístico, nunca Date.now() aqui). `windowDays` lido do SOT por
-// default; aceita um override só para testes determinísticos. NUNCA lança.
-//
-// Um pet REUNIDO (resolvedAt) NÃO é "arquivado por idade": ele já saiu do mapa
-// ativo pelo lifecycle resolvido (PET-M2), e tratá-lo como aged-by-age confundiria
-// dois eixos ortogonais (resolvido vs envelhecido). Aqui respondemos só ao eixo da
-// IDADE; o eixo do lifecycle resolvido é de isPetResolved. (lifecycleForPet em
-// petMarkerIcon já dá precedência a `reunido` sobre `aged`.)
-export function isPetArchivedByAge(pet, nowMs, windowDays = PET_ARCHIVE_WINDOW_DAYS) {
-  if (!pet) return false;
-  if (isPetResolved(pet)) return false; // resolvido sai por outro eixo, não por idade
-  return petAgeDays(pet, nowMs) >= windowDays;
-}
+// ─── PET-M12 — wrappers de EXCLUSÃO por idade (age-archive, READ-side) ────────
+// Os predicados-núcleo (petAgeDays / isPetArchivedByAge / isPetResolved) e o SOT
+// PET_ARCHIVE_WINDOW_DAYS vivem na CAMADA-FOLHA (petTaxonomy) porque o match (§4)
+// também os consome — manter a DAG sem ciclo. Aqui ficam os wrappers de SUPERFÍCIE
+// que o PetsApp usa: estampar o flag `aged` e derivar a lista do mapa ativo.
 
 // Estampa o discriminador derivado `aged` em UM pet parseado, SEM mutar o original
 // (devolve um objeto novo). `aged` é o que petMarkerIcon.lifecycleForPet já lê para
@@ -1116,8 +707,8 @@ export function incrementPetFlag(dados) {
 // INJETADOS pelo chamador (PetsApp, no boundary), nunca Date.now()/geolocation
 // aqui (espelha matchesPetFilter/findPossibleMatches). A UI (PetListView) só
 // consome a lista já ordenada e a distância já computada por linha — não recomputa
-// nada nem conhece Haversine. Reusa o `haversineKm` privado deste módulo (o MESMO
-// usado pelo match do M9b) — uma só verdade de "distância entre dois pontos".
+// nada nem conhece Haversine. Reusa o `haversineKm` da folha (petTaxonomy) — o
+// MESMO usado pelo match do M9b — uma só verdade de "distância entre dois pontos".
 
 // Distância em km de UM pet ao centro do usuário, ou null se não dá para medir
 // (sem centro, ou coords do pet/centro inválidas). PURA. `null` (não Infinity) é
@@ -1180,423 +771,4 @@ export function sortPetsForList(pets, center, nowMs) {
     return b.recency - a.recency;
   });
   return decorated.map((d) => d.pet);
-}
-
-// ─── PET-M9b — MATCH POSSÍVEL (perdido ↔ encontrado/avistado), predicado PURO ──
-//
-// Implementa o PET_MATCH_SPEC.md (PET-M9a) — o spec é a SOT de PRODUTO; este bloco
-// é a SOT de CÓDIGO. NÃO reabre as decisões de design (raio 5 km, janela 30 dias,
-// coringa de espécie, regra do silêncio §3, exclusão §4 ANTES de parear): só as
-// codifica. O predicado é PURO e DETERMINÍSTICO — `nowMs` é INJETADO (nunca
-// Date.now() aqui, mesma disciplina de matchesPetFilter/isPetArchivedByAge) — e
-// NUNCA lança em pet malformado (barricada de leitura: pet "lixo" simplesmente
-// não casa, some do conjunto de candidatos em vez de derrubar o render).
-//
-// ÉTICA (spec §0/§6): um match errado mostrado como certeza é o erro MAIS CARO da
-// superfície (falsa-esperança no ponto de maior vulnerabilidade). Por isso o
-// default é o SILÊNCIO: `candidate` (passa em §1) é SEPARADO de `shouldSurface`
-// (rompe o limiar de §3). Um par pode ser candidato e mesmo assim ficar silencioso.
-
-// ── Os QUATRO defaults vivem em UMA SOT (espelha PET_RECENCY_OPTIONS / o limiar
-//    do M12), lidos pelo predicado E pelos testes — nunca espalhados (spec §1.5). ──
-//
-// Raio (km): centro a centro (Haversine). ≤ STRONG forte · ≤ MAX moderado · > MAX
-// fora (não candidato). Janela (dias): |Δrelatos| ≤ MAX_DAYS; achado posterior à
-// perda é PREFERÊNCIA (mais forte), não exclusão (datas de relato são ruidosas).
-export const PET_MATCH_DEFAULTS = {
-  radiusStrongKm: 1,   // spec §1.3 — ≤1 km: proximidade forte
-  radiusMaxKm: 5,      // spec §1.3 — teto padrão (não um piso); >5 km não é candidato
-  windowDays: 30,      // spec §1.4 — espelha o staircase 7/30/90 do SOT
-};
-
-// Vereditos de FORÇA de uma faceta/agregado (degraus, nunca um score cru exposto —
-// o número não vai à UI, só decide mostrar/silenciar; spec §1.3/§3.1).
-export const PET_MATCH_STRENGTH = {
-  STRONG: 'strong',
-  MODERATE: 'moderate',
-  WEAK: 'weak',
-  NONE: 'none',
-};
-
-// Raio médio da Terra (km) — fator local, evita o número mágico espalhado.
-const EARTH_RADIUS_KM = 6371;
-const DEG_TO_RAD = Math.PI / 180;
-
-// Distância Haversine em km entre dois pares [lat,lng]. PURA. Defensiva: par
-// inválido → Infinity (nunca casa; degrada com calma em vez de lançar/NaN —
-// espelha o petAgeDays→Infinity de uma data ilegível).
-function haversineKm(a, b) {
-  if (!isFiniteCoordPair(a) || !isFiniteCoordPair(b)) return Infinity;
-  const lat1 = a[0] * DEG_TO_RAD;
-  const lat2 = b[0] * DEG_TO_RAD;
-  const dLat = (b[0] - a[0]) * DEG_TO_RAD;
-  const dLng = (b[1] - a[1]) * DEG_TO_RAD;
-  const sinLat = Math.sin(dLat / 2);
-  const sinLng = Math.sin(dLng / 2);
-  const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng;
-  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-
-// Status que contam como "alguém viu/pegou um pet" (o lado NÃO-perdido do par).
-// DERIVADO da SOT PET_STATUSES — ninguém escreve 'encontrado'/'avistado' hardcoded;
-// o lado-perdido é 'perdido' (também da SOT). Se a lista de status mudar, a regra
-// de pareamento acompanha (a âncora é "exatamente um lado perdido", spec §1.1).
-const PERDIDO_ID = 'perdido';
-const SIGHTING_STATUS_IDS = new Set(
-  PET_STATUSES.map((s) => s.id).filter((id) => id !== PERDIDO_ID),
-);
-
-// Espécie é CORINGA (não bloqueia o par, mas o enfraquece)? `outro` OU vazia/ausente
-// = "não sei classificar" → incerteza, não contradição (spec §1.2). Lê o id 'outro'
-// da SOM PET_SPECIES indiretamente: é o único id de espécie que NÃO é uma classe
-// concreta de bicho. Aqui tratamos vazio e 'outro' igualmente como coringa.
-function isWildcardSpecies(species) {
-  const s = String(species || '').trim();
-  return s === '' || s === 'outro';
-}
-
-// Pareamento de STATUS (spec §1.1): é candidato SOMENTE se EXATAMENTE um lado é
-// `perdido` e o outro é `encontrado`/`avistado`. perdido↔perdido, achador↔achador
-// e encontrado↔avistado NÃO são candidatos (nenhum dono à espera no par, ou nenhuma
-// evidência). PURA + defensiva (status ausente/lixo → não casa).
-function statusesPair(statusA, statusB) {
-  const aLost = statusA === PERDIDO_ID;
-  const bLost = statusB === PERDIDO_ID;
-  // XOR: exatamente um lado perdido.
-  if (aLost === bLost) return false;
-  const sighting = aLost ? statusB : statusA;
-  return SIGHTING_STATUS_IDS.has(sighting);
-}
-
-// Força da faceta ESPÉCIE: igualdade concreta = forte; coringa (outro/vazio de um
-// lado) = fraca (não bloqueia, mas não é evidência de identidade — spec §1.2/§3.1);
-// espécies concretas diferentes (cao≠gato) = NONE (contradição dura → não candidato).
-function speciesStrength(spA, spB) {
-  const wildA = isWildcardSpecies(spA);
-  const wildB = isWildcardSpecies(spB);
-  if (wildA || wildB) {
-    // Pelo menos um lado é coringa: nunca bloqueia, mas é fraco (ausência de
-    // contradição, não prova). Dois coringas também: ainda fraco.
-    return PET_MATCH_STRENGTH.WEAK;
-  }
-  // Ambos concretos: igualdade = forte; diferença = contradição (não candidato).
-  return spA === spB ? PET_MATCH_STRENGTH.STRONG : PET_MATCH_STRENGTH.NONE;
-}
-
-// Força da faceta DISTÂNCIA (spec §1.3): ≤1 km forte · 1–5 km moderado · >5 km
-// NONE (fora — não candidato). Lê os limiares do SOT PET_MATCH_DEFAULTS.
-function distanceStrength(km, defaults) {
-  if (!(km <= defaults.radiusMaxKm)) return PET_MATCH_STRENGTH.NONE; // inclui Infinity/NaN
-  if (km <= defaults.radiusStrongKm) return PET_MATCH_STRENGTH.STRONG;
-  return PET_MATCH_STRENGTH.MODERATE;
-}
-
-// Força da faceta TEMPO (spec §1.4): |Δrelatos| em dias. Fora da janela → NONE (não
-// candidato). Dentro: achado POSTERIOR à perda = forte (caso típico); achado
-// anterior (pré-avistamento) = moderado (plausível, mas mais fraco — não excluído,
-// pois datas de relato são ruidosas). `nowMs` é injetado por simetria com as outras
-// funções puras do módulo (a janela mede Δ ENTRE os dois relatos, não a idade
-// absoluta, então `nowMs` não é consultado aqui — reservado, documenta a injeção).
-function timeStrength(petA, petB, nowMs, defaults) {
-  void nowMs;
-  const tA = Date.parse(petA && petA.dateIso);
-  const tB = Date.parse(petB && petB.dateIso);
-  if (Number.isNaN(tA) || Number.isNaN(tB)) return PET_MATCH_STRENGTH.NONE;
-  const deltaDays = Math.abs(tA - tB) / MS_PER_DAY;
-  if (deltaDays > defaults.windowDays) return PET_MATCH_STRENGTH.NONE; // fora da janela
-  // Ordem temporal: o achado (lado não-perdido) é POSTERIOR à perda? Mais forte.
-  const aLost = petA.status === PERDIDO_ID;
-  const lostT = aLost ? tA : tB;
-  const sightingT = aLost ? tB : tA;
-  return sightingT >= lostT ? PET_MATCH_STRENGTH.STRONG : PET_MATCH_STRENGTH.MODERATE;
-}
-
-// Um pet é CANDIDATO ELEGÍVEL (entra no pareamento)? Ativo: NÃO resolvido (M2) E
-// NÃO arquivado por idade (M12) — a exclusão do spec §4, aplicada ANTES de parear.
-// `nowMs` injetado (a idade do M12 precisa do relógio). Defensiva: pet sem coords
-// finitas também é inelegível (não dá para medir distância). NUNCA lança.
-function isMatchEligible(pet, nowMs) {
-  if (!pet) return false;
-  if (!isFiniteCoordPair(pet.coords)) return false;
-  if (isPetResolved(pet)) return false;          // reunido/encerrado — spec §4
-  if (isPetArchivedByAge(pet, nowMs)) return false; // envelhecido/arquivado — M12/§4
-  return true;
-}
-
-// Predicado PURO do match entre DOIS pets (forma do parsePetRow). Devolve um
-// veredito ESTÁVEL { candidate, strength, shouldSurface, distanceKm }:
-//   • candidate     — passa em TODAS as condições de §1 (status/espécie/raio/janela).
-//   • strength      — força agregada do par ('strong'|'moderate'|'weak'|'none').
-//   • shouldSurface — rompe o LIMIAR DE SILÊNCIO de §3 (a única coisa que a UI lê
-//                     para decidir MOSTRAR). FALSE para um par que só casa por
-//                     coringa de espécie e/ou só pela distância no teto de 5 km.
-//   • distanceKm    — distância centro-a-centro (informativa; NUNCA exposta como
-//                     número ao usuário — score é banido §2.2).
-// `nowMs` injetado. NUNCA lança (pet malformado → não candidato, silencioso).
-//
-// LIMIAR DE SILÊNCIO (spec §3.1, calibração fixada e testada aqui):
-//   Um par rompe o silêncio SÓ quando soma confiança em MAIS DE UMA faceta:
-//     - espécie CONCRETA (não coringa)  E
-//     - proximidade real (forte ≤1 km, OU moderada 1–5 km mas então com o tempo
-//       forte) — o teto de 5 km SOZINHO nunca rompe o silêncio  E
-//     - coincidência temporal dentro da janela (achado fora de ordem só passa se
-//       distância for forte).
-//   Caso contrário: candidate pode ser true, mas shouldSurface = false (silêncio).
-export function petMatchStrength(petA, petB, nowMs, defaults = PET_MATCH_DEFAULTS) {
-  const SILENT = { candidate: false, strength: PET_MATCH_STRENGTH.NONE, shouldSurface: false, distanceKm: Infinity };
-  const a = petA || {};
-  const b = petB || {};
-
-  // §1.1 — pareamento de status (exatamente um lado perdido).
-  if (!statusesPair(a.status, b.status)) return SILENT;
-
-  // §1.2 — espécie (concreta-igual / coringa / contradição).
-  const sp = speciesStrength(a.species, b.species);
-  if (sp === PET_MATCH_STRENGTH.NONE) return SILENT; // cao≠gato: contradição → não candidato
-
-  // §1.3 — distância (Haversine; >5 km não é candidato).
-  const distanceKm = haversineKm(a.coords, b.coords);
-  const dist = distanceStrength(distanceKm, defaults);
-  if (dist === PET_MATCH_STRENGTH.NONE) return SILENT;
-
-  // §1.4 — janela de tempo (|Δ| ≤ 30 d; fora → não candidato).
-  const time = timeStrength(a, b, nowMs, defaults);
-  if (time === PET_MATCH_STRENGTH.NONE) return SILENT;
-
-  // Chegou aqui: é CANDIDATO (passa em todas as condições de §1).
-  // Agora o LIMIAR DE SILÊNCIO de §3 decide mostrar ou silenciar.
-  const speciesConcrete = sp === PET_MATCH_STRENGTH.STRONG;
-  const proximityReal =
-    dist === PET_MATCH_STRENGTH.STRONG
-    || (dist === PET_MATCH_STRENGTH.MODERATE && time === PET_MATCH_STRENGTH.STRONG);
-  const timeOk =
-    time === PET_MATCH_STRENGTH.STRONG
-    || (time === PET_MATCH_STRENGTH.MODERATE && dist === PET_MATCH_STRENGTH.STRONG);
-
-  const shouldSurface = speciesConcrete && proximityReal && timeOk;
-
-  // Força agregada (degrau informativo): forte só quando as três facetas são fortes;
-  // moderado quando rompe o silêncio mas não é tudo forte; fraco quando é candidato
-  // porém silenciado (coringa e/ou só no teto de 5 km).
-  let strength;
-  if (sp === PET_MATCH_STRENGTH.STRONG && dist === PET_MATCH_STRENGTH.STRONG && time === PET_MATCH_STRENGTH.STRONG) {
-    strength = PET_MATCH_STRENGTH.STRONG;
-  } else if (shouldSurface) {
-    strength = PET_MATCH_STRENGTH.MODERATE;
-  } else {
-    strength = PET_MATCH_STRENGTH.WEAK;
-  }
-
-  return { candidate: true, strength, shouldSurface, distanceKm };
-}
-
-// Acha os possíveis matches de UM pet numa lista de pets (forma do parsePetRow).
-// PURA + DETERMINÍSTICA (`nowMs` injetado). Aplica a EXCLUSÃO de §4 ANTES de parear
-// (resolvidos/arquivados nem entram, dos DOIS lados) e devolve só os pares que
-// ROMPEM O SILÊNCIO de §3 (shouldSurface) — o default é não mostrar. Nunca o
-// próprio pet (não casa consigo mesmo). Ordenado do mais forte/mais perto ao mais
-// fraco (a UI mostra o melhor candidato primeiro; UMA próxima decisão calma, §2.3).
-// NUNCA lança: lista não-array → []; pet/elemento malformado → ignorado.
-//
-// Cada item: { pet, strength, distanceKm }. NÃO expõe um score numérico (banido
-// §2.2) — `strength` é um degrau e `distanceKm` é só p/ ordenação interna/futuro
-// "a ~X km" calmo, nunca uma porcentagem de certeza.
-export function findPossibleMatches(pet, allPets, nowMs, defaults = PET_MATCH_DEFAULTS) {
-  if (!pet || !Array.isArray(allPets)) return [];
-  if (!isMatchEligible(pet, nowMs)) return []; // o próprio pet aberto já saiu de cena
-  const out = [];
-  for (const other of allPets) {
-    if (!other || other === pet) continue;
-    if (!isMatchEligible(other, nowMs)) continue; // §4 — exclusão ANTES de parear
-    const verdict = petMatchStrength(pet, other, nowMs, defaults);
-    if (verdict.shouldSurface) {
-      out.push({ pet: other, strength: verdict.strength, distanceKm: verdict.distanceKm });
-    }
-  }
-  // Ordena: força (strong antes de moderate) e, empatando, mais perto primeiro.
-  const rank = { [PET_MATCH_STRENGTH.STRONG]: 0, [PET_MATCH_STRENGTH.MODERATE]: 1, [PET_MATCH_STRENGTH.WEAK]: 2 };
-  out.sort((x, y) => {
-    const r = (rank[x.strength] ?? 3) - (rank[y.strength] ?? 3);
-    if (r !== 0) return r;
-    return x.distanceKm - y.distanceKm;
-  });
-  return out;
-}
-
-// ─── PET-M12b — DE-DUP NEAR-DUPLICATE (SOFT-merge VISUAL, predicado PURO) ──────
-//
-// O QUE É: o MESMO relato re-postado (a pessoa publicou duas/três vezes em pânico,
-// ou dois vizinhos relataram o MESMÍSSIMO avistamento) vira VÁRIOS pinos quase
-// sobrepostos no mapa. Este bloco DETECTA esses quase-duplicados e os AGRUPA num
-// cluster de exibição — para o mapa mostrar UM pino expansível em vez de uma pilha.
-//
-// ╔══════════════════════════════════════════════════════════════════════════╗
-// ║ NOTA DE LENS-OF-FAILURE (espelha PET_MATCH_SPEC §6 — leia ANTES de mexer)  ║
-// ╠══════════════════════════════════════════════════════════════════════════╣
-// ║ O ERRO MAIS CARO desta superfície é o FALSO-MERGE: agrupar dois gatos      ║
-// ║ pretos DIFERENTES como se fossem o mesmo relato APAGA, da visão do usuário,║
-// ║ um report real (um pet que alguém está procurando some atrás do "dupe").   ║
-// ║ Um falso-merge é PIOR que um pino duplicado — por isso o PET-M12b foi      ║
-// ║ SEPARADO do PET-M12 (que só arquiva por idade, sem risco de identidade).   ║
-// ║                                                                            ║
-// ║ As TRÊS barricadas contra o falso-merge (em ordem), análogas às do match:  ║
-// ║                                                                            ║
-// ║  (a) SOFT / VISUAL-ONLY — esta camada NUNCA deleta, NUNCA reescreve, NUNCA ║
-// ║      muta a linha do report "absorvido". É uma transformação de LEITURA    ║
-// ║      sobre os pets já parseados (igual a activePetsByAge / filterPets): os ║
-// ║      dados crus de TODOS os membros sobrevivem intactos na planilha E no   ║
-// ║      grupo devolvido. Nenhuma escrita acontece. Isolação kind:'pet'        ║
-// ║      preservada por construção (não há writer aqui).                       ║
-// ║                                                                            ║
-// ║  (b) CONSERVADOR — o limiar é MUITO mais APERTADO que o match do M9b. O    ║
-// ║      M9b casa status DIFERENTES (perdido↔encontrado) a 5 km e 30 dias —    ║
-// ║      "pode ser o mesmo bicho". O dedup exige o MESMO relato re-postado:    ║
-// ║      MESMO status + MESMA espécie CONCRETA (coringa outro/vazio NUNCA      ║
-// ║      funde — incerteza não é identidade) + coords MUITO próximas (~75 m    ║
-// ║      default, ~67× mais apertado que os 5 km do match) + janela curta      ║
-// ║      (~3 dias). Concordância em VÁRIOS eixos, não um só. Na dúvida, NÃO    ║
-// ║      funde (preferimos o pino duplicado ao falso-merge — espelha o        ║
-// ║      "prefere o silêncio" do §3.3 do match).                              ║
-// ║                                                                            ║
-// ║  (c) REVERSÍVEL / EXPANSÍVEL pelo viewer — o grupo EXPÕE todos os membros  ║
-// ║      (`group.members` = [representante, ...absorvidos]). A UI mostra um    ║
-// ║      pino mas pode SEMPRE re-expandir o cluster e exibir cada membro       ║
-// ║      individualmente. Nada é escondido de forma irreversível; o falso-     ║
-// ║      merge, se acontecer, é desfeito por um toque do usuário, não por uma  ║
-// ║      restauração de dados (porque o dado nunca saiu).                      ║
-// ╚══════════════════════════════════════════════════════════════════════════╝
-//
-// PURO + DETERMINÍSTICO: `nowMs` é INJETADO pelo chamador (nunca Date.now() aqui —
-// mesma disciplina de petMatchStrength/isPetArchivedByAge). NUNCA lança: pet
-// malformado simplesmente não funde com ninguém (some do agrupamento como singleton
-// em vez de derrubar o render).
-
-// ── Os limiares vivem em UMA SOT (espelha PET_MATCH_DEFAULTS / PET_ARCHIVE_WINDOW_DAYS),
-//    lidos pelo predicado E pelos testes — nunca espalhados. CONSERVADORES por
-//    design: muito mais apertados que o match, porque o custo do erro é maior. ──
-//
-// radiusMeters (~75 m): dois relatos do MESMO episódio caem praticamente no mesmo
-//   ponto (a pessoa toca o mapa quase no mesmo lugar / o GPS varia poucos metros).
-//   75 m absorve o jitter de um pino solto à mão sem alcançar o quarteirão vizinho
-//   — ~67× mais apertado que os 5 km do match (intencional: dedup ≠ match).
-// windowDays (~3): o mesmo relato re-postado acontece em horas/poucos dias, não em
-//   semanas. 3 dias cobre "publiquei, não vi aparecer, publiquei de novo amanhã"
-//   sem fundir dois episódios distantes no tempo — ~10× mais apertado que os 30
-//   dias do match.
-export const PET_DEDUP_DEFAULTS = {
-  radiusMeters: 75, // ~75 m: jitter do mesmo episódio, NÃO o quarteirão vizinho
-  windowDays: 3,    // ~3 dias: re-post em horas/poucos dias, não um novo episódio
-};
-
-// Metros por km — fator local (evita o número mágico 1000 espalhado).
-const METERS_PER_KM = 1000;
-
-// Timestamp (ms) de um pet para a janela de dedup. PURO: usa o DateISO de
-// publicação (o fato histórico de QUANDO o relato entrou — NÃO freshnessAt, que é
-// o "fato vivo" do M13; dois posts do mesmo episódio são próximos na PUBLICAÇÃO,
-// não na última renovação). Data ausente/ilegível → null (não funde por tempo —
-// degrada com calma, igual ao Infinity de petAgeDays). PURO, nunca lança.
-function petPublishMs(pet) {
-  const iso = pet && pet.dateIso;
-  if (!iso) return null;
-  const t = Date.parse(iso);
-  return Number.isNaN(t) ? null : t;
-}
-
-// Predicado PURO e DETERMINÍSTICO: dois pets são QUASE-DUPLICADOS (o MESMO relato
-// re-postado)? `nowMs` é parte da assinatura (injetado, nunca Date.now() aqui) por
-// simetria com os outros predicados puros do módulo; a janela mede Δ ENTRE as duas
-// publicações (não a idade absoluta), então `nowMs` não é consultado hoje — fica
-// reservado e documenta a injeção. NUNCA lança.
-//
-// CONSERVADOR por construção (Lens-of-Failure barricada (b)): exige concordância em
-// QUATRO eixos, TODOS apertados — um único eixo frouxo já NÃO funde:
-//   1. MESMO status (perdido com perdido; não cruza status como o match faz);
-//   2. MESMA espécie CONCRETA — coringa (outro/vazio) NUNCA funde (incerteza de
-//      identidade não pode apagar um report; espelha a regra do coringa do §1.2,
-//      mas aqui ainda mais dura: lá o coringa só enfraquece, aqui ele BLOQUEIA);
-//   3. coords dentro de radiusMeters (~75 m — muito mais apertado que o match);
-//   4. publicações dentro de windowDays (~3 dias — muito mais apertado que o match).
-// Default em DÚVIDA = NÃO funde (qualquer eixo que falhe → false): preferimos o
-// pino duplicado ao falso-merge (espelha "prefere o silêncio" do §3.3).
-export function isNearDuplicate(petA, petB, nowMs, defaults = PET_DEDUP_DEFAULTS) {
-  void nowMs;
-  const a = petA || {};
-  const b = petB || {};
-
-  // 1) MESMO status (string igual; status ausente/lixo de um lado → não funde).
-  if (!a.status || a.status !== b.status) return false;
-
-  // 2) MESMA espécie CONCRETA — coringa (outro/vazio) NUNCA funde. Se qualquer
-  //    lado é coringa, a identidade é incerta e fundir poderia apagar um report
-  //    distinto (barricada (b) do Lens-of-Failure). Espécies concretas precisam
-  //    ser IGUAIS (cao com cao); cao≠gato obviamente não funde.
-  if (isWildcardSpecies(a.species) || isWildcardSpecies(b.species)) return false;
-  if (a.species !== b.species) return false;
-
-  // 3) coords MUITO próximas (~75 m). haversineKm devolve km (Infinity p/ par
-  //    inválido → nunca funde). Converte o limiar SOT de metros p/ km e compara.
-  const km = haversineKm(a.coords, b.coords);
-  const radiusKm = defaults.radiusMeters / METERS_PER_KM;
-  if (!(km <= radiusKm)) return false; // inclui Infinity/NaN: par inválido não funde
-
-  // 4) janela de tempo curta (~3 dias) entre as DUAS publicações. Data ilegível de
-  //    qualquer lado → não funde (degrada com calma).
-  const tA = petPublishMs(a);
-  const tB = petPublishMs(b);
-  if (tA === null || tB === null) return false;
-  const deltaDays = Math.abs(tA - tB) / MS_PER_DAY;
-  return deltaDays <= defaults.windowDays;
-}
-
-// SOFT-CONSOLIDA uma lista de pets em GRUPOS de quase-duplicados, para EXIBIÇÃO.
-// PURA + DETERMINÍSTICA (`nowMs` injetado). NÃO muta nenhum pet de entrada, NÃO
-// deleta, NÃO reescreve — devolve uma NOVA estrutura de grupos sobre os MESMOS
-// objetos de pet (barricada (a) do Lens-of-Failure: visual/soft only).
-//
-// Forma de cada grupo (REVERSÍVEL/EXPANSÍVEL — barricada (c)):
-//   {
-//     representative,  // o pet mostrado como pino único (o 1º membro, ordem estável)
-//     members,         // [representative, ...absorvidos] — TODOS os membros, sempre
-//     duplicateCount,  // members.length - 1 (quantos foram absorvidos; 0 = singleton)
-//   }
-// `members` SEMPRE contém todos os relatos do cluster, então a UI pode re-expandir
-// o grupo e mostrar cada um individualmente — o falso-merge (se ocorrer) é desfeito
-// por um toque, porque NADA foi destruído.
-//
-// AGRUPAMENTO conservador (single-linkage simples e determinístico): varre os pets
-// na ORDEM dada; cada pet ou abre um grupo novo (vira representante) ou entra no
-// PRIMEIRO grupo existente cujo REPRESENTANTE seja seu quase-duplicado. Casar contra
-// o REPRESENTANTE (não contra qualquer membro) mantém o cluster APERTADO em torno de
-// um ponto único — evita o "encadeamento" (drift) onde A~B e B~C arrastariam C para
-// longe de A. Na dúvida (sem representante quase-duplicado), o pet vira seu próprio
-// grupo (singleton) — preferir não-fundir é a barricada (b).
-//
-// Defensiva: `pets` não-array → []; um pet null/lixo nunca casa (isNearDuplicate é
-// defensivo) e simplesmente forma um singleton — nunca derruba o agrupamento.
-export function groupNearDuplicates(pets, nowMs, defaults = PET_DEDUP_DEFAULTS) {
-  if (!Array.isArray(pets)) return [];
-  const groups = [];
-  for (const pet of pets) {
-    let placed = false;
-    for (const g of groups) {
-      // Casa contra o REPRESENTANTE do grupo (cluster apertado, sem drift).
-      if (isNearDuplicate(g.representative, pet, nowMs, defaults)) {
-        g.members.push(pet);
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) {
-      // Novo grupo: este pet é o representante (members começa com ele mesmo).
-      groups.push({ representative: pet, members: [pet] });
-    }
-  }
-  // Carimba o duplicateCount derivado em cada grupo (DEPOIS de fechar os membros),
-  // sem mutar nenhum pet — só os objetos de grupo recém-criados aqui.
-  return groups.map((g) => ({
-    representative: g.representative,
-    members: g.members,
-    duplicateCount: g.members.length - 1,
-  }));
 }
