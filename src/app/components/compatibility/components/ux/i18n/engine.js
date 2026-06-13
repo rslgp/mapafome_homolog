@@ -19,6 +19,17 @@ const LOCALE_KEY = 'mdf_locale';
 const DEFAULT_LOCALE = 'pt-BR';
 export const SUPPORTED_LOCALES = ['pt-BR', 'es'];
 
+// Display metadata for the language picker (INTL). `label` is the language's
+// name IN ITS OWN language (endonym) so a speaker recognizes it regardless of
+// the active UI locale; `flag` is a representative emoji. This is locale
+// METADATA, not translatable copy, so it lives with SUPPORTED_LOCALES on the
+// engine rather than in a per-feature DICT shard. Keep keys in sync with
+// SUPPORTED_LOCALES. Re-exported by ../strings.js for LanguageControl.
+export const LOCALE_LABELS = {
+  'pt-BR': { label: 'Português', flag: '🇧🇷' },
+  'es': { label: 'Español', flag: '🇪🇸' },
+};
+
 let currentLocale = DEFAULT_LOCALE;
 
 if (typeof window !== 'undefined') {

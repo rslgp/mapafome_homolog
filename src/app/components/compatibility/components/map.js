@@ -22,6 +22,8 @@ import PropTypes from 'prop-types';
 
 import SearchField from './SearchField';
 import CountryFlagControl from './CountryFlagControl';
+import LanguageControl from './LanguageControl';
+import { INTL_ENABLED } from './intlConfig';
 import MarkerGroup from './MarkerGroup';
 import ReporterMarkers from './ReporterMarkers';
 import {
@@ -336,8 +338,12 @@ const CoffeeMap = ({
 
                 <SearchField />
 
-                {/* INTL: flag selector that re-scopes the address search to any country */}
-                <CountryFlagControl />
+                {/* INTL (dev-toggle INTL_ENABLED): flag selector re-scopes the
+                    address search to any country, plus a UI language picker.
+                    Both mount only when the feature is on; otherwise search
+                    stays pinned to Brazil and neither control renders. */}
+                {INTL_ENABLED && <CountryFlagControl />}
+                {INTL_ENABLED && <LanguageControl />}
 
                 {/* Pans map when GPS location arrives — MapContainer.center is not reactive */}
                 <MapViewUpdater center={center} />

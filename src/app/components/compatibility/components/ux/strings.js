@@ -9,7 +9,7 @@
 // module (useLocale uses React hooks).
 //
 // To EDIT copy: change the matching shard file, not this barrel.
-//   • base food-map UI (report./errors./pin./empty./cta./country.) → i18n/strings.core.js
+//   • base food-map UI (report./errors./pin./empty./cta./country./lang.) → i18n/strings.core.js
 //   • /assinar (assinar.*)                                          → i18n/strings.assinar.js
 //   • /pets (pets.*)                                                → i18n/strings.pets.js
 // A NEW namespace is added by creating a shard and wiring it in i18n/dictionary.js.
@@ -21,4 +21,8 @@ export {
   useLocale,
   localeKeys,
   SUPPORTED_LOCALES,
+  // INTL — LanguageControl reads the language picker's display metadata
+  // (endonym label + flag) from here. The data lives next to SUPPORTED_LOCALES
+  // in the engine; this barrel keeps the consumer import path stable.
+  LOCALE_LABELS,
 } from './i18n/engine.js';

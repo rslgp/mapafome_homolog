@@ -4,9 +4,10 @@ import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import { LatLng } from 'leaflet';
 import PropTypes from 'prop-types';
 import { ICONS } from './mapConstants';
-import { getCountry } from './countries';
+import { getCountry, DEFAULT_COUNTRY } from './countries';
 import { getSelectedCountry, subscribe } from './countryStore';
 import { getLocale } from './ux/strings';
+import { INTL_ENABLED } from './intlConfig';
 
 /**
  * SearchField Component
@@ -114,9 +115,18 @@ const SearchField = ({ apiKey }) => {
   // Re-render this component when the selected country changes, so the control
   // is rebuilt for the new geocoder scope. We hold the code in state and seed it
   // from the store (default 'br'); the subscription flips it on every change.
-  const [countryCode, setCountryCode] = useState(getSelectedCountry);
+  //
+  // INTL dev-toggle: when the feature is OFF the search stays pinned to Brazil
+  // exactly as before — we ignore the store, seed 'br', and never subscribe, so
+  // a stale persisted country can never leak through while the feature is dark.
+  const [countryCode, setCountryCode] = useState(
+    INTL_ENABLED ? getSelectedCountry : () => DEFAULT_COUNTRY,
+  );
 
-  useEffect(() => subscribe(setCountryCode), []);
+  useEffect(() => {
+    if (!INTL_ENABLED) return undefined;
+    return subscribe(setCountryCode);
+  }, []);
 
   useEffect(() => {
     const provider = buildCountryProvider(countryCode);

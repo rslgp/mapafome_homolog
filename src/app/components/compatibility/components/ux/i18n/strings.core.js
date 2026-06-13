@@ -39,6 +39,10 @@ export const pt = {
   'country.search':      'Buscar país',
   'country.empty':       'Nenhum país encontrado.',
   'country.close':       'Fechar a lista de países',
+  // ── LanguageControl (INTL) — UI language picker ─────────────────────────
+  'lang.button':         'Idioma: {name}',
+  'lang.open':           'Trocar o idioma do site',
+  'lang.title':          'Escolha o idioma',
 };
 
 export const es = {
@@ -73,4 +77,8 @@ export const es = {
   'country.search':      'Buscar país',
   'country.empty':       'No se encontró ningún país.',
   'country.close':       'Cerrar la lista de países',
+  // ── LanguageControl (INTL) — UI language picker ─────────────────────────
+  'lang.button':         'Idioma: {name}',
+  'lang.open':           'Cambiar el idioma del sitio',
+  'lang.title':          'Elige el idioma',
 };
