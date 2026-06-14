@@ -26,8 +26,8 @@ describe('intlConfig.INTL_ENABLED', () => {
     expect(typeof (await loadWith(undefined))).toBe('boolean');
   });
 
-  it('defaults to the DEV_DEFAULT (OFF) when the env var is unset', async () => {
-    expect(await loadWith(undefined)).toBe(false);
+  it('defaults to the DEV_DEFAULT (ON) when the env var is unset', async () => {
+    expect(await loadWith(undefined)).toBe(true);
   });
 
   it('honors explicit off values', async () => {
@@ -42,7 +42,7 @@ describe('intlConfig.INTL_ENABLED', () => {
     }
   });
 
-  it('falls back to the default (OFF) for an unrecognized value', async () => {
-    expect(await loadWith('maybe')).toBe(false);
+  it('falls back to the default (ON) for an unrecognized value', async () => {
+    expect(await loadWith('maybe')).toBe(true);
   });
 });

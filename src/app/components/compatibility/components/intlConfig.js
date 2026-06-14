@@ -14,7 +14,7 @@
 
 // Quick local default when NEXT_PUBLIC_INTL is unset. Set to false to ship the
 // feature dark while keeping all the code in place.
-const DEV_DEFAULT = false;
+const DEV_DEFAULT = true;
 
 function readEnvFlag() {
   // process.env is statically replaced at build time in Next; guard so a bare

@@ -27,10 +27,14 @@ const LISBON_PT = [38.72, -9.13];
 const SP_BR = [-23.55, -46.63];
 
 describe('INTL M5 rollback drill (MISS-1) — OFF artifact is Brazil-only', () => {
-  it('the COMMITTED flag is OFF (DEV_DEFAULT=false; the dark-ship invariant)', () => {
+  it('the COMMITTED flag is ON (DEV_DEFAULT=true; intl shipped on this branch)', () => {
     // The unit suite runs with NEXT_PUBLIC_INTL unset → INTL_ENABLED === DEV_DEFAULT.
-    // If this ever reads true in committed source, the dark-ship was broken.
-    expect(INTL_ENABLED).toBe(false);
+    // The dark-ship default was intentionally LIFTED on feat/intl-marking: intl now
+    // ships ON by default. Rollback remains a REBUILD with NEXT_PUBLIC_INTL=off (the
+    // env override still wins and resolves at module load); the geofence assertions
+    // below still pin the Brazil-only PUBLISH boundary, which is governed by its own
+    // resolver and is unaffected by this UI flag.
+    expect(INTL_ENABLED).toBe(true);
   });
 
   it('the OFF publish geofence REJECTS an international pin (Lisbon)', () => {
