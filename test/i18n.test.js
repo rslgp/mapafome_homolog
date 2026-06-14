@@ -34,8 +34,21 @@ const ASSINAR = join(HERE, '..', 'src', 'app', 'assinar');
 
 // pt-BR is the default; reset to it after each test so order is irrelevant and
 // no test leaks a locale into the next (module-level currentLocale is shared).
-beforeEach(() => { act(() => setLocale('pt-BR')); });
-afterEach(() => { cleanup(); act(() => setLocale('pt-BR')); });
+//
+// NOTE — async act: setLocale() now defers its subscriber NOTIFICATION to a
+// microtask (engine.js notify()), so the React re-render lands on a tick AFTER the
+// setLocale call returns. WHY the engine defers it: the live language picker is a
+// vanilla Leaflet DOM control whose click handler calls setLocale() synchronously,
+// OUTSIDE React's scheduler; firing the store-change on a fresh microtask is what
+// lets React flush the re-render (the in-browser probe proved the subscriber fired
+// but React never re-read the snapshot when notify ran inside that imperative
+// stack). The synchronous part (SOT write, localStorage, <html lang>) is unchanged,
+// so getLocale()/t() see the new value immediately. To observe the RE-RENDER in a
+// test, wrap setLocale in an ASYNC act so act() flushes the deferred microtask
+// before the assertion — this is the correct way to drive an async-notify store,
+// not a workaround.
+beforeEach(async () => { await act(async () => { setLocale('pt-BR'); }); });
+afterEach(async () => { cleanup(); await act(async () => { setLocale('pt-BR'); }); });
 
 describe('strings.t() — locale resolution', () => {
   it('defaults to pt-BR', () => {
@@ -44,15 +57,15 @@ describe('strings.t() — locale resolution', () => {
     expect(t('empty.no_pins_in_view')).toContain('Ninguém foi mapeado');
   });
 
-  it('returns es strings after setLocale("es")', () => {
-    act(() => setLocale('es'));
+  it('returns es strings after setLocale("es")', async () => {
+    await act(async () => { setLocale('es'); });
     expect(getLocale()).toBe('es');
     expect(t('cta.report')).toBe('Reportar');
     expect(t('empty.no_pins_in_view')).toContain('Nadie ha sido mapeado');
   });
 
-  it('returns en-US strings after setLocale("en-US") (INTL M6)', () => {
-    act(() => setLocale('en-US'));
+  it('returns en-US strings after setLocale("en-US") (INTL M6)', async () => {
+    await act(async () => { setLocale('en-US'); });
     expect(getLocale()).toBe('en-US');
     // A finalized mechanical label.
     expect(t('cta.report')).toBe('Report');
@@ -65,8 +78,11 @@ describe('strings.t() — locale resolution', () => {
     expect(t('does.not.exist')).toBe('does.not.exist');
   });
 
-  it('ignores an unsupported locale (stays on the previous one)', () => {
-    act(() => setLocale('fr'));
+  it('ignores an unsupported locale (stays on the previous one)', async () => {
+    // 'ja' is not in SUPPORTED_LOCALES (the seven are pt-BR/es/en-US/de/fr/ru/zh),
+    // so setLocale must reject it and keep the previous locale. (This fixture
+    // formerly used 'fr' as the unsupported example; 'fr' is now a real locale.)
+    await act(async () => { setLocale('ja'); });
     expect(getLocale()).toBe('pt-BR');
   });
 });
@@ -74,7 +90,7 @@ describe('strings.t() — locale resolution', () => {
 describe('useLocale() — re-render on locale change (the crux)', () => {
   // A converted component must show es after the switch AND pt-BR after
   // switching back, WITHOUT being remounted, proving the live subscription.
-  it('re-renders EmptyViewportOverlay in place across pt-BR -> es -> pt-BR', () => {
+  it('re-renders EmptyViewportOverlay in place across pt-BR -> es -> pt-BR', async () => {
     const { container } = render(<EmptyViewportOverlay visible onStartReport={() => {}} />);
 
     // 1) pt-BR (default).
@@ -83,30 +99,33 @@ describe('useLocale() — re-render on locale change (the crux)', () => {
     expect(container.querySelector('.mdf-empty__cta').textContent.trim())
       .toBe('Relatar');
 
-    // 2) Flip to es — setLocale dispatches 'mdf-locale-change'; useLocale forces
-    //    a re-render so t() re-reads. No remount, no re-render() call here.
-    act(() => setLocale('es'));
+    // 2) Flip to es — setLocale schedules the subscriber notify on a microtask;
+    //    useSyncExternalStore's onStoreChange then fires and React re-reads
+    //    getSnapshot, re-rendering in place so t() re-resolves. The async act()
+    //    flushes that microtask before we assert. No remount, no re-render() call.
+    await act(async () => { setLocale('es'); });
     expect(container.querySelector('.mdf-empty__text').textContent)
       .toContain('Nadie ha sido mapeado');
     expect(container.querySelector('.mdf-empty__cta').textContent.trim())
       .toBe('Reportar');
 
     // 3) Flip back to pt-BR — default copy is restored (no regression).
-    act(() => setLocale('pt-BR'));
+    await act(async () => { setLocale('pt-BR'); });
     expect(container.querySelector('.mdf-empty__text').textContent)
       .toContain('Ninguém foi mapeado');
     expect(container.querySelector('.mdf-empty__cta').textContent.trim())
       .toBe('Relatar');
   });
 
-  it('a t()-consuming probe that calls useLocale() updates on the event', () => {
+  it('a t()-consuming probe that calls useLocale() updates on the event', async () => {
     function Probe() {
       useLocale();
       return <span data-testid="probe">{t('report.button')}</span>;
     }
     const { getByTestId } = render(<Probe />);
     expect(getByTestId('probe').textContent).toBe('Publicar ponto');
-    act(() => setLocale('es'));
+    // Async act flushes the deferred subscriber notify so the re-render commits.
+    await act(async () => { setLocale('es'); });
     expect(getByTestId('probe').textContent).toBe('Publicar punto');
   });
 });
@@ -126,8 +145,8 @@ describe('errors.offline — P7: queue-and-retry copy, wired via t()', () => {
     expect(t('errors.offline')).not.toContain('Tente de novo'); // the old, wrong copy
   });
 
-  it('es resolves to the parallel save-and-send copy', () => {
-    act(() => setLocale('es'));
+  it('es resolves to the parallel save-and-send copy', async () => {
+    await act(async () => { setLocale('es'); });
     expect(t('errors.offline')).toBe(
       'Estás sin conexión. El punto fue guardado y se enviará cuando vuelva la conexión.',
     );

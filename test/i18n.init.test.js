@@ -72,11 +72,14 @@ describe('detectLocale() — pure browser-tag matcher (M6.2)', () => {
 
   it('returns the DEFAULT_LOCALE (pt-BR) for an unknown / empty input', async () => {
     const { detectLocale } = await import(ENGINE);
-    expect(detectLocale(['fr-FR'])).toBe('pt-BR');
-    expect(detectLocale(['de', 'ja'])).toBe('pt-BR');
+    // 'ja'/'ko' are NOT supported (the seven are pt-BR/es/en-US/de/fr/ru/zh), so
+    // they fall back to DEFAULT. (Formerly used 'fr-FR'/'de' as the unknown
+    // examples; both are real locales since INTL M7.)
+    expect(detectLocale(['ja-JP'])).toBe('pt-BR');
+    expect(detectLocale(['ko', 'ja'])).toBe('pt-BR');
     expect(detectLocale([])).toBe('pt-BR');
     expect(detectLocale(undefined)).toBe('pt-BR');
-    expect(detectLocale('zh-CN')).toBe('pt-BR'); // single-string form, unknown
+    expect(detectLocale('ko-KR')).toBe('pt-BR'); // single-string form, unknown (zh is now supported)
   });
 
   it('prefers an exact tag over a base match earlier in the list', async () => {
@@ -135,7 +138,9 @@ describe('useAutoDetectLocale() — mount-effect, NOT module-load (R12)', () => 
   });
 
   it('unknown browser language with no stored locale resolves to the default (pt-BR)', async () => {
-    stubNavigatorLanguages(['fr-FR']);
+    // 'ja-JP' is not a supported locale, so auto-detect falls back to default.
+    // (Formerly 'fr-FR', which now resolves to the real 'fr' locale, INTL M7.)
+    stubNavigatorLanguages(['ja-JP']);
     window.localStorage.clear();
     vi.resetModules();
     const m = await import(ENGINE);
