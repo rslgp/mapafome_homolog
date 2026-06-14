@@ -119,9 +119,12 @@ function captureSetViewLogs(page) {
 // Web-first: poll the captured setView logs for a line carrying the device lat,
 // then assert a tile at zoom 13 was requested. Generous budget for the slow mount.
 async function expectRecenteredAt(page, setViewLogs, coords) {
-  // The recenter log carries the new center array; match the latitude to a few
-  // decimals so float formatting differences do not make this brittle.
-  const latToken = coords.latitude.toFixed(3); // e.g. "-15.794"
+  // The recenter log is console.log([lat, lng]) (mapComponents.js:418), so the
+  // line carries the EXACT JS-stringified latitude, e.g. "[-34.6037, -58.3816]".
+  // Match String(latitude) — NOT toFixed(N), which rounds (e.g. -34.6037 ->
+  // "-34.604") to a string that is NOT a substring of the logged value and would
+  // false-fail. This is the precise device-coordinate the GPS fix recentered to.
+  const latToken = String(coords.latitude); // e.g. "-34.6037"
   await expect
     .poll(() => setViewLogs.some((l) => l.includes(latToken)), {
       timeout: 45000,
@@ -144,6 +147,25 @@ async function expectRecenteredAt(page, setViewLogs, coords) {
     )
     .toBe(true);
 }
+
+// DETERMINISM (LBR-09) — PIN the browser UI language to the app DEFAULT (pt-BR).
+// WHY this is load-bearing, not cosmetic: layout.js mounts TWO competing
+// first-session locale effects — LocaleAutoDetect (browser-language,
+// useAutoDetectLocale) AND LocationLocaleDetect (location, useLocationLocale).
+// Both gate on hasStoredLocale(). In headless Chromium the context locale
+// defaults to en-US, so navigator.languages === ['en-US']; useAutoDetectLocale
+// then resolves en-US, sees it differs from the pt-BR default, and PERSISTS
+// mdf_locale=en-US synchronously on mount. That stored write (a) makes
+// useLocationLocale's pre-request hasStoredLocale() gate true so it NEVER even
+// reverse-geocodes (observed: nominatimHit=0), and (b) would itself answer the
+// <html lang> assertion with en-US regardless of the location signal — i.e. the
+// browser-language path masks the feature under test. Pinning the context locale
+// to 'pt-BR' makes detectLocale(['pt-BR']) === DEFAULT_LOCALE, so
+// useAutoDetectLocale takes its no-persist branch (applyDocumentLang only), leaves
+// mdf_locale unset, and the LOC-LANG path is the ONLY thing that can change the
+// locale — which is exactly what these tests must isolate. (Triaged: with this
+// pin nominatimHit=1 and the location-derived locale applies.)
+test.use({ locale: 'pt-BR' });
 
 // Shared arrange: returning-visitor cookie so the tour backdrop never intercepts
 // (T5). Per-test only — seeds state, no shared mutable data, fullyParallel-safe.
