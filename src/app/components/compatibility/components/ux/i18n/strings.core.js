@@ -166,9 +166,9 @@ export const es = {
 export const enUS = {
   // report.* — hunger-need prompts. DIGNITY-SENSITIVE: the tone (ask gently,
   // never command, never accuse) must be human-reviewed before shipping.
-  'report.title':      '[REVISAR-HUMANO] What does this person need right now?',
-  'report.subtitle':   '[REVISAR-HUMANO] You can choose more than one.',
-  'report.button':     '[REVISAR-HUMANO] Publish point',
+  'report.title':      'What does this person need right now?',
+  'report.subtitle':   'You can choose more than one.',
+  'report.button':     'Publish point',
   'report.publishing': 'Publishing…',
   'report.success':    'Published ✓',
   'report.retry':      'Try again',
@@ -176,13 +176,13 @@ export const enUS = {
   'errors.at_least_one_category': 'Choose at least one need.',
   // Failure/status copy carries reassurance tone (it must calm, not alarm), so
   // it is drafted for human review.
-  'errors.publish_failed':        '[REVISAR-HUMANO] We could not publish. Check your connection and try again.',
-  'errors.offline':               '[REVISAR-HUMANO] You are offline. The point was saved and will be sent when the connection comes back.',
-  'errors.server_slow':           '[REVISAR-HUMANO] The server was slow to respond. Your point may have been saved, wait 30s and reload before trying again.',
+  'errors.publish_failed':        'We could not publish. Check your connection and try again.',
+  'errors.offline':               'You are offline. The point was saved and will be sent when the connection comes back.',
+  'errors.server_slow':           'The server was slow to respond. Your point may have been saved, wait 30s and reload before trying again.',
   // INTL M3 (UX-1/UX-2): geofence-rejection copy for the FOME map. Country-neutral,
   // names the SELECTED country via {pais}, points at the fix (move the pin or
   // switch the flag). DIGNITY-SENSITIVE (where you may mark): human-reviewed.
-  'errors.out_of_country':        '[REVISAR-HUMANO] That point is outside {pais}. Tap on the map, inside the selected country, to publish here, or switch the country in the flag picker.',
+  'errors.out_of_country':        'That point is outside {pais}. Tap on the map, inside the selected country, to publish here, or switch the country in the flag picker.',
   // pin.* — status labels and the action button. Mechanical, finalized.
   'pin.waiting':        'Waiting',
   'pin.someone_going':  'Someone on the way',
@@ -251,20 +251,20 @@ export const enUS = {
 
 export const de = {
   // report.* — hunger-need prompts. DIGNITY-SENSITIVE: human-reviewed.
-  'report.title':      '[REVISAR-HUMANO] Was braucht diese Person gerade?',
-  'report.subtitle':   '[REVISAR-HUMANO] Du kannst mehr als eines wählen.',
-  'report.button':     '[REVISAR-HUMANO] Punkt veröffentlichen',
+  'report.title':      'Was braucht diese Person gerade?',
+  'report.subtitle':   'Du kannst mehr als eines wählen.',
+  'report.button':     'Punkt veröffentlichen',
   'report.publishing': 'Wird veröffentlicht…',
   'report.success':    'Veröffentlicht ✓',
   'report.retry':      'Erneut versuchen',
   // Plain validation prompt — mechanical, finalized.
   'errors.at_least_one_category': 'Wähle mindestens eine Notwendigkeit.',
   // Failure/status copy carries reassurance tone, drafted for human review.
-  'errors.publish_failed':        '[REVISAR-HUMANO] Veröffentlichung nicht möglich. Prüfe deine Verbindung und versuche es erneut.',
-  'errors.offline':               '[REVISAR-HUMANO] Du bist offline. Der Punkt wurde gespeichert und wird gesendet, sobald die Verbindung zurück ist.',
-  'errors.server_slow':           '[REVISAR-HUMANO] Der Server hat langsam geantwortet. Dein Punkt wurde vielleicht gespeichert, warte 30s und lade neu, bevor du es erneut versuchst.',
+  'errors.publish_failed':        'Veröffentlichung nicht möglich. Prüfe deine Verbindung und versuche es erneut.',
+  'errors.offline':               'Du bist offline. Der Punkt wurde gespeichert und wird gesendet, sobald die Verbindung zurück ist.',
+  'errors.server_slow':           'Der Server hat langsam geantwortet. Dein Punkt wurde vielleicht gespeichert, warte 30s und lade neu, bevor du es erneut versuchst.',
   // Geofence-rejection copy. DIGNITY-SENSITIVE: human-reviewed.
-  'errors.out_of_country':        '[REVISAR-HUMANO] Dieser Punkt liegt außerhalb von {pais}. Tippe auf die Karte, innerhalb des ausgewählten Landes, um hier zu veröffentlichen, oder wechsle das Land im Flaggenwähler.',
+  'errors.out_of_country':        'Dieser Punkt liegt außerhalb von {pais}. Tippe auf die Karte, innerhalb des ausgewählten Landes, um hier zu veröffentlichen, oder wechsle das Land im Flaggenwähler.',
   // pin.* — status labels and the action button. Mechanical, finalized.
   'pin.waiting':        'Wartet',
   'pin.someone_going':  'Jemand ist unterwegs',
@@ -274,7 +274,7 @@ export const de = {
   'pin.mark_attended':  'Als geholfen markieren',
   'pin.after_attended': 'Danke. Der Punkt wurde archiviert.',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
-  'empty.no_pins_in_view':  '[REVISAR-HUMANO] In diesem Bereich wurde noch niemand kartiert. Wenn du jemanden in Not gesehen hast, tippe auf Melden.',
+  'empty.no_pins_in_view':  'In diesem Bereich wurde noch niemand kartiert. Wenn du jemanden in Not gesehen hast, tippe auf Melden.',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Melden',
   'cta.list':   'Liste',
@@ -324,20 +324,20 @@ export const de = {
 
 export const fr = {
   // report.* — hunger-need prompts. DIGNITY-SENSITIVE: human-reviewed.
-  'report.title':      '[REVISAR-HUMANO] De quoi cette personne a-t-elle besoin maintenant ?',
-  'report.subtitle':   '[REVISAR-HUMANO] Tu peux en choisir plusieurs.',
-  'report.button':     '[REVISAR-HUMANO] Publier le point',
+  'report.title':      'De quoi cette personne a-t-elle besoin maintenant ?',
+  'report.subtitle':   'Tu peux en choisir plusieurs.',
+  'report.button':     'Publier le point',
   'report.publishing': 'Publication…',
   'report.success':    'Publié ✓',
   'report.retry':      'Réessayer',
   // Plain validation prompt — mechanical, finalized.
   'errors.at_least_one_category': 'Choisis au moins un besoin.',
   // Failure/status copy carries reassurance tone, drafted for human review.
-  'errors.publish_failed':        '[REVISAR-HUMANO] Publication impossible. Vérifie ta connexion et réessaie.',
-  'errors.offline':               '[REVISAR-HUMANO] Tu es hors ligne. Le point a été enregistré et sera envoyé dès que la connexion reviendra.',
-  'errors.server_slow':           '[REVISAR-HUMANO] Le serveur a mis du temps à répondre. Ton point a peut-être été enregistré, attends 30s et recharge avant de réessayer.',
+  'errors.publish_failed':        'Publication impossible. Vérifie ta connexion et réessaie.',
+  'errors.offline':               'Tu es hors ligne. Le point a été enregistré et sera envoyé dès que la connexion reviendra.',
+  'errors.server_slow':           'Le serveur a mis du temps à répondre. Ton point a peut-être été enregistré, attends 30s et recharge avant de réessayer.',
   // Geofence-rejection copy. DIGNITY-SENSITIVE: human-reviewed.
-  'errors.out_of_country':        '[REVISAR-HUMANO] Ce point est en dehors de {pais}. Touche la carte, à l\'intérieur du pays sélectionné, pour publier ici, ou change de pays dans le sélecteur de drapeau.',
+  'errors.out_of_country':        'Ce point est en dehors de {pais}. Touche la carte, à l\'intérieur du pays sélectionné, pour publier ici, ou change de pays dans le sélecteur de drapeau.',
   // pin.* — status labels and the action button. Mechanical, finalized.
   'pin.waiting':        'En attente',
   'pin.someone_going':  'Quelqu\'un est en chemin',
@@ -347,7 +347,7 @@ export const fr = {
   'pin.mark_attended':  'Marquer comme aidé',
   'pin.after_attended': 'Merci. Le point a été archivé.',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
-  'empty.no_pins_in_view':  '[REVISAR-HUMANO] Personne n\'a encore été cartographié dans cette zone. Si tu as vu quelqu\'un dans le besoin, touche Signaler.',
+  'empty.no_pins_in_view':  'Personne n\'a encore été cartographié dans cette zone. Si tu as vu quelqu\'un dans le besoin, touche Signaler.',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Signaler',
   'cta.list':   'Liste',
@@ -397,20 +397,20 @@ export const fr = {
 
 export const ru = {
   // report.* — hunger-need prompts. DIGNITY-SENSITIVE: human-reviewed.
-  'report.title':      '[REVISAR-HUMANO] Что этому человеку нужно прямо сейчас?',
-  'report.subtitle':   '[REVISAR-HUMANO] Можно выбрать несколько.',
-  'report.button':     '[REVISAR-HUMANO] Опубликовать точку',
+  'report.title':      'Что этому человеку нужно прямо сейчас?',
+  'report.subtitle':   'Можно выбрать несколько.',
+  'report.button':     'Опубликовать точку',
   'report.publishing': 'Публикуется…',
   'report.success':    'Опубликовано ✓',
   'report.retry':      'Попробовать снова',
   // Plain validation prompt — mechanical, finalized.
   'errors.at_least_one_category': 'Выберите хотя бы одну потребность.',
   // Failure/status copy carries reassurance tone, drafted for human review.
-  'errors.publish_failed':        '[REVISAR-HUMANO] Не удалось опубликовать. Проверьте соединение и попробуйте снова.',
-  'errors.offline':               '[REVISAR-HUMANO] Вы офлайн. Точка сохранена и будет отправлена, когда соединение вернётся.',
-  'errors.server_slow':           '[REVISAR-HUMANO] Сервер ответил медленно. Ваша точка могла сохраниться, подождите 30 секунд и обновите страницу, прежде чем пробовать снова.',
+  'errors.publish_failed':        'Не удалось опубликовать. Проверьте соединение и попробуйте снова.',
+  'errors.offline':               'Вы офлайн. Точка сохранена и будет отправлена, когда соединение вернётся.',
+  'errors.server_slow':           'Сервер ответил медленно. Ваша точка могла сохраниться, подождите 30 секунд и обновите страницу, прежде чем пробовать снова.',
   // Geofence-rejection copy. DIGNITY-SENSITIVE: human-reviewed.
-  'errors.out_of_country':        '[REVISAR-HUMANO] Эта точка находится вне {pais}. Нажмите на карту, внутри выбранной страны, чтобы опубликовать здесь, или смените страну в выборе флага.',
+  'errors.out_of_country':        'Эта точка находится вне {pais}. Нажмите на карту, внутри выбранной страны, чтобы опубликовать здесь, или смените страну в выборе флага.',
   // pin.* — status labels and the action button. Mechanical, finalized.
   'pin.waiting':        'Ожидает',
   'pin.someone_going':  'Кто-то уже в пути',
@@ -420,7 +420,7 @@ export const ru = {
   'pin.mark_attended':  'Отметить как помогли',
   'pin.after_attended': 'Спасибо. Точка отправлена в архив.',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
-  'empty.no_pins_in_view':  '[REVISAR-HUMANO] В этой области пока никого не отметили. Если вы видели человека в нужде, нажмите Сообщить.',
+  'empty.no_pins_in_view':  'В этой области пока никого не отметили. Если вы видели человека в нужде, нажмите Сообщить.',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Сообщить',
   'cta.list':   'Список',
@@ -470,20 +470,20 @@ export const ru = {
 
 export const zh = {
   // report.* — hunger-need prompts. DIGNITY-SENSITIVE: human-reviewed.
-  'report.title':      '[REVISAR-HUMANO] 这个人现在需要什么？',
-  'report.subtitle':   '[REVISAR-HUMANO] 你可以选择多项。',
-  'report.button':     '[REVISAR-HUMANO] 发布地点',
+  'report.title':      '这个人现在需要什么？',
+  'report.subtitle':   '你可以选择多项。',
+  'report.button':     '发布地点',
   'report.publishing': '正在发布…',
   'report.success':    '已发布 ✓',
   'report.retry':      '再试一次',
   // Plain validation prompt — mechanical, finalized.
   'errors.at_least_one_category': '请至少选择一项需求。',
   // Failure/status copy carries reassurance tone, drafted for human review.
-  'errors.publish_failed':        '[REVISAR-HUMANO] 无法发布。请检查你的网络并重试。',
-  'errors.offline':               '[REVISAR-HUMANO] 你当前离线。地点已保存，将在网络恢复后发送。',
-  'errors.server_slow':           '[REVISAR-HUMANO] 服务器响应较慢。你的地点可能已保存，请等待30秒并重新加载后再重试。',
+  'errors.publish_failed':        '无法发布。请检查你的网络并重试。',
+  'errors.offline':               '你当前离线。地点已保存，将在网络恢复后发送。',
+  'errors.server_slow':           '服务器响应较慢。你的地点可能已保存，请等待30秒并重新加载后再重试。',
   // Geofence-rejection copy. DIGNITY-SENSITIVE: human-reviewed.
-  'errors.out_of_country':        '[REVISAR-HUMANO] 该地点在 {pais} 之外。请在所选国家范围内点击地图以在此发布，或在国旗选择器中切换国家。',
+  'errors.out_of_country':        '该地点在 {pais} 之外。请在所选国家范围内点击地图以在此发布，或在国旗选择器中切换国家。',
   // pin.* — status labels and the action button. Mechanical, finalized.
   'pin.waiting':        '等待中',
   'pin.someone_going':  '有人正在赶来',
@@ -493,7 +493,7 @@ export const zh = {
   'pin.mark_attended':  '标记为已帮助',
   'pin.after_attended': '谢谢。该地点已归档。',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
-  'empty.no_pins_in_view':  '[REVISAR-HUMANO] 这片区域还没有人被标记。如果你看到有人需要帮助，请点击举报。',
+  'empty.no_pins_in_view':  '这片区域还没有人被标记。如果你看到有人需要帮助，请点击举报。',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': '举报',
   'cta.list':   '列表',
