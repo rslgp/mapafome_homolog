@@ -8,17 +8,22 @@ import {
   toCsvCampanhas,
 } from '../components/compatibility/components/ux/marketingReports';
 import { downloadBlob } from '../components/compatibility/components/ux/downloadBlob';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
 // Marketing report — destined for sponsor/advertiser companies. Separate
 // from /relatorios (public-policy) because the audience and framing differ.
 
-const STATUS_LABEL = {
-  ativo: 'Ativo',
-  expirado: 'Expirado',
-  'aguardando-inicio': 'Agendado',
+// Campaign-status -> full i18n key. The visible label is resolved via t() at
+// render time so it follows the active locale (the ids stay the SOT). Full keys
+// are kept here as literals so the no-dead-key scan sees each one referenced.
+const STATUS_KEY = {
+  ativo: 'page.mktreport.status_active',
+  expirado: 'page.mktreport.status_expired',
+  'aguardando-inicio': 'page.mktreport.status_scheduled',
 };
 
 export default function RelatorioMarketingPage() {
+  useLocale(); // re-render on locale change so t() re-reads
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState(null);
   const [report, setReport] = useState(null);
@@ -72,61 +77,55 @@ export default function RelatorioMarketingPage() {
 
   return (
     <main className="mdf-mkt">
-      <Link href="/" className="mdf-mkt__back">← Mapa</Link>
-      <h1>Relatório de marketing</h1>
+      <Link href="/" className="mdf-mkt__back">{t('page.mktreport.back')}</Link>
+      <h1>{t('page.mktreport.title')}</h1>
       <p className="mdf-mkt__lead">
-        Relatório de campanha para empresas que patrocinam o espaço do MAPA FOME.
-        Mostra alcance potencial (pontos de necessidade reportados dentro do raio
-        e da janela de tempo contratada) e alcance engajado (desses pontos,
-        quantos foram atendidos por um voluntário).
+        {t('page.mktreport.lead')}
       </p>
       <p className="mdf-mkt__ethics">
-        <strong>Zero rastreamento individual.</strong> Nenhum identificador de
-        usuário, device id ou pixel de terceiros é usado. Os números abaixo são
-        agregados de pontos reportados no território da campanha — uma métrica
-        honesta de <em>contexto e dignidade</em>, não de vigilância.
+        <strong>{t('page.mktreport.ethics_strong')}</strong> {t('page.mktreport.ethics_lead')}<em>{t('page.mktreport.ethics_em')}</em>{t('page.mktreport.ethics_tail')}
       </p>
 
-      {status === 'loading' && <p className="mdf-mkt__status">Carregando dados…</p>}
+      {status === 'loading' && <p className="mdf-mkt__status">{t('page.mktreport.loading')}</p>}
       {status === 'error' && (
         <div className="mdf-mkt__status mdf-mkt__status--error" role="alert">
-          Não foi possível carregar o relatório.
-          {error ? <> Detalhe técnico: <code>{error}</code></> : null}
-          <button type="button" className="mdf-mkt__retry" onClick={load}>Tentar novamente</button>
+          {t('page.mktreport.error')}
+          {error ? <> {t('page.mktreport.error_detail')} <code>{error}</code></> : null}
+          <button type="button" className="mdf-mkt__retry" onClick={load}>{t('page.mktreport.retry')}</button>
         </div>
       )}
 
       {status === 'ready' && report && (
         <>
           <section className="mdf-mkt__section">
-            <h2>Resumo</h2>
+            <h2>{t('page.mktreport.summary_title')}</h2>
             <dl className="mdf-mkt__kv">
-              <dt>Campanhas ativas agora</dt><dd>{report.resumo.patrocinios_ativos}</dd>
-              <dt>Campanhas agendadas</dt><dd>{report.resumo.patrocinios_agendados}</dd>
-              <dt>Campanhas expiradas</dt><dd>{report.resumo.patrocinios_expirados}</dd>
-              <dt>Audiência potencial total (período contratado)</dt>
+              <dt>{t('page.mktreport.summary_active')}</dt><dd>{report.resumo.patrocinios_ativos}</dd>
+              <dt>{t('page.mktreport.summary_scheduled')}</dt><dd>{report.resumo.patrocinios_agendados}</dd>
+              <dt>{t('page.mktreport.summary_expired')}</dt><dd>{report.resumo.patrocinios_expirados}</dd>
+              <dt>{t('page.mktreport.summary_potential')}</dt>
               <dd>{report.resumo.audiencia_potencial_total}</dd>
-              <dt>Audiência engajada (pontos atendidos)</dt>
+              <dt>{t('page.mktreport.summary_engaged')}</dt>
               <dd>{report.resumo.audiencia_engajada_total}</dd>
             </dl>
           </section>
 
           <section className="mdf-mkt__section">
-            <h2>Campanhas</h2>
+            <h2>{t('page.mktreport.campaigns_title')}</h2>
             {report.campanhas.length === 0 ? (
-              <p>Nenhuma campanha cadastrada no momento.</p>
+              <p>{t('page.mktreport.campaigns_empty')}</p>
             ) : (
               <table className="mdf-mkt__table">
-                <caption>Campanhas ativas, agendadas e expiradas com alcance estimado</caption>
+                <caption>{t('page.mktreport.campaigns_caption')}</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Campanha</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Janela</th>
-                    <th scope="col">Raio</th>
-                    <th scope="col">Audiência potencial</th>
-                    <th scope="col">Engajada</th>
-                    <th scope="col">Até agora</th>
+                    <th scope="col">{t('page.mktreport.col_campaign')}</th>
+                    <th scope="col">{t('page.mktreport.col_status')}</th>
+                    <th scope="col">{t('page.mktreport.col_window')}</th>
+                    <th scope="col">{t('page.mktreport.col_radius')}</th>
+                    <th scope="col">{t('page.mktreport.col_potential')}</th>
+                    <th scope="col">{t('page.mktreport.col_engaged')}</th>
+                    <th scope="col">{t('page.mktreport.col_so_far')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -136,17 +135,17 @@ export default function RelatorioMarketingPage() {
                         <b>{c.label}</b>
                         <br />
                         <span className="mdf-mkt__meta">
-                          {c.placements.length > 0 ? c.placements.join(' · ') : 'sem placement'}
+                          {c.placements.length > 0 ? c.placements.join(' · ') : t('page.mktreport.no_placement')}
                         </span>
                       </td>
                       <td>
                         <span className={`mdf-mkt__badge mdf-mkt__badge--${c.status}`}>
-                          {STATUS_LABEL[c.status] || c.status}
+                          {STATUS_KEY[c.status] ? t(STATUS_KEY[c.status]) : c.status}
                         </span>
                       </td>
                       <td>
                         {c.inicio || '—'}<br />
-                        <small>até {c.fim || '—'}</small>
+                        <small>{t('page.mktreport.until')} {c.fim || '—'}</small>
                       </td>
                       <td>{c.raio_km != null ? `${c.raio_km} km` : '—'}</td>
                       <td><b>{c.audiencia_potencial_no_periodo}</b></td>
@@ -160,43 +159,32 @@ export default function RelatorioMarketingPage() {
           </section>
 
           <section className="mdf-mkt__section">
-            <h2>Exportar</h2>
-            <p>Formatos prontos para incluir em media kit, relatório de fim de campanha ou importar em planilha.</p>
+            <h2>{t('page.mktreport.export_title')}</h2>
+            <p>{t('page.mktreport.export_intro')}</p>
             <div className="mdf-mkt__actions">
-              <button type="button" onClick={exportJson}>Baixar JSON completo</button>
-              <button type="button" onClick={exportCsv}>CSV — campanhas</button>
+              <button type="button" onClick={exportJson}>{t('page.mktreport.export_json')}</button>
+              <button type="button" onClick={exportCsv}>{t('page.mktreport.export_csv')}</button>
             </div>
           </section>
 
           <section className="mdf-mkt__section mdf-mkt__section--cite">
-            <h2>Metodologia para a marca</h2>
+            <h2>{t('page.mktreport.method_title')}</h2>
             <p>
-              Ao contratar um slot, a marca define um <em>centro</em> geográfico,
-              um <em>raio</em> em km e uma <em>janela de tempo</em>. Contamos o
-              número de pontos de necessidade reportados na plataforma MAPA FOME
-              dentro desse retângulo (tempo × espaço) — é a <em>audiência potencial</em>
-              da campanha, uma medida honesta de quantas vezes o banner esteve ao
-              lado de um pedido de ajuda real na região.
+              {t('page.mktreport.method_p1_a')}<em>{t('page.mktreport.method_center')}</em>{t('page.mktreport.method_p1_b')}<em>{t('page.mktreport.method_radius')}</em>{t('page.mktreport.method_p1_c')}<em>{t('page.mktreport.method_window')}</em>{t('page.mktreport.method_p1_d')}<em>{t('page.mktreport.method_potential')}</em>{t('page.mktreport.method_p1_e')}
             </p>
             <p>
-              <em>Audiência engajada</em> = dos pontos potenciais, quantos foram
-              atendidos por um voluntário. É um indicador de contexto: quanto
-              maior, mais a marca esteve exposta junto a uma comunidade ativa.
+              <em>{t('page.mktreport.method_engaged')}</em>{t('page.mktreport.method_p2')}
             </p>
             <p>
-              Não fazemos <em>retargeting</em>, não vendemos dados, não mostramos
-              histórico de navegação. O MAPA FOME é uma ferramenta humanitária;
-              o patrocínio existe para sustentar a operação, não para vigiar
-              vulneráveis.
+              {t('page.mktreport.method_p3_a')}<em>{t('page.mktreport.method_retargeting')}</em>{t('page.mktreport.method_p3_b')}
             </p>
           </section>
 
           <section className="mdf-mkt__section">
-            <h2>Como citar / atribuição</h2>
+            <h2>{t('page.mktreport.cite_title')}</h2>
             <p>
-              Empresa patrocinadora pode divulgar o apoio citando:
-              &quot;<b>Apoiador do MAPA FOME — {new Date(report.meta.gerado_em).toLocaleDateString('pt-BR')}</b>&quot;.
-              Logomarca conjunta e kit de divulgação disponíveis sob solicitação.
+              {t('page.mktreport.cite_lead')}
+              &quot;<b>{t('page.mktreport.cite_quote')} {new Date(report.meta.gerado_em).toLocaleDateString('pt-BR')}</b>&quot;{t('page.mktreport.cite_tail')}
             </p>
           </section>
         </>

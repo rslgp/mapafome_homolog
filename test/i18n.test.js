@@ -31,6 +31,16 @@ const COMPAT = join(HERE, '..', 'src', 'app', 'components', 'compatibility');
 const PETS = join(HERE, '..', 'src', 'app', 'pets');
 // The /assinar route reads assinar.* keys outside the compat tree as well.
 const ASSINAR = join(HERE, '..', 'src', 'app', 'assinar');
+// PAGE-CHROME batch 2 — these standalone route pages read page.* keys outside the
+// compat tree (partners/reports/marketing-report/press/initiative-register), so the
+// no-dead-key scan must include them too (same reasoning as /pets and /assinar).
+const ROUTE_PAGES = [
+  join(HERE, '..', 'src', 'app', 'parceiros'),
+  join(HERE, '..', 'src', 'app', 'relatorios'),
+  join(HERE, '..', 'src', 'app', 'relatorio-marketing'),
+  join(HERE, '..', 'src', 'app', 'imprensa'),
+  join(HERE, '..', 'src', 'app', 'iniciativas'),
+];
 
 // pt-BR is the default; reset to it after each test so order is irrelevant and
 // no test leaks a locale into the next (module-level currentLocale is shared).
@@ -217,6 +227,7 @@ describe('dictionary — P8: parity + zero dead keys', () => {
     walk(COMPAT);
     walk(PETS);
     walk(ASSINAR);
+    for (const root of ROUTE_PAGES) walk(root);
     const corpus = files.map((f) => readFileSync(f, 'utf8')).join('\n');
 
     // A key counts as live if it appears as a quoted string literal anywhere
@@ -228,9 +239,14 @@ describe('dictionary — P8: parity + zero dead keys', () => {
     // dot before a known dynamic segment) is present as a template literal.
     const present = (key) => corpus.includes(`'${key}'`) || corpus.includes(`"${key}"`);
     // Dynamic prefixes used by the /pets render sites (t(`<prefix>${id}...`)).
+    // PAGE-CHROME batch 2 adds two more: /parceiros composes the tier card/select
+    // copy as t(`page.partners.tier_${id}_<field>`) and /iniciativas composes the
+    // category chip label as t(`page.initiative.cat_${id}`), so the full key never
+    // appears as a literal — its template PREFIX does.
     const DYNAMIC_PREFIXES = [
       'pets.status.', 'pets.species.', 'pets.size.', 'pets.lifecycle.',
       'pets.publish.failed.', 'pets.publish.throttle.', 'pets.share.lead.',
+      'page.partners.tier_', 'page.initiative.cat_',
     ];
     const liveViaDynamic = (key) =>
       DYNAMIC_PREFIXES.some((p) => key.startsWith(p) && (corpus.includes(`\`${p}`) || corpus.includes(`'${p}`)));

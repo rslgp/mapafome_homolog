@@ -3,22 +3,20 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import './register.css';
+import { t, useLocale } from '../../components/compatibility/components/ux/strings';
 
 // M6 — initiatives registration. Ongoing groups (soup kitchens, neighborhood
 // collectives) announce fixed locations so donors and people in need can
 // find them. Never in the primary header (Hick's Law).
 
-const CATEGORIES = [
-  { id: 'comida',  label: 'Comida' },
-  { id: 'agua',    label: 'Água' },
-  { id: 'roupa',   label: 'Roupa' },
-  { id: 'higiene', label: 'Higiene' },
-  { id: 'abrigo',  label: 'Abrigo' },
-];
+// Category ids are the source of truth; the visible chip label is resolved via
+// t() at render so it follows the active locale.
+const CATEGORY_IDS = ['comida', 'agua', 'roupa', 'higiene', 'abrigo'];
 
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 
 export default function InitiativeRegisterPage() {
+  useLocale(); // re-render on locale change so t() re-reads
   const [nome, setNome] = useState('');
   const [cats, setCats] = useState(new Set());
   const [endereco, setEndereco] = useState('');
@@ -76,24 +74,24 @@ export default function InitiativeRegisterPage() {
   if (status === 'success') {
     return (
       <main className="mdf-initiative-ok">
-        <h1>Iniciativa registrada</h1>
-        <p>Obrigado. O ponto aparecerá no mapa em breve, após a revisão da comunidade.</p>
-        <Link href="/">Voltar para o mapa</Link>
+        <h1>{t('page.initiative.ok_title')}</h1>
+        <p>{t('page.initiative.ok_body')}</p>
+        <Link href="/">{t('page.initiative.ok_back')}</Link>
       </main>
     );
   }
 
   return (
     <main className="mdf-initiative">
-      <Link href="/" className="mdf-initiative__back">← Mapa</Link>
-      <h1>Cadastrar iniciativa</h1>
+      <Link href="/" className="mdf-initiative__back">{t('page.initiative.back')}</Link>
+      <h1>{t('page.initiative.title')}</h1>
       <p className="mdf-initiative__sub">
-        Para grupos, ONGs ou coletivos que já distribuem ajuda em um local fixo.
+        {t('page.initiative.sub')}
       </p>
 
       <form onSubmit={handleSubmit} noValidate>
         <label className="mdf-field">
-          <span>Nome da iniciativa</span>
+          <span>{t('page.initiative.name_label')}</span>
           <input
             type="text"
             value={nome}
@@ -104,37 +102,37 @@ export default function InitiativeRegisterPage() {
         </label>
 
         <fieldset className="mdf-field">
-          <legend>O que distribuem</legend>
+          <legend>{t('page.initiative.what_legend')}</legend>
           <div className="mdf-chips">
-            {CATEGORIES.map((c) => (
+            {CATEGORY_IDS.map((id) => (
               <button
-                key={c.id}
+                key={id}
                 type="button"
                 role="checkbox"
-                aria-checked={cats.has(c.id)}
-                className={`mdf-chip${cats.has(c.id) ? ' mdf-chip--on' : ''}`}
-                onClick={() => toggleCat(c.id)}
+                aria-checked={cats.has(id)}
+                className={`mdf-chip${cats.has(id) ? ' mdf-chip--on' : ''}`}
+                onClick={() => toggleCat(id)}
               >
-                {c.label}
+                {t(`page.initiative.cat_${id}`)}
               </button>
             ))}
           </div>
         </fieldset>
 
         <label className="mdf-field">
-          <span>Endereço ou ponto de referência</span>
+          <span>{t('page.initiative.addr_label')}</span>
           <input
             type="text"
             value={endereco}
             onChange={(e) => setEndereco(e.target.value)}
-            placeholder="Ex: Rua Setúbal, 123 — Boa Viagem, Recife"
+            placeholder={t('page.initiative.addr_ph')}
             maxLength={140}
             required
           />
         </label>
 
         <fieldset className="mdf-field">
-          <legend>Dias de atuação</legend>
+          <legend>{t('page.initiative.days_legend')}</legend>
           <div className="mdf-chips">
             {WEEKDAYS.map((d) => (
               <button
@@ -152,23 +150,23 @@ export default function InitiativeRegisterPage() {
         </fieldset>
 
         <label className="mdf-field">
-          <span>Horário</span>
+          <span>{t('page.initiative.time_label')}</span>
           <input
             type="text"
             value={horario}
             onChange={(e) => setHorario(e.target.value)}
-            placeholder="Ex: 11h às 14h"
+            placeholder={t('page.initiative.time_ph')}
             maxLength={40}
           />
         </label>
 
         <label className="mdf-field">
-          <span>Contato</span>
+          <span>{t('page.initiative.contact_label')}</span>
           <input
             type="text"
             value={contato}
             onChange={(e) => setContato(e.target.value)}
-            placeholder="WhatsApp, Instagram ou e-mail"
+            placeholder={t('page.initiative.contact_ph')}
             maxLength={80}
             required
           />
@@ -176,7 +174,7 @@ export default function InitiativeRegisterPage() {
 
         {status === 'error' && (
           <p className="mdf-initiative__error" role="alert">
-            Não foi possível registrar. Tente de novo em alguns segundos.
+            {t('page.initiative.error')}
           </p>
         )}
 
@@ -185,7 +183,7 @@ export default function InitiativeRegisterPage() {
           className="mdf-initiative__submit"
           disabled={status === 'submitting'}
         >
-          {status === 'submitting' ? 'Registrando…' : 'Registrar iniciativa'}
+          {status === 'submitting' ? t('page.initiative.submitting') : t('page.initiative.submit')}
         </button>
       </form>
     </main>

@@ -17,6 +17,7 @@ import {
   toCsvGrowthMapaFome,
 } from '../components/compatibility/components/ux/reports';
 import { downloadBlob } from '../components/compatibility/components/ux/downloadBlob';
+import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
 // Public-interest aggregate reports surface. Intended for:
 //   • Ministério Público (SAN / direitos humanos)
@@ -28,6 +29,7 @@ import { downloadBlob } from '../components/compatibility/components/ux/download
 // no PII, no raw coordinates, k-anonymized at k=5. See reports.js.
 
 export default function RelatoriosPage() {
+  useLocale(); // re-render on locale change so t() re-reads
   const [status, setStatus] = useState('loading'); // loading | ready | error
   const [error, setError] = useState(null);
   const [report, setReport] = useState(null);
@@ -92,27 +94,22 @@ export default function RelatoriosPage() {
 
   return (
     <main className="mdf-reports">
-      <Link href="/" className="mdf-reports__back">← Mapa</Link>
-      <h1>Relatórios agregados</h1>
+      <Link href="/" className="mdf-reports__back">{t('page.reports.back')}</Link>
+      <h1>{t('page.reports.title')}</h1>
       <p className="mdf-reports__lead">
-        Dados agregados do MAPA FOME para uso de órgãos públicos
-        (Ministério Público, secretarias de saúde, SAN e direitos humanos) em
-        diagnóstico e decisão de política pública.
+        {t('page.reports.lead')}
       </p>
       <p className="mdf-reports__dignity">
-        Nenhum dado pessoal, coordenada individual ou identificador aparece
-        aqui. Grupos menores que 5 foram consolidados em <em>outros</em> para
-        evitar reidentificação. LGPD-aligned. Conforme nota de dignidade do
-        projeto.
+        {t('page.reports.dignity_lead')}<em>{t('page.reports.dignity_others')}</em>{t('page.reports.dignity_tail')}
       </p>
 
-      {status === 'loading' && <p className="mdf-reports__status">Carregando dados…</p>}
+      {status === 'loading' && <p className="mdf-reports__status">{t('page.reports.loading')}</p>}
       {status === 'error' && (
         <div className="mdf-reports__status mdf-reports__status--error" role="alert">
-          Não foi possível carregar o relatório no momento.
-          {error ? <> Detalhe técnico: <code>{error}</code></> : null}
+          {t('page.reports.error')}
+          {error ? <> {t('page.reports.error_detail')} <code>{error}</code></> : null}
           <button type="button" className="mdf-reports__retry" onClick={load}>
-            Tentar novamente
+            {t('page.reports.retry')}
           </button>
         </div>
       )}
@@ -120,44 +117,40 @@ export default function RelatoriosPage() {
       {status === 'ready' && report && (
         <>
           <section className="mdf-reports__section">
-            <h2>Resumo executivo</h2>
+            <h2>{t('page.reports.exec_title')}</h2>
             <dl className="mdf-reports__kv">
-              <dt>Gerado em</dt>
+              <dt>{t('page.reports.exec_generated')}</dt>
               <dd>{new Date(report.meta.gerado_em).toLocaleString('pt-BR')}</dd>
-              <dt>Pontos reportados (total)</dt>
+              <dt>{t('page.reports.exec_total_reported')}</dt>
               <dd>{report.resumo_executivo.total_pontos_reportados}</dd>
-              <dt>Total atendidos</dt>
+              <dt>{t('page.reports.exec_total_attended')}</dt>
               <dd>{report.resumo_executivo.total_atendidos}</dd>
-              <dt>Taxa de atendimento global</dt>
+              <dt>{t('page.reports.exec_global_rate')}</dt>
               <dd>{report.resumo_executivo.taxa_atendimento_global_pct}%</dd>
-              <dt>Tempo mediano até atendimento</dt>
+              <dt>{t('page.reports.exec_median_time')}</dt>
               <dd>{report.resumo_executivo.tempo_mediano_atendimento_h != null ? `${report.resumo_executivo.tempo_mediano_atendimento_h} h` : '—'}</dd>
-              <dt>Tempo p90 até atendimento</dt>
+              <dt>{t('page.reports.exec_p90_time')}</dt>
               <dd>{report.resumo_executivo.tempo_p90_atendimento_h != null ? `${report.resumo_executivo.tempo_p90_atendimento_h} h` : '—'}</dd>
-              <dt>Pontos sem atendimento &gt; 24 h</dt>
+              <dt>{t('page.reports.exec_unattended_24h')}</dt>
               <dd>{report.resumo_executivo.pontos_sem_atendimento_24h}</dd>
             </dl>
           </section>
 
           <section className="mdf-reports__section mdf-reports__section--pri">
-            <h2>Vulnerabilidade alimentar por região</h2>
+            <h2>{t('page.reports.vuln_title')}</h2>
             <p className="mdf-reports__caption">
-              Onde estão, por região, as pessoas em vulnerabilidade que precisam
-              de <b>alimento pronto</b> (refeição imediata — típico de população em
-              situação de rua) versus <b>cesta básica</b> (suprimento semanal —
-              insegurança alimentar familiar). Cada coluna ativa políticas
-              públicas distintas.
+              {t('page.reports.vuln_caption_lead')}<b>{t('page.reports.vuln_ready_food')}</b>{t('page.reports.vuln_caption_mid')}<b>{t('page.reports.vuln_basket')}</b>{t('page.reports.vuln_caption_tail')}
             </p>
             <table className="mdf-reports__table">
               <thead>
                 <tr>
-                  <th>Região</th>
-                  <th>Alimento pronto</th>
-                  <th>Cesta básica</th>
-                  <th>Comida (genérico)</th>
-                  <th>Total</th>
-                  <th>Atendidos</th>
-                  <th>Taxa</th>
+                  <th>{t('page.reports.col_region')}</th>
+                  <th>{t('page.reports.vuln_ready_food')}</th>
+                  <th>{t('page.reports.vuln_basket')}</th>
+                  <th>{t('page.reports.vuln_generic')}</th>
+                  <th>{t('page.reports.col_total')}</th>
+                  <th>{t('page.reports.col_attended')}</th>
+                  <th>{t('page.reports.col_rate')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -175,22 +168,19 @@ export default function RelatoriosPage() {
               </tbody>
             </table>
             <p className="mdf-reports__caption">
-              Leitura de política pública: alta concentração de <em>alimento
-              pronto</em> sinaliza população em situação de rua → resposta via
-              Consultório na Rua, Centro POP, sopões. Alta concentração de{' '}
-              <em>cesta básica</em> sinaliza insegurança alimentar familiar →
-              Bolsa Família, Cartão Alimentação, Programa Auxílio Brasil.
+              {t('page.reports.vuln_policy_lead')}<em>{t('page.reports.vuln_policy_ready')}</em>{t('page.reports.vuln_policy_mid')}{' '}
+              <em>{t('page.reports.vuln_policy_basket')}</em>{t('page.reports.vuln_policy_tail')}
             </p>
           </section>
 
           <section className="mdf-reports__section">
-            <h2>Distribuição de necessidades (share por categoria)</h2>
+            <h2>{t('page.reports.dist_title')}</h2>
             <p className="mdf-reports__caption">
-              Onde concentrar orçamento e estoque. Baseado em todos os pontos já reportados.
+              {t('page.reports.dist_caption')}
             </p>
             <table className="mdf-reports__table">
               <thead>
-                <tr><th>Categoria</th><th>Total</th><th>Share</th></tr>
+                <tr><th>{t('page.reports.col_category')}</th><th>{t('page.reports.col_total')}</th><th>{t('page.reports.col_share')}</th></tr>
               </thead>
               <tbody>
                 {Object.entries(report.distribuicao_categorias).map(([cat, rec]) => (
@@ -205,33 +195,32 @@ export default function RelatoriosPage() {
           </section>
 
           <section className="mdf-reports__section">
-            <h2>Crescimento do MAPA FOME</h2>
+            <h2>{t('page.reports.growth_mf_title')}</h2>
             <p className="mdf-reports__caption">
-              Evolução do projeto: pontos novos, acumulado, regiões atingidas e taxa de atendimento mês a mês.
-              Use como narrativa de impacto em editais, comunicação institucional e captação.
+              {t('page.reports.growth_mf_caption')}
             </p>
             {report.crescimento_mapafome && (
               <>
                 <dl className="mdf-reports__kv">
-                  <dt>Meses ativos</dt>
+                  <dt>{t('page.reports.growth_active_months')}</dt>
                   <dd>{report.crescimento_mapafome.resumo.meses_ativos}</dd>
-                  <dt>Total acumulado de pontos</dt>
+                  <dt>{t('page.reports.growth_total_accum')}</dt>
                   <dd>{report.crescimento_mapafome.resumo.total_pontos}</dd>
-                  <dt>Regiões atingidas</dt>
+                  <dt>{t('page.reports.growth_regions_reached')}</dt>
                   <dd>{report.crescimento_mapafome.resumo.regioes_ativas_total}</dd>
-                  <dt>Crescimento total (primeiro mês → último)</dt>
+                  <dt>{t('page.reports.growth_total_growth')}</dt>
                   <dd>{report.crescimento_mapafome.resumo.crescimento_total_pct == null ? '—' : `${report.crescimento_mapafome.resumo.crescimento_total_pct}%`}</dd>
                 </dl>
                 <table className="mdf-reports__table">
-                  <caption>Série mensal de crescimento</caption>
+                  <caption>{t('page.reports.growth_series_caption')}</caption>
                   <thead>
                     <tr>
-                      <th scope="col">Mês</th>
-                      <th scope="col">Novos</th>
-                      <th scope="col">Acumulado</th>
-                      <th scope="col">Atendidos</th>
-                      <th scope="col">Taxa atend.</th>
-                      <th scope="col">Regiões ativas</th>
+                      <th scope="col">{t('page.reports.col_month')}</th>
+                      <th scope="col">{t('page.reports.col_new')}</th>
+                      <th scope="col">{t('page.reports.col_accum')}</th>
+                      <th scope="col">{t('page.reports.col_attended')}</th>
+                      <th scope="col">{t('page.reports.col_rate_short')}</th>
+                      <th scope="col">{t('page.reports.col_active_regions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -252,13 +241,13 @@ export default function RelatoriosPage() {
           </section>
 
           <section className="mdf-reports__section">
-            <h2>Crescimento mês a mês</h2>
+            <h2>{t('page.reports.growth_mom_title')}</h2>
             <p className="mdf-reports__caption">
-              Série histórica para diagnosticar agravamento ou melhoria da insegurança alimentar no território coberto.
+              {t('page.reports.growth_mom_caption')}
             </p>
             <table className="mdf-reports__table">
               <thead>
-                <tr><th>Mês</th><th>Total</th><th>Δ absoluto</th><th>Δ %</th></tr>
+                <tr><th>{t('page.reports.col_month')}</th><th>{t('page.reports.col_total')}</th><th>{t('page.reports.col_delta_abs')}</th><th>{t('page.reports.col_delta_pct')}</th></tr>
               </thead>
               <tbody>
                 {report.crescimento_mensal.map((g) => (
@@ -274,12 +263,12 @@ export default function RelatoriosPage() {
           </section>
 
           <section className="mdf-reports__section">
-            <h2>Sazonalidade semanal</h2>
+            <h2>{t('page.reports.weekly_title')}</h2>
             <p className="mdf-reports__caption">
-              Distribuição dos reportes por dia da semana — apoio ao planejamento de plantões da rede de SAN e equipes itinerantes.
+              {t('page.reports.weekly_caption')}
             </p>
             <table className="mdf-reports__table">
-              <thead><tr><th>Dia</th><th>Pontos</th></tr></thead>
+              <thead><tr><th>{t('page.reports.col_day')}</th><th>{t('page.reports.col_points')}</th></tr></thead>
               <tbody>
                 {Object.entries(report.sazonalidade_dia_semana).map(([d, n]) => (
                   <tr key={d}><td>{d}</td><td>{n}</td></tr>
@@ -289,12 +278,12 @@ export default function RelatoriosPage() {
           </section>
 
           <section className="mdf-reports__section">
-            <h2>Sazonalidade diária (hora a hora)</h2>
+            <h2>{t('page.reports.hourly_title')}</h2>
             <p className="mdf-reports__caption">
-              Concentração por hora do dia — ajuda a dimensionar escala e dimensionamento de equipes noturnas.
+              {t('page.reports.hourly_caption')}
             </p>
             <table className="mdf-reports__table">
-              <thead><tr><th>Hora</th><th>Pontos</th></tr></thead>
+              <thead><tr><th>{t('page.reports.col_hour')}</th><th>{t('page.reports.col_points')}</th></tr></thead>
               <tbody>
                 {Object.entries(report.sazonalidade_hora_dia).map(([h, n]) => (
                   <tr key={h}><td>{h}:00</td><td>{n}</td></tr>
@@ -304,12 +293,12 @@ export default function RelatoriosPage() {
           </section>
 
           <section className="mdf-reports__section">
-            <h2>Demanda por região e categoria</h2>
+            <h2>{t('page.reports.demand_title')}</h2>
             <p className="mdf-reports__caption">
-              Onde cada tipo de necessidade concentra. Dois eixos: região × categoria.
+              {t('page.reports.demand_caption')}
             </p>
             <table className="mdf-reports__table">
-              <thead><tr><th>Região</th><th>Categoria</th><th>Pontos</th></tr></thead>
+              <thead><tr><th>{t('page.reports.col_region')}</th><th>{t('page.reports.col_category')}</th><th>{t('page.reports.col_points')}</th></tr></thead>
               <tbody>
                 {Object.entries(report.demanda_regiao_categoria).flatMap(([region, cats]) =>
                   Object.entries(cats).map(([cat, n]) => (
@@ -325,21 +314,21 @@ export default function RelatoriosPage() {
           </section>
 
           <section className="mdf-reports__section mdf-reports__section--alert">
-            <h2>Alertas</h2>
+            <h2>{t('page.reports.alerts_title')}</h2>
             <p>
-              Pontos sem atendimento há mais de 24 h: <b>{report.alerta_pontos_sem_atendimento.acima_de_24h}</b>
-              {' '}({report.alerta_pontos_sem_atendimento.share_acima_24h_pct}% do total).
+              {t('page.reports.alerts_24h_lead')} <b>{report.alerta_pontos_sem_atendimento.acima_de_24h}</b>
+              {' '}({report.alerta_pontos_sem_atendimento.share_acima_24h_pct}{t('page.reports.alerts_24h_tail')}).
             </p>
             <p>
-              Pontos sem atendimento há mais de 72 h: <b>{report.alerta_pontos_sem_atendimento.acima_de_72h}</b> — sinal de saturação da rede voluntária naquela região.
+              {t('page.reports.alerts_72h_lead')} <b>{report.alerta_pontos_sem_atendimento.acima_de_72h}</b>{t('page.reports.alerts_72h_tail')}
             </p>
           </section>
 
           <section className="mdf-reports__section">
-            <h2>Taxa de atendimento por região</h2>
+            <h2>{t('page.reports.attend_title')}</h2>
             <table className="mdf-reports__table">
               <thead>
-                <tr><th>Região</th><th>Reportados</th><th>Atendidos</th><th>Taxa</th></tr>
+                <tr><th>{t('page.reports.col_region')}</th><th>{t('page.reports.col_reported')}</th><th>{t('page.reports.col_attended')}</th><th>{t('page.reports.col_rate')}</th></tr>
               </thead>
               <tbody>
                 {Object.entries(report.atendimento_por_regiao).map(([region, rec]) => (
@@ -355,30 +344,27 @@ export default function RelatoriosPage() {
           </section>
 
           <section className="mdf-reports__section">
-            <h2>Exportar</h2>
-            <p>Formatos prontos para anexar em laudo, peça processual, relatório anual ou importar em ferramentas de análise.</p>
+            <h2>{t('page.reports.export_title')}</h2>
+            <p>{t('page.reports.export_intro')}</p>
             <div className="mdf-reports__actions">
-              <button type="button" onClick={exportJson}>Baixar JSON completo</button>
-              <button type="button" onClick={() => exportCsv('categoria-mes')}>CSV — categoria × mês</button>
-              <button type="button" onClick={() => exportCsv('regiao-mes')}>CSV — região × mês</button>
-              <button type="button" onClick={() => exportCsv('atendimento')}>CSV — atendimento por região</button>
-              <button type="button" onClick={() => exportCsv('dia-semana')}>CSV — sazonalidade semanal</button>
-              <button type="button" onClick={() => exportCsv('hora-dia')}>CSV — sazonalidade horária</button>
-              <button type="button" onClick={() => exportCsv('crescimento-mensal')}>CSV — crescimento mensal</button>
-              <button type="button" onClick={() => exportCsv('demanda-regiao-categoria')}>CSV — demanda região × categoria</button>
-              <button type="button" onClick={() => exportCsv('distribuicao-categorias')}>CSV — share por categoria</button>
-              <button type="button" onClick={() => exportCsv('vulnerabilidade-alimentar')}>CSV — vulnerabilidade alimentar (pronto × cesta)</button>
-              <button type="button" onClick={() => exportCsv('crescimento-mapafome')}>CSV — crescimento MAPA FOME (série mensal)</button>
+              <button type="button" onClick={exportJson}>{t('page.reports.export_json')}</button>
+              <button type="button" onClick={() => exportCsv('categoria-mes')}>{t('page.reports.export_cat_month')}</button>
+              <button type="button" onClick={() => exportCsv('regiao-mes')}>{t('page.reports.export_region_month')}</button>
+              <button type="button" onClick={() => exportCsv('atendimento')}>{t('page.reports.export_attend_region')}</button>
+              <button type="button" onClick={() => exportCsv('dia-semana')}>{t('page.reports.export_weekly')}</button>
+              <button type="button" onClick={() => exportCsv('hora-dia')}>{t('page.reports.export_hourly')}</button>
+              <button type="button" onClick={() => exportCsv('crescimento-mensal')}>{t('page.reports.export_growth_month')}</button>
+              <button type="button" onClick={() => exportCsv('demanda-regiao-categoria')}>{t('page.reports.export_demand')}</button>
+              <button type="button" onClick={() => exportCsv('distribuicao-categorias')}>{t('page.reports.export_share')}</button>
+              <button type="button" onClick={() => exportCsv('vulnerabilidade-alimentar')}>{t('page.reports.export_vuln')}</button>
+              <button type="button" onClick={() => exportCsv('crescimento-mapafome')}>{t('page.reports.export_growth_mf')}</button>
             </div>
           </section>
 
           <section className="mdf-reports__section mdf-reports__section--cite">
-            <h2>Como citar</h2>
+            <h2>{t('page.reports.cite_title')}</h2>
             <p>
-              MAPA FOME — Relatório agregado de pontos de insegurança alimentar,
-              gerado em {new Date(report.meta.gerado_em).toLocaleDateString('pt-BR')},
-              acessado via <code>mapafome.com.br/relatorios</code>.
-              Dados anônimos, agregados, LGPD-aligned.
+              {t('page.reports.cite_lead')}{new Date(report.meta.gerado_em).toLocaleDateString('pt-BR')}{t('page.reports.cite_mid')}<code>mapafome.com.br/relatorios</code>{t('page.reports.cite_tail')}
             </p>
           </section>
         </>
