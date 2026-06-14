@@ -25,6 +25,14 @@ const DROPPED_PIN_INLINE_SVG =
 export const MAP_CONFIG = {
   DEFAULT_ZOOM_MOBILE: 7,
   DEFAULT_ZOOM_DESKTOP: 10,
+  // LOCATE_ZOOM — neighborhood/exact-place zoom applied the FIRST time the device
+  // GPS fix recenters the map on open (MapViewUpdater). Tighter than the country
+  // flag-pick CAPITAL_PICK_ZOOM (11, which frames a metro area when jumping to a
+  // capital you only approximately know): a GPS fix is the user's EXACT position,
+  // so Z13 reads as "here is you, precisely" and surfaces the food-need pins right
+  // around them individually. Sits below MAX_ZOOM (18). Only the FIRST center
+  // change uses it; later pans (post-publish ping, etc.) stay pan-only as before.
+  LOCATE_ZOOM: 13,
   MOBILE_BREAKPOINT: 480,
   MAX_ZOOM: 18,
   MAP_HEIGHT: "70vh",

@@ -18,7 +18,7 @@
 //   MapSizeInvalidator→ invalidateSize on mount + viewport resize
 //   MapViewUpdater    → imperative panning when the `center` prop changes
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { TileLayer, LayersControl, useMap } from 'react-leaflet';
 import { MAP_CONFIG } from './mapConstants';
 import {
@@ -399,11 +399,31 @@ export const MapSizeInvalidator = () => {
 
 export const MapViewUpdater = ({ center }) => {
     const map = useMap();
+    // LOCATE recenter-with-zoom: the device GPS fix arriving (App.js
+    // setState({ center: coords }) from getCurrentPosition) is the FIRST center
+    // value that DIFFERS from the constructor default. On that recenter we also
+    // zoom to LOCATE_ZOOM (Z13, exact-place) so the user lands on their precise
+    // surroundings, not the country-default zoom. We must NOT trigger on the
+    // initial mount (center === the default, no GPS yet) — MapContainer already
+    // framed that at screensizeZoom — so we capture the mount center in a ref and
+    // only apply LOCATE_ZOOM on the first center that changed away from it, ONCE.
+    // Every later center change (post-publish ping recenter, etc.) stays pan-only
+    // (no zoom argument) exactly as before, so we never clobber the user's chosen
+    // zoom on an unrelated pan. Refs (not state) so flipping the flags adds no render.
+    const initialCenterRef = useRef(center);
+    const didLocateRef = useRef(false);
 
     useEffect(() => {
-        if (center && center.length === 2) {
-            console.log('[map] MapViewUpdater setView:', center);
-            map.setView(center);
+        if (!center || center.length !== 2) return;
+        console.log('[map] MapViewUpdater setView:', center);
+        const init = initialCenterRef.current;
+        const changedFromMount = !init || init.length !== 2
+            || center[0] !== init[0] || center[1] !== init[1];
+        if (changedFromMount && !didLocateRef.current) {
+            didLocateRef.current = true;
+            map.setView(center, MAP_CONFIG.LOCATE_ZOOM); // exact-place zoom on the GPS fix
+        } else {
+            map.setView(center); // pan-only, preserve current zoom (unchanged behavior)
         }
     }, [center, map]);
 
