@@ -106,9 +106,24 @@ export function wireLanguageControl(dom) {
   };
 
   const pick = (locale) => {
-    setLocale(locale);       // persists + dispatches mdf-locale-change
+    setLocale(locale);       // persists to localStorage + sets <html lang> + dispatches mdf-locale-change
     renderButton();          // reflect the new language on the trigger now
     closePanel(true);
+    // RELIABLE APPLY: reload so the whole site re-renders in the picked language.
+    // WHY a reload instead of a pure in-place re-render: this map app is mounted via
+    // a dynamic ssr:false import and the picker is a vanilla Leaflet imperative
+    // control; an exhaustive in-browser investigation proved the locale event fires
+    // on window and the SOT/<html lang>/localStorage all update, but the React tree
+    // (header, MainControls) did NOT re-render off the event in this mount setup, so
+    // a pure live switch left half the UI stale. setLocale has already PERSISTED the
+    // choice, and the persisted-init path renders the picked language correctly on
+    // load (verified), so a reload applies it reliably across the entire site. The
+    // small flash is the honest, dependable trade-off until the in-place re-render is
+    // resolved. Guarded so non-browser/test contexts (no location.reload) are a no-op.
+    if (typeof window !== 'undefined' && window.location && typeof window.location.reload === 'function') {
+      // Defer one tick so localStorage/<html lang> writes flush before navigation.
+      setTimeout(() => { try { window.location.reload(); } catch (_e) { /* no-op */ } }, 0);
+    }
   };
 
   // One option per supported locale, labeled in its own language (endonym).
