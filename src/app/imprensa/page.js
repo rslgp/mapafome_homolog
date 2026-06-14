@@ -242,7 +242,7 @@ export default function ImprensaPage() {
         <p>
           {t('page.press.media_intro')}
         </p>
-        <ul className="mdf-press__refusals">
+        <ul className="mdf-press__rules mdf-press__rules--do">
           {MEDIA.map((m) => (
             <li key={m.outlet}>
               <strong>{m.outlet} ({m.when}).</strong> {m.text}
