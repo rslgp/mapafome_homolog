@@ -8,11 +8,8 @@
 import * as core from './strings.core.js';
 import * as assinar from './strings.assinar.js';
 import * as pets from './strings.pets.js';
-// page-chrome shard (BRAND scope): the header/nav strings + the per-country brand
-// tagline key the brand header resolves. Spread LAST per locale so it is purely
-// additive. Only the three shipping locales are registered (SUPPORTED_LOCALES =
-// pt-BR/es/en-US); the shard carries exactly the keys header.js/countryBrand.js
-// reference, so parity holds and no key is dead.
+// page-chrome shard: the migrated formerly-inline UI strings (header, sheets,
+// tutorial, filters, info panel). Spread LAST per locale so it is purely additive.
 import * as page from './strings.page.js';
 
 export const DICT = {
@@ -23,4 +20,13 @@ export const DICT = {
   // test/i18n*.test.js). Dignity-sensitive values are drafted + prefixed
   // `[REVISAR-HUMANO] ` pending human tone review (plan D7/M6.3).
   'en-US': { ...core.enUS, ...assinar.enUS, ...pets.enUS, ...page.enUS },
+  // INTL — de/fr/ru/zh, locales 4 to 7, bringing MapaFome to the SOLONE game's
+  // 7-language set (ptbr, en, es, de, fr, ru, cn->zh). Each shard exports a block
+  // per locale at FULL key parity (asserted data-driven over SUPPORTED_LOCALES).
+  // Dignity-sensitive values carry `[REVISAR-HUMANO] ` for human tone review
+  // before ship, mirroring the en-US draft set exactly; mechanical copy is final.
+  'de':    { ...core.de,   ...assinar.de,   ...pets.de,   ...page.de },
+  'fr':    { ...core.fr,   ...assinar.fr,   ...pets.fr,   ...page.fr },
+  'ru':    { ...core.ru,   ...assinar.ru,   ...pets.ru,   ...page.ru },
+  'zh':    { ...core.zh,   ...assinar.zh,   ...pets.zh,   ...page.zh },
 };
