@@ -61,6 +61,15 @@
   z-index: 1000;
 }
 
+/* Restore the disclosure contract: the open-state display:flex above overrides
+   the user-agent [hidden] { display: none } rule, so toggling panel.hidden in JS
+   (Esc, close button, outside click) flipped aria-expanded but left the panel
+   painted. This explicit guard wins (same selector + attribute) and hides it.
+   Shared by CountryFlagControl and LanguageControl (both use .mdf-flag__panel). */
+.mdf-flag__panel[hidden] {
+  display: none;
+}
+
 /* Heading row: title on the left, discoverable close button on the right. */
 .mdf-flag__head {
   display: flex;

@@ -91,7 +91,10 @@
 .mdf-initiative__submit {
   min-height: var(--mdf-touch-target);
   padding: 0 var(--mdf-space-6);
-  background: var(--mdf-brand);
+  /* AA: white-on-brand (#FFF/#D64545) is 4.38:1, fails 4.5:1 normal text.
+     16px/700 is below the large-text cutoff so 4.5:1 applies. Resting fill
+     uses the darker brand-hover (#B93838) for white label = 5.70:1. */
+  background: var(--mdf-brand-hover);
   color: var(--mdf-brand-ink);
   border: none;
   border-radius: var(--mdf-radius-pill);
