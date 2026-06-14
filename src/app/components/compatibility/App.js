@@ -34,6 +34,8 @@ import { getCountry } from './components/countries';
 import * as countryStore from './components/countryStore';
 import { INTL_ENABLED } from './components/intlConfig';
 import { assertPublishCountryMatches } from './components/reverseGeocodeGuard';
+import { LOCATION_GEOFENCE_ENABLED } from './components/geofenceConfig';
+import { createPhysicalCountryResolver } from './components/geofenceLocation';
 
 import qr from './images/qr.svg';
 
@@ -215,6 +217,17 @@ class App extends Component {
       // intlPinGuardDeps); OFF → {} so the Brazil path is byte-identical to today.
       ...intlPinGuardDeps(),
     };
+
+    // LOCATION-GEOFENCE: the per-session resolver of the user's PHYSICAL country
+    // (GPS reverse-geocoded), built ONLY when the dark-ship flag is ON. When OFF
+    // this stays null and NOTHING in the publish path reads it (see handleClickMap),
+    // so the OFF behavior is byte-identical to today: no geolocation/geocode call for
+    // this feature, no change to the existing selected-country gate. The resolver
+    // imports only the existing reverse-geocoder + the pure isInsideCountry — it never
+    // touches the store/flag itself (same DI shape as activeCountry/offshoreGuard).
+    this._physicalCountryResolver = LOCATION_GEOFENCE_ENABLED
+      ? createPhysicalCountryResolver()
+      : null;
   }
 
   telefoneFilterChange(event) {
@@ -417,6 +430,55 @@ class App extends Component {
       return;
     }
 
+    // LOCATION-GEOFENCE (dark-ship, default OFF): an ADDITIONAL, stricter gate layered
+    // ON TOP of the selected-country gate above — it does NOT replace it. The binding
+    // country here is the user's GPS PHYSICAL country (reverse-geocoded), not the flag
+    // picker: a user physically in Brazil cannot mark a point in the USA even if the
+    // flag is set to 'us'. When the flag is OFF (_physicalCountryResolver === null)
+    // this whole branch is skipped and we fall straight through to the synchronous
+    // publish below, byte-identical to today. When ON, the async check runs first and
+    // either blocks (localized message) or proceeds to the SAME publish path.
+    if (this._physicalCountryResolver) {
+      this._enforceLocationGeofenceThenPublish(latlng);
+      return;
+    }
+
+    this._publishMarkFromMap(latlng);
+  }
+
+  // LOCATION-GEOFENCE strict gate (flag ON only). Resolves the user's PHYSICAL country
+  // (cached per session; awaits a one-shot resolve only if the cache is cold), then
+  // requires the clicked mark's coords to be INSIDE that physical country via the pure
+  // isInsideCountry predicate. If the physical country is UNKNOWN (geolocation denied /
+  // no GPS / reverse-geocode failed or offline) we BLOCK with a localized message (the
+  // strict fallback the user chose). On success we hand off to the EXISTING publish
+  // path unchanged, so the offshore guard + write-gate still run as before.
+  async _enforceLocationGeofenceThenPublish(latlng) {
+    const resolver = this._physicalCountryResolver;
+    // Prefer the warm cache (resolved off the first GPS fix); fall back to a one-shot
+    // resolve from the device coords if the click beat the background warm-up.
+    let physical = resolver.peek();
+    if (physical === undefined) {
+      try {
+        physical = await resolver.resolve(envVariables.currentLocation || latlng);
+      } catch (_e) {
+        physical = null; // network/parse failure → unknown → strict block below
+      }
+    }
+    if (!resolver.allows(latlng)) {
+      // Unknown physical country OR mark falls outside it → strict block. Surfaced via
+      // the same offlineToast surface the out-of-country path already uses.
+      this.setState({ offlineToast: t('page.geofence.need_location') });
+      return;
+    }
+    this._publishMarkFromMap(latlng);
+  }
+
+  // The publish tail of handleClickMap, extracted verbatim so it can be reached BOTH
+  // from the synchronous OFF path (byte-identical to today) and after the async
+  // LOCATION-GEOFENCE check resolves. The selected-country bbox gate already ran in
+  // handleClickMap before either caller reaches here.
+  _publishMarkFromMap(latlng) {
     this.setState({ isLoading: true });
     // The async Sheets write lives in appPinActions.publishPinFromMap (deps-
     // injected like appMainBootstrap). The synchronous coordinate resolution +
@@ -684,6 +746,14 @@ class App extends Component {
         const coords = [position.coords.latitude, position.coords.longitude];
         console.log('[geo] SUCCESS - device coords:', coords);
         envVariables.currentLocation = coords;
+        // LOCATION-GEOFENCE (flag ON only): kick off the physical-country resolve
+        // off the FIRST real device fix, so the synchronous click handler later reads
+        // a cached code instead of blocking on the network. Fire-and-forget: the
+        // promise is intentionally not awaited here (it only warms the cache); the
+        // click path still awaits/falls back if it lands before this resolves.
+        if (self._physicalCountryResolver) {
+          self._physicalCountryResolver.resolve(coords).catch(function () {});
+        }
         self.setState({ center: coords }, function () {
           console.log('[geo] state.center after setState:', self.state.center);
           runMain(self, bootstrapDeps);
