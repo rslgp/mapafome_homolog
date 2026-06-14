@@ -6,6 +6,8 @@ import {
 } from 'leaflet-geosearch';
 import { CircularProgress } from '@mui/material';
 
+import { t } from '../ux/strings';
+
 // import CircularProgress from '@material-ui/core/CircularProgress';
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
@@ -114,11 +116,11 @@ class NameForm extends Component {
     render() {
       return (
         this.state.isLoading ?
-        <div><CircularProgress aria-label="Enviando endereço" /></div>
+        <div><CircularProgress aria-label={t('page.address.sending')} /></div>
         :
         <form onSubmit={this.handleSubmit}>
           <label>
-            <input className="TextField" type="text" placeholder='Insira rua,nº,bairro,cidade,estado' value={this.state.value} onChange={this.handleChange} />
+            <input className="TextField" type="text" placeholder={t('page.address.address_ph')} value={this.state.value} onChange={this.handleChange} />
           </label>
           <input className="SubmitButton" type="submit" value="Enviar Endereço" />
         </form>

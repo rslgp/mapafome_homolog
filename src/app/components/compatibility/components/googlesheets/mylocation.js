@@ -104,7 +104,7 @@ class NameForm extends Component {
     handleSubmit(event) { 
         //navigator.geolocation.getCurrentPosition(function(position) {
         if(this.state.location[0]===-8.0671132 && this.state.location[1]===-34.8766719){
-          alert("Localização do celular está desativada, ative, recarregue a página e tente novamente com a localização ativa, se mesmo assim não conseguir insira o endereço completo e clique enviar endereço");
+          alert(t('page.address.geo_disabled'));
           event.preventDefault();
           return;
         }
@@ -195,7 +195,7 @@ class NameForm extends Component {
     render() {
       return (
           this.state.isLoading ?
-          <div><CircularProgress aria-label="Salvando seu ponto" /></div>
+          <div><CircularProgress aria-label={t('page.address.saving_point')} /></div>
           : 
             <button className="hidden SubmitButton marcar-local" onClick={this.handleSubmit}>
               Atual
