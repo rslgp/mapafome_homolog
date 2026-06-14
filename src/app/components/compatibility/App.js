@@ -51,7 +51,7 @@ import AesEncryption from 'aes-encryption';
 
 import { getCookie, setCookie } from './components/cookies';
 
-import { runMain, installDebugHelpers } from './appMainBootstrap';
+import { runMain, installDebugHelpers, filterRowsByCountry } from './appMainBootstrap';
 import { coordsFromPin } from './domain/pinCoords';
 import { normalizeTelefoneInput } from './domain/telefoneInput';
 import { alimentoFieldVisibility } from './domain/alimentoFieldVisibility';
@@ -586,9 +586,31 @@ class App extends Component {
     });
   }
 
+  // INTL — re-derive the rendered marker set when the selected country changes,
+  // WITHOUT a sheet re-fetch. The raw rows are cached in-module (envVariables.rows)
+  // by runMain, so this is a pure re-filter through the SAME filterRowsByCountry
+  // helper the bootstrap uses (so the kind!=='pet' drop + the legacy-'br'
+  // attribution invariant — see the long comment block in appMainBootstrap.js —
+  // can never drift to a second copy). Active country is resolved the SAME way the
+  // bootstrap resolves it (activeCountryFor, NOT the subscribe callback arg) so
+  // flag-OFF stays 'br' and the OFF path is byte-identical to today.
+  _refilterForCountry() {
+    // GUARD: country changed before the first sheet load finished. Do NOTHING —
+    // the in-flight runMain will apply the THEN-current country when it lands.
+    // Do not throw, do not fetch.
+    if (envVariables.rows === undefined) return;
+    const activeCountry = activeCountryFor(INTL_ENABLED, countryStore);
+    const dataMaps = filterRowsByCountry(envVariables.rows, activeCountry);
+    // Keep rowCount in sync with dataMaps exactly as runMain does, so the
+    // "pontos mapeados" headline + the LiveAnnouncer aria-live count track the
+    // markers.
+    this.setState({ dataMaps, rowCount: dataMaps.length });
+  }
+
   componentWillUnmount() {
     if (this._urgencyTicker) clearInterval(this._urgencyTicker);
     if (this._unbindOnlineFlush) this._unbindOnlineFlush();
+    if (this._unbindCountry) this._unbindCountry();
   }
 
   componentDidMount() {
@@ -601,6 +623,16 @@ class App extends Component {
     // byte-identical to today. This is the only place the store+flag meet the
     // pure POJO.
     setActiveCountryResolver(() => activeCountryFor(INTL_ENABLED, countryStore));
+
+    // INTL — on a country change (the flag control's pick() recenters the camera
+    // but does NOT touch markers), re-derive the marker set from the cached rows.
+    // The store only notifies on an ACTUAL code change, and with the INTL flag OFF
+    // the picker never mounts, so this subscription is effectively inert on the OFF
+    // path — _refilterForCountry resolves activeCountryFor → 'br' regardless. The
+    // callback arg is intentionally ignored: we re-resolve the active country the
+    // SAME way the bootstrap does so OFF behavior stays byte-identical. Unbound in
+    // componentWillUnmount (no subscription leak).
+    this._unbindCountry = countryStore.subscribe(() => this._refilterForCountry());
 
     // M2 — tick once a minute so the context bar and marker urgency re-derive
     // without any backend push. Client clock is the source of truth here; a
