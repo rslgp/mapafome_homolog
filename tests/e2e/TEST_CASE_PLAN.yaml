@@ -1,0 +1,558 @@
+# TEST_CASE_PLAN.yaml — Playwright E2E test-case plan for mapafome_homolog (100% coverage).
+#
+# WHAT THIS FILE IS
+#   A human + machine readable PLAN of every Playwright test case needed to cover
+#   100% of the app's user-facing surface (all 8 routes, every interactive control,
+#   every modal/sheet, the publish/geofence flow, i18n, a11y, PWA, payments).
+#   It is NOT the runner config (that is playwright.config.js, driven by
+#   playwright.parallel.yaml). It is the SPEC the e2e specs are measured against.
+#
+# HOW "100% COVERAGE" IS DEFINED HERE (be honest about the metric)
+#   This plan targets 100% of the USER-FACING FEATURE SURFACE, enumerated by
+#   scanning src/app (the 8 page.js routes + every mounted control/sheet/overlay).
+#   It is a feature/route coverage target, NOT a line/branch coverage number —
+#   line/branch coverage is owned by the vitest suite under /test (`npm run
+#   test:coverage`). Where a behavior is already proven at the module level in
+#   vitest, this plan REFERENCES it instead of re-proving it in a slow browser
+#   (noted per case as `unit_ref`), so the browser lane stays focused on what only
+#   a real browser can verify: client-mounted Leaflet controls, hydration, tiles,
+#   keyboard/focus, touch targets, and real network.
+#
+# STATUS LEGEND (coverage state of each case as of this plan)
+#   covered  — an existing spec already asserts this (file named in `spec`).
+#   gap      — no spec asserts this yet; NEW case to author for 100%.
+#   partial  — touched by an existing spec but an assertion is missing/weak.
+#
+# FLAG NOTE
+#   NEXT_PUBLIC_INTL may be ON or OFF. Cases tagged `intl_gated: true` assert the
+#   country-flag picker behavior; they MUST skip honestly (test.skip) when the
+#   control is not mounted, never false-fail. Mirrors the existing specs.
+#
+# HOW TO RUN
+#   npx playwright test                 # whole suite (config reads parallel.yaml)
+#   npx playwright test --grep @a11y    # one lane by tag
+#   tags below map 1:1 to the @-tags already used in the specs.
+
+meta:
+  project: mapafome_homolog
+  app: "MAPA FOME — Next.js 16 / React 19 food-and-pet aid map (PWA, static-export)"
+  plan_owner: e2e
+  generated: "2026-06-14"
+  runner: "@playwright/test ^1.60"
+  browsers: [chromium-desktop, mobile-chrome]   # from playwright.parallel.yaml projects
+  base_url: "http://localhost:3000"
+  coverage_target: "100% of user-facing feature surface (8 routes + all mounted controls/sheets)"
+  coverage_excludes:
+    - "Line/branch coverage of pure modules — owned by vitest (npm run test:coverage)."
+    - "Real Asaas charges — payment rail submit is asserted to REACH the backend boundary only (no live money)."
+    - "Real GPS / geolocation hardware — mocked via context.grantPermissions + setGeolocation."
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ROUTES — the SOT route list (kept in sync with playwright.parallel.yaml `routes`
+# and src/app/**/page.js). Every route gets the baseline trio: 200, real render,
+# zero console errors, zero WCAG A/AA violations.
+# ──────────────────────────────────────────────────────────────────────────────
+routes:
+  - { path: /,                      page: src/app/page.js,                       name: home (map shell) }
+  - { path: /assinar,               page: src/app/assinar/page.js,               name: recurring-support subscription }
+  - { path: /imprensa,              page: src/app/imprensa/page.js,              name: press kit }
+  - { path: /iniciativas/cadastrar, page: src/app/iniciativas/cadastrar/page.js, name: initiative registration }
+  - { path: /parceiros,             page: src/app/parceiros/page.js,             name: partners }
+  - { path: /pets,                  page: src/app/pets/page.js,                  name: lost/found pets map }
+  - { path: /relatorio-marketing,   page: src/app/relatorio-marketing/page.js,   name: marketing report }
+  - { path: /relatorios,            page: src/app/relatorios/page.js,            name: public reports }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SUITES — grouped by feature area. Each case has: id, title, tags, priority,
+# coverage status, the spec file (existing or proposed), steps, and assertions.
+# ──────────────────────────────────────────────────────────────────────────────
+suites:
+
+  # ── 1. ROUTE / CODE VALIDATION ────────────────────────────────────────────────
+  - suite: route_validation
+    tag: "@code"
+    intent: "Every route returns 200, a real render (not Next's error shell), and emits no uncaught console/page errors in real Chromium (catches hydration/runtime errors a static check misses)."
+    spec: tests/e2e/routes.e2e.js
+    helpers: [ROUTES, captureConsoleErrors, looksLikeErrorShell]
+    cases:
+      - id: ROUTE-01
+        title: "each SOT route renders 200 + real content, no console errors"
+        for_each: route
+        status: covered
+        priority: P0
+        steps:
+          - "goto(route, waitUntil=domcontentloaded)"
+          - "wait for body innerText length > 20 (cold-compile budget 45s)"
+        assert:
+          - "response.status() === 200"
+          - "looksLikeErrorShell(page) === false"
+          - "captured console/page errors array is empty"
+      - id: ROUTE-02
+        title: "home exposes the app title (real-render proof)"
+        status: covered
+        priority: P1
+        assert: ["page title matches /MAPA FOME/i"]
+
+  # ── 2. HOME MAP — CORE SHELL & TILES ──────────────────────────────────────────
+  - suite: home_map_shell
+    tag: "@usability"
+    intent: "The Leaflet map mounts client-side, real tiles load (not a gray box), and the category/recency filter is operable."
+    spec: tests/e2e/usability.e2e.js
+    components: [App.js, MainMap.js, map.js, mapComponents.js]
+    cases:
+      - id: MAP-01
+        title: "the Leaflet map renders with at least one loaded tile"
+        status: covered
+        priority: P0
+        assert: [".leaflet-container visible", ".leaflet-tile-loaded visible within 30s"]
+      - id: MAP-02
+        title: "default tile layer fetches + renders tiles (Waze provider, HTTP 200)"
+        status: covered
+        priority: P0
+        spec_ref: tests/e2e/interactions.e2e.js
+        assert: ["a tile request returned 200", "a real tile <img> is in the loaded state"]
+      - id: MAP-03
+        title: "category filter <select> is present and changing it updates the value"
+        status: covered
+        priority: P1
+        assert: ["select has > 1 option", "selecting last option sets that value"]
+      - id: MAP-04
+        title: "tap/click on the map drops a pin and remembers the coords for reporting"
+        status: gap
+        priority: P1
+        spec_proposed: tests/e2e/map-interactions.e2e.js
+        note: "unit_ref test/mapClickHandler.test.js + test/pinCoords.test.js prove the logic; this proves the browser wiring (click -> visible dropped pin marker)."
+        steps: ["dismiss tour", "gotoHome", "click map at center", "open report sheet via FAB"]
+        assert: ["a dropped-pin marker appears at the clicked location", "report sheet opens anchored to those coords"]
+      - id: MAP-05
+        title: "marker cluster expands on zoom and a marker popup opens on click"
+        status: gap
+        priority: P2
+        spec_proposed: tests/e2e/map-interactions.e2e.js
+        assert: ["clicking a cluster zooms/spiderfies", "clicking a leaf marker opens a popup with pin content"]
+      - id: MAP-06
+        title: "geolocation 'my location' control recenters to the mocked GPS fix"
+        status: gap
+        priority: P2
+        spec_proposed: tests/e2e/map-interactions.e2e.js
+        setup: "context.grantPermissions(['geolocation']); context.setGeolocation({lat,lng})"
+        assert: ["clicking the locate control moves the view toward the mocked coordinates"]
+
+  # ── 3. LANGUAGE DISCLOSURE (locale switch) ────────────────────────────────────
+  - suite: language_disclosure
+    tag: "@usability,@interactions"
+    intent: "The language control opens, lists locales, switches the active locale (UI re-renders), and closes via toggle + Escape with focus return."
+    spec: [tests/e2e/usability.e2e.js, tests/e2e/interactions.e2e.js]
+    components: [LanguageControl.js, ux/i18n/engine.js]
+    selectors:
+      toggle: 'button.mdf-flag__btn[aria-controls="mdf-lang-panel"]'
+      panel: '#mdf-lang-panel'
+    cases:
+      - id: LANG-01
+        title: "opens, lists >= 2 locales, switching fires mdf-locale-change and updates the toggle label"
+        status: covered
+        priority: P0
+        assert: ["panel visible", ">= 2 locale options", "mdf-locale-change event fires", "toggle aria-label changes"]
+      - id: LANG-02
+        title: "closes via the toggle and via Escape, Escape returns focus to the trigger"
+        status: covered
+        priority: P1
+        assert: ["panel gets hidden attr", "aria-expanded reset to false", "trigger refocused after Escape"]
+      - id: LANG-03
+        title: "FINDING gate: panel with hidden=\"\" must also be visually hidden (CSS [hidden] gap)"
+        status: covered
+        priority: P2
+        note: "Known CSS gap surfaced loudly by the spec; remains a hard assertion so a fix is detected."
+
+  # ── 4. COUNTRY-FLAG DISCLOSURE + MAP RECENTER (INTL) ──────────────────────────
+  - suite: country_flag_disclosure
+    tag: "@usability,@interactions,@intl"
+    intent: "The country picker opens, search filters, selection persists, closes via X + Escape with focus return, and picking a country recenters the map (Brazil=fitBounds, others=capital setView)."
+    spec: [tests/e2e/usability.e2e.js, tests/e2e/interactions.e2e.js, tests/e2e/intl-marking.e2e.js]
+    components: [CountryFlagControl.js, countries.js, countryStore.js, geofence.js]
+    intl_gated: true
+    selectors:
+      toggle: 'button.mdf-flag__btn[aria-controls="mdf-flag-panel"]'
+      panel: '#mdf-flag-panel'
+      close: '#mdf-flag-panel button.mdf-flag__close'
+      option: '#mdf-flag-panel button.mdf-flag__option'
+      search: 'input.mdf-flag__search'
+    cases:
+      - id: CTRY-01
+        title: "opens, search narrows the country list, Escape from search closes the panel"
+        status: covered
+        priority: P1
+        assert: ["panel visible", "typing 'bra' narrows option count", "Escape from search hides panel"]
+      - id: CTRY-02
+        title: "closes via the X button and via Escape; both return focus to the trigger"
+        status: covered
+        priority: P1
+      - id: CTRY-03
+        title: "picker lists a multi-country launch set (> 5), not Brazil-only"
+        status: covered
+        priority: P1
+      - id: CTRY-04
+        title: "selecting a country persists in localStorage['mdf_country'] and the toggle label reflects it"
+        status: covered
+        priority: P1
+      - id: CTRY-05
+        title: "pick Brasil from a world view -> map fitBounds recenters onto Brazil"
+        status: covered
+        priority: P0
+        assert: ["a post-pick tile decodes inside Brazil bounds", "view center moved onto Brazil"]
+      - id: CTRY-06
+        title: "pick France -> map setView zooms IN onto Paris (capital), not whole-country, not Brazil"
+        status: covered
+        priority: P1
+        assert: ["max tile zoom >= 9", "a tile lands within ~1.5deg of Paris", "no city-zoom tile inside Brazil box"]
+
+  # ── 5. PUBLISH FLOW — REPORT SHEET (home) ─────────────────────────────────────
+  - suite: report_publish_flow
+    tag: "@usability,@flow"
+    intent: "The report bottom-sheet opens from the FAB, validates required fields, honors the country geofence, and a successful publish optimistically adds the marker."
+    spec_proposed: tests/e2e/report-flow.e2e.js
+    components: [ReportSheet.js, form.js, publishQueue.js, geofence.js, AppOverlays.js]
+    unit_ref: [test/publishQueue.test.js, test/geofence.test.js, test/sheetsValidators.test.js, test/publishPinFromMap.intl.test.js, test/reverseGeocodeGuard.test.js]
+    cases:
+      - id: PUB-01
+        title: "the + FAB opens the Report sheet (modal contract: focus trap, Escape closes)"
+        status: gap
+        priority: P0
+        assert: ["FAB[aria-label='Relatar ponto'] opens ReportSheet", "Escape closes it", "focus returns to FAB"]
+      - id: PUB-02
+        title: "submitting with empty required fields shows validation errors and does NOT publish"
+        status: gap
+        priority: P1
+        assert: ["validation messages shown", "no publish network request fired"]
+      - id: PUB-03
+        title: "a valid report inside the active country publishes and adds a marker optimistically"
+        status: gap
+        priority: P1
+        note: "Mock the sheets POST at the network layer (page.route) so no live write; assert the optimistic marker appears."
+        assert: ["publish POST is issued to the sheets/queue boundary", "a new marker renders without a reload"]
+      - id: PUB-04
+        title: "a report OUTSIDE the active country geofence is rejected with a clear message"
+        status: gap
+        priority: P2
+        unit_ref: test/intlMultiCountry.test.js
+        assert: ["geofence rejection message shown", "no publish request fired"]
+      - id: PUB-05
+        title: "offline publish enqueues (publishQueue) and an OfflineToast informs the user"
+        status: gap
+        priority: P2
+        setup: "context.setOffline(true)"
+        assert: ["OfflineToast appears", "the report is queued, not lost"]
+
+  # ── 6. PIN DETAIL SHEET + LIST VIEW + EMPTY STATE (home overlays) ─────────────
+  - suite: home_overlays
+    tag: "@usability,@flow"
+    intent: "Selecting a pin opens its detail sheet (claim / mark-attended actions), the list view opens and selects a pin, and the empty-viewport overlay offers to start a report."
+    spec_proposed: tests/e2e/overlays.e2e.js
+    components: [PinDetailSheet.js, ListView.js, EmptyViewportOverlay.js, NotificationPrefs.js]
+    cases:
+      - id: OVL-01
+        title: "selecting a pin opens PinDetailSheet with its data and a working close"
+        status: gap
+        priority: P1
+        assert: ["sheet opens with pin fields", "Escape/close dismisses it and returns focus"]
+      - id: OVL-02
+        title: "claim / mark-attended actions fire their handlers from the detail sheet"
+        status: gap
+        priority: P2
+      - id: OVL-03
+        title: "the list view opens, lists points, and selecting one focuses its pin on the map"
+        status: gap
+        priority: P2
+        assert: ["ListView opens", "selecting an item closes the list and selects the pin"]
+      - id: OVL-04
+        title: "with zero points in view, EmptyViewportOverlay shows and its CTA opens the report sheet"
+        status: gap
+        priority: P2
+        assert: ["overlay visible when dataMaps is empty and not loading", "CTA opens ReportSheet"]
+      - id: OVL-05
+        title: "notification preferences panel opens and toggles persist"
+        status: gap
+        priority: P3
+        components: [NotificationPrefs.js, NotificationPrefs.css]
+
+  # ── 7. ONBOARDING TOUR (first-run) ────────────────────────────────────────────
+  - suite: onboarding_tour
+    tag: "@usability"
+    intent: "A first-time visitor (no mdf_tour_done cookie) sees the guided tour; it is dismissable and sets the cookie so it does not reappear."
+    spec_proposed: tests/e2e/onboarding.e2e.js
+    components: [GuidedTutorial.js, cookies.js]
+    cases:
+      - id: TOUR-01
+        title: "first visit (no cookie) opens the GuidedTutorial over the map"
+        status: gap
+        priority: P1
+        note: "Do NOT call dismissOnboardingTour here — this case asserts the tour APPEARS."
+        assert: ["mdf-tour backdrop appears ~600ms after load"]
+      - id: TOUR-02
+        title: "dismissing the tour sets mdf_tour_done and a reload does NOT reopen it"
+        status: gap
+        priority: P1
+        assert: ["close sets cookie mdf_tour_done=1", "after reload the backdrop does not appear"]
+
+  # ── 8. PETS MODULE (/pets) — map, filter, list, report, detail ────────────────
+  - suite: pets_module
+    tag: "@usability,@flow,@pets"
+    intent: "The /pets fork: its own Leaflet map + pet markers, the filter bar, list view, report-a-pet sheet, pet detail sheet (reveal/share/match), and load/empty states."
+    spec_proposed: tests/e2e/pets.e2e.js
+    components: [PetsApp.js, PetMap.js, PetFilterBar.js, PetListView.js, PetReportSheet.js, PetDetailSheet.js, PetMapLoadStates.js, PetFirstRunHint.js]
+    unit_ref: [src/app/pets/PetFilterBar.test.js, src/app/pets/PetListView.test.js, src/app/pets/PetDetailSheet.*.test.js, src/app/pets/petMatch.test.js, src/app/pets/petShare.test.js, src/app/pets/petPublishQueue.test.js]
+    cases:
+      - id: PET-01
+        title: "/pets renders its Leaflet map with tiles and the pet legend/filter controls"
+        status: gap
+        priority: P0
+        assert: [".leaflet-container visible", "pet filter bar present", "no console errors"]
+      - id: PET-02
+        title: "the pet filter bar narrows visible markers by species/status and recency"
+        status: gap
+        priority: P1
+      - id: PET-03
+        title: "the pet list view opens and selecting a pet opens its detail sheet"
+        status: gap
+        priority: P2
+      - id: PET-04
+        title: "report-a-pet sheet opens, validates, and publishes (mocked) with optimistic marker"
+        status: gap
+        priority: P1
+      - id: PET-05
+        title: "pet detail sheet reveals contact, shares (deep link), and shows a match hint"
+        status: gap
+        priority: P2
+        unit_ref: [src/app/pets/PetDetailSheet.reveal.test.js, src/app/pets/PetDetailSheet.share.test.js, src/app/pets/PetDetailSheet.match.test.js]
+      - id: PET-06
+        title: "first-run hint shows once then stays dismissed; load/empty/error states render"
+        status: gap
+        priority: P3
+        unit_ref: [src/app/pets/PetFirstRunHint.test.js, src/app/pets/petMapLoadState.test.js]
+      - id: PET-07
+        title: "a pet deep-link (?pet=<id>) opens that pet's detail sheet on load"
+        status: gap
+        priority: P2
+        unit_ref: src/app/pets/petDeepLink.test.js
+
+  # ── 9. ASSINAR (/assinar) — recurring-support subscription form ───────────────
+  - suite: subscription_form
+    tag: "@flow,@payments"
+    intent: "The support-subscription form: rail picker (Pix/cartao/boleto) + value picker are keyboard-operable radiogroups, donor fields validate (CPF/CNPJ, phone, email), and submit reaches the Asaas backend boundary then renders the payment artifact (Pix QR / boleto / card redirect)."
+    spec_proposed: tests/e2e/assinar.e2e.js
+    components: [assinar/page.js, asaasSubscriptionClient.js, PaymentArtifacts.js, useRovingRadioGroup.js, copyText.js]
+    unit_ref: [test/asaasSubscriptionClient.test.js, test/assinar-a11y.test.js, test/telefoneInput.test.js, test/i18n.assinar.test.js]
+    cases:
+      - id: SUB-01
+        title: "rail radiogroup is operable by arrow keys (roving tabindex), selection updates"
+        status: gap
+        priority: P1
+        assert: ["ArrowRight/Left moves selection", "aria-checked reflects the active rail"]
+      - id: SUB-02
+        title: "preset value picker + custom amount: presets are radios, custom amount deselects presets"
+        status: gap
+        priority: P2
+      - id: SUB-03
+        title: "submitting with invalid CPF/CNPJ or email shows validation errors, no backend call"
+        status: gap
+        priority: P1
+        unit_ref: test/asaasSubscriptionClient.test.js
+      - id: SUB-04
+        title: "a valid submission POSTs to the Asaas backend (mocked) and renders the Pix QR artifact"
+        status: gap
+        priority: P1
+        note: "page.route the NEXT_PUBLIC_ASAAS_BACKEND_URL endpoint -> mocked success; assert PaymentArtifacts renders. NEVER hit live Asaas."
+        assert: ["POST issued to backend URL", "status -> success", "Pix QR / copy-paste artifact visible"]
+      - id: SUB-05
+        title: "backend error response surfaces an error state, not a crash"
+        status: gap
+        priority: P2
+        assert: ["mocked 500 -> error status shown", "no uncaught console error"]
+      - id: SUB-06
+        title: "the Pix copy-paste / copy-code button copies to clipboard"
+        status: gap
+        priority: P3
+        unit_ref: src/app/assinar/copyText.js
+
+  # ── 10. CONTENT ROUTES — imprensa, parceiros, iniciativas, relatorios ─────────
+  - suite: content_routes
+    tag: "@usability,@content"
+    intent: "The non-map content routes render their real content and their primary interactive elements work (press-kit copy buttons, partner links, the initiative registration form, the public + marketing reports)."
+    spec_proposed: tests/e2e/content-routes.e2e.js
+    cases:
+      - id: CNT-01
+        title: "/imprensa renders the press kit and the copy controls copy text to clipboard"
+        status: gap
+        priority: P2
+        components: [imprensa/page.js, imprensa/CopyControls.js, pressKitContent.js]
+        assert: ["press-kit headings render", "a copy button writes to the clipboard"]
+      - id: CNT-02
+        title: "/parceiros lists partners and external links have safe rel/target"
+        status: gap
+        priority: P3
+        components: [parceiros/page.js]
+        assert: ["partner entries render", "external links use rel=noopener"]
+      - id: CNT-03
+        title: "/iniciativas/cadastrar form validates required fields and submits"
+        status: gap
+        priority: P2
+        components: [iniciativas/cadastrar/page.js, register.css]
+        assert: ["empty submit blocked with messages", "valid submit reaches its handler (mocked)"]
+      - id: CNT-04
+        title: "/relatorios renders the public report tables/figures from data"
+        status: gap
+        priority: P3
+        components: [relatorios/page.js, reports.js]
+        unit_ref: test/reports.test.js
+      - id: CNT-05
+        title: "/relatorio-marketing renders the marketing report (figures + CSV export)"
+        status: gap
+        priority: P3
+        components: [relatorio-marketing/page.js, marketingReports.js, ux/csv.js]
+        unit_ref: [test/csv.test.js]
+        assert: ["report figures render", "CSV export produces a download"]
+
+  # ── 11. I18N RUNTIME PARITY ───────────────────────────────────────────────────
+  - suite: i18n_runtime
+    tag: "@i18n"
+    intent: "At runtime, no raw i18n key leaks into visible text, forcing a locale renders that locale, and switching locale re-renders strings live."
+    spec: tests/e2e/i18n.e2e.js
+    components: [ux/i18n/engine.js, ux/i18n/dictionary.js, strings.core.js, strings.assinar.js, strings.pets.js]
+    unit_ref: [test/i18n.test.js, test/i18n.init.test.js, test/i18n.assinar.test.js, test/i18n.pets.test.js, test/intlReadback.test.js]
+    cases:
+      - id: I18N-01
+        title: "home renders real copy (no untranslated dotted keys) in pt-BR, es, en-US"
+        for_each: "locale in [pt-BR, es, en-US]"
+        status: covered
+        priority: P1
+        assert: ["no raw-key leak tokens in visible body text"]
+      - id: I18N-02
+        title: "forcing localStorage['mdf_locale'] renders that locale's UI"
+        status: covered
+        priority: P1
+      - id: I18N-03
+        title: "switching locale at runtime re-renders strings (no stale text)"
+        status: covered
+        priority: P1
+      - id: I18N-04
+        title: "the /assinar and /pets routes also render leak-free copy per locale"
+        status: gap
+        priority: P2
+        note: "extend the raw-key scan to /assinar and /pets, the two routes with their own string namespaces."
+
+  # ── 12. ACCESSIBILITY (deep, per route) ───────────────────────────────────────
+  - suite: accessibility
+    tag: "@a11y"
+    intent: "Zero WCAG 2.0/2.1/2.2 A+AA axe violations on EVERY route; keyboard-only operability with a visible focus indicator; interactive controls meet the ~44px touch-target minimum (WCAG 2.5.5/2.5.8)."
+    spec: tests/e2e/a11y.e2e.js
+    unit_ref: [test/assinar-a11y.test.js, test/overlay-a11y.test.js, test/tapVisibility.test.js]
+    cases:
+      - id: A11Y-01
+        title: "each route has zero WCAG A/AA axe violations"
+        for_each: route
+        status: covered
+        priority: P0
+        note: "Known real findings tracked in memory: contrast + touch-target. These are the cases this gate must keep red until fixed."
+      - id: A11Y-02
+        title: "home is keyboard-reachable and the focused element has a visible focus indicator"
+        status: covered
+        priority: P1
+      - id: A11Y-03
+        title: "interactive controls meet the ~44px minimum touch target (mobile-chrome project)"
+        status: covered
+        priority: P1
+      - id: A11Y-04
+        title: "the report/pin/pets sheets are dialog-role, focus-trapped, and Escape-dismissable"
+        status: gap
+        priority: P1
+        note: "extend a11y assertions to the modals/sheets once open (the per-route scan above sees them closed)."
+
+  # ── 13. PWA / SERVICE WORKER / INSTALL / OFFLINE ──────────────────────────────
+  - suite: pwa
+    tag: "@pwa"
+    intent: "The service worker registers, the install prompt/toast appears when eligible, and going offline shows the OfflineToast (the app degrades, not breaks)."
+    spec_proposed: tests/e2e/pwa.e2e.js
+    components: [swRegister.js, useInstallPrompt.js, InstallToast.js, OfflineToast.js]
+    unit_ref: [test/swArchiveHost.test.js]
+    cases:
+      - id: PWA-01
+        title: "the service worker registers on home load"
+        status: gap
+        priority: P2
+        assert: ["navigator.serviceWorker has a registration after load"]
+      - id: PWA-02
+        title: "the install toast appears when beforeinstallprompt fires (synthesized)"
+        status: gap
+        priority: P3
+      - id: PWA-03
+        title: "going offline shows the OfflineToast and the shell still renders"
+        status: gap
+        priority: P2
+        setup: "context.setOffline(true)"
+        assert: ["OfflineToast visible", "app shell still interactive (no error shell)"]
+
+  # ── 14. SPONSORS / VERSION FOOTER / ANALYTICS (cross-cutting) ─────────────────
+  - suite: cross_cutting
+    tag: "@usability,@content"
+    intent: "Sponsor slots render their content, the version footer shows a version string, and analytics events fire without throwing (no real beacon required)."
+    spec_proposed: tests/e2e/cross-cutting.e2e.js
+    components: [SponsorSlot.js, sponsors.js, VersionFooter.js, ux/analytics.js, intlAnalytics.js]
+    unit_ref: [test/sponsors.test.js, test/intlAnalytics.test.js]
+    cases:
+      - id: XC-01
+        title: "sponsor slot(s) render their content where configured"
+        status: gap
+        priority: P3
+      - id: XC-02
+        title: "the version footer renders a semver-looking version string"
+        status: gap
+        priority: P3
+      - id: XC-03
+        title: "analytics calls do not throw and never block the UI (no uncaught error)"
+        status: gap
+        priority: P3
+
+# ──────────────────────────────────────────────────────────────────────────────
+# COVERAGE MATRIX — every route x the lanes that touch it. "covered" means at
+# least one P0/P1 case in that lane asserts the route today; "gap" means a case
+# is planned above but not yet authored.
+# ──────────────────────────────────────────────────────────────────────────────
+coverage_matrix:
+  legend: { covered: "spec exists", gap: "case planned, spec to author" }
+  by_route:
+    "/":                       { route: covered, a11y: covered, i18n: covered, interactions: covered, flow: gap }
+    "/assinar":                { route: covered, a11y: covered, i18n: gap,     flow: gap }
+    "/imprensa":               { route: covered, a11y: covered, content: gap }
+    "/iniciativas/cadastrar":  { route: covered, a11y: covered, content: gap }
+    "/parceiros":              { route: covered, a11y: covered, content: gap }
+    "/pets":                   { route: covered, a11y: covered, i18n: gap,     flow: gap }
+    "/relatorio-marketing":    { route: covered, a11y: covered, content: gap }
+    "/relatorios":             { route: covered, a11y: covered, content: gap }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# GAP SUMMARY — the NEW spec files to author to reach 100% feature coverage,
+# in priority order. Each maps to the suites above.
+# ──────────────────────────────────────────────────────────────────────────────
+gap_specs_to_author:
+  - { file: tests/e2e/report-flow.e2e.js,      covers: [report_publish_flow],         priority: P0 }
+  - { file: tests/e2e/pets.e2e.js,             covers: [pets_module],                 priority: P0 }
+  - { file: tests/e2e/assinar.e2e.js,          covers: [subscription_form],           priority: P1 }
+  - { file: tests/e2e/overlays.e2e.js,         covers: [home_overlays],               priority: P1 }
+  - { file: tests/e2e/onboarding.e2e.js,       covers: [onboarding_tour],             priority: P1 }
+  - { file: tests/e2e/map-interactions.e2e.js, covers: ["home_map_shell MAP-04..06"], priority: P1 }
+  - { file: tests/e2e/content-routes.e2e.js,   covers: [content_routes],              priority: P2 }
+  - { file: tests/e2e/pwa.e2e.js,              covers: [pwa],                         priority: P2 }
+  - { file: tests/e2e/cross-cutting.e2e.js,    covers: [cross_cutting],               priority: P3 }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# TEST DESIGN CONVENTIONS (apply to every new spec so the suite stays honest)
+# ──────────────────────────────────────────────────────────────────────────────
+conventions:
+  - "Stateless + independent per test so fullyParallel stays safe."
+  - "Seed the returning-visitor cookie via dismissOnboardingTour(context) in beforeEach UNLESS the case is about the tour itself (onboarding suite)."
+  - "Cookie shape: url-only (no path+url together) — Playwright 1.60 rejects both (see _helpers.js / memory mapafome-playwright-helper-cookie-bug)."
+  - "INTL-gated cases MUST test.skip honestly when the country-flag control is not mounted — never false-fail."
+  - "Mock all writes at the network boundary (page.route): sheets publish, Asaas backend, analytics. NEVER perform a live write or a live charge."
+  - "Generous timeouts already set in playwright.parallel.yaml for the slow HDD; prefer web-first assertions (expect(locator)) over fixed waits."
+  - "Filter benign console noise via captureConsoleErrors (favicon/gtag/devtools) — only real app errors fail a route."
+  - "Where a behavior is fully proven in vitest (unit_ref), assert only the browser-only half here to keep the slow lane lean."
