@@ -90,6 +90,37 @@ export function getLocale() {
   return currentLocale;
 }
 
+// ── Location → locale resolver (LOC-LANG) ─────────────────────────────────────
+// resolveLocaleFromCountry — PURE map from an ISO 3166-1 alpha-2 country code (the
+// SAME normalized lowercase code reverseGeocodeCountry returns, via
+// normalizeCountryCode) to a SUPPORTED locale. Three explicit buckets, everything
+// else -> 'en-US' (the international fallback for the location path; note this
+// DIFFERS from detectLocale's pt-BR default, because a device physically located
+// in, e.g., France is better served by English than by Brazilian Portuguese — the
+// browser-language path already covers the pt/es/en speakers there):
+//   • Lusophone country -> 'pt-BR'
+//   • Hispanophone country -> 'es'
+//   • anything else (incl. null/unknown) -> 'en-US'
+// Side-effect-free and store-free so it is unit-testable and the mount-effect host
+// can call it without importing the geocoder. Returns null ONLY for a falsy/blank
+// input so the caller can distinguish "no signal" (do nothing) from "resolved to a
+// concrete locale" (apply it) — a non-null, non-blank but UNKNOWN country still
+// resolves to the 'en-US' fallback, never null.
+const LUSOPHONE_COUNTRIES = ['br', 'pt', 'ao', 'mz', 'cv', 'gw', 'st', 'tl', 'gq'];
+const HISPANOPHONE_COUNTRIES = [
+  'es', 'ar', 'mx', 'co', 'cl', 'pe', 've', 'ec', 'gt', 'cu', 'bo', 'do',
+  'hn', 'py', 'sv', 'ni', 'cr', 'pa', 'uy', 'pr',
+];
+
+export function resolveLocaleFromCountry(code) {
+  if (typeof code !== 'string') return null;
+  const cc = code.trim().toLowerCase();
+  if (!cc) return null;
+  if (LUSOPHONE_COUNTRIES.includes(cc)) return 'pt-BR';
+  if (HISPANOPHONE_COUNTRIES.includes(cc)) return 'es';
+  return 'en-US';
+}
+
 // Sorted key list for a locale (defaults to the active one). Read-only view of
 // the dictionary intended for parity/dead-key tests; returns [] for an unknown
 // locale so callers don't have to guard.
@@ -158,4 +189,83 @@ export function useAutoDetectLocale() {
     if (match !== currentLocale) setLocale(match);
     else applyDocumentLang(match); // already on the match: still fix <html lang>
   }, []);
+}
+
+// hasStoredLocale — the single read of the stored-locale gate (the dark-ship
+// "a manual/stored choice always wins" invariant). Shared by the location-locale
+// effect so the gate semantics match useAutoDetectLocale exactly (engine.js:58
+// init read + engine.js:153 effect read): a stored value present at ANY check
+// means "do not auto-apply a derived locale". SSR/no-storage -> treated as no
+// stored value (the effect is browser-only anyway).
+function hasStoredLocale() {
+  try {
+    return !!window.localStorage.getItem(LOCALE_KEY);
+  } catch (_e) {
+    return false;
+  }
+}
+
+// useLocationLocale — FIRST-SESSION location-derived UI language (LOC-LANG), run
+// as a MOUNT-EFFECT for the SAME R12 reason as useAutoDetectLocale: the first
+// client render must still emit the prerendered DEFAULT_LOCALE (no hydration
+// mismatch), and the one re-render comes via 'mdf-locale-change' that useLocale
+// already subscribes to. It auto-requests device geolocation on mount, reverse-
+// geocodes the coords to a country (the geocoder is INJECTED — reverseGeocode —
+// so the engine never imports it and there is no module cycle), resolves the
+// nearest SUPPORTED locale (resolveLocaleFromCountry), and routes it through the
+// SINGLE writer setLocale (which writes <html lang> R14 + persists + re-renders).
+//
+// DARK-SHIP INVARIANT (a manual/stored choice ALWAYS wins): gated on
+// hasStoredLocale() BEFORE the request AND RE-checked at apply time, because the
+// reverse-geocode is async — between the request and its resolution the user may
+// have picked a language manually, OR useAutoDetectLocale may have persisted a
+// browser-language choice. Either way a stored value present at apply time means
+// we DO NOT override it. This is the same precedence as the browser-language path,
+// extended to the location signal.
+//
+// FAIL-CLOSED-TO-DEFAULT on ANY failure (denied permission, timeout, position
+// error, missing geolocation/fetch, ocean/network reverse-geocode miss, an
+// unmount mid-request): the effect simply does nothing — no throw, no console
+// spam — so today's default locale behavior is left UNCHANGED. The recenter of
+// the MAP on the same coords is owned separately by App.js's existing
+// getCurrentPosition (this hook is the LANGUAGE half only).
+export function useLocationLocale(reverseGeocode) {
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return undefined;
+    const geo = navigator.geolocation;
+    if (!geo || typeof geo.getCurrentPosition !== 'function') return undefined;
+    if (typeof reverseGeocode !== 'function') return undefined;
+    if (hasStoredLocale()) return undefined; // stored/manual choice wins — never re-detect
+
+    let cancelled = false;
+    geo.getCurrentPosition(
+      (position) => {
+        const coords = position && position.coords
+          ? [position.coords.latitude, position.coords.longitude]
+          : null;
+        if (!coords) return;
+        // reverseGeocode fails OPEN (resolves null on ocean/network/throttle/parse
+        // error) and never throws per its contract; still guard with .catch so a
+        // future contract change cannot surface an unhandled rejection or console
+        // noise. A null country or a null resolved locale => do nothing (leave the
+        // default), honoring the graceful-degradation rule.
+        Promise.resolve()
+          .then(() => reverseGeocode(coords))
+          .then((countryCode) => {
+            if (cancelled) return;
+            const locale = resolveLocaleFromCountry(countryCode);
+            if (!locale) return;
+            // RE-check the gate: a manual pick or the browser-language path may
+            // have persisted a locale during the async window. Stored wins.
+            if (hasStoredLocale()) return;
+            if (locale !== currentLocale) setLocale(locale);
+          })
+          .catch(() => { /* swallow — graceful degradation, no console spam */ });
+      },
+      () => { /* denied / timeout / position error -> leave default, no spam */ },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 },
+    );
+
+    return () => { cancelled = true; };
+  }, [reverseGeocode]);
 }

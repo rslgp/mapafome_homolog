@@ -31,4 +31,11 @@ export {
   detectLocale,
   useAutoDetectLocale,
   applyDocumentLang,
+  // LOC-LANG — first-session location-derived UI language. resolveLocaleFromCountry
+  // is the pure country->SUPPORTED-locale map; useLocationLocale is the mount-effect
+  // (R12, NOT module-load) that auto-requests geolocation, reverse-geocodes (the
+  // geocoder is injected by the mount host), and applies the result through
+  // setLocale ONLY when no stored/manual locale exists (dark-ship invariant).
+  resolveLocaleFromCountry,
+  useLocationLocale,
 } from './i18n/engine.js';

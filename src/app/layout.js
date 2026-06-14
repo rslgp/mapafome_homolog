@@ -1,6 +1,7 @@
 // app/layout.js
 import './globals.css';
 import LocaleAutoDetect from './components/LocaleAutoDetect';
+import LocationLocaleDetect from './components/LocationLocaleDetect';
 
 export const metadata = {
   metadataBase: new URL('https://mapafome.com.br'),
@@ -52,6 +53,14 @@ export default function RootLayout({ children }) {
             is covered; SSR-safe (no markup, detection deferred to the effect) so
             the prerendered DEFAULT_LOCALE HTML is never contradicted (R12). */}
         <LocaleAutoDetect />
+        {/* LOC-LANG — first-session location-derived UI language, run as a client
+            mount-effect (renders null). Auto-requests geolocation, reverse-geocodes
+            the coords to a country, and applies the nearest supported locale ONLY
+            when no stored/manual mdf_locale exists (dark-ship invariant). Mounted
+            once here alongside LocaleAutoDetect; SSR-safe (no markup, detection
+            deferred to the effect) so the prerendered pt-BR HTML is never
+            contradicted (R12). */}
+        <LocationLocaleDetect />
         {children}
       </body>
     </html>
