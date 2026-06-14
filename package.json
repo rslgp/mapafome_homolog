@@ -16,6 +16,9 @@
     "drill:rollback": "node scripts/rollback-drill.mjs",
     "smoke200": "node scripts/smoke200.mjs",
     "a11y": "npx --yes @axe-core/cli http://localhost:3000 --exit --tags wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa --show-errors",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
     "export": "next build",
     "predeploy": "npm run build && node -e \"const fs=require('fs');['CNAME','.nojekyll'].forEach(f=>{if(!fs.existsSync('out/'+f)){console.error('[deploy] out/'+f+' missing — check public/'+f);process.exit(1)}});console.log('[deploy] out/CNAME + out/.nojekyll OK')\"",
     "deploy": "gh-pages -d out --dotfiles"
@@ -36,6 +39,7 @@
     "react-leaflet-markercluster": "^5.0.0-rc.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@vitest/coverage-v8": "^4.1.5",

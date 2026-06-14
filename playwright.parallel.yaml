@@ -1,0 +1,117 @@
+# playwright.parallel.yaml — PARALLELISM SOURCE-OF-TRUTH for the Chrome E2E suite.
+#
+# WHY a YAML at all: Playwright's native config is JS/TS (playwright.config.js).
+# Playwright does NOT read YAML directly. So this file is the human-editable
+# single source of truth for *how parallel* the suite runs; playwright.config.js
+# loads it (via js-yaml) and applies every value below. Edit parallelism HERE,
+# not in the .js — the .js is just the applier.
+#
+# Binding hardware reality on THIS box (see ~/.claude memory: rafael-pc-hardware):
+#   slow 1TB HDD, ~12GB free, i5-8250U (4C/8T). Disk I/O — not CPU — is the
+#   ceiling. Each Playwright worker is its own Chromium process (RAM + disk
+#   cache churn), so workers are bounded LOW on purpose. "More workers" on this
+#   HDD past ~3 thrashes and gets SLOWER, not faster. Tune up only on better disk.
+
+meta:
+  name: mapafome-e2e
+  description: Chrome (Chromium) E2E — usability, deep a11y, route/code validation, in-browser i18n parity.
+  generated: "2026-06-13"
+  branch: feat/intl-marking          # Lane A worktree (mapafome_homolog); INTL flag currently ON locally
+  intl_note: "tests assume NEXT_PUBLIC_INTL may be ON; lang/flag controls asserted only when present (graceful skip)"
+
+# ── Parallelism knobs (the whole point of this file) ────────────────────────────
+parallel:
+  # Run test FILES in parallel AND tests within a file in parallel. The suite is
+  # written stateless/independent per test, so full parallelism is safe.
+  fullyParallel: true
+
+  # Worker processes. Bounded to 3 by the HDD constraint above. CI override below.
+  # null would let Playwright pick (~= cpu count = 8) → disk thrash on this box.
+  workers:
+    local: 3
+    ci: 2                # CI here is the same slow disk; keep it conservative
+
+  # Sharding: split the suite across N independent machines/runs. 1 = no shard
+  # locally. Set shard.total>1 + pass --shard=<i>/<n> to fan out across runners
+  # (or across the project's two git worktrees if you ever parallelize that way).
+  shard:
+    total: 1
+    index: 1
+
+  # Retries absorb HDD-induced flake (the same 5s-timeout class we saw in vitest
+  # when the disk saturated). Real failures still fail — a retry that passes is
+  # logged as "flaky", not green-washed.
+  retries:
+    local: 1
+    ci: 2
+
+  # Per-test and per-action timeouts. Generous because first-hit route compiles
+  # under `next dev` on a cold HDD took ~44s in this session (measured).
+  timeouts:
+    testMs: 60000           # per test
+    actionMs: 15000         # per click/fill/etc.
+    navigationMs: 45000     # per goto (cold-compile budget)
+    expectMs: 10000         # per web-first assertion
+    globalMs: 1200000       # whole-run ceiling (20 min)
+
+  # forbidOnly: fail the run if a `test.only` was left in (CI hygiene).
+  forbidOnly_in_ci: true
+
+# ── Browser projects to run (each is a parallel lane of its own) ────────────────
+# Chromium = "Chrome" per the request. Mobile project validates touch-target /
+# responsive usability on a phone viewport. Add webkit/firefox later if wanted.
+projects:
+  - name: chromium-desktop
+    use:
+      browserName: chromium
+      channel: chromium          # bundled Chromium (no system Chrome dependency)
+      viewport: { width: 1366, height: 900 }
+      headless: true
+  - name: mobile-chrome
+    use:
+      browserName: chromium
+      device: "Pixel 7"          # Playwright device preset (touch + mobile UA)
+      headless: true
+
+# ── Test discovery ──────────────────────────────────────────────────────────────
+discovery:
+  testDir: tests/e2e
+  testMatch: "**/*.e2e.js"
+  outputDir: test-results/e2e
+
+# ── How the app under test is served (the webServer Playwright boots/reuses) ────
+# reuseExistingServer:true means if a dev server is ALREADY up on :3000 (the one
+# started this session), Playwright reuses it instead of booting a second one —
+# critical on this disk, and avoids a port collision with Lane A.
+webServer:
+  command: "npm run dev"
+  url: "http://localhost:3000"
+  reuseExistingServer: true
+  timeoutMs: 180000              # cold `next dev` boot budget on HDD
+  cwd: "."                       # the mapafome_homolog worktree root
+
+baseURL: "http://localhost:3000"
+
+# ── Reporters ───────────────────────────────────────────────────────────────────
+reporters:
+  - list                        # live per-test lines in the terminal
+  - html                        # browsable report at playwright-report/ (trace on fail)
+
+# ── Artifacts on failure (for debugging usability regressions) ──────────────────
+artifacts:
+  screenshot: only-on-failure
+  video: retain-on-failure
+  trace: on-first-retry         # full trace viewer for the first retry of a failure
+
+# ── Routes the suite validates (kept in sync with the app's app/ dir) ───────────
+# Code-validation lane asserts each returns 200 + a real render (not Next's
+# error shell) and emits no uncaught console error. Mirrors scripts/smoke200.mjs.
+routes:
+  - /
+  - /assinar
+  - /imprensa
+  - /iniciativas/cadastrar
+  - /parceiros
+  - /pets
+  - /relatorio-marketing
+  - /relatorios

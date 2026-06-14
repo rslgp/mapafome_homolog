@@ -51,3 +51,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright e2e — generated artifacts (report, traces, screenshots, videos)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
