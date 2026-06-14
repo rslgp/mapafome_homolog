@@ -239,7 +239,7 @@ const InfoPanel = ({ rowCount }) => {
               </span>
               {t('page.info.subscribe_label')}
             </a>
-            {/* <a
+            <a
               className="mdf-btn mdf-btn--secondary mdf-btn--channel-patreon mdf-btn--lg"
               target="_blank"
               rel="noreferrer"
@@ -248,8 +248,8 @@ const InfoPanel = ({ rowCount }) => {
               title="Apoio mensal no Patreon"
             >
               <span aria-hidden="true">★</span>
-              Apoio mensal no Patreon
-            </a> */}
+              Patreon
+            </a>
           </div>
         </section>
 
