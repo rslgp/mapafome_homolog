@@ -107,6 +107,34 @@
   text-decoration: underline;
 }
 
+/* ── INTL brand layer (per-country, flag-gated) ─────────────────────────────
+ * These classes ONLY render when the INTL brand layer is active (header.js gates
+ * them on `brand`); with the flag OFF they never appear, so the default header DOM
+ * is byte-identical (dark-ship). The per-country accent arrives as a layered
+ * --mdf-brand override on .mdf-header__brand (set inline in JSX), never a hardcoded
+ * hue here — the color specialist owns the values. */
+
+/* Selected-country flag badge next to the constant MAPA FOME mark. Emoji glyph;
+ * decorative (aria-hidden in JSX), sized to sit alongside the 24px mark. */
+.mdf-header__flag-badge {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Per-country tagline under the wordmark. Stacks below the main wordmark (the
+ * wordmark span is inline; force a line break + muted, lighter treatment). */
+.mdf-header__tagline {
+  display: block;
+  font-weight: 400;
+  font-size: var(--mdf-fs-caption);
+  letter-spacing: normal;
+  color: var(--mdf-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Count / meta ─────────────────────────────────── */
 
 .mdf-header__meta {
