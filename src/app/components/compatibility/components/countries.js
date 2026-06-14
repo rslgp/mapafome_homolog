@@ -109,6 +109,267 @@ export const COUNTRY_BOUNDS = {
 
 export const DEFAULT_COUNTRY = 'br';
 
+// ── CAPITAL-ZOOM — capital-city coordinates for the flag-pick camera jump ──
+//
+// On a country pick the flag control zooms IN to that country's CAPITAL CITY via
+// Leaflet setView([lat, lng], CAPITAL_PICK_ZOOM). This map is the data SOT for
+// that jump: ISO-3166 alpha-2 code -> [lat, lng] of the capital, well-known
+// city-centre coordinates (rounded to ~4 dp, city-level precision; the fixed
+// zoom 11 frames the metro area, so sub-block accuracy is unnecessary).
+//
+// This is ADDITIVE and orthogonal to the two bounds maps above:
+//   • COUNTRY_BOUNDS        — search VIEWPORT corner pairs (Brazil only).
+//   • COUNTRY_PUBLISH_BOUNDS — publish GEOFENCE rectangles (dark-ship, frozen).
+//   • COUNTRY_CAPITALS (here) — the capital POINT the camera jumps to on pick.
+// It touches neither of the frozen bounds maps; the Brazil pick path explicitly
+// IGNORES this map (CountryFlagControl keeps Brazil's fitBounds whole-country
+// framing — the default-country experience stays byte-for-byte identical).
+//
+// Coverage goal: every key present in COUNTRY_NAMES. A handful of uninhabited /
+// no-permanent-capital territories are intentionally OMITTED (no real capital
+// city exists); a pick on one of those falls back to today's behavior (bounds
+// or the fallback zoom) and never crashes. Omitted, by design:
+//   • aq (Antártida)            — no capital; research stations only.
+//   • bv (Ilha Bouvet)          — uninhabited Norwegian dependency.
+//   • tf (Terras Austrais Fr.)  — admin seat is off-territory (Saint-Pierre, Réunion).
+//   • um is not in COUNTRY_NAMES, so it needs no entry.
+// Every other code below has a capital; getCountry().capital is null for the
+// three above (COUNTRY_CAPITALS[cc] || null), which the pick handler treats as
+// "no capital → use the existing bounds / fallback-zoom path".
+export const COUNTRY_CAPITALS = {
+  af: [34.5553, 69.2075],   // Cabul
+  za: [-25.7479, 28.2293],  // Pretória (sede administrativa)
+  al: [41.3275, 19.8189],   // Tirana
+  de: [52.5200, 13.4050],   // Berlim
+  ad: [42.5063, 1.5218],    // Andorra-a-Velha
+  ao: [-8.8390, 13.2894],   // Luanda
+  ai: [18.2206, -63.0686],  // The Valley
+  ag: [17.1274, -61.8468],  // Saint John's
+  sa: [24.7136, 46.6753],   // Riade
+  dz: [36.7538, 3.0588],    // Argel
+  ar: [-34.6037, -58.3816], // Buenos Aires
+  am: [40.1792, 44.4991],   // Erevan
+  aw: [12.5092, -70.0086],  // Oranjestad
+  au: [-35.2809, 149.1300], // Camberra
+  at: [48.2082, 16.3738],   // Viena
+  az: [40.4093, 49.8671],   // Baku
+  bs: [25.0480, -77.3554],  // Nassau
+  bh: [26.2285, 50.5860],   // Manama
+  bd: [23.8103, 90.4125],   // Daca
+  bb: [13.1132, -59.5988],  // Bridgetown
+  be: [50.8503, 4.3517],    // Bruxelas
+  bz: [17.2510, -88.7590],  // Belmopan
+  bj: [6.4969, 2.6289],     // Porto-Novo
+  bm: [32.2949, -64.7820],  // Hamilton
+  by: [53.9006, 27.5590],   // Minsk
+  bo: [-16.4897, -68.1193], // La Paz (sede de governo)
+  ba: [43.8563, 18.4131],   // Sarajevo
+  bw: [-24.6282, 25.9231],  // Gaborone
+  br: [-15.7939, -47.8828], // Brasília
+  bn: [4.9031, 114.9398],   // Bandar Seri Begauã
+  bg: [42.6977, 23.3219],   // Sófia
+  bf: [12.3714, -1.5197],   // Uagadugu
+  bi: [-3.3614, 29.3599],   // Gitega
+  bt: [27.4728, 89.6390],   // Timphu
+  cv: [14.9330, -23.5133],  // Praia
+  cm: [3.8480, 11.5021],    // Iaundé
+  kh: [11.5564, 104.9282],  // Phnom Penh
+  ca: [45.4215, -75.6972],  // Otava
+  qa: [25.2854, 51.5310],   // Doha
+  kz: [51.1694, 71.4491],   // Astana
+  td: [12.1348, 15.0557],   // Jamena
+  cl: [-33.4489, -70.6693], // Santiago
+  cn: [39.9042, 116.4074],  // Pequim
+  cy: [35.1856, 33.3823],   // Nicósia
+  co: [4.7110, -74.0721],   // Bogotá
+  km: [-11.7172, 43.2473],  // Moroni
+  cg: [-4.2634, 15.2429],   // Brazzaville
+  cd: [-4.4419, 15.2663],   // Kinshasa
+  kp: [39.0392, 125.7625],  // Pyongyang
+  kr: [37.5665, 126.9780],  // Seul
+  ci: [6.8276, -5.2893],    // Yamoussoukro (capital oficial)
+  cr: [9.9281, -84.0907],   // San José
+  hr: [45.8150, 15.9819],   // Zagreb
+  cu: [23.1136, -82.3666],  // Havana
+  cw: [12.1224, -68.8824],  // Willemstad
+  dk: [55.6761, 12.5683],   // Copenhague
+  dj: [11.5721, 43.1456],   // Djibuti
+  dm: [15.3092, -61.3790],  // Roseau
+  eg: [30.0444, 31.2357],   // Cairo
+  sv: [13.6929, -89.2182],  // São Salvador
+  ae: [24.4539, 54.3773],   // Abu Dhabi
+  ec: [-0.1807, -78.4678],  // Quito
+  er: [15.3229, 38.9251],   // Asmara
+  sk: [48.1486, 17.1077],   // Bratislava
+  si: [46.0569, 14.5058],   // Liubliana
+  es: [40.4168, -3.7038],   // Madri
+  us: [38.9072, -77.0369],  // Washington, D.C.
+  ee: [59.4370, 24.7536],   // Talim
+  sz: [-26.3054, 31.1367],  // Mbabane
+  et: [9.0320, 38.7469],    // Adis Abeba
+  fj: [-18.1248, 178.4501], // Suva
+  ph: [14.5995, 120.9842],  // Manila
+  fi: [60.1699, 24.9384],   // Helsinque
+  fr: [48.8566, 2.3522],    // Paris
+  ga: [0.4162, 9.4673],     // Libreville
+  gm: [13.4549, -16.5790],  // Banjul
+  gh: [5.6037, -0.1870],    // Acra
+  ge: [41.7151, 44.8271],   // Tiblíssi
+  gi: [36.1408, -5.3536],   // Gibraltar
+  gd: [12.0561, -61.7488],  // Saint George's
+  gr: [37.9838, 23.7275],   // Atenas
+  gl: [64.1814, -51.6941],  // Nuuk
+  gp: [16.2415, -61.5340],  // Basse-Terre
+  gu: [13.4745, 144.7504],  // Hagåtña
+  gt: [14.6349, -90.5069],  // Cidade da Guatemala
+  gg: [49.4555, -2.5368],   // Saint Peter Port
+  gy: [6.8013, -58.1551],   // Georgetown
+  gf: [4.9224, -52.3135],   // Caiena
+  gn: [9.6412, -13.5784],   // Conacri
+  gq: [3.7504, 8.7371],     // Malabo
+  gw: [11.8817, -15.6178],  // Bissau
+  ht: [18.5944, -72.3074],  // Porto Príncipe
+  nl: [52.3676, 4.9041],    // Amsterdã
+  hn: [14.0723, -87.1921],  // Tegucigalpa
+  hk: [22.3193, 114.1694],  // Hong Kong
+  hu: [47.4979, 19.0402],   // Budapeste
+  ye: [15.3694, 44.1910],   // Sana
+  cx: [-10.4217, 105.6791], // Flying Fish Cove
+  im: [54.1509, -4.4777],   // Douglas
+  ky: [19.2869, -81.3674],  // George Town
+  cc: [-12.1642, 96.8710],  // West Island
+  ck: [-21.2129, -159.7777],// Avarua
+  fo: [62.0079, -6.7906],   // Tórshavn
+  fk: [-51.6921, -57.8589], // Stanley
+  mp: [15.1898, 145.7193],  // Saipan (Capitol Hill)
+  mh: [7.0897, 171.3803],   // Majuro
+  sb: [-9.4456, 159.9729],  // Honiara
+  tc: [21.4664, -71.1359],  // Cockburn Town
+  vg: [18.4207, -64.6400],  // Road Town
+  vi: [18.3358, -64.8963],  // Charlotte Amalie
+  in: [28.6139, 77.2090],   // Nova Déli
+  id: [-6.2088, 106.8456],  // Jacarta
+  ir: [35.6892, 51.3890],   // Teerã
+  iq: [33.3152, 44.3661],   // Bagdá
+  ie: [53.3498, -6.2603],   // Dublin
+  is: [64.1466, -21.9426],  // Reykjavík
+  il: [31.7683, 35.2137],   // Jerusalém
+  it: [41.9028, 12.4964],   // Roma
+  jm: [17.9712, -76.7936],  // Kingston
+  jp: [35.6762, 139.6503],  // Tóquio
+  je: [49.1869, -2.1064],   // Saint Helier
+  jo: [31.9454, 35.9284],   // Amã
+  kw: [29.3759, 47.9774],   // Cidade do Kuwait
+  la: [17.9757, 102.6331],  // Vienciana
+  ls: [-29.3100, 27.4786],  // Maseru
+  lv: [56.9496, 24.1052],   // Riga
+  lb: [33.8938, 35.5018],   // Beirute
+  lr: [6.3004, -10.7969],   // Monróvia
+  ly: [32.8872, 13.1913],   // Trípoli
+  li: [47.1410, 9.5209],    // Vaduz
+  lt: [54.6872, 25.2797],   // Vilnius
+  lu: [49.6116, 6.1319],    // Luxemburgo
+  mo: [22.1987, 113.5439],  // Macau
+  mk: [41.9981, 21.4254],   // Escópia
+  mg: [-18.8792, 47.5079],  // Antananarivo
+  my: [3.1390, 101.6869],   // Kuala Lumpur
+  mw: [-13.9626, 33.7741],  // Lilôngue
+  mv: [4.1755, 73.5093],    // Malé
+  ml: [12.6392, -8.0029],   // Bamaco
+  mt: [35.8989, 14.5146],   // Valeta
+  ma: [34.0209, -6.8416],   // Rabat
+  mq: [14.6161, -61.0588],  // Fort-de-France
+  mu: [-20.1609, 57.5012],  // Port Louis
+  mr: [18.0735, -15.9582],  // Nouakchott
+  yt: [-12.7806, 45.2278],  // Mamoudzou
+  mx: [19.4326, -99.1332],  // Cidade do México
+  mm: [19.7633, 96.0785],   // Népido
+  fm: [6.9248, 158.1611],   // Palikir
+  mz: [-25.9692, 32.5732],  // Maputo
+  md: [47.0105, 28.8638],   // Quixinau
+  mc: [43.7384, 7.4246],    // Mônaco
+  mn: [47.8864, 106.9057],  // Ulã Bator
+  me: [42.4304, 19.2594],   // Podgorica
+  ms: [16.7064, -62.2150],  // Brades (capital de facto)
+  na: [-22.5609, 17.0658],  // Windhoek
+  nr: [-0.5477, 166.9209],  // Yaren (distrito de facto)
+  np: [27.7172, 85.3240],   // Catmandu
+  ni: [12.1149, -86.2362],  // Manágua
+  ne: [13.5128, 2.1128],    // Niamei
+  ng: [9.0765, 7.3986],     // Abuja
+  nu: [-19.0544, -169.8672],// Alofi
+  no: [59.9139, 10.7522],   // Oslo
+  nc: [-22.2758, 166.4580], // Numeá
+  nz: [-41.2865, 174.7762], // Wellington
+  om: [23.5880, 58.3829],   // Mascate
+  pw: [7.5006, 134.6242],   // Ngerulmud
+  pa: [8.9824, -79.5199],   // Cidade do Panamá
+  pg: [-9.4438, 147.1803],  // Port Moresby
+  pk: [33.6844, 73.0479],   // Islamabad
+  py: [-25.2637, -57.5759], // Assunção
+  pe: [-12.0464, -77.0428], // Lima
+  pf: [-17.5350, -149.5696],// Papeete
+  pl: [52.2297, 21.0122],   // Varsóvia
+  pr: [18.4655, -66.1057],  // San Juan
+  pt: [38.7223, -9.1393],   // Lisboa
+  ke: [-1.2921, 36.8219],   // Nairóbi
+  kg: [42.8746, 74.5698],   // Bisqueque
+  ki: [1.3290, 172.9790],   // Tarawa do Sul
+  gb: [51.5074, -0.1278],   // Londres
+  cf: [4.3947, 18.5582],    // Bangui
+  do: [18.4861, -69.9312],  // São Domingos
+  re: [-20.8789, 55.4481],  // Saint-Denis
+  ro: [44.4268, 26.1025],   // Bucareste
+  rw: [-1.9706, 30.1044],   // Kigali
+  ru: [55.7558, 37.6173],   // Moscou
+  eh: [27.1536, -13.2033],  // Aiune
+  ws: [-13.8333, -171.7667],// Apia
+  as: [-14.2756, -170.7020],// Pago Pago
+  sm: [43.9424, 12.4578],   // São Marinho
+  sh: [-15.9650, -5.7089],  // Jamestown
+  lc: [14.0101, -60.9875],  // Castries
+  bl: [17.8962, -62.8498],  // Gustavia
+  kn: [17.2955, -62.7261],  // Basseterre
+  st: [0.3302, 6.7333],     // São Tomé
+  vc: [13.1600, -61.2248],  // Kingstown
+  sn: [14.7167, -17.4677],  // Dacar
+  sl: [8.4657, -13.2317],   // Freetown
+  rs: [44.7866, 20.4489],   // Belgrado
+  sc: [-4.6191, 55.4513],   // Victória
+  sg: [1.3521, 103.8198],   // Singapura
+  sy: [33.5138, 36.2765],   // Damasco
+  so: [2.0469, 45.3182],    // Mogadíscio
+  lk: [6.9271, 79.8612],    // Colombo (Sri Jayawardenepura Kotte é a sede legislativa)
+  sd: [15.5007, 32.5599],   // Cartum
+  ss: [4.8594, 31.5713],    // Juba
+  se: [59.3293, 18.0686],   // Estocolmo
+  ch: [46.9480, 7.4474],    // Berna
+  sr: [5.8520, -55.2038],   // Paramaribo
+  tj: [38.5598, 68.7870],   // Duchambe
+  th: [13.7563, 100.5018],  // Banguecoque
+  tw: [25.0330, 121.5654],  // Taipé
+  tz: [-6.1630, 35.7516],   // Dodoma
+  tl: [-8.5569, 125.5603],  // Díli
+  tg: [6.1725, 1.2314],     // Lomé
+  to: [-21.1393, -175.2046],// Nukualofa
+  tt: [10.6549, -61.5019],  // Porto de Espanha
+  tn: [36.8065, 10.1815],   // Túnis
+  tm: [37.9601, 58.3261],   // Asgabate
+  tr: [39.9334, 32.8597],   // Ancara
+  tv: [-8.5211, 179.1983],  // Funafuti
+  ua: [50.4501, 30.5234],   // Kiev
+  ug: [0.3476, 32.5825],    // Campala
+  uy: [-34.9011, -56.1645], // Montevidéu
+  uz: [41.2995, 69.2401],   // Tasquente
+  vu: [-17.7333, 168.3273], // Porto Vila
+  va: [41.9029, 12.4534],   // Cidade do Vaticano
+  ve: [10.4806, -66.9036],  // Caracas
+  vn: [21.0278, 105.8342],  // Hanói
+  wf: [-13.2825, -176.1736],// Mata-Utu
+  zm: [-15.3875, 28.3228],  // Lusaca
+  zw: [-17.8252, 31.0335],  // Harare
+};
+
 // ── INTL M1 — publish geofence bounds (DISTINCT from the search viewport above) ──
 //
 // COUNTRY_BOUNDS (above) is the SEARCH VIEWPORT: a single [NORTH, SOUTH] corner
@@ -239,8 +500,11 @@ export function normalizeCountryCode(code) {
   return Object.prototype.hasOwnProperty.call(COUNTRY_NAMES, cc) ? cc : null;
 }
 
-// getCountry('br') -> { code, name, flag, bounds }. Falls back to the default
-// country for an unknown code, so callers always get a renderable object.
+// getCountry('br') -> { code, name, flag, bounds, capital }. Falls back to the
+// default country for an unknown code, so callers always get a renderable object.
+// `capital` is the [lat, lng] the flag-pick camera jumps to (CAPITAL-ZOOM), or
+// null for the few territories with no capital city (the pick then falls back to
+// the bounds / fallback-zoom path — see CountryFlagControl.pick).
 export function getCountry(code) {
   const cc = normalizeCountryCode(code) || DEFAULT_COUNTRY;
   return {
@@ -248,6 +512,7 @@ export function getCountry(code) {
     name: COUNTRY_NAMES[cc],
     flag: flagEmoji(cc),
     bounds: COUNTRY_BOUNDS[cc] || null,
+    capital: COUNTRY_CAPITALS[cc] || null,
   };
 }
 

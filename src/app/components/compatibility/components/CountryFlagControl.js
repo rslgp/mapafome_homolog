@@ -33,13 +33,21 @@ import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import './CountryFlagControl.css';
 import { t, getLocale } from './ux/strings';
-import { countriesForLocale, getCountry } from './countries';
+import { countriesForLocale, getCountry, DEFAULT_COUNTRY } from './countries';
 import { getSelectedCountry, setSelectedCountry, subscribe } from './countryStore';
 
 // Zoom used when recentering on a freshly chosen country that has no bounds: a
 // gentle zoom-out so the user sees they switched countries (the next address
 // search pans precisely).
 const COUNTRY_PICK_FALLBACK_ZOOM = 4;
+
+// CAPITAL-ZOOM — fixed city-level zoom used when a freshly picked country has a
+// known capital (getCountry().capital): we setView([lat,lng], CAPITAL_PICK_ZOOM)
+// for a DETERMINISTIC jump straight to the capital city (no flyTo animation —
+// keeps the E2E render check stable on a slow box). Z11 frames the metro area.
+// Brazil ('br') is the EXCEPTION: it keeps its whole-country fitBounds framing
+// and never uses this zoom (the default-country experience stays unchanged).
+const CAPITAL_PICK_ZOOM = 11;
 
 const hasDocument = () => typeof document !== 'undefined';
 
@@ -148,12 +156,28 @@ export function wireFlagControl(map, dom) {
   }
   const togglePanel = () => (panel.hidden ? openPanel() : closePanel(true));
 
+  // Camera precedence on a country pick (CAPITAL-ZOOM):
+  //   1. Brazil ('br') WITH bounds -> fitBounds (UNCHANGED dark-ship whole-country
+  //      framing; Brazil is NEVER zoomed to Brasília — default stays byte-identical).
+  //   2. has a capital -> setView([lat,lng], CAPITAL_PICK_ZOOM) — deterministic
+  //      city-level jump to the capital (no flyTo: stable on a slow E2E box).
+  //   3. has bounds (any other bounded country) -> fitBounds (existing path).
+  //   4. else -> gentle fallback zoom (existing COUNTRY_PICK_FALLBACK_ZOOM path).
+  // getCountry normalizes the code, so c is always renderable and c.capital is
+  // null for the few capital-less territories (they fall through to 3/4).
   const pick = (code) => {
     setSelectedCountry(code);
     const c = getCountry(code);
     if (map && map.getContainer()) {
-      if (c.bounds) map.fitBounds([c.bounds[0], c.bounds[1]]);
-      else map.setZoom(Math.min(map.getZoom(), COUNTRY_PICK_FALLBACK_ZOOM));
+      if (c.code === DEFAULT_COUNTRY && c.bounds) {
+        map.fitBounds([c.bounds[0], c.bounds[1]]);
+      } else if (c.capital) {
+        map.setView(c.capital, CAPITAL_PICK_ZOOM);
+      } else if (c.bounds) {
+        map.fitBounds([c.bounds[0], c.bounds[1]]);
+      } else {
+        map.setZoom(Math.min(map.getZoom(), COUNTRY_PICK_FALLBACK_ZOOM));
+      }
     }
     closePanel(true);
   };
