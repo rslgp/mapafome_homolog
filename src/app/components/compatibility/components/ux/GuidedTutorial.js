@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { getCookie, setCookie, removeCookie } from '../cookies';
 import './GuidedTutorial.css';
 import { trackReportStarted } from './analytics';
+import { t, useLocale } from './strings';
 
 const COOKIE_NAME = 'mdf_tour_done';
 const COOKIE_TTL_DAYS = 365;
@@ -11,21 +12,24 @@ const COOKIE_TTL_DAYS = 365;
 /* Two parallel flows. The user picks one on the chooser stop;
  * the chosen flow then runs as 3 contextual steps spotlighting real DOM. */
 
+// String CONTENT is stored as i18n KEYS, not resolved text, so it is re-read via
+// t() at RENDER time (resolving at module load would freeze the first locale and
+// never update on a language switch). Selectors/swatchClass stay literal.
 const CHOOSER = {
   kind: 'chooser',
-  title: 'Bem-vindo ao MAPA FOME',
-  body: 'Em 3 passos você ajuda a combater a fome. O que descreve melhor você agora?',
+  titleKey: 'page.tutorial.welcome_title',
+  bodyKey: 'page.tutorial.welcome_body',
   options: [
     {
       key: 'reporter',
-      label: 'Vi alguém precisando de comida',
-      hint: 'Vou marcar um ponto amarelo no mapa',
+      labelKey: 'page.tutorial.reporter_label',
+      hintKey: 'page.tutorial.reporter_hint',
       swatchClass: 'mdf-tour__swatch--yellow',
     },
     {
       key: 'helper',
-      label: 'Represento uma iniciativa que ajuda',
-      hint: 'Igreja, ONG ou grupo, ponto azul ou vermelho',
+      labelKey: 'page.tutorial.helper_label',
+      hintKey: 'page.tutorial.helper_hint',
       swatchClass: 'mdf-tour__swatch--bluered',
     },
   ],
@@ -34,36 +38,36 @@ const CHOOSER = {
 const REPORTER_STOPS = [
   {
     selectors: ['.leaflet-container', '#mdf-target-map'],
-    title: 'Passo 1: Toque no mapa',
-    body: 'Encontre no mapa o local onde você viu a pessoa e toque para marcar o ponto.',
+    titleKey: 'page.tutorial.rep1_title',
+    bodyKey: 'page.tutorial.rep1_body',
   },
   {
     selectors: ['#CoffeeTable', '#mdf-target-controls'],
-    title: 'Passo 2: Escolha a categoria amarela',
-    body: 'Marque "Pessoa precisando de Alimento pronto" ou "Cesta básica". As duas aparecem como pontos amarelos no mapa.',
+    titleKey: 'page.tutorial.rep2_title',
+    bodyKey: 'page.tutorial.rep2_body',
   },
   {
     selectors: ['#mdf-target-confirm', '.marcar-local'],
-    title: 'Passo 3: Confirme o ponto',
-    body: 'Revise e confirme. O ponto fica visível para que um voluntário próximo possa levar ajuda.',
+    titleKey: 'page.tutorial.rep3_title',
+    bodyKey: 'page.tutorial.rep3_body',
   },
 ];
 
 const HELPER_STOPS = [
   {
     selectors: ['.leaflet-container', '#mdf-target-map'],
-    title: 'Passo 1: Toque onde sua iniciativa atua',
-    body: 'Marque no mapa o ponto fixo onde sua igreja, ONG ou grupo recebe doações ou entrega refeições.',
+    titleKey: 'page.tutorial.help1_title',
+    bodyKey: 'page.tutorial.help1_body',
   },
   {
     selectors: ['#CoffeeTable', '#mdf-target-controls'],
-    title: 'Passo 2: Azul ou vermelho?',
-    body: 'Azul: você recebe alimentos ou recursos para distribuir (ONGs, sopão, voluntários). Vermelho: você entrega refeição em ponto fixo da rua em certo dia da semana.',
+    titleKey: 'page.tutorial.help2_title',
+    bodyKey: 'page.tutorial.help2_body',
   },
   {
     selectors: ['.tfMarginUp', '#mdf-target-confirm'],
-    title: 'Passo 3: Contato, Instagram e confirmação',
-    body: 'Adicione um telefone com DDD e o Instagram (ou Facebook) da sua iniciativa para que doadores cheguem até você. Depois confirme o ponto.',
+    titleKey: 'page.tutorial.help3_title',
+    bodyKey: 'page.tutorial.help3_body',
   },
 ];
 
@@ -91,6 +95,7 @@ function getRect(selectors) {
 }
 
 export default function GuidedTutorial({ open, onClose }) {
+  useLocale(); // re-render on locale change so the t() resolutions below re-read
   const [flow, setFlow] = useState(null); // null = chooser, 'reporter' | 'helper'
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState(null);
@@ -310,20 +315,20 @@ export default function GuidedTutorial({ open, onClose }) {
       >
         {!isChooser && (
           <div className="mdf-tour__meta">
-            {flow === 'reporter' ? 'Pessoa precisando' : 'Iniciativa que ajuda'}
+            {flow === 'reporter' ? t('page.tutorial.meta_reporter') : t('page.tutorial.meta_helper')}
             {' · '}
-            Passo {index + 1} de {stops.length}
+            {t('page.tutorial.meta_step').replace('{n}', index + 1).replace('{total}', stops.length)}
           </div>
         )}
         <h2 id="mdf-tour-title" className="mdf-tour__title">
-          {stop.title}
+          {t(stop.titleKey)}
         </h2>
         <p id="mdf-tour-body" className="mdf-tour__body">
-          {stop.body}
+          {t(stop.bodyKey)}
         </p>
 
         {isChooser ? (
-          <div className="mdf-tour__choices" role="group" aria-label="Escolha um perfil">
+          <div className="mdf-tour__choices" role="group" aria-label={t('page.tutorial.choose_profile')}>
             {CHOOSER.options.map((opt) => (
               <button
                 key={opt.key}
@@ -336,8 +341,8 @@ export default function GuidedTutorial({ open, onClose }) {
                   aria-hidden="true"
                 />
                 <span className="mdf-tour__choice-text">
-                  <span className="mdf-tour__choice-label">{opt.label}</span>
-                  <span className="mdf-tour__choice-hint">{opt.hint}</span>
+                  <span className="mdf-tour__choice-label">{t(opt.labelKey)}</span>
+                  <span className="mdf-tour__choice-hint">{t(opt.hintKey)}</span>
                 </span>
               </button>
             ))}
@@ -346,7 +351,7 @@ export default function GuidedTutorial({ open, onClose }) {
               className="mdf-tour__btn mdf-tour__btn--ghost mdf-tour__chooser-skip"
               onClick={handleSkip}
             >
-              Pular tutorial
+              {t('page.tutorial.skip')}
             </button>
           </div>
         ) : (
@@ -356,7 +361,7 @@ export default function GuidedTutorial({ open, onClose }) {
               className="mdf-tour__btn mdf-tour__btn--ghost"
               onClick={handleSkip}
             >
-              Pular tutorial
+              {t('page.tutorial.skip')}
             </button>
             <div className="mdf-tour__nav">
               <button
@@ -364,7 +369,7 @@ export default function GuidedTutorial({ open, onClose }) {
                 className="mdf-tour__btn mdf-tour__btn--ghost"
                 onClick={handlePrev}
               >
-                {index === 0 ? 'Trocar perfil' : 'Voltar'}
+                {index === 0 ? t('page.tutorial.change_profile') : t('page.tutorial.back')}
               </button>
               <button
                 type="button"
@@ -372,7 +377,7 @@ export default function GuidedTutorial({ open, onClose }) {
                 onClick={handleNext}
                 autoFocus
               >
-                {index < stops.length - 1 ? 'Próximo' : 'Entendi'}
+                {index < stops.length - 1 ? t('page.tutorial.next') : t('page.tutorial.got_it')}
               </button>
             </div>
           </div>

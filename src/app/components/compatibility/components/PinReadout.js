@@ -18,6 +18,7 @@
 // the component is purely UI; all state transitions originate elsewhere.
 
 import React, { useEffect, useState } from 'react';
+import { t, useLocale } from './ux/strings';
 import {
     MARKER_PLACED_EVENT,
     MARKER_CLEARED_EVENT,
@@ -29,6 +30,7 @@ const formatCoord = (n) => Number.isFinite(n) ? n.toFixed(5) : '—';
 const COPY_FEEDBACK_MS = 1500;
 
 const PinReadout = () => {
+    useLocale(); // re-render on locale change so t() re-reads
     const [coords, setCoords] = useState(null);
     const [copied, setCopied] = useState(false);
 
@@ -107,20 +109,20 @@ const PinReadout = () => {
                 type="button"
                 className="mdf-pin-readout__coords"
                 onClick={handleCopyCoords}
-                aria-label={`Copiar coordenadas ${formatCoord(coords.lat)}, ${formatCoord(coords.lng)}`}
-                title="Copiar coordenadas"
+                aria-label={t('page.readout.copy_coords_aria').replace('{coords}', `${formatCoord(coords.lat)}, ${formatCoord(coords.lng)}`)}
+                title={t('page.readout.copy_coords_title')}
             >
                 {copied
-                    ? '✓ copiado'
+                    ? t('page.readout.copied')
                     : `${formatCoord(coords.lat)}, ${formatCoord(coords.lng)}`}
             </button>
             <button
                 type="button"
                 className="mdf-pin-readout__reset"
                 onClick={handleReset}
-                aria-label="Limpar ponto marcado"
+                aria-label={t('page.readout.clear_aria')}
             >
-                Limpar
+                {t('page.readout.clear')}
             </button>
         </div>
     );

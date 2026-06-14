@@ -2,8 +2,10 @@
 
 import React, { useEffect } from 'react';
 import './OfflineToast.css';
+import { t, useLocale } from './strings';
 
 export default function OfflineToast({ message, onDismiss, autoHideMs = 6000 }) {
+  useLocale(); // re-render on locale change so t() re-reads
   useEffect(() => {
     if (!message) return;
     const id = setTimeout(() => onDismiss?.(), autoHideMs);
@@ -19,7 +21,7 @@ export default function OfflineToast({ message, onDismiss, autoHideMs = 6000 }) 
         type="button"
         className="mdf-toast__dismiss"
         onClick={() => onDismiss?.()}
-        aria-label="Fechar aviso"
+        aria-label={t('page.toast.close_notice')}
       >
         ✕
       </button>

@@ -673,6 +673,9 @@ class App extends Component {
     if (this._urgencyTicker) clearInterval(this._urgencyTicker);
     if (this._unbindOnlineFlush) this._unbindOnlineFlush();
     if (this._unbindCountry) this._unbindCountry();
+    if (this._onLocaleChange && typeof window !== 'undefined') {
+      window.removeEventListener('mdf-locale-change', this._onLocaleChange);
+    }
   }
 
   componentDidMount() {
@@ -695,6 +698,19 @@ class App extends Component {
     // SAME way the bootstrap does so OFF behavior stays byte-identical. Unbound in
     // componentWillUnmount (no subscription leak).
     this._unbindCountry = countryStore.subscribe(() => this._refilterForCountry());
+
+    // INTL — INSTANT language switch. App is a class component that renders ~11
+    // t() strings (the map shell: alerts, buttons, error copy). t() resolves at
+    // render time against the active locale, but a manual language pick only
+    // dispatches the 'mdf-locale-change' CustomEvent (setLocale) — the small
+    // useLocale() hook consumers re-render, but THIS class component does not
+    // subscribe to anything that re-renders it, so its strings stayed stale until
+    // a reload. Listen for the event and forceUpdate() so the WHOLE site (shell
+    // included) switches language live, with no reload. Removed in unmount.
+    if (typeof window !== 'undefined') {
+      this._onLocaleChange = () => this.forceUpdate();
+      window.addEventListener('mdf-locale-change', this._onLocaleChange);
+    }
 
     // M2 — tick once a minute so the context bar and marker urgency re-derive
     // without any backend push. Client clock is the source of truth here; a

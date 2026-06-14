@@ -176,8 +176,8 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
     : t('report.button');
 
   const locationLabel = coords
-    ? `Ponto em: ${coords[0].toFixed(5)}, ${coords[1].toFixed(5)}`
-    : 'Toque no mapa para escolher o local';
+    ? t('page.report.location_at').replace('{lat}', coords[0].toFixed(5)).replace('{lng}', coords[1].toFixed(5))
+    : t('page.report.location_tap');
 
   return (
     <div className="mdf-sheet" role="dialog" aria-modal="true" aria-labelledby="mdf-sheet-title">
@@ -194,7 +194,7 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
         <div
           className="mdf-sheet__handle"
           role="separator"
-          aria-label="Arraste para redimensionar"
+          aria-label={t('page.report.resize_aria')}
           aria-valuemin={40}
           aria-valuemax={95}
           aria-valuenow={Math.round(sheetHeightVh ?? 70)}
@@ -218,7 +218,7 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
           </p>
         )}
 
-        <div className="mdf-sheet__chips" role="group" aria-label="Categorias">
+        <div className="mdf-sheet__chips" role="group" aria-label={t('page.report.categories_aria')}>
           {CATEGORIES.map((cat, i) => {
             const checked = selected.has(cat.id);
             return (
@@ -245,13 +245,13 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
           open={detailOpen}
           onToggle={(e) => setDetailOpen(e.target.open)}
         >
-          <summary>Adicionar detalhe (opcional)</summary>
-          <label className="mdf-sr-only" htmlFor="mdf-detail">Detalhe</label>
+          <summary>{t('page.report.add_detail')}</summary>
+          <label className="mdf-sr-only" htmlFor="mdf-detail">{t('page.report.detail_label')}</label>
           <input
             id="mdf-detail"
             type="text"
             className="mdf-sheet__input"
-            placeholder="Ex: idoso, perto da farmácia"
+            placeholder={t('page.report.detail_ph')}
             maxLength={140}
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
@@ -264,25 +264,25 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
           open={contactOpen}
           onToggle={(e) => setContactOpen(e.target.open)}
         >
-          <summary>Seu contato (opcional)</summary>
+          <summary>{t('page.report.contact_summary')}</summary>
           <p className="mdf-sheet__helper">
-            Um voluntário pode querer confirmar com você antes de ir até o local.
+            {t('page.report.contact_helper')}
           </p>
-          <label className="mdf-sr-only" htmlFor="mdf-contact">Contato</label>
+          <label className="mdf-sr-only" htmlFor="mdf-contact">{t('page.report.contact_label')}</label>
           <input
             id="mdf-contact"
             type="text"
             className="mdf-sheet__input"
-            placeholder="Ex: (81) 99999-0000 ou @seuperfil"
+            placeholder={t('page.report.contact_ph')}
             maxLength={60}
             value={contact}
             onChange={(e) => setContact(e.target.value)}
             disabled={status === 'publishing' || status === 'success'}
           />
           <p className="mdf-sheet__consent">
-            Ao informar um contato, você concorda com os{' '}
-            <a href="/privacy.html" target="_blank" rel="noreferrer">Termos de Privacidade</a>
-            . Seu contato só é mostrado a voluntários que abrirem o ponto e só para coordenação do atendimento.
+            {t('page.report.consent_lead')}{' '}
+            <a href="/privacy.html" target="_blank" rel="noreferrer">{t('page.report.terms_privacy')}</a>
+            {t('page.report.consent_tail')}
           </p>
         </details>
 
@@ -299,7 +299,7 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
             onClick={() => onClose?.()}
             disabled={status === 'publishing'}
           >
-            Cancelar
+            {t('page.report.cancel')}
           </button>
           <button
             type="button"
@@ -313,10 +313,10 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
         </div>
 
         <p className="mdf-sheet__consent mdf-sheet__consent--below-cta">
-          Ao confirmar a inserção do ponto, você está de acordo com os{' '}
-          <a href="/privacy.html" target="_blank" rel="noreferrer">Termos de Privacidade</a>
-          {' '}e os{' '}
-          <a href="/terms.html" target="_blank" rel="noreferrer">Termos de Uso</a>.
+          {t('page.report.consent2_lead')}{' '}
+          <a href="/privacy.html" target="_blank" rel="noreferrer">{t('page.report.terms_privacy')}</a>
+          {' '}{t('page.report.consent2_mid')}{' '}
+          <a href="/terms.html" target="_blank" rel="noreferrer">{t('page.report.terms_use')}</a>.
         </p>
       </div>
     </div>

@@ -18,6 +18,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import useInstallPrompt from './useInstallPrompt';
 import './InstallToast.css';
+import { t, useLocale } from './strings';
 
 const DISMISS_KEY = 'mdf_install_dismissed_until';
 const DISMISS_MS = 14 * 24 * 60 * 60 * 1000; // 14 days — don't nag
@@ -45,6 +46,7 @@ function rememberDismiss() {
 }
 
 const InstallToast = () => {
+  useLocale(); // re-render on locale change so t() re-reads
   const [promptEvent, setPromptEvent] = useState(null);
   const [visible, setVisible] = useState(false);
   // iOS variant: 'add' = Safari Share -> Adicionar à Tela de Início (D1);
@@ -237,15 +239,15 @@ const InstallToast = () => {
     // Share → Adicionar à Tela de Início.
     const isSafariHint = iosMode === 'safari';
     const title = isSafariHint
-      ? 'Abra no Safari para instalar'
-      : 'Adicionar à Tela de Início';
+      ? t('page.install.ios_safari_title')
+      : t('page.install.ios_add_title');
     const sub = isSafariHint
-      ? 'Este app não instala dentro do Instagram/Facebook/WhatsApp. Toque em ⋯ (ou aA) e escolha “Abrir no Safari”, depois instale por lá.'
-      : 'Toque em Compartilhar (⎙) na barra do Safari e escolha “Adicionar à Tela de Início” (Add to Home Screen).';
+      ? t('page.install.ios_safari_sub')
+      : t('page.install.ios_add_sub');
     return (
       <div
         {...wrapperProps}
-        aria-label="Como instalar o MAPA FOME no iPhone ou iPad"
+        aria-label={t('page.install.ios_aria')}
       >
         <img className="mdf-install-toast__icon" src="/logo192.png" alt="" width="40" height="40" />
         <div className="mdf-install-toast__body">
@@ -258,7 +260,7 @@ const InstallToast = () => {
             className="mdf-install-toast__btn mdf-install-toast__btn--later"
             onClick={handleDismiss}
           >
-            Entendi
+            {t('page.install.got_it')}
           </button>
         </div>
       </div>
@@ -268,13 +270,13 @@ const InstallToast = () => {
   return (
     <div
       {...wrapperProps}
-      aria-label="Instalar o aplicativo MAPA FOME"
+      aria-label={t('page.install.aria')}
     >
       <img className="mdf-install-toast__icon" src="/logo192.png" alt="" width="40" height="40" />
       <div className="mdf-install-toast__body">
-        <strong className="mdf-install-toast__title">Instalar o MAPA FOME</strong>
+        <strong className="mdf-install-toast__title">{t('page.install.title')}</strong>
         <span className="mdf-install-toast__sub">
-          Adicione à tela inicial: abre rápido, funciona offline e ocupa 0 espaço.
+          {t('page.install.sub')}
         </span>
       </div>
       <div className="mdf-install-toast__actions">
@@ -283,14 +285,14 @@ const InstallToast = () => {
           className="mdf-install-toast__btn mdf-install-toast__btn--install"
           onClick={handleInstall}
         >
-          Instalar
+          {t('page.install.btn')}
         </button>
         <button
           type="button"
           className="mdf-install-toast__btn mdf-install-toast__btn--later"
           onClick={handleDismiss}
         >
-          Agora não
+          {t('page.install.later')}
         </button>
       </div>
     </div>

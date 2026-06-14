@@ -26,21 +26,21 @@ function formatRelativeTime(dateIso) {
   const diffMs = Date.now() - Date.parse(dateIso);
   if (Number.isNaN(diffMs)) return '';
   const h = diffMs / 36e5;
-  if (h < 1) return `há ${Math.max(1, Math.round(h * 60))} min`;
-  if (h < 24) return `há ${Math.round(h)}h`;
-  return `há ${Math.round(h / 24)} dias`;
+  if (h < 1) return t('page.list.ago_min').replace('{n}', Math.max(1, Math.round(h * 60)));
+  if (h < 24) return t('page.list.ago_hours').replace('{n}', Math.round(h));
+  return t('page.list.ago_days').replace('{n}', Math.round(h / 24));
 }
 
 function formatDistance(km) {
   if (!Number.isFinite(km)) return null;
-  if (km < 1) return `${Math.round(km * 1000)} m`;
-  return `${km.toFixed(1).replace('.', ',')} km`;
+  if (km < 1) return t('page.list.dist_m').replace('{n}', Math.round(km * 1000));
+  return t('page.list.dist_km').replace('{n}', km.toFixed(1).replace('.', ','));
 }
 
 function formatEta(km) {
   if (!Number.isFinite(km)) return null;
   const minutes = Math.max(1, Math.round((km / WALK_KMH) * 60));
-  return `~${minutes} min a pé`;
+  return t('page.pin.eta_walk').replace('{n}', minutes);
 }
 
 function pinId(row) {
@@ -194,20 +194,20 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
         </div>
 
         <h2 id="mdf-pin-title" className="mdf-pin-sheet__title">
-          {derived.timeSince || 'Ponto mapeado'}
+          {derived.timeSince || t('page.pin.mapped_point')}
         </h2>
 
         <dl className="mdf-pin-sheet__meta">
           {derived.distanceLabel && (
             <>
-              <dt>Distância</dt>
+              <dt>{t('page.pin.distance')}</dt>
               <dd>{derived.distanceLabel}{derived.etaLabel ? ` · ${derived.etaLabel}` : ''}</dd>
             </>
           )}
         </dl>
 
         {derived.categories.length > 0 && (
-          <ul className="mdf-pin-sheet__cats" aria-label="Categorias">
+          <ul className="mdf-pin-sheet__cats" aria-label={t('page.report.categories_aria')}>
             {derived.categories.map((id) => {
               const meta = CATEGORY_LABELS[id] || { label: id, icon: '•' };
               return (
@@ -230,7 +230,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
             rel="noreferrer"
           >
             <span aria-hidden="true">{derived.contact.icon}</span>
-            <span>{derived.contact.label} de quem reportou</span>
+            <span>{t('page.pin.contact_of').replace('{label}', derived.contact.label)}</span>
           </a>
         )}
 
@@ -241,7 +241,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
             className="mdf-pin-sheet__close"
             onClick={() => onClose?.()}
           >
-            Fechar
+            {t('page.pin.close')}
           </button>
 
           {derived.dirHref && (
@@ -262,7 +262,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
               onClick={handleClaim}
               disabled={busy === 'claim'}
             >
-              {busy === 'claim' ? 'Marcando…' : t('pin.going_button')}
+              {busy === 'claim' ? t('page.pin.claiming') : t('pin.going_button')}
             </button>
           )}
 
@@ -273,7 +273,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
               onClick={handleMarkAttended}
               disabled={busy === 'attended'}
             >
-              {busy === 'attended' ? 'Registrando…' : t('pin.mark_attended')}
+              {busy === 'attended' ? t('page.pin.registering') : t('pin.mark_attended')}
             </button>
           )}
         </div>

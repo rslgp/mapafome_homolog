@@ -33,16 +33,16 @@ function hoursSince(dateIso) {
 
 function formatDistance(km) {
   if (!Number.isFinite(km)) return '—';
-  if (km < 1) return `${Math.round(km * 1000)} m`;
-  return `${km.toFixed(1).replace('.', ',')} km`;
+  if (km < 1) return t('page.list.dist_m').replace('{n}', Math.round(km * 1000));
+  return t('page.list.dist_km').replace('{n}', km.toFixed(1).replace('.', ','));
 }
 
 function formatRelative(dateIso) {
   const h = hoursSince(dateIso);
   if (!Number.isFinite(h)) return '';
-  if (h < 1) return `há ${Math.max(1, Math.round(h * 60))} min`;
-  if (h < 24) return `há ${Math.round(h)}h`;
-  return `há ${Math.round(h / 24)} dias`;
+  if (h < 1) return t('page.list.ago_min').replace('{n}', Math.max(1, Math.round(h * 60)));
+  if (h < 24) return t('page.list.ago_hours').replace('{n}', Math.round(h));
+  return t('page.list.ago_days').replace('{n}', Math.round(h / 24));
 }
 
 function truncate(str, max) {
@@ -57,7 +57,7 @@ function truncate(str, max) {
 const STATUS_LABEL = {
   waiting:       () => t('pin.waiting'),
   someone_going: () => t('pin.someone_going'),
-  done:          () => 'Atendido',
+  done:          () => t('page.list.status_done'),
 };
 
 function statusOf(row) {
@@ -118,13 +118,13 @@ export default function ListView({ open, dataMaps, userCoords, onSelectPin, onCl
       <div className="mdf-list__backdrop" aria-hidden="true" onClick={() => onClose?.()} />
       <section className="mdf-list__panel">
         <header className="mdf-list__header">
-          <h2 id="mdf-list-title">Lista de pontos</h2>
-          <button type="button" className="mdf-list__close" onClick={() => onClose?.()}>Fechar</button>
+          <h2 id="mdf-list-title">{t('page.list.title')}</h2>
+          <button type="button" className="mdf-list__close" onClick={() => onClose?.()}>{t('page.list.close')}</button>
         </header>
 
         {rows.length === 0 ? (
           <p className="mdf-list__empty">
-            Ninguém foi mapeado por aqui ainda. Toque em Relatar se você viu alguém precisando.
+            {t('page.list.empty')}
           </p>
         ) : (
           <ul className="mdf-list__rows" role="list">

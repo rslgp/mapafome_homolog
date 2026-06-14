@@ -7,6 +7,7 @@ import {
 
 import CircularProgress from '@mui/material/CircularProgress';
 import envVariables from '../variaveisAmbiente';
+import { t } from '../ux/strings';
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 
@@ -90,7 +91,7 @@ class NameForm extends Component {
         // Total row count
         let numero = self.state.value.replace(/[^0-9]/g,'');
         if(numero === ''){
-          alert("faltou colocar o número");
+          alert(t('page.form.addr_missing_num'));
           
           event.preventDefault();
           self.setState({isLoading: false});

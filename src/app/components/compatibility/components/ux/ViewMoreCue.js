@@ -2,12 +2,15 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import './ViewMoreCue.css';
+import { t, useLocale } from './strings';
 
 // Persistent scroll-affordance between the map and the InfoPanel. Without it,
 // users only see the map and never discover the legend, acknowledgments, and
 // sponsor slot below. Disappears the moment the user actually scrolls.
 
-export default function ViewMoreCue({ label = 'Veja mais abaixo' }) {
+export default function ViewMoreCue({ label }) {
+  useLocale(); // re-render on locale change so t() re-reads
+  const resolvedLabel = label ?? t('page.cue.view_more');
   const [dismissed, setDismissed] = useState(false);
   const rootRef = useRef(null);
 
@@ -47,9 +50,9 @@ export default function ViewMoreCue({ label = 'Veja mais abaixo' }) {
       type="button"
       className="mdf-viewmore"
       onClick={handleClick}
-      aria-label={label}
+      aria-label={resolvedLabel}
     >
-      <span className="mdf-viewmore__text">{label}</span>
+      <span className="mdf-viewmore__text">{resolvedLabel}</span>
       <span className="mdf-viewmore__chev" aria-hidden="true">⌄</span>
     </button>
   );

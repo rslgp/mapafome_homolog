@@ -10,6 +10,7 @@ import { PLACEMENTS } from './ux/sponsors';
 import useInstallPrompt from './ux/useInstallPrompt';
 import { LEGEND, ACKNOWLEDGEMENTS, HUNGER_TIMELINE } from './infoPanelContent';
 import './InfoPanel.css';
+import { t, useLocale } from './ux/strings';
 
 // The static content data (the color legend, the acknowledgements list, and the
 // hunger-timeline rows — plus the legend icon refs) moved to ./infoPanelContent
@@ -17,6 +18,7 @@ import './InfoPanel.css';
 // wiring. The PWA-install hook extraction is deliberately deferred to a follow-up.
 
 const InfoPanel = ({ rowCount }) => {
+  useLocale(); // re-render on locale change so t() re-reads
   const [showAgradecimentos, setShowAgradecimentos] = useState(false);
   const [showApoiadores, setShowApoiadores] = useState(false);
   const [showTabela, setShowTabela] = useState(false);
@@ -84,11 +86,11 @@ const InfoPanel = ({ rowCount }) => {
     if (isIOS && isInAppBrowser) {
       // Webview do Instagram/Facebook/WhatsApp não tem "Adicionar à Tela de
       // Início" (D3): orienta a abrir no Safari primeiro.
-      setInstallHint('Abra no Safari para instalar: toque em ⋯ (ou aA) e escolha "Abrir no Safari", depois instale por lá.');
+      setInstallHint(t('page.info.hint_ios_safari'));
     } else if (isIOS) {
-      setInstallHint('No iPhone/iPad (Safari): toque em Compartilhar (⎙) e escolha "Adicionar à Tela de Início" (Add to Home Screen).');
+      setInstallHint(t('page.info.hint_ios_add'));
     } else {
-      setInstallHint('Abra o menu do navegador (⋮) e escolha "Instalar app" ou "Adicionar à tela inicial".');
+      setInstallHint(t('page.info.install_hint_other'));
     }
   };
 
@@ -98,18 +100,18 @@ const InfoPanel = ({ rowCount }) => {
         <header className="ip-share">
           <a
             className="mdf-btn mdf-btn--secondary"
-            title="Compartilhar no WhatsApp"
+            title={t('page.info.share_whatsapp')}
             href="whatsapp://send?text=No MAPA FOME dá pra ver no mapa quem está com fome e ajudar agora. Faça a sua parte: www.mapafome.com.br"
           >
             <img className="mdf-btn__ico" src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="" />
-            <span>Compartilhar no WhatsApp</span>
+            <span>{t('page.info.share_whatsapp')}</span>
           </a>
           <a
             target="_blank"
             rel="noreferrer"
             className="mdf-btn mdf-btn--icon mdf-btn--channel-tg"
-            title="Compartilhar no Telegram"
-            aria-label="Compartilhar no Telegram"
+            title={t('page.info.share_telegram')}
+            aria-label={t('page.info.share_telegram')}
             href="https://t.me/share?url=www.mapafome.com.br&text=Para%20marcar%20no%20mapa%20e%20alimentar%20quem%20tem%20fome%2C%20achei%20esse%20site%3A"
           >
             <img className="mdf-btn__ico" src="https://telegram.org/img/WidgetButton_LogoSmall.png" alt="" />
@@ -118,17 +120,17 @@ const InfoPanel = ({ rowCount }) => {
 
         <div className="ip-stats" aria-live="polite">
           <strong>{rowCount || 0}</strong>
-          <span>pontos mapeados</span>
+          <span>{t('page.info.stats_points')}</span>
         </div>
 
         <div className="ip-apps">
           {!isInstalled && (
-            <div className="ip-apps__install-badges" role="group" aria-label="Baixar o app (PWA-lite)">
+            <div className="ip-apps__install-badges" role="group" aria-label={t('page.info.install_group')}>
               <button
                 type="button"
                 className="mdf-btn mdf-btn--badge"
                 onClick={handleInstall}
-                aria-label="Baixar o app no Google Play (PWA-lite)"
+                aria-label={t('page.info.install_play')}
               >
                 <img className="imgGooglePlay" alt="Disponível no Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/pt_badge_web_generic.png" />
               </button>
@@ -136,7 +138,7 @@ const InfoPanel = ({ rowCount }) => {
                 type="button"
                 className="mdf-btn mdf-btn--badge"
                 onClick={handleInstall}
-                aria-label="Baixar o app na App Store (PWA-lite)"
+                aria-label={t('page.info.install_appstore')}
               >
                 <img alt="Baixar na App Store" src="https://www.gov.br/cnpq/pt-br/acesso-a-informacao/acoes-e-programas/servicos/app-store-selo.png" />
               </button>
@@ -148,7 +150,7 @@ const InfoPanel = ({ rowCount }) => {
             target="_blank"
             rel="noreferrer"
             href="https://mapafome.com.br/solone/"
-            aria-label="Jogue SOLONE, o jogo do MAPA FOME"
+            aria-label={t('page.info.game_aria')}
           >
             <img
               className="mdf-btn__media"
@@ -158,8 +160,8 @@ const InfoPanel = ({ rowCount }) => {
               height="44"
             />
             <span className="mdf-btn__label-wrap">
-              <strong className="mdf-btn__title">Jogue SOLONE</strong>
-              <small className="mdf-btn__sub">O jogo do MAPA FOME</small>
+              <strong className="mdf-btn__title">{t('page.info.game_title')}</strong>
+              <small className="mdf-btn__sub">{t('page.info.game_sub')}</small>
             </span>
           </a>
           {/* PET-M22 — /pets is an internal app route: use next/link (NOT a raw
@@ -169,18 +171,18 @@ const InfoPanel = ({ rowCount }) => {
           <Link
             className="mdf-btn mdf-btn--secondary mdf-btn--lg"
             href="/pets"
-            aria-label="MapaPets — mapa de animais perdidos"
-            title="MapaPets — mapa de animais perdidos"
+            aria-label={t('page.info.pets_aria')}
+            title={t('page.info.pets_aria')}
           >
             <span className="mdf-btn__emoji" aria-hidden="true">🐾</span>
-            <span>MapaPets</span>
+            <span>{t('page.info.pets_label')}</span>
           </Link>
           <a
             className="mdf-btn mdf-btn--badge mdf-btn--framed ip-apps__globo"
             target="_blank"
             rel="noreferrer"
             href="https://globoplay.globo.com/v/10350537/"
-            aria-label="MAPA FOME no Jornal Hoje (Globo)"
+            aria-label={t('page.info.globo_aria')}
           >
             <img alt="Globo" src="https://cdn.guiademarcas.globo/capa_globo_corporativa_bf2z6hY.png" />
           </a>
@@ -189,7 +191,7 @@ const InfoPanel = ({ rowCount }) => {
             target="_blank"
             rel="noreferrer"
             href="https://instagram.com/mapafome"
-            aria-label="MAPA FOME no Instagram"
+            aria-label={t('page.info.instagram_aria')}
           >
             <ImagemInstagram />
           </a>
@@ -215,20 +217,19 @@ const InfoPanel = ({ rowCount }) => {
         )}
 
         <p className="ip-intro">
-          No mapa, clique em uma bolinha para saber como ajudar. Você pode se incluir
-          ou incluir outra pessoa: selecione a situação e confirme o local.{' '}
-          (Mais informações <a target="_blank" rel="noreferrer" href="https://g1.globo.com/pe/pernambuco/noticia/2022/02/10/site-criado-por-estudante-da-ufpe-aproxima-pessoas-que-estao-passando-fome-e-doadores-de-comida.ghtml">na matéria da Globo</a>{' '}
-          e na Globo no <a target="_blank" rel="noreferrer" href="https://globoplay.globo.com/v/10350537/">Jornal Hoje em rede nacional</a>, confira o jogo <a target="_blank" rel="noreferrer" href="https://mapafome.com.br/solone/">SOLONE</a> para divulgação, marketing e engajamento.)
+          {t('page.info.intro_lead')}{' '}
+          (<a target="_blank" rel="noreferrer" href="https://g1.globo.com/pe/pernambuco/noticia/2022/02/10/site-criado-por-estudante-da-ufpe-aproxima-pessoas-que-estao-passando-fome-e-doadores-de-comida.ghtml">{t('page.info.intro_globo')}</a>{' '}
+          · <a target="_blank" rel="noreferrer" href="https://globoplay.globo.com/v/10350537/">Jornal Hoje</a> · <a target="_blank" rel="noreferrer" href="https://mapafome.com.br/solone/">SOLONE</a>)
         </p>
 
-        <section className="ip-support" aria-label="Apoie o MAPA FOME">
-          <h3>Ajude a manter esse site desde 2022 online e a descoberta de mais pessoas</h3>
+        <section className="ip-support" aria-label={t('page.info.support_aria')}>
+          <h3>{t('page.info.support_heading')}</h3>
           <div className="ip-support__actions">
             <a
               className="mdf-btn mdf-btn--secondary mdf-btn--brand-outline mdf-btn--lg"
               href="/assinar"
-              aria-label="Assinatura mensal via Pix, cartão ou boleto"
-              title="Assinatura mensal via Pix, cartão ou boleto"
+              aria-label={t('page.info.subscribe_aria')}
+              title={t('page.info.subscribe_aria')}
             >
               <span className="mdf-btn__logo-chip">
                 <img
@@ -236,7 +237,7 @@ const InfoPanel = ({ rowCount }) => {
                   alt="Pix"
                 />
               </span>
-              Assinar apoio mensal
+              {t('page.info.subscribe_label')}
             </a>
             {/* <a
               className="mdf-btn mdf-btn--secondary mdf-btn--channel-patreon mdf-btn--lg"
@@ -252,7 +253,7 @@ const InfoPanel = ({ rowCount }) => {
           </div>
         </section>
 
-        <ul className="ip-legend" aria-label="Legenda das cores no mapa">
+        <ul className="ip-legend" aria-label={t('page.info.legend_aria')}>
           {LEGEND.map((item) => (
             <li
               key={item.key}
@@ -260,9 +261,9 @@ const InfoPanel = ({ rowCount }) => {
             >
               <span className={`ip-legend__chip ${item.chipClass}`}>
                 <img src={item.icon} alt="" width="22" height="22" />
-                {item.label}
+                {t(item.labelKey)}
               </span>
-              <p className="ip-legend__text">{item.desc}</p>
+              <p className="ip-legend__text">{t(item.descKey)}</p>
             </li>
           ))}
         </ul>
@@ -275,7 +276,7 @@ const InfoPanel = ({ rowCount }) => {
             aria-expanded={showAgradecimentos}
             aria-controls="ip-collapse-agradecimentos"
           >
-            {showAgradecimentos ? 'Esconder agradecimentos' : 'Ver agradecimentos'}
+            {showAgradecimentos ? t('page.info.hide_thanks') : t('page.info.show_thanks')}
           </button>
           <button
             type="button"
@@ -284,7 +285,7 @@ const InfoPanel = ({ rowCount }) => {
             aria-expanded={showApoiadores}
             aria-controls="ip-collapse-apoiadores"
           >
-            {showApoiadores ? 'Esconder apoiadores' : 'Ver Apoiadores'}
+            {showApoiadores ? t('page.info.hide_supporters') : t('page.info.show_supporters')}
           </button>
           <button
             type="button"
@@ -293,7 +294,7 @@ const InfoPanel = ({ rowCount }) => {
             aria-expanded={showTabela}
             aria-controls="ip-collapse-tabela"
           >
-            {showTabela ? 'Esconder consequências' : 'Ver consequências da fome'}
+            {showTabela ? t('page.info.hide_conseq') : t('page.info.show_conseq')}
           </button>
         </div>
 
@@ -304,8 +305,18 @@ const InfoPanel = ({ rowCount }) => {
             aria-label="Agradecimentos"
           >
             <ul className="ip-bullets">
-              {ACKNOWLEDGEMENTS.map((line, i) => (
-                <li key={`ack-${i}`}>{line}</li>
+              {ACKNOWLEDGEMENTS.map((ack, i) => (
+                <li key={`ack-${i}`}>
+                  {ack.links ? (
+                    <>
+                      {t(ack.docLeadKey)}{' '}
+                      <a target="_blank" rel="noreferrer" href={ack.links[0].href}>{ack.links[0].label}</a>.{' '}
+                      <a target="_blank" rel="noreferrer" href={ack.links[1].href}>{ack.links[1].label}</a>
+                    </>
+                  ) : (
+                    t(ack.key)
+                  )}
+                </li>
               ))}
             </ul>
           </section>
@@ -338,9 +349,9 @@ const InfoPanel = ({ rowCount }) => {
                 </thead>
                 <tbody>
                   {HUNGER_TIMELINE.map((row) => (
-                    <tr key={row.time}>
-                      <th scope="row">{row.time}</th>
-                      <td>{row.conseq}</td>
+                    <tr key={row.timeKey}>
+                      <th scope="row">{t(row.timeKey)}</th>
+                      <td>{t(row.conseqKey)}</td>
                       <td>
                         <span className={`ip-risk ip-risk--${row.risk.replace(/\s+/g, '-')}`}>
                           {row.risk}

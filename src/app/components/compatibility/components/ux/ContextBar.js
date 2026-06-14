@@ -60,11 +60,11 @@ export default function ContextBar({ dataMaps, userCoords, radiusKm = RADIUS_KM,
   return (
     <div className="mdf-context-bar" role="status" aria-live="polite">
       <span className="mdf-context-bar__count">
-        <strong>{nearby}</strong> pontos em {radiusKm} km
+        <strong>{nearby}</strong> {t('page.context.points_in').replace('{km}', radiusKm)}
       </span>
       <span className="mdf-context-bar__sep" aria-hidden="true">·</span>
       <span className={`mdf-context-bar__stale${waitingOver6h > 0 ? ' mdf-context-bar__stale--on' : ''}`}>
-        <strong>{waitingOver6h}</strong> aguardando há mais de 6h
+        <strong>{waitingOver6h}</strong> {t('page.context.waiting_over')}
       </span>
       {onOpenList && (
         <button
