@@ -55,6 +55,10 @@ export const pt = {
   'lang.button':         'Idioma: {name}',
   'lang.open':           'Trocar o idioma do site',
   'lang.title':          'Escolha o idioma',
+  // Polite live-region announcement fired when picking a country recenters the
+  // map (CountryFlagControl pick -> setView capital). Mechanical/navigational
+  // copy (not dignity-sensitive). {country} is the localized country name.
+  'map.center_on_country': 'Mapa centralizado em {country}.',
 };
 
 export const es = {
@@ -97,6 +101,9 @@ export const es = {
   'lang.button':         'Idioma: {name}',
   'lang.open':           'Cambiar el idioma del sitio',
   'lang.title':          'Elige el idioma',
+  // Live-region announcement on map recenter after a country pick. {country} is
+  // the localized country name.
+  'map.center_on_country': 'Mapa centrado en {country}.',
 };
 
 export const enUS = {
@@ -145,4 +152,7 @@ export const enUS = {
   'lang.button':         'Language: {name}',
   'lang.open':           'Change the site language',
   'lang.title':          'Choose the language',
+  // Live-region announcement on map recenter after a country pick. Mechanical
+  // (navigational status), finalized. {country} is the localized country name.
+  'map.center_on_country': 'Map centered on {country}.',
 };

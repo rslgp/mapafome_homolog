@@ -101,7 +101,15 @@ export function createFlagDom() {
   empty.textContent = t('country.empty');
   empty.hidden = true;
 
-  return { wrap, button, panel, closeBtn, input, list, empty };
+  // Off-screen polite live region for the "map recentered on {country}" status
+  // announced when a pick moves the camera. Lives on the wrapper (not the panel)
+  // because the panel closes on pick, and a removed/hidden node is not announced.
+  // Visually hidden (.mdf-sr-only) but present in the a11y tree for screen readers.
+  const announce = L.DomUtil.create('p', 'mdf-flag__announce mdf-sr-only', wrap);
+  announce.setAttribute('role', 'status');
+  announce.setAttribute('aria-live', 'polite');
+
+  return { wrap, button, panel, closeBtn, input, list, empty, announce };
 }
 
 // Attach all behavior (render, filter, open/close, pick, listeners) to a DOM
@@ -109,7 +117,7 @@ export function createFlagDom() {
 // Leaflet container (the store subscription + the document outside-click hook).
 // Exported for unit tests (open/close/pick exercised on the real DOM in jsdom).
 export function wireFlagControl(map, dom) {
-  const { wrap, button, panel, closeBtn, input, list, empty } = dom;
+  const { wrap, button, panel, closeBtn, input, list, empty, announce } = dom;
 
   // The active country's name in the ACTIVE UI locale (M3.5/I18N-1). getCountry
   // only carries the pt-BR curated name; the locale-aware name comes from the
@@ -177,6 +185,16 @@ export function wireFlagControl(map, dom) {
         map.fitBounds([c.bounds[0], c.bounds[1]]);
       } else {
         map.setZoom(Math.min(map.getZoom(), COUNTRY_PICK_FALLBACK_ZOOM));
+      }
+      // Announce the recenter to screen readers in the active locale (a11y: the
+      // camera move is otherwise silent). Localized country name via localeName;
+      // the string itself is t('map.center_on_country') with full pt/es/enUS
+      // parity. Re-set textContent each pick so an identical-text repeat is
+      // still announced (toggling via a cleared value forces the live region).
+      if (announce) {
+        const announced = t('map.center_on_country').replace('{country}', localeName(c.code));
+        announce.textContent = '';
+        announce.textContent = announced;
       }
     }
     closePanel(true);
