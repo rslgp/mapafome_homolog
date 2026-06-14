@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import './ReportSheet.css';
 import { track } from './analytics';
 import { t, useLocale } from './strings';
-import { NEED_CATEGORIES } from './needCategories';
+import { NEED_CATEGORIES, needLabel } from './needCategories';
 // INTL M4b (STATE-1, point a): capture the active publish country into the
 // payload AT PUBLISH TIME. This is the single stamp point BOTH publish paths
 // inherit — the object flows unchanged into the interactive write AND into the
@@ -233,7 +233,7 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
                 disabled={status === 'publishing' || status === 'success'}
               >
                 <span className="mdf-chip__icon" aria-hidden="true">{cat.icon}</span>
-                <span className="mdf-chip__label">{cat.label}</span>
+                <span className="mdf-chip__label">{needLabel(cat.id)}</span>
                 {checked && <span className="mdf-chip__check" aria-hidden="true">✓</span>}
               </button>
             );

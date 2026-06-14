@@ -8,14 +8,15 @@ import { track } from './analytics';
 import { t, useLocale } from './strings';
 import envVariables from '../variaveisAmbiente';
 import { coordsFromPin } from '../../domain/pinCoords';
-import { NEED_CATEGORY_MAP } from './needCategories';
+import { NEED_CATEGORY_MAP, needLabel } from './needCategories';
 
 // M3 — donor response surface: status, distance, time-since, soft claim,
 // mark-as-attended. Reporter contact is only ever exposed as a tap-to-act
 // button (never as displayable PII text) per § dignity_constraints.
 
-// id → { label, icon } from the needCategories SOT (covers the disaster needs:
-// remédios/animais/carregar). Unknown ids fall back to a generic dot below.
+// id → { id, icon } from the needCategories SOT (covers the disaster needs:
+// remédios/animais/carregar). The display label is i18n-keyed and resolved via
+// needLabel(id) at render; unknown ids fall back to a generic dot + the id below.
 const CATEGORY_LABELS = NEED_CATEGORY_MAP;
 
 const CLAIM_TTL_MS = 30 * 60 * 1000; // 30 minutes — soft claim window.
@@ -209,11 +210,11 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
         {derived.categories.length > 0 && (
           <ul className="mdf-pin-sheet__cats" aria-label={t('page.report.categories_aria')}>
             {derived.categories.map((id) => {
-              const meta = CATEGORY_LABELS[id] || { label: id, icon: '•' };
+              const meta = CATEGORY_LABELS[id] || { icon: '•' };
               return (
                 <li key={id} className="mdf-pin-sheet__cat">
                   <span className="mdf-pin-sheet__cat-icon" aria-hidden="true">{meta.icon}</span>
-                  <span>{meta.label}</span>
+                  <span>{needLabel(id)}</span>
                 </li>
               );
             })}

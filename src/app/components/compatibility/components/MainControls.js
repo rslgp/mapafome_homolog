@@ -11,7 +11,7 @@ import { MARKER_PLACED_EVENT, MARKER_CLEARED_EVENT } from './mapComponents';
 // import green from '../images/green.svg';
 // import red from '../images/red.svg';
 import { bean as coffeeBean, hub, green, red } from './image/svgHandler';
-import { NEED_CATEGORIES } from './ux/needCategories';
+import { NEED_CATEGORIES, needLabel } from './ux/needCategories';
 import { t, useLocale } from './ux/strings';
 
 import Link from 'next/link';
@@ -99,7 +99,7 @@ const MainControls = ({
                 <optgroup label={t('mainctl.filter.needs_group')}>
                   <option value="need:*">{t('mainctl.filter.all_needs')}</option>
                   {NEED_CATEGORIES.map((c) => (
-                    <option key={c.id} value={`need:${c.id}`}>{c.icon} {c.label}</option>
+                    <option key={c.id} value={`need:${c.id}`}>{c.icon} {needLabel(c.id)}</option>
                   ))}
                 </optgroup>
               </select>

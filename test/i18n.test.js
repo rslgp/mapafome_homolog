@@ -247,6 +247,10 @@ describe('dictionary — P8: parity + zero dead keys', () => {
       'pets.status.', 'pets.species.', 'pets.size.', 'pets.lifecycle.',
       'pets.publish.failed.', 'pets.publish.throttle.', 'pets.share.lead.',
       'page.partners.tier_', 'page.initiative.cat_',
+      // NEED categories — the needCategories accessors resolve the label/legend by
+      // id (needLabel/needReportLabel call t(`need.label.${id}`) / t(`need.report.${id}`)),
+      // so the full key never appears as a literal; its template PREFIX does.
+      'need.label.', 'need.report.',
     ];
     const liveViaDynamic = (key) =>
       DYNAMIC_PREFIXES.some((p) => key.startsWith(p) && (corpus.includes(`\`${p}`) || corpus.includes(`'${p}`)));

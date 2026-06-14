@@ -15,20 +15,25 @@
 
 import { resolveRegion } from './regionResolver';
 import { csvEsc } from './csv';
-import { NEED_CATEGORIES } from './needCategories';
+import { NEED_CATEGORIES, needReportLabel } from './needCategories';
 
 const K_ANON = 5;
 
 // Legend for the public aggregate. The reporter-need labels come from the
-// needCategories SOT (so disaster needs added there — remédios/animais/carregar
-// — are documented in the report too). The two legacy food SUBTYPES below are
-// report-only buckets derived from legacy Roaster rows; they have no reporter
-// chip, so they are spelled out here.
-const CATEGORY_LABELS = {
-  ...Object.fromEntries(NEED_CATEGORIES.map((c) => [c.id, c.reportLabel])),
-  alimento_pronto: 'Alimento pronto (refeição imediata)',
-  cesta_basica: 'Cesta básica (suprimento semanal)',
-};
+// needCategories SOT (so disaster needs added there — remédios/animais/carregar —
+// are documented in the report too); they are i18n-keyed (need.report.<id>), so
+// the legend is BUILT INSIDE buildReport (categoryLabels() below) where t()
+// resolves the ACTIVE locale at call time, not frozen at module load. The two
+// legacy food SUBTYPES are report-only buckets derived from legacy Roaster rows;
+// they have no reporter chip, so they are spelled out here (pt-BR; these legacy
+// labels are out of scope for this need-label i18n pass).
+function categoryLabels() {
+  return {
+    ...Object.fromEntries(NEED_CATEGORIES.map((c) => [c.id, needReportLabel(c.id)])),
+    alimento_pronto: 'Alimento pronto (refeição imediata)',
+    cesta_basica: 'Cesta básica (suprimento semanal)',
+  };
+}
 
 // Legacy Roaster values mapped to reporter-pin semantics. Donor/initiative
 // rows are excluded — reports describe the reporter surface (people in need),
@@ -278,7 +283,7 @@ export function buildReport(rows, { now = Date.now() } = {}) {
       nota_dignidade:
         'Nenhum dado pessoal ou coordenada individual nesta agregação. ' +
         'Grupos < 5 foram consolidados em "outros" para evitar reidentificação.',
-      legenda_categorias: CATEGORY_LABELS,
+      legenda_categorias: categoryLabels(),
     },
     resumo_executivo: {
       total_pontos_reportados: total,

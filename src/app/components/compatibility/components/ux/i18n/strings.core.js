@@ -89,6 +89,32 @@ export const pt = {
   'mainctl.confirm.aria_ready':   'Confirmar ponto marcado no mapa',
   'mainctl.confirm.aria_pending': 'Confirmar ponto (toque no mapa primeiro)',
   'mainctl.confirm.aria_busy':    'Confirmando ponto',
+  // ── NEED categories (needCategories SOT) — reporter-pin needs. id + icon stay
+  // in the data file; the display text is i18n-keyed here. `need.label.<id>` is the
+  // short chip/detail/filter label; `need.report.<id>` is the fuller public
+  // aggregate-report legend label. Resolved DYNAMICALLY by id at the render sites
+  // (t(`need.label.${id}`) / t(`need.report.${id}`)), like pets.status.<id>.label,
+  // so the dead-key scan lists `need.label.` / `need.report.` as dynamic prefixes.
+  // DIGNITY-SENSITIVE (hunger/poverty/health/disaster-relief copy): pt-BR is the
+  // verbatim final source; the other six locales are machine drafts carrying
+  // `[REVISAR-HUMANO] ` pending human tone review. ids: comida/agua/roupa/higiene/
+  // abrigo/remedio/animais/energia. No em-dash.
+  'need.label.comida':   'Comida',
+  'need.label.agua':     'Água',
+  'need.label.roupa':    'Roupa',
+  'need.label.higiene':  'Higiene',
+  'need.label.abrigo':   'Abrigo',
+  'need.label.remedio':  'Remédios',
+  'need.label.animais':  'Animais',
+  'need.label.energia':  'Carregar',
+  'need.report.comida':  'Comida (genérico)',
+  'need.report.agua':    'Água',
+  'need.report.roupa':   'Roupa',
+  'need.report.higiene': 'Higiene',
+  'need.report.abrigo':  'Abrigo',
+  'need.report.remedio': 'Remédios',
+  'need.report.animais': 'Animais (resgate e ração)',
+  'need.report.energia': 'Carregar celular / energia',
 };
 
 export const es = {
@@ -161,6 +187,25 @@ export const es = {
   'mainctl.confirm.aria_ready':   'Confirmar el punto marcado en el mapa',
   'mainctl.confirm.aria_pending': 'Confirmar punto (toca primero en el mapa)',
   'mainctl.confirm.aria_busy':    'Confirmando punto',
+  // ── NEED categories — DIGNITY-SENSITIVE draft, `[REVISAR-HUMANO] ` pending
+  // human tone review. Short noun labels (no interrogative/exclamatory clause,
+  // so no ¿/¡). No em-dash. See the pt block for the field contract. ──
+  'need.label.comida':   '[REVISAR-HUMANO] Comida',
+  'need.label.agua':     '[REVISAR-HUMANO] Agua',
+  'need.label.roupa':    '[REVISAR-HUMANO] Ropa',
+  'need.label.higiene':  '[REVISAR-HUMANO] Higiene',
+  'need.label.abrigo':   '[REVISAR-HUMANO] Refugio',
+  'need.label.remedio':  '[REVISAR-HUMANO] Medicinas',
+  'need.label.animais':  '[REVISAR-HUMANO] Animales',
+  'need.label.energia':  '[REVISAR-HUMANO] Cargar',
+  'need.report.comida':  '[REVISAR-HUMANO] Comida (genérico)',
+  'need.report.agua':    '[REVISAR-HUMANO] Agua',
+  'need.report.roupa':   '[REVISAR-HUMANO] Ropa',
+  'need.report.higiene': '[REVISAR-HUMANO] Higiene',
+  'need.report.abrigo':  '[REVISAR-HUMANO] Refugio',
+  'need.report.remedio': '[REVISAR-HUMANO] Medicinas',
+  'need.report.animais': '[REVISAR-HUMANO] Animales (rescate y alimento)',
+  'need.report.energia': '[REVISAR-HUMANO] Cargar teléfono / energía',
 };
 
 export const enUS = {
@@ -240,6 +285,24 @@ export const enUS = {
   'mainctl.confirm.aria_ready':   'Confirm the point marked on the map',
   'mainctl.confirm.aria_pending': 'Confirm point (tap the map first)',
   'mainctl.confirm.aria_busy':    'Confirming point',
+  // ── NEED categories — DIGNITY-SENSITIVE draft, `[REVISAR-HUMANO] ` pending
+  // human tone review. Short noun labels. No em-dash. See the pt block. ──
+  'need.label.comida':   '[REVISAR-HUMANO] Food',
+  'need.label.agua':     '[REVISAR-HUMANO] Water',
+  'need.label.roupa':    '[REVISAR-HUMANO] Clothing',
+  'need.label.higiene':  '[REVISAR-HUMANO] Hygiene',
+  'need.label.abrigo':   '[REVISAR-HUMANO] Shelter',
+  'need.label.remedio':  '[REVISAR-HUMANO] Medicine',
+  'need.label.animais':  '[REVISAR-HUMANO] Animals',
+  'need.label.energia':  '[REVISAR-HUMANO] Charge',
+  'need.report.comida':  '[REVISAR-HUMANO] Food (generic)',
+  'need.report.agua':    '[REVISAR-HUMANO] Water',
+  'need.report.roupa':   '[REVISAR-HUMANO] Clothing',
+  'need.report.higiene': '[REVISAR-HUMANO] Hygiene',
+  'need.report.abrigo':  '[REVISAR-HUMANO] Shelter',
+  'need.report.remedio': '[REVISAR-HUMANO] Medicine',
+  'need.report.animais': '[REVISAR-HUMANO] Animals (rescue and pet food)',
+  'need.report.energia': '[REVISAR-HUMANO] Charge phone / power',
 };
 
 // INTL M7 — de/fr/ru/zh added at full key parity with pt. Same DRAFTED vs
@@ -320,6 +383,24 @@ export const de = {
   'mainctl.confirm.aria_ready':   'Den auf der Karte markierten Punkt bestätigen',
   'mainctl.confirm.aria_pending': 'Punkt bestätigen (zuerst auf die Karte tippen)',
   'mainctl.confirm.aria_busy':    'Punkt wird bestätigt',
+  // ── NEED categories — DIGNITY-SENSITIVE draft, `[REVISAR-HUMANO] ` pending
+  // human tone review. Short noun labels. No em-dash. See the pt block. ──
+  'need.label.comida':   '[REVISAR-HUMANO] Essen',
+  'need.label.agua':     '[REVISAR-HUMANO] Wasser',
+  'need.label.roupa':    '[REVISAR-HUMANO] Kleidung',
+  'need.label.higiene':  '[REVISAR-HUMANO] Hygiene',
+  'need.label.abrigo':   '[REVISAR-HUMANO] Unterkunft',
+  'need.label.remedio':  '[REVISAR-HUMANO] Medikamente',
+  'need.label.animais':  '[REVISAR-HUMANO] Tiere',
+  'need.label.energia':  '[REVISAR-HUMANO] Aufladen',
+  'need.report.comida':  '[REVISAR-HUMANO] Essen (allgemein)',
+  'need.report.agua':    '[REVISAR-HUMANO] Wasser',
+  'need.report.roupa':   '[REVISAR-HUMANO] Kleidung',
+  'need.report.higiene': '[REVISAR-HUMANO] Hygiene',
+  'need.report.abrigo':  '[REVISAR-HUMANO] Unterkunft',
+  'need.report.remedio': '[REVISAR-HUMANO] Medikamente',
+  'need.report.animais': '[REVISAR-HUMANO] Tiere (Rettung und Tierfutter)',
+  'need.report.energia': '[REVISAR-HUMANO] Handy aufladen / Strom',
 };
 
 export const fr = {
@@ -393,6 +474,25 @@ export const fr = {
   'mainctl.confirm.aria_ready':   'Confirmer le point marqué sur la carte',
   'mainctl.confirm.aria_pending': 'Confirmer le point (touchez d\'abord la carte)',
   'mainctl.confirm.aria_busy':    'Confirmation du point',
+  // ── NEED categories — DIGNITY-SENSITIVE draft, `[REVISAR-HUMANO] ` pending
+  // human tone review. Short noun labels (no : ; ! ? high marks, so no narrow
+  // NBSP needed). No em-dash. See the pt block. ──
+  'need.label.comida':   '[REVISAR-HUMANO] Nourriture',
+  'need.label.agua':     '[REVISAR-HUMANO] Eau',
+  'need.label.roupa':    '[REVISAR-HUMANO] Vêtements',
+  'need.label.higiene':  '[REVISAR-HUMANO] Hygiène',
+  'need.label.abrigo':   '[REVISAR-HUMANO] Abri',
+  'need.label.remedio':  '[REVISAR-HUMANO] Médicaments',
+  'need.label.animais':  '[REVISAR-HUMANO] Animaux',
+  'need.label.energia':  '[REVISAR-HUMANO] Recharger',
+  'need.report.comida':  '[REVISAR-HUMANO] Nourriture (générique)',
+  'need.report.agua':    '[REVISAR-HUMANO] Eau',
+  'need.report.roupa':   '[REVISAR-HUMANO] Vêtements',
+  'need.report.higiene': '[REVISAR-HUMANO] Hygiène',
+  'need.report.abrigo':  '[REVISAR-HUMANO] Abri',
+  'need.report.remedio': '[REVISAR-HUMANO] Médicaments',
+  'need.report.animais': '[REVISAR-HUMANO] Animaux (sauvetage et nourriture)',
+  'need.report.energia': '[REVISAR-HUMANO] Recharger un téléphone / énergie',
 };
 
 export const ru = {
@@ -466,6 +566,26 @@ export const ru = {
   'mainctl.confirm.aria_ready':   'Подтвердить точку, отмеченную на карте',
   'mainctl.confirm.aria_pending': 'Подтвердить точку (сначала нажмите на карту)',
   'mainctl.confirm.aria_busy':    'Подтверждение точки',
+  // ── NEED categories — DIGNITY-SENSITIVE draft, `[REVISAR-HUMANO] ` pending
+  // human tone review. Nominative citation forms only: these are standalone UI
+  // labels with no numeral-driven case, so no case/declension was applied (that
+  // transform is human-review-only). No em-dash. See the pt block. ──
+  'need.label.comida':   '[REVISAR-HUMANO] Еда',
+  'need.label.agua':     '[REVISAR-HUMANO] Вода',
+  'need.label.roupa':    '[REVISAR-HUMANO] Одежда',
+  'need.label.higiene':  '[REVISAR-HUMANO] Гигиена',
+  'need.label.abrigo':   '[REVISAR-HUMANO] Кров',
+  'need.label.remedio':  '[REVISAR-HUMANO] Лекарства',
+  'need.label.animais':  '[REVISAR-HUMANO] Животные',
+  'need.label.energia':  '[REVISAR-HUMANO] Зарядка',
+  'need.report.comida':  '[REVISAR-HUMANO] Еда (общее)',
+  'need.report.agua':    '[REVISAR-HUMANO] Вода',
+  'need.report.roupa':   '[REVISAR-HUMANO] Одежда',
+  'need.report.higiene': '[REVISAR-HUMANO] Гигиена',
+  'need.report.abrigo':  '[REVISAR-HUMANO] Кров',
+  'need.report.remedio': '[REVISAR-HUMANO] Лекарства',
+  'need.report.animais': '[REVISAR-HUMANO] Животные (спасение и корм)',
+  'need.report.energia': '[REVISAR-HUMANO] Зарядить телефон / электричество',
 };
 
 export const zh = {
@@ -539,4 +659,24 @@ export const zh = {
   'mainctl.confirm.aria_ready':   '确认在地图上标记的地点',
   'mainctl.confirm.aria_pending': '确认地点（请先点击地图）',
   'mainctl.confirm.aria_busy':    '正在确认地点',
+  // ── NEED categories — DIGNITY-SENSITIVE draft, `[REVISAR-HUMANO] ` pending
+  // human tone review. No measure-word/full-width-punctuation rewrite was applied
+  // beyond matching this shard's existing house style (that transform is
+  // human-review-only). No em-dash. See the pt block. ──
+  'need.label.comida':   '[REVISAR-HUMANO] 食物',
+  'need.label.agua':     '[REVISAR-HUMANO] 水',
+  'need.label.roupa':    '[REVISAR-HUMANO] 衣物',
+  'need.label.higiene':  '[REVISAR-HUMANO] 卫生用品',
+  'need.label.abrigo':   '[REVISAR-HUMANO] 住所',
+  'need.label.remedio':  '[REVISAR-HUMANO] 药品',
+  'need.label.animais':  '[REVISAR-HUMANO] 动物',
+  'need.label.energia':  '[REVISAR-HUMANO] 充电',
+  'need.report.comida':  '[REVISAR-HUMANO] 食物（通用）',
+  'need.report.agua':    '[REVISAR-HUMANO] 水',
+  'need.report.roupa':   '[REVISAR-HUMANO] 衣物',
+  'need.report.higiene': '[REVISAR-HUMANO] 卫生用品',
+  'need.report.abrigo':  '[REVISAR-HUMANO] 住所',
+  'need.report.remedio': '[REVISAR-HUMANO] 药品',
+  'need.report.animais': '[REVISAR-HUMANO] 动物（救援与口粮）',
+  'need.report.energia': '[REVISAR-HUMANO] 给手机充电 / 电力',
 };
