@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import './NotificationPrefs.css';
 import LocaleSwitch from './LocaleSwitch';
+import { t, useLocale } from './strings';
 
 // M8 — donor opt-in panel. Defaults to OFF. We only request the browser
 // permission AFTER the donor has acted on at least one pin (signal = a
@@ -18,9 +19,9 @@ const DEFAULT_PREFS = {
 };
 
 const FREQUENCIES = [
-  { id: 'immediate', label: 'Imediato' },
-  { id: 'hourly',    label: 'Resumo por hora' },
-  { id: 'daily',     label: 'Resumo diário' },
+  { id: 'immediate', labelKey: 'page.notifprefs.freq_immediate' },
+  { id: 'hourly',    labelKey: 'page.notifprefs.freq_hourly' },
+  { id: 'daily',     labelKey: 'page.notifprefs.freq_daily' },
 ];
 
 function loadPrefs() {
@@ -41,6 +42,7 @@ function savePrefs(prefs) {
 }
 
 export default function NotificationPrefs({ open, onClose }) {
+  useLocale(); // re-render on locale change so t() re-reads
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [perm, setPerm] = useState('default');
 
@@ -77,13 +79,12 @@ export default function NotificationPrefs({ open, onClose }) {
       <div className="mdf-notif__backdrop" onClick={() => onClose?.()} aria-hidden="true" />
       <section className="mdf-notif__panel">
         <header className="mdf-notif__header">
-          <h2 id="mdf-notif-title">Notificações de pontos</h2>
-          <button type="button" className="mdf-notif__close" onClick={() => onClose?.()}>Fechar</button>
+          <h2 id="mdf-notif-title">{t('page.notifprefs.title')}</h2>
+          <button type="button" className="mdf-notif__close" onClick={() => onClose?.()}>{t('page.notifprefs.close')}</button>
         </header>
 
         <p className="mdf-notif__intro">
-          Você decide se quer ser avisado quando alguém precisar de ajuda por perto.
-          Tudo começa desligado. Ligue só o que faz sentido para você.
+          {t('page.notifprefs.intro')}
         </p>
 
         <label className="mdf-notif__row">
@@ -92,13 +93,13 @@ export default function NotificationPrefs({ open, onClose }) {
             checked={prefs.enabled}
             onChange={(e) => update({ enabled: e.target.checked })}
           />
-          <span><strong>Receber notificações</strong></span>
+          <span><strong>{t('page.notifprefs.receive')}</strong></span>
         </label>
 
         {prefs.enabled && (
           <>
             <label className="mdf-notif__row mdf-notif__row--column">
-              <span>Raio: <strong>{prefs.radiusKm} km</strong></span>
+              <span>{t('page.notifprefs.radius')} <strong>{prefs.radiusKm} km</strong></span>
               <input
                 type="range"
                 min={1}
@@ -110,7 +111,7 @@ export default function NotificationPrefs({ open, onClose }) {
             </label>
 
             <fieldset className="mdf-notif__freq">
-              <legend>Frequência</legend>
+              <legend>{t('page.notifprefs.frequency')}</legend>
               {FREQUENCIES.map((f) => (
                 <label key={f.id} className="mdf-notif__radio">
                   <input
@@ -120,7 +121,7 @@ export default function NotificationPrefs({ open, onClose }) {
                     checked={prefs.frequency === f.id}
                     onChange={() => update({ frequency: f.id })}
                   />
-                  <span>{f.label}</span>
+                  <span>{t(f.labelKey)}</span>
                 </label>
               ))}
             </fieldset>
@@ -133,15 +134,15 @@ export default function NotificationPrefs({ open, onClose }) {
                 disabled={perm === 'denied'}
               >
                 {perm === 'denied'
-                  ? 'Permissão bloqueada, ajuste no ícone do navegador'
-                  : 'Permitir notificações neste navegador'}
+                  ? t('page.notifprefs.perm_blocked')
+                  : t('page.notifprefs.perm_allow')}
               </button>
             )}
           </>
         )}
 
         <p className="mdf-notif__foot">
-          Desligar é reversível a qualquer momento, volte aqui e desmarque.
+          {t('page.notifprefs.foot')}
         </p>
 
         <LocaleSwitch />

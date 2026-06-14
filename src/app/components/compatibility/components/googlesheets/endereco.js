@@ -156,7 +156,7 @@ class NameForm extends Component {
         }catch(e){
             console.log("ERRO");
             console.log(e);
-            alert("Houve um problema ao cadastrar endereço, porfavor clique no mapa e depois confirme o no botão marcar Local tocado.\nou use o botão marcar Localização Atual");
+            alert(t('page.address.register_error'));
         }
         await sheet.addRow(row);
        
@@ -171,13 +171,13 @@ class NameForm extends Component {
     render() {
       return (
         this.state.isLoading ?
-        <div><CircularProgress aria-label="Enviando endereço" /></div>
+        <div><CircularProgress aria-label={t('page.address.sending')} /></div>
         :
         <form className='form-endereco' onSubmit={this.handleSubmit}>
           <label>
-            <input className="TextField" type="text" placeholder='Insira rua,nº,bairro,cidade,estado' value={this.state.value} onChange={this.handleChange} />
+            <input className="TextField" type="text" placeholder={t('page.address.address_ph')} value={this.state.value} onChange={this.handleChange} />
           </label>
-          <input className="SubmitButton" id='enviar-endereco' type="submit" value="Enviar Endereço" />
+          <input className="SubmitButton" id='enviar-endereco' type="submit" value={t('page.address.submit')} />
         </form>
       );
     }

@@ -1,71 +1,73 @@
 import '../../App.css';
 import './TabelaFome.css';
+import { t, useLocale } from '../ux/strings';
 
 function TabelaFome() {
+  useLocale(); // re-render on locale change so t() re-reads
 
   return (
         <div>
             <table className="tf-table">
             <tbody>
             <tr className="tf-row--zebra">
-            <th style={{"width":"7%"}}>Tempo<br/>de<br/>Fome</th>
-            <th style={{"width":"86%"}}>Consequências ruins</th>
-            <th style={{"width":"7%"}}>Risco de vida<br/>da pessoa<br/>desamparada</th>
+            <th style={{"width":"7%"}}>{t('page.hungertable.hdr_time')}</th>
+            <th style={{"width":"86%"}}>{t('page.hungertable.hdr_conseq')}</th>
+            <th style={{"width":"7%"}}>{t('page.hungertable.hdr_risk')}</th>
             </tr>
             <tr>
-            <td>0-3<br/>horas</td>
-            <td>Mudança mínima</td>
-            <td>0</td>
+            <td>{t('page.hungertable.time_0')}</td>
+            <td>{t('page.hungertable.conseq_0')}</td>
+            <td>{t('page.hungertable.risk_0')}</td>
             </tr>
             <tr className="tf-row--zebra">
-            <td>4-8<br/>horas</td>
-            <td className="tf-cell--desc">Você vai sentir mais fome e sua barriga vai doer um pouco, e pode ter dor de cabeça</td>
-            <td>0</td>
+            <td>{t('page.hungertable.time_1')}</td>
+            <td className="tf-cell--desc">{t('page.hungertable.conseq_1')}</td>
+            <td>{t('page.hungertable.risk_0')}</td>
             </tr>
             <tr>
-            <td>9-12<br/>horas</td>
-            <td className="tf-cell--desc">Você vai começar a se sentir cansado e rabugento, raivoso, irritado, estressado e vai ter dor de cabeça</td>
-            <td>baixa</td>
+            <td>{t('page.hungertable.time_2')}</td>
+            <td className="tf-cell--desc">{t('page.hungertable.conseq_2')}</td>
+            <td>{t('page.hungertable.risk_low')}</td>
             </tr>
             <tr className="tf-row--zebra">
-            <td>13-16<br/>horas</td>
-            <td className="tf-cell--desc">vai ser mais difícil prestar atenção ou se concentrar</td>
-            <td>moderada</td>
+            <td>{t('page.hungertable.time_3')}</td>
+            <td className="tf-cell--desc">{t('page.hungertable.conseq_3')}</td>
+            <td>{t('page.hungertable.risk_mod')}</td>
             </tr>
             <tr>
-            <td>17-24<br/>horas</td>
-            <td className="tf-cell--desc">Seu corpo vai não ter açúcar suficiente, o que vai fazer você se sentir tonto ou TREMENDO</td>
-            <td>moderada</td>
+            <td>{t('page.hungertable.time_4')}</td>
+            <td className="tf-cell--desc">{t('page.hungertable.conseq_4')}</td>
+            <td>{t('page.hungertable.risk_mod')}</td>
             </tr>
             <tr className="tf-row--zebra">
-            <td>25-48<br/>horas</td>
-            <td className="tf-cell--desc">Você vai se sentir fraco e entra em situação de alto estresse e em modo de sobrevivência seu coração vai bater mais rápido pois falta energia que vem da comida, então tenta trabalhar dobrado na tentativa de manter o resultado (entrega de oxigênio e nutrientes para orgão vitais)</td>
-            <td>alta</td>
+            <td>{t('page.hungertable.time_5')}</td>
+            <td className="tf-cell--desc">{t('page.hungertable.conseq_5')}</td>
+            <td>{t('page.hungertable.risk_high')}</td>
             </tr>
             <tr>
-            <td>49-72<br/>horas</td>
-            <td className="tf-cell--desc">Seu corpo vai começar a usar energia armazenada (gordura,...), o que vai fazer você se sentir cansado e seu sistema imunológico vai não funcionar tão bem, fica doente mais facilmente</td>
-            <td>alta</td>
+            <td>{t('page.hungertable.time_6')}</td>
+            <td className="tf-cell--desc">{t('page.hungertable.conseq_6')}</td>
+            <td>{t('page.hungertable.risk_high')}</td>
             </tr>
             <tr className="tf-row--zebra">
-            <td>3-7<br/>dias</td>
-            <td className="tf-cell--desc">Os músculos passam a serem consumidos como energia, você vai se sentir muito fraco e seus músculos vão diminuir. Isso não é bom para o seu corpo, danifica o organismo. Diminuição da motivação ou produtividade</td>
-            <td>alta</td>
+            <td>{t('page.hungertable.time_7')}</td>
+            <td className="tf-cell--desc">{t('page.hungertable.conseq_7')}</td>
+            <td>{t('page.hungertable.risk_high')}</td>
             </tr>
             <tr>
-            <td>8-14<br/>dias</td>
-            <td className="tf-cell--desc">Seus órgãos, que são partes importantes do seu corpo, vão ficar feridos e você vai ficar doente muito mais facilmente</td>
-            <td>muito alta</td>
+            <td>{t('page.hungertable.time_8')}</td>
+            <td className="tf-cell--desc">{t('page.hungertable.conseq_8')}</td>
+            <td>{t('page.hungertable.risk_vhigh')}</td>
             </tr>
             <tr className="tf-row--zebra">
-            <td>15-21<br/>dias</td>
-            <td className="tf-cell--desc">Você vai ficar muito doente e sua vida vai estar em perigo</td>
-            <td>extremamente alto</td>
+            <td>{t('page.hungertable.time_9')}</td>
+            <td className="tf-cell--desc">{t('page.hungertable.conseq_9')}</td>
+            <td>{t('page.hungertable.risk_xhigh')}</td>
             </tr>
             <tr>
-            <td>22+<br/>dias</td>
-            <td className="tf-cell--desc">Você está em perigo extremo porque seu corpo não está recebendo comida suficiente, e seus órgãos vão parar de funcionar corretamente ou parar a qualquer momento</td>
-            <td>extremamente alto</td>
+            <td>{t('page.hungertable.time_10')}</td>
+            <td className="tf-cell--desc">{t('page.hungertable.conseq_10')}</td>
+            <td>{t('page.hungertable.risk_xhigh')}</td>
             </tr>
             </tbody>
             </table>

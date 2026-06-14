@@ -302,7 +302,7 @@ const InfoPanel = ({ rowCount }) => {
           <section
             id="ip-collapse-agradecimentos"
             className="ip-collapse"
-            aria-label="Agradecimentos"
+            aria-label={t('page.info.thanks_aria')}
           >
             <ul className="ip-bullets">
               {ACKNOWLEDGEMENTS.map((ack, i) => (
@@ -326,7 +326,7 @@ const InfoPanel = ({ rowCount }) => {
           <section
             id="ip-collapse-apoiadores"
             className="ip-collapse"
-            aria-label="Apoiadores"
+            aria-label={t('page.info.supporters_aria')}
           >
             <Apoiadores />
           </section>
@@ -336,15 +336,15 @@ const InfoPanel = ({ rowCount }) => {
           <section
             id="ip-collapse-tabela"
             className="ip-collapse"
-            aria-label="Consequências da fome ao longo do tempo"
+            aria-label={t('page.info.conseq_aria')}
           >
             <div className="ip-table-wrap">
               <table className="ip-table">
                 <thead>
                   <tr>
-                    <th scope="col">Tempo de fome</th>
-                    <th scope="col">Consequências</th>
-                    <th scope="col">Risco de vida</th>
+                    <th scope="col">{t('page.info.conseq_th_time')}</th>
+                    <th scope="col">{t('page.info.conseq_th_conseq')}</th>
+                    <th scope="col">{t('page.info.conseq_th_risk')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -372,35 +372,31 @@ const InfoPanel = ({ rowCount }) => {
             src="https://brasil.un.org/profiles/undg_country/themes/custom/undg/images/SDGs/pt-br/SDG-2.svg"
           />
           <figcaption>
-            No MAPA FOME você pode encontrar a quem ajudar e fazer novas marcações.
-            Selecione a opção que representa você ou outra pessoa, adicione um
-            contato se quiser, e confirme com a localização atual ou um endereço.
+            {t('page.info.ods_caption')}
           </figcaption>
         </figure>
 
-        <section className="ip-uses" aria-label="Para que serve o MAPA FOME">
-          <h3>Serve para</h3>
+        <section className="ip-uses" aria-label={t('page.info.uses_aria')}>
+          <h3>{t('page.info.uses_heading')}</h3>
           <ul>
-            <li>mapear pessoas que estão com fome na rua ou em casa</li>
-            <li>mapear iniciativas que recebem recursos para fazer doação</li>
-            <li>mostrar no mapa onde e quando tem alimento sendo distribuído</li>
-            <li>mostrar lugares comerciais ou residenciais que precisam de voluntários para buscar alimentos não consumidos</li>
-            <li>mapear e ajudar vítimas de desastres naturais, como na enchente do Rio Grande do Sul em 2024, quando atingidos entraram em contato e pediram o filtro <em>Esse ano</em>. Hoje também dá para filtrar o mapa por necessidades além de comida — água, abrigo, roupa, higiene, remédios, animais e carregar o celular — porque uma catástrofe desabriga pessoas independente de renda</li>
+            <li>{t('page.info.uses_li1')}</li>
+            <li>{t('page.info.uses_li2')}</li>
+            <li>{t('page.info.uses_li3')}</li>
+            <li>{t('page.info.uses_li4')}</li>
+            <li>{t('page.info.uses_disaster_lead')}<em>{t('page.info.uses_disaster_filter')}</em>{t('page.info.uses_disaster_tail')}</li>
           </ul>
           <p className="ip-uses__note">
-            É possível traçar uma rota ao destino: clique em <em>Ir para o destino</em> para abrir no Google Maps.
+            {t('page.info.uses_note_lead')}<em>{t('page.info.uses_note_link')}</em>{t('page.info.uses_note_tail')}
           </p>
         </section>
 
         <p className="ip-conclusion">
-          <strong>Conclusão:</strong> faço um apelo a você para tomar medidas e ações
-          solidárias recorrentes, em intervalos de 1 a 14 dias. Alivie a dor e o
-          sofrimento de outro ser humano.
+          <strong>{t('page.info.conclusion_label')}</strong> {t('page.info.conclusion_body')}
         </p>
 
         <footer className="ip-footer">
           <div className="ip-contact">
-            <span className="ip-contact__label">Contato:</span>
+            <span className="ip-contact__label">{t('page.info.contact_label')}</span>
             <a
               target="_blank"
               rel="noreferrer"
@@ -414,34 +410,33 @@ const InfoPanel = ({ rowCount }) => {
           </div>
           <Sugestao />
           <SponsorSlot placement={PLACEMENTS.INFO_PANEL_FOOTER} />
-          <nav className="ip-legal" aria-label="Documentos legais">
-            <a target="_blank" rel="noreferrer" href="./privacy.html">Política de Privacidade</a>
+          <nav className="ip-legal" aria-label={t('page.info.legal_aria')}>
+            <a target="_blank" rel="noreferrer" href="./privacy.html">{t('page.info.legal_privacy')}</a>
             <span aria-hidden="true">·</span>
-            <a target="_blank" rel="noreferrer" href="./terms.html">Termos de Uso</a>
+            <a target="_blank" rel="noreferrer" href="./terms.html">{t('page.info.legal_terms')}</a>
             <span aria-hidden="true">·</span>
-            <a href="/assinar">Apoie o projeto</a>
+            <a href="/assinar">{t('page.info.legal_support')}</a>
             <span aria-hidden="true">·</span>
-            <a href="/relatorios">Relatórios (órgãos públicos)</a>
+            <a href="/relatorios">{t('page.info.legal_reports')}</a>
             <span aria-hidden="true">·</span>
-            <a href="/relatorio-marketing">Relatório de marketing (parceiros)</a>
+            <a href="/relatorio-marketing">{t('page.info.legal_marketing')}</a>
             <span aria-hidden="true">·</span>
-            <a href="/parceiros">Seja parceiro</a>
+            <a href="/parceiros">{t('page.info.legal_partner')}</a>
             <span aria-hidden="true">·</span>
-            <a href="/imprensa">Imprensa</a>
+            <a href="/imprensa">{t('page.info.legal_press')}</a>
           </nav>
           <a
             className="mdf-btn mdf-btn--tertiary"
             target="_blank"
             rel="noreferrer"
             href="https://github.dev/rslgp/mapafome_homolog/src/app/components/compatibility/components/README.md"
-            aria-label="Contribuir / abrir PR no GitHub"
-            title="Contribuir / abrir PR no GitHub"
+            aria-label={t('page.info.github_aria')}
+            title={t('page.info.github_aria')}
           >
             <img className="mdf-btn__brandmark imgGithub" src="https://brand.github.com/_next/static/media/logo-03.cc5e5332.png" alt="GitHub" />
           </a>
           <p className="ip-closing">
-            Ninguém deveria passar fome ao nosso lado. Faça hoje a sua parte:
-            doe, marque um ponto no mapa ou compartilhe o MAPA FOME.
+            {t('page.info.closing')}
           </p>
         </footer>
       </Paper>

@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 
 import CircularProgress from '@mui/material/CircularProgress';
+import { t } from '../ux/strings';
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 
@@ -48,9 +49,9 @@ class Sugestoes extends Component {
           await sheet.addRow(row);
         
           self.setState({isLoading: false});
-          alert("sugestão enviada com sucesso");
+          alert(t('page.form.suggestion_sent'));
         }catch(e){
-          alert("Erro, tente novamente");
+          alert(t('page.form.suggestion_error'));
         }
         
       })(this);
@@ -62,13 +63,13 @@ class Sugestoes extends Component {
     render() {
       return (
         this.state.isLoading ?
-        <div><CircularProgress aria-label="Enviando sugestão" /></div>
+        <div><CircularProgress aria-label={t('page.form.suggestion_sending')} /></div>
         :
         <form onSubmit={this.handleSubmit}>
           <label>
-            <textarea className="TextField" type="text" placeholder='Insira sua sugestão, depoimento e contato em caso de dúvida' value={this.state.value} onChange={this.handleChange} />
+            <textarea className="TextField" type="text" placeholder={t('page.form.suggestion_ph')} value={this.state.value} onChange={this.handleChange} />
           </label>
-          <input className="SubmitButton" type="submit" value="Enviar sugestão" />
+          <input className="SubmitButton" type="submit" value={t('page.form.suggestion_submit')} />
         </form>
       );
     }
