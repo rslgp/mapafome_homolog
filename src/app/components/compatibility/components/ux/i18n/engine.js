@@ -22,10 +22,29 @@ import { DICT } from './dictionary.js';
 
 const LOCALE_KEY = 'mdf_locale';
 const DEFAULT_LOCALE = 'pt-BR';
-// Seven UI locales, matching the SOLONE game's language set (ptbr, en, es, de,
-// fr, ru, cn->zh). Order mirrors SOLONE's rotation order. de/fr/ru/zh ship with
-// dignity-sensitive copy drafted (`[REVISAR-HUMANO] `) pending human tone review.
-export const SUPPORTED_LOCALES = ['pt-BR', 'es', 'en-US', 'de', 'fr', 'ru', 'zh'];
+// Twelve UI locales. The first seven mirror the SOLONE game's language set (ptbr,
+// en, es, de, fr, ru, cn->zh); INTL HUMANITARIAN EXPANSION adds ar/bn/uk (per
+// INTERNATIONAL_EXPANSION.md, ordered by humanitarian return: Arabic, Bengali,
+// Ukrainian). INTL DEMAND EXPANSION adds hi (Hindi -> India) and tr (Turkish ->
+// Turkey, the world's largest refugee-hosting country): both high-need geographies
+// whose primary language sat outside the prior set. de/fr/ru/zh/ar/bn/uk/hi/tr ship
+// with dignity-sensitive copy drafted (`[REVISAR-HUMANO] `) pending human tone review.
+export const SUPPORTED_LOCALES = ['pt-BR', 'es', 'en-US', 'de', 'fr', 'ru', 'zh', 'ar', 'bn', 'uk', 'hi', 'tr'];
+
+// RTL_LOCALES — the set of right-to-left UI locales among SUPPORTED_LOCALES. Only
+// Arabic (ar) is RTL in this set; pt-BR/es/en-US/de/fr/ru/zh/bn/uk/hi/tr are all LTR
+// (Hindi is Devanagari-LTR, Turkish is Latin-LTR).
+// Used by applyDocumentLang to write <html dir> alongside <html lang>, so text
+// direction follows the active language everywhere with no new mount host. Kept as
+// a module-level Set so isRtlLocale and applyDocumentLang share one source of truth.
+const RTL_LOCALES = new Set(['ar']);
+
+// isRtlLocale — pure predicate, true for a right-to-left locale. Exported through
+// the barrel for testability (and for any consumer that needs to branch layout on
+// direction); applyDocumentLang uses it for the <html dir> write.
+export function isRtlLocale(locale) {
+  return RTL_LOCALES.has(locale);
+}
 
 // Display metadata for the language picker (INTL). `label` is the language's
 // name IN ITS OWN language (endonym) so a speaker recognizes it regardless of
@@ -41,6 +60,17 @@ export const LOCALE_LABELS = {
   'fr': { label: 'Français', flag: '🇫🇷' },
   'ru': { label: 'Русский', flag: '🇷🇺' },
   'zh': { label: '中文', flag: '🇨🇳' },
+  // INTL HUMANITARIAN EXPANSION — ar/bn/uk. `label` is the endonym (the language's
+  // own name); `flag` is a representative emoji. Arabic is pan-regional (Syria,
+  // Sudan, refugees per the doc); 🇸🇦 is the conventional, reliably-rendered
+  // picker emoji for the Arabic language. bn -> Bangladesh, uk -> Ukraine.
+  'ar': { label: 'العربية', flag: '🇸🇦' },
+  'bn': { label: 'বাংলা', flag: '🇧🇩' },
+  'uk': { label: 'Українська', flag: '🇺🇦' },
+  // INTL DEMAND EXPANSION — hi/tr. Endonym labels (हिन्दी / Türkçe); the flag is the
+  // primary country each locale serves: hi -> India 🇮🇳, tr -> Turkey 🇹🇷.
+  'hi': { label: 'हिन्दी', flag: '🇮🇳' },
+  'tr': { label: 'Türkçe', flag: '🇹🇷' },
 };
 
 // applyDocumentLang — the SINGLE writer of <html lang> (R14, WCAG 3.1.1). Called
@@ -54,6 +84,13 @@ export const LOCALE_LABELS = {
 export function applyDocumentLang(locale) {
   if (typeof document !== 'undefined') {
     document.documentElement.setAttribute('lang', locale);
+    // INTL HUMANITARIAN EXPANSION (Arabic RTL): direction follows language here, in
+    // the SINGLE <html lang> writer, so every path (module-init, manual pick, auto-
+    // detect) sets <html dir> too with no new mount host. ar -> rtl, all other
+    // supported locales -> ltr. SSR-safe under the same `typeof document` guard.
+    // NOTE: this is the dir ATTRIBUTE only; a full CSS logical-property / layout RTL
+    // audit is intentionally out of scope for this pass.
+    document.documentElement.setAttribute('dir', isRtlLocale(locale) ? 'rtl' : 'ltr');
   }
 }
 
@@ -259,6 +296,11 @@ export function detectLocale(languages) {
     if (base === 'fr') return 'fr';
     if (base === 'ru') return 'ru';
     if (base === 'zh') return 'zh';
+    // INTL HUMANITARIAN EXPANSION — ar/bn/uk are base codes, so a regional tag
+    // (ar-EG, ar-SY, bn-BD, bn-IN, uk-UA) maps to the base locale here.
+    if (base === 'ar') return 'ar';
+    if (base === 'bn') return 'bn';
+    if (base === 'uk') return 'uk';
   }
   return DEFAULT_LOCALE;
 }

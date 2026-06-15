@@ -719,3 +719,507 @@ export const zh = {
   'filter.period.annual':     '每年（12个月）',
   'filter.period.all':        '全部',
 };
+
+// INTL HUMANITARIAN EXPANSION — ar/bn/uk added at full key parity with pt. Same
+// DRAFTED vs FINALIZED split as enUS/de: the dignity-sensitive copy (report.*
+// hunger-need prompts, the reassuring errors.* status copy, the
+// errors.out_of_country geofence note, the empty.* state, the need.* categories)
+// carries `[REVISAR-HUMANO] ` so a human approves the tone before it ships;
+// mechanical strings ship finalized. Placeholders ({pais}, {name}, {country})
+// preserved verbatim. No em-dash. ar is Modern Standard Arabic (RTL: the browser
+// handles bidi rendering of the literal tokens, no RLM/LRM inserted). bn is
+// Bengali (Bangladesh register). uk is Ukrainian (NOT Russian); standalone labels
+// use nominative citation forms only (no numeral-driven declension, human-review).
+
+export const ar = {
+  // report.* — hunger-need prompts. DIGNITY-SENSITIVE: human-reviewed.
+  'report.title':      'ماذا يحتاج هذا الشخص الآن؟',
+  'report.subtitle':   'يمكنك اختيار أكثر من واحد.',
+  'report.button':     'نشر النقطة',
+  'report.publishing': 'جارٍ النشر…',
+  'report.success':    'تم النشر ✓',
+  'report.retry':      'حاول مرة أخرى',
+  // Plain validation prompt — mechanical, finalized.
+  'errors.at_least_one_category': 'اختر حاجة واحدة على الأقل.',
+  // Failure/status copy carries reassurance tone, drafted for human review.
+  'errors.publish_failed':        'تعذّر النشر. تحقّق من اتصالك وحاول مرة أخرى.',
+  'errors.offline':               'أنت غير متصل بالإنترنت. تم حفظ النقطة وسيتم إرسالها عند عودة الاتصال.',
+  'errors.server_slow':           'استغرق الخادم وقتًا للرد. ربما تم حفظ نقطتك، انتظر 30 ثانية وأعد التحميل قبل المحاولة مرة أخرى.',
+  // Geofence-rejection copy. DIGNITY-SENSITIVE: human-reviewed.
+  'errors.out_of_country':        'هذه النقطة خارج {pais}. انقر على الخريطة، داخل البلد المحدّد، للنشر هنا، أو غيّر البلد من محدّد العَلَم.',
+  // pin.* — status labels and the action button. Mechanical, finalized.
+  'pin.waiting':        'في الانتظار',
+  'pin.someone_going':  'شخص ما في الطريق',
+  'pin.attended_today': 'تمت المساعدة اليوم',
+  'pin.going_button':   'أنا في الطريق الآن',
+  'pin.directions':     'الاتجاهات',
+  'pin.mark_attended':  'وضع علامة كمُساعَد',
+  'pin.after_attended': 'شكرًا. تم أرشفة النقطة.',
+  // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
+  'empty.no_pins_in_view':  '[REVISAR-HUMANO] لم يُسجَّل أحد في هذه المنطقة بعد. إذا رأيت شخصًا محتاجًا، انقر على إبلاغ.',
+  'empty.close': 'إغلاق الإشعار',
+  // cta.* — navigation/action labels. Mechanical, finalized.
+  'cta.report': 'إبلاغ',
+  'cta.list':   'قائمة',
+  'cta.help':   'كيف يعمل',
+  'cta.pets':   'حيوانات مفقودة',
+  // ── CountryFlagControl (INTL) — flag-driven geocoder scope. Mechanical. ──
+  'country.button':      'بلد البحث: {name}',
+  'country.open':        'تغيير بلد البحث عن العنوان',
+  'country.title':       'البحث عن عنوان في أي بلد؟',
+  'country.search':      'ابحث عن بلد',
+  'country.empty':       'لم يتم العثور على أي بلد.',
+  'country.close':       'إغلاق قائمة البلدان',
+  // ── LanguageControl (INTL) — UI language picker. Mechanical. ──
+  'lang.button':         'اللغة: {name}',
+  'lang.open':           'تغيير لغة الموقع',
+  'lang.title':          'اختر اللغة',
+  // Live-region announcement on map recenter. Mechanical, finalized.
+  'map.center_on_country': 'تم توسيط الخريطة على {country}.',
+  // ── MainControls.js filter panel + confirm-point control. Mechanical. ──
+  'mainctl.loading':              'جارٍ التحميل...',
+  'mainctl.loading_aria':         'جارٍ التحميل',
+  'mainctl.filter.label':         'المرشّح الحالي:',
+  'mainctl.filter.aria':          'تصفية حسب الفئة',
+  'mainctl.filter.all':           'الكل',
+  'mainctl.filter.donors':        'المتبرّعون',
+  'mainctl.filter.basket':        'سلة غذائية',
+  'mainctl.filter.street':        'بلا مأوى',
+  'mainctl.filter.ready_meal':    'وجبة جاهزة',
+  'mainctl.filter.social':        'وسائل التواصل',
+  'mainctl.filter.has_cnpj':      'لديه CNPJ',
+  'mainctl.filter.none':          'لا شيء',
+  'mainctl.filter.needs_group':   'الاحتياجات في الكارثة',
+  'mainctl.filter.all_needs':     'جميع الاحتياجات',
+  'mainctl.phone_filter.label':   'الهاتف',
+  'mainctl.phone_filter.aria':    'تصفية حسب الهاتف',
+  'mainctl.confirm.label':        'تأكيد النقطة',
+  'mainctl.confirm.label_ready':  '✓ تأكيد النقطة',
+  'mainctl.confirm.aria_ready':   'تأكيد النقطة المحدّدة على الخريطة',
+  'mainctl.confirm.aria_pending': 'تأكيد النقطة (انقر على الخريطة أولًا)',
+  'mainctl.confirm.aria_busy':    'جارٍ تأكيد النقطة',
+  // ── NEED categories — DIGNITY-SENSITIVE draft, `[REVISAR-HUMANO] ` pending
+  // human tone review. Short noun labels. No em-dash. See the pt block. ──
+  'need.label.comida':   '[REVISAR-HUMANO] طعام',
+  'need.label.agua':     '[REVISAR-HUMANO] ماء',
+  'need.label.roupa':    '[REVISAR-HUMANO] ملابس',
+  'need.label.higiene':  '[REVISAR-HUMANO] نظافة',
+  'need.label.abrigo':   '[REVISAR-HUMANO] مأوى',
+  'need.label.remedio':  '[REVISAR-HUMANO] أدوية',
+  'need.label.animais':  '[REVISAR-HUMANO] حيوانات',
+  'need.label.energia':  '[REVISAR-HUMANO] شحن',
+  'need.report.comida':  '[REVISAR-HUMANO] طعام (عام)',
+  'need.report.agua':    '[REVISAR-HUMANO] ماء',
+  'need.report.roupa':   '[REVISAR-HUMANO] ملابس',
+  'need.report.higiene': '[REVISAR-HUMANO] نظافة',
+  'need.report.abrigo':  '[REVISAR-HUMANO] مأوى',
+  'need.report.remedio': '[REVISAR-HUMANO] أدوية',
+  'need.report.animais': '[REVISAR-HUMANO] حيوانات (إنقاذ وطعام)',
+  'need.report.energia': '[REVISAR-HUMANO] شحن الهاتف / طاقة',
+  // FILTRO_TEMPO Lane B - period (recency) selector. MECHANICAL duration
+  // labels, finalized (no [REVISAR-HUMANO] marker, no em-dash).
+  'filter.period.label':      'الفترة',
+  'filter.period.daily':      'يومي (24 ساعة)',
+  'filter.period.weekly':     'أسبوعي (7 أيام)',
+  'filter.period.monthly':    'شهري (30 يومًا)',
+  'filter.period.semiannual': 'نصف سنوي (6 أشهر)',
+  'filter.period.annual':     'سنوي (12 شهرًا)',
+  'filter.period.all':        'الكل',
+};
+
+export const bn = {
+  // report.* — hunger-need prompts. DIGNITY-SENSITIVE: human-reviewed.
+  'report.title':      'এই মানুষটির এখন কী প্রয়োজন?',
+  'report.subtitle':   'আপনি একাধিক বেছে নিতে পারেন.',
+  'report.button':     'পয়েন্ট প্রকাশ করুন',
+  'report.publishing': 'প্রকাশ করা হচ্ছে…',
+  'report.success':    'প্রকাশিত ✓',
+  'report.retry':      'আবার চেষ্টা করুন',
+  // Plain validation prompt — mechanical, finalized.
+  'errors.at_least_one_category': 'অন্তত একটি প্রয়োজন বেছে নিন.',
+  // Failure/status copy carries reassurance tone, drafted for human review.
+  'errors.publish_failed':        'প্রকাশ করা যায়নি. আপনার সংযোগ পরীক্ষা করে আবার চেষ্টা করুন.',
+  'errors.offline':               'আপনি অফলাইন আছেন. পয়েন্টটি সংরক্ষণ করা হয়েছে এবং সংযোগ ফিরে এলে পাঠানো হবে.',
+  'errors.server_slow':           'সার্ভার সাড়া দিতে দেরি করেছে. আপনার পয়েন্ট হয়তো সংরক্ষিত হয়েছে, 30 সেকেন্ড অপেক্ষা করুন এবং আবার চেষ্টার আগে পৃষ্ঠা রিলোড করুন.',
+  // Geofence-rejection copy. DIGNITY-SENSITIVE: human-reviewed.
+  'errors.out_of_country':        'এই পয়েন্টটি {pais}-এর বাইরে. এখানে প্রকাশ করতে নির্বাচিত দেশের ভেতরে মানচিত্রে আলতো চাপুন, অথবা পতাকা নির্বাচকে দেশ পরিবর্তন করুন.',
+  // pin.* — status labels and the action button. Mechanical, finalized.
+  'pin.waiting':        'অপেক্ষমাণ',
+  'pin.someone_going':  'কেউ পথে আছে',
+  'pin.attended_today': 'আজ সাহায্য করা হয়েছে',
+  'pin.going_button':   'আমি এখনই যাচ্ছি',
+  'pin.directions':     'পথনির্দেশ',
+  'pin.mark_attended':  'সাহায্য করা হয়েছে চিহ্নিত করুন',
+  'pin.after_attended': 'ধন্যবাদ. পয়েন্টটি সংরক্ষণাগারে রাখা হয়েছে.',
+  // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
+  'empty.no_pins_in_view':  '[REVISAR-HUMANO] এই এলাকায় এখনও কাউকে মানচিত্রে যুক্ত করা হয়নি. যদি কাউকে প্রয়োজনে দেখে থাকেন, রিপোর্ট-এ আলতো চাপুন.',
+  'empty.close': 'বিজ্ঞপ্তি বন্ধ করুন',
+  // cta.* — navigation/action labels. Mechanical, finalized.
+  'cta.report': 'রিপোর্ট',
+  'cta.list':   'তালিকা',
+  'cta.help':   'কীভাবে কাজ করে',
+  'cta.pets':   'হারানো পোষা প্রাণী',
+  // ── CountryFlagControl (INTL) — flag-driven geocoder scope. Mechanical. ──
+  'country.button':      'অনুসন্ধানের দেশ: {name}',
+  'country.open':        'ঠিকানা অনুসন্ধানের দেশ পরিবর্তন করুন',
+  'country.title':       'কোন দেশে ঠিকানা অনুসন্ধান করবেন?',
+  'country.search':      'দেশ অনুসন্ধান করুন',
+  'country.empty':       'কোনো দেশ পাওয়া যায়নি.',
+  'country.close':       'দেশের তালিকা বন্ধ করুন',
+  // ── LanguageControl (INTL) — UI language picker. Mechanical. ──
+  'lang.button':         'ভাষা: {name}',
+  'lang.open':           'সাইটের ভাষা পরিবর্তন করুন',
+  'lang.title':          'ভাষা বেছে নিন',
+  // Live-region announcement on map recenter. Mechanical, finalized.
+  'map.center_on_country': '{country}-এ মানচিত্র কেন্দ্রীভূত হয়েছে.',
+  // ── MainControls.js filter panel + confirm-point control. Mechanical. ──
+  'mainctl.loading':              'লোড হচ্ছে...',
+  'mainctl.loading_aria':         'লোড হচ্ছে',
+  'mainctl.filter.label':         'বর্তমান ফিল্টার:',
+  'mainctl.filter.aria':          'বিভাগ অনুসারে ফিল্টার করুন',
+  'mainctl.filter.all':           'সব',
+  'mainctl.filter.donors':        'দাতা',
+  'mainctl.filter.basket':        'খাদ্য ঝুড়ি',
+  'mainctl.filter.street':        'গৃহহীন',
+  'mainctl.filter.ready_meal':    'তৈরি খাবার',
+  'mainctl.filter.social':        'সামাজিক মাধ্যম',
+  'mainctl.filter.has_cnpj':      'CNPJ আছে',
+  'mainctl.filter.none':          'কোনোটি নয়',
+  'mainctl.filter.needs_group':   'দুর্যোগে প্রয়োজন',
+  'mainctl.filter.all_needs':     'সব প্রয়োজন',
+  'mainctl.phone_filter.label':   'ফোন',
+  'mainctl.phone_filter.aria':    'ফোন অনুসারে ফিল্টার করুন',
+  'mainctl.confirm.label':        'পয়েন্ট নিশ্চিত করুন',
+  'mainctl.confirm.label_ready':  '✓ পয়েন্ট নিশ্চিত করুন',
+  'mainctl.confirm.aria_ready':   'মানচিত্রে চিহ্নিত পয়েন্ট নিশ্চিত করুন',
+  'mainctl.confirm.aria_pending': 'পয়েন্ট নিশ্চিত করুন (প্রথমে মানচিত্রে আলতো চাপুন)',
+  'mainctl.confirm.aria_busy':    'পয়েন্ট নিশ্চিত করা হচ্ছে',
+  // ── NEED categories — DIGNITY-SENSITIVE draft, `[REVISAR-HUMANO] ` pending
+  // human tone review. Short noun labels. No em-dash. See the pt block. ──
+  'need.label.comida':   '[REVISAR-HUMANO] খাবার',
+  'need.label.agua':     '[REVISAR-HUMANO] পানি',
+  'need.label.roupa':    '[REVISAR-HUMANO] পোশাক',
+  'need.label.higiene':  '[REVISAR-HUMANO] পরিচ্ছন্নতা',
+  'need.label.abrigo':   '[REVISAR-HUMANO] আশ্রয়',
+  'need.label.remedio':  '[REVISAR-HUMANO] ওষুধ',
+  'need.label.animais':  '[REVISAR-HUMANO] প্রাণী',
+  'need.label.energia':  '[REVISAR-HUMANO] চার্জ',
+  'need.report.comida':  '[REVISAR-HUMANO] খাবার (সাধারণ)',
+  'need.report.agua':    '[REVISAR-HUMANO] পানি',
+  'need.report.roupa':   '[REVISAR-HUMANO] পোশাক',
+  'need.report.higiene': '[REVISAR-HUMANO] পরিচ্ছন্নতা',
+  'need.report.abrigo':  '[REVISAR-HUMANO] আশ্রয়',
+  'need.report.remedio': '[REVISAR-HUMANO] ওষুধ',
+  'need.report.animais': '[REVISAR-HUMANO] প্রাণী (উদ্ধার ও খাদ্য)',
+  'need.report.energia': '[REVISAR-HUMANO] ফোন চার্জ / বিদ্যুৎ',
+  // FILTRO_TEMPO Lane B - period (recency) selector. MECHANICAL duration
+  // labels, finalized (no [REVISAR-HUMANO] marker, no em-dash).
+  'filter.period.label':      'সময়কাল',
+  'filter.period.daily':      'দৈনিক (24 ঘণ্টা)',
+  'filter.period.weekly':     'সাপ্তাহিক (7 দিন)',
+  'filter.period.monthly':    'মাসিক (30 দিন)',
+  'filter.period.semiannual': 'ষাণ্মাসিক (6 মাস)',
+  'filter.period.annual':     'বার্ষিক (12 মাস)',
+  'filter.period.all':        'সব',
+};
+
+export const uk = {
+  // report.* — hunger-need prompts. DIGNITY-SENSITIVE: human-reviewed.
+  'report.title':      'Що цій людині потрібно прямо зараз?',
+  'report.subtitle':   'Можна вибрати кілька.',
+  'report.button':     'Опублікувати точку',
+  'report.publishing': 'Публікується…',
+  'report.success':    'Опубліковано ✓',
+  'report.retry':      'Спробувати знову',
+  // Plain validation prompt — mechanical, finalized.
+  'errors.at_least_one_category': 'Виберіть хоча б одну потребу.',
+  // Failure/status copy carries reassurance tone, drafted for human review.
+  'errors.publish_failed':        'Не вдалося опублікувати. Перевірте з’єднання та спробуйте знову.',
+  'errors.offline':               'Ви офлайн. Точку збережено, її буде надіслано, коли з’єднання відновиться.',
+  'errors.server_slow':           'Сервер відповів повільно. Можливо, вашу точку збережено, зачекайте 30 секунд і оновіть сторінку, перш ніж пробувати знову.',
+  // Geofence-rejection copy. DIGNITY-SENSITIVE: human-reviewed.
+  'errors.out_of_country':        'Ця точка перебуває поза межами {pais}. Натисніть на карту, усередині вибраної країни, щоб опублікувати тут, або змініть країну у виборі прапора.',
+  // pin.* — status labels and the action button. Mechanical, finalized.
+  'pin.waiting':        'Очікує',
+  'pin.someone_going':  'Хтось уже в дорозі',
+  'pin.attended_today': 'Допомогли сьогодні',
+  'pin.going_button':   'Я вже йду',
+  'pin.directions':     'Як дістатися',
+  'pin.mark_attended':  'Позначити як допомогли',
+  'pin.after_attended': 'Дякуємо. Точку надіслано в архів.',
+  // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
+  'empty.no_pins_in_view':  '[REVISAR-HUMANO] У цій області поки нікого не позначено. Якщо ви бачили людину в потребі, натисніть Повідомити.',
+  'empty.close': 'Закрити сповіщення',
+  // cta.* — navigation/action labels. Mechanical, finalized.
+  'cta.report': 'Повідомити',
+  'cta.list':   'Список',
+  'cta.help':   'Як це працює',
+  'cta.pets':   'Загублені улюбленці',
+  // ── CountryFlagControl (INTL) — flag-driven geocoder scope. Mechanical. ──
+  'country.button':      'Країна пошуку: {name}',
+  'country.open':        'Змінити країну пошуку адреси',
+  'country.title':       'У якій країні шукати адресу?',
+  'country.search':      'Шукати країну',
+  'country.empty':       'Країну не знайдено.',
+  'country.close':       'Закрити список країн',
+  // ── LanguageControl (INTL) — UI language picker. Mechanical. ──
+  'lang.button':         'Мова: {name}',
+  'lang.open':           'Змінити мову сайту',
+  'lang.title':          'Виберіть мову',
+  // Live-region announcement on map recenter. Mechanical, finalized.
+  'map.center_on_country': 'Карту центровано на {country}.',
+  // ── MainControls.js filter panel + confirm-point control. Mechanical. ──
+  'mainctl.loading':              'Завантаження...',
+  'mainctl.loading_aria':         'Завантаження',
+  'mainctl.filter.label':         'поточний фільтр:',
+  'mainctl.filter.aria':          'Фільтрувати за категорією',
+  'mainctl.filter.all':           'Усі',
+  'mainctl.filter.donors':        'Жертводавці',
+  'mainctl.filter.basket':        'Продуктовий кошик',
+  'mainctl.filter.street':        'Без житла',
+  'mainctl.filter.ready_meal':    'Готова їжа',
+  'mainctl.filter.social':        'Соцмережі',
+  'mainctl.filter.has_cnpj':      'має CNPJ',
+  'mainctl.filter.none':          'Немає',
+  'mainctl.filter.needs_group':   'Потреби під час лиха',
+  'mainctl.filter.all_needs':     'Усі потреби',
+  'mainctl.phone_filter.label':   'Телефон',
+  'mainctl.phone_filter.aria':    'Фільтрувати за телефоном',
+  'mainctl.confirm.label':        'Підтвердити точку',
+  'mainctl.confirm.label_ready':  '✓ Підтвердити точку',
+  'mainctl.confirm.aria_ready':   'Підтвердити точку, позначену на карті',
+  'mainctl.confirm.aria_pending': 'Підтвердити точку (спочатку натисніть на карту)',
+  'mainctl.confirm.aria_busy':    'Підтвердження точки',
+  // ── NEED categories — DIGNITY-SENSITIVE draft, `[REVISAR-HUMANO] ` pending
+  // human tone review. Nominative citation forms only (standalone labels, no
+  // numeral-driven case; that transform is human-review-only). No em-dash. ──
+  'need.label.comida':   '[REVISAR-HUMANO] Їжа',
+  'need.label.agua':     '[REVISAR-HUMANO] Вода',
+  'need.label.roupa':    '[REVISAR-HUMANO] Одяг',
+  'need.label.higiene':  '[REVISAR-HUMANO] Гігієна',
+  'need.label.abrigo':   '[REVISAR-HUMANO] Притулок',
+  'need.label.remedio':  '[REVISAR-HUMANO] Ліки',
+  'need.label.animais':  '[REVISAR-HUMANO] Тварини',
+  'need.label.energia':  '[REVISAR-HUMANO] Зарядка',
+  'need.report.comida':  '[REVISAR-HUMANO] Їжа (загальне)',
+  'need.report.agua':    '[REVISAR-HUMANO] Вода',
+  'need.report.roupa':   '[REVISAR-HUMANO] Одяг',
+  'need.report.higiene': '[REVISAR-HUMANO] Гігієна',
+  'need.report.abrigo':  '[REVISAR-HUMANO] Притулок',
+  'need.report.remedio': '[REVISAR-HUMANO] Ліки',
+  'need.report.animais': '[REVISAR-HUMANO] Тварини (порятунок і корм)',
+  'need.report.energia': '[REVISAR-HUMANO] Зарядити телефон / електрика',
+  // FILTRO_TEMPO Lane B - period (recency) selector. MECHANICAL duration
+  // labels, finalized. Fixed citation forms for a standalone dropdown option
+  // (no numeral-driven case/declension; that transform stays human-review-only).
+  'filter.period.label':      'Період',
+  'filter.period.daily':      'Щодня (24 год)',
+  'filter.period.weekly':     'Щотижня (7 днів)',
+  'filter.period.monthly':    'Щомісяця (30 днів)',
+  'filter.period.semiannual': 'Раз на півроку (6 місяців)',
+  'filter.period.annual':     'За рік (12 місяців)',
+  'filter.period.all':        'Усі',
+};
+
+// INTL HUMANITARIAN EXPANSION — hi/tr added at full key parity with pt. Same
+// DRAFTED vs FINALIZED split as enUS/de/ar: the dignity-sensitive copy (the
+// reassuring empty.* state and the need.* hunger/disaster categories) carries
+// `[REVISAR-HUMANO] ` so a human approves the tone before it ships; mechanical
+// strings (report.* prompts here ship finalized like de/ar, error/status copy,
+// pin/cta/country/lang chrome, filters, durations) ship finalized. The marked
+// key set is byte-identical to de/ar. Placeholders ({pais}, {name}, {country})
+// preserved verbatim. No em-dash. hi is Hindi (Devanagari, LTR), warm-dignified
+// register. tr is Turkish (Latin + diacritics, LTR), warm-dignified register;
+// standalone need.* labels use plain citation forms (no case inflection).
+
+export const hi = {
+  // report.* — hunger-need prompts. DIGNITY-SENSITIVE: human-reviewed.
+  'report.title':      'इस व्यक्ति को अभी क्या चाहिए?',
+  'report.subtitle':   'आप एक से ज़्यादा चुन सकते हैं.',
+  'report.button':     'बिंदु प्रकाशित करें',
+  'report.publishing': 'प्रकाशित हो रहा है…',
+  'report.success':    'प्रकाशित ✓',
+  'report.retry':      'फिर से प्रयास करें',
+  // Plain validation prompt — mechanical, finalized.
+  'errors.at_least_one_category': 'कम से कम एक ज़रूरत चुनें.',
+  // Failure/status copy carries reassurance tone, drafted for human review.
+  'errors.publish_failed':        'प्रकाशित नहीं हो सका. अपना कनेक्शन जाँचें और फिर से प्रयास करें.',
+  'errors.offline':               'आप ऑफ़लाइन हैं. बिंदु सहेज लिया गया है और कनेक्शन लौटने पर भेज दिया जाएगा.',
+  'errors.server_slow':           'सर्वर को जवाब देने में देर लगी. आपका बिंदु शायद सहेजा जा चुका है, 30 सेकंड रुकें और फिर से प्रयास करने से पहले पेज पुनः लोड करें.',
+  // Geofence-rejection copy. DIGNITY-SENSITIVE: human-reviewed.
+  'errors.out_of_country':        'यह बिंदु {pais} के बाहर है. यहाँ प्रकाशित करने के लिए चुने हुए देश के भीतर मानचित्र पर टैप करें, या झंडा चयनकर्ता में देश बदलें.',
+  // pin.* — status labels and the action button. Mechanical, finalized.
+  'pin.waiting':        'प्रतीक्षारत',
+  'pin.someone_going':  'कोई रास्ते में है',
+  'pin.attended_today': 'आज मदद की गई',
+  'pin.going_button':   'मैं अभी जा रहा हूँ',
+  'pin.directions':     'रास्ता',
+  'pin.mark_attended':  'मदद की गई के रूप में चिह्नित करें',
+  'pin.after_attended': 'धन्यवाद. बिंदु संग्रहित कर दिया गया है.',
+  // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
+  'empty.no_pins_in_view':  '[REVISAR-HUMANO] इस क्षेत्र में अभी तक किसी को मानचित्र पर नहीं डाला गया है. अगर आपने किसी को ज़रूरत में देखा है, तो रिपोर्ट करें पर टैप करें.',
+  'empty.close': 'सूचना बंद करें',
+  // cta.* — navigation/action labels. Mechanical, finalized.
+  'cta.report': 'रिपोर्ट करें',
+  'cta.list':   'सूची',
+  'cta.help':   'यह कैसे काम करता है',
+  'cta.pets':   'खोए हुए पालतू जानवर',
+  // ── CountryFlagControl (INTL) — flag-driven geocoder scope. Mechanical. ──
+  'country.button':      'खोज का देश: {name}',
+  'country.open':        'पता खोज का देश बदलें',
+  'country.title':       'किस देश में पता खोजें?',
+  'country.search':      'देश खोजें',
+  'country.empty':       'कोई देश नहीं मिला.',
+  'country.close':       'देशों की सूची बंद करें',
+  // ── LanguageControl (INTL) — UI language picker. Mechanical. ──
+  'lang.button':         'भाषा: {name}',
+  'lang.open':           'साइट की भाषा बदलें',
+  'lang.title':          'भाषा चुनें',
+  // Live-region announcement on map recenter. Mechanical, finalized.
+  'map.center_on_country': 'मानचित्र {country} पर केंद्रित किया गया.',
+  // ── MainControls.js filter panel + confirm-point control. Mechanical. ──
+  'mainctl.loading':              'लोड हो रहा है...',
+  'mainctl.loading_aria':         'लोड हो रहा है',
+  'mainctl.filter.label':         'वर्तमान फ़िल्टर:',
+  'mainctl.filter.aria':          'श्रेणी के अनुसार फ़िल्टर करें',
+  'mainctl.filter.all':           'सभी',
+  'mainctl.filter.donors':        'दानदाता',
+  'mainctl.filter.basket':        'खाद्य टोकरी',
+  'mainctl.filter.street':        'बेघर',
+  'mainctl.filter.ready_meal':    'तैयार भोजन',
+  'mainctl.filter.social':        'सोशल मीडिया',
+  'mainctl.filter.has_cnpj':      'CNPJ है',
+  'mainctl.filter.none':          'कोई नहीं',
+  'mainctl.filter.needs_group':   'आपदा में ज़रूरतें',
+  'mainctl.filter.all_needs':     'सभी ज़रूरतें',
+  'mainctl.phone_filter.label':   'फ़ोन',
+  'mainctl.phone_filter.aria':    'फ़ोन के अनुसार फ़िल्टर करें',
+  'mainctl.confirm.label':        'बिंदु की पुष्टि करें',
+  'mainctl.confirm.label_ready':  '✓ बिंदु की पुष्टि करें',
+  'mainctl.confirm.aria_ready':   'मानचित्र पर चिह्नित बिंदु की पुष्टि करें',
+  'mainctl.confirm.aria_pending': 'बिंदु की पुष्टि करें (पहले मानचित्र पर टैप करें)',
+  'mainctl.confirm.aria_busy':    'बिंदु की पुष्टि हो रही है',
+  // ── NEED categories — DIGNITY-SENSITIVE draft, `[REVISAR-HUMANO] ` pending
+  // human tone review. Short noun labels. No em-dash. See the pt block. ──
+  'need.label.comida':   '[REVISAR-HUMANO] भोजन',
+  'need.label.agua':     '[REVISAR-HUMANO] पानी',
+  'need.label.roupa':    '[REVISAR-HUMANO] कपड़े',
+  'need.label.higiene':  '[REVISAR-HUMANO] स्वच्छता',
+  'need.label.abrigo':   '[REVISAR-HUMANO] आश्रय',
+  'need.label.remedio':  '[REVISAR-HUMANO] दवाइयाँ',
+  'need.label.animais':  '[REVISAR-HUMANO] जानवर',
+  'need.label.energia':  '[REVISAR-HUMANO] चार्ज',
+  'need.report.comida':  '[REVISAR-HUMANO] भोजन (सामान्य)',
+  'need.report.agua':    '[REVISAR-HUMANO] पानी',
+  'need.report.roupa':   '[REVISAR-HUMANO] कपड़े',
+  'need.report.higiene': '[REVISAR-HUMANO] स्वच्छता',
+  'need.report.abrigo':  '[REVISAR-HUMANO] आश्रय',
+  'need.report.remedio': '[REVISAR-HUMANO] दवाइयाँ',
+  'need.report.animais': '[REVISAR-HUMANO] जानवर (बचाव और चारा)',
+  'need.report.energia': '[REVISAR-HUMANO] फ़ोन चार्ज / बिजली',
+  // FILTRO_TEMPO Lane B - period (recency) selector. MECHANICAL duration
+  // labels, finalized (no [REVISAR-HUMANO] marker, no em-dash).
+  'filter.period.label':      'अवधि',
+  'filter.period.daily':      'दैनिक (24 घंटे)',
+  'filter.period.weekly':     'साप्ताहिक (7 दिन)',
+  'filter.period.monthly':    'मासिक (30 दिन)',
+  'filter.period.semiannual': 'अर्धवार्षिक (6 महीने)',
+  'filter.period.annual':     'वार्षिक (12 महीने)',
+  'filter.period.all':        'सभी',
+};
+
+export const tr = {
+  // report.* — hunger-need prompts. DIGNITY-SENSITIVE: human-reviewed.
+  'report.title':      'Bu kişinin şu anda neye ihtiyacı var?',
+  'report.subtitle':   'Birden fazla seçebilirsin.',
+  'report.button':     'Noktayı yayınla',
+  'report.publishing': 'Yayınlanıyor…',
+  'report.success':    'Yayınlandı ✓',
+  'report.retry':      'Tekrar dene',
+  // Plain validation prompt — mechanical, finalized.
+  'errors.at_least_one_category': 'En az bir ihtiyaç seç.',
+  // Failure/status copy carries reassurance tone, drafted for human review.
+  'errors.publish_failed':        'Yayınlanamadı. Bağlantını kontrol et ve tekrar dene.',
+  'errors.offline':               'Çevrimdışısın. Nokta kaydedildi ve bağlantı geri geldiğinde gönderilecek.',
+  'errors.server_slow':           'Sunucu yanıt vermekte gecikti. Noktan kaydedilmiş olabilir, 30 saniye bekle ve tekrar denemeden önce sayfayı yeniden yükle.',
+  // Geofence-rejection copy. DIGNITY-SENSITIVE: human-reviewed.
+  'errors.out_of_country':        'Bu nokta {pais} dışında. Burada yayınlamak için seçili ülkenin içinde haritaya dokun ya da bayrak seçicisinden ülkeyi değiştir.',
+  // pin.* — status labels and the action button. Mechanical, finalized.
+  'pin.waiting':        'Bekliyor',
+  'pin.someone_going':  'Biri yolda',
+  'pin.attended_today': 'Bugün yardım edildi',
+  'pin.going_button':   'Şimdi yola çıkıyorum',
+  'pin.directions':     'Yol tarifi',
+  'pin.mark_attended':  'Yardım edildi olarak işaretle',
+  'pin.after_attended': 'Teşekkürler. Nokta arşivlendi.',
+  // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
+  'empty.no_pins_in_view':  '[REVISAR-HUMANO] Bu alanda henüz kimse haritaya eklenmedi. İhtiyaç içinde birini gördüysen, Bildir\'e dokun.',
+  'empty.close': 'Bildirimi kapat',
+  // cta.* — navigation/action labels. Mechanical, finalized.
+  'cta.report': 'Bildir',
+  'cta.list':   'Liste',
+  'cta.help':   'Nasıl çalışır',
+  'cta.pets':   'Kayıp evcil hayvanlar',
+  // ── CountryFlagControl (INTL) — flag-driven geocoder scope. Mechanical. ──
+  'country.button':      'Arama ülkesi: {name}',
+  'country.open':        'Adres aramasının ülkesini değiştir',
+  'country.title':       'Hangi ülkede adres aransın?',
+  'country.search':      'Ülke ara',
+  'country.empty':       'Ülke bulunamadı.',
+  'country.close':       'Ülke listesini kapat',
+  // ── LanguageControl (INTL) — UI language picker. Mechanical. ──
+  'lang.button':         'Dil: {name}',
+  'lang.open':           'Site dilini değiştir',
+  'lang.title':          'Dil seç',
+  // Live-region announcement on map recenter. Mechanical, finalized.
+  'map.center_on_country': 'Harita {country} merkezine alındı.',
+  // ── MainControls.js filter panel + confirm-point control. Mechanical. ──
+  'mainctl.loading':              'Yükleniyor...',
+  'mainctl.loading_aria':         'Yükleniyor',
+  'mainctl.filter.label':         'geçerli filtre:',
+  'mainctl.filter.aria':          'Kategoriye göre filtrele',
+  'mainctl.filter.all':           'Tümü',
+  'mainctl.filter.donors':        'Bağışçılar',
+  'mainctl.filter.basket':        'Gıda sepeti',
+  'mainctl.filter.street':        'Evsiz',
+  'mainctl.filter.ready_meal':    'Hazır yemek',
+  'mainctl.filter.social':        'Sosyal medya',
+  'mainctl.filter.has_cnpj':      'CNPJ var',
+  'mainctl.filter.none':          'Hiçbiri',
+  'mainctl.filter.needs_group':   'Afette ihtiyaçlar',
+  'mainctl.filter.all_needs':     'Tüm ihtiyaçlar',
+  'mainctl.phone_filter.label':   'Telefon',
+  'mainctl.phone_filter.aria':    'Telefona göre filtrele',
+  'mainctl.confirm.label':        'Noktayı onayla',
+  'mainctl.confirm.label_ready':  '✓ Noktayı onayla',
+  'mainctl.confirm.aria_ready':   'Haritada işaretlenen noktayı onayla',
+  'mainctl.confirm.aria_pending': 'Noktayı onayla (önce haritaya dokun)',
+  'mainctl.confirm.aria_busy':    'Nokta onaylanıyor',
+  // ── NEED categories — DIGNITY-SENSITIVE draft, `[REVISAR-HUMANO] ` pending
+  // human tone review. Short noun labels. No em-dash. See the pt block. ──
+  'need.label.comida':   '[REVISAR-HUMANO] Yiyecek',
+  'need.label.agua':     '[REVISAR-HUMANO] Su',
+  'need.label.roupa':    '[REVISAR-HUMANO] Giysi',
+  'need.label.higiene':  '[REVISAR-HUMANO] Hijyen',
+  'need.label.abrigo':   '[REVISAR-HUMANO] Barınak',
+  'need.label.remedio':  '[REVISAR-HUMANO] İlaç',
+  'need.label.animais':  '[REVISAR-HUMANO] Hayvanlar',
+  'need.label.energia':  '[REVISAR-HUMANO] Şarj',
+  'need.report.comida':  '[REVISAR-HUMANO] Yiyecek (genel)',
+  'need.report.agua':    '[REVISAR-HUMANO] Su',
+  'need.report.roupa':   '[REVISAR-HUMANO] Giysi',
+  'need.report.higiene': '[REVISAR-HUMANO] Hijyen',
+  'need.report.abrigo':  '[REVISAR-HUMANO] Barınak',
+  'need.report.remedio': '[REVISAR-HUMANO] İlaç',
+  'need.report.animais': '[REVISAR-HUMANO] Hayvanlar (kurtarma ve mama)',
+  'need.report.energia': '[REVISAR-HUMANO] Telefon şarjı / elektrik',
+  // FILTRO_TEMPO Lane B - period (recency) selector. MECHANICAL duration
+  // labels, finalized (no [REVISAR-HUMANO] marker, no em-dash).
+  'filter.period.label':      'Dönem',
+  'filter.period.daily':      'Günlük (24 saat)',
+  'filter.period.weekly':     'Haftalık (7 gün)',
+  'filter.period.monthly':    'Aylık (30 gün)',
+  'filter.period.semiannual': 'Altı aylık (6 ay)',
+  'filter.period.annual':     'Yıllık (12 ay)',
+  'filter.period.all':        'Tümü',
+};

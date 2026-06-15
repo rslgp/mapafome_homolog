@@ -29,4 +29,20 @@ export const DICT = {
   'fr':    { ...core.fr,   ...assinar.fr,   ...pets.fr,   ...page.fr },
   'ru':    { ...core.ru,   ...assinar.ru,   ...pets.ru,   ...page.ru },
   'zh':    { ...core.zh,   ...assinar.zh,   ...pets.zh,   ...page.zh },
+  // INTL HUMANITARIAN EXPANSION — ar/bn/uk, locales 8 to 10 (INTERNATIONAL_EXPANSION.md,
+  // ordered by humanitarian return: Arabic RTL, Bengali, Ukrainian). Each shard
+  // exports a block per locale at FULL key parity (asserted data-driven over
+  // SUPPORTED_LOCALES). Dignity-sensitive values carry `[REVISAR-HUMANO] ` for human
+  // tone review before ship, mirroring the en-US/de draft set exactly; mechanical
+  // copy is final. ar is RTL (direction wired in engine.applyDocumentLang).
+  'ar':    { ...core.ar,   ...assinar.ar,   ...pets.ar,   ...page.ar },
+  'bn':    { ...core.bn,   ...assinar.bn,   ...pets.bn,   ...page.bn },
+  'uk':    { ...core.uk,   ...assinar.uk,   ...pets.uk,   ...page.uk },
+  // INTL DEMAND EXPANSION — hi/tr, locales 11 to 12 (Hindi -> India, Turkish ->
+  // Turkey). Each shard exports a block per locale at FULL key parity (asserted
+  // data-driven over SUPPORTED_LOCALES). Dignity-sensitive values carry
+  // `[REVISAR-HUMANO] ` for human tone review, mirroring the de/ar draft set;
+  // mechanical copy is final. Both are LTR (Hindi Devanagari, Turkish Latin).
+  'hi':    { ...core.hi,   ...assinar.hi,   ...pets.hi,   ...page.hi },
+  'tr':    { ...core.tr,   ...assinar.tr,   ...pets.tr,   ...page.tr },
 };
