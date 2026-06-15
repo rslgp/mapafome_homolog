@@ -42,13 +42,22 @@ const HITBOX_RECT_STYLE = {
     interactive: false,
 };
 
-const isHitboxDebugEnabled = () => {
-    if (typeof window === 'undefined') return false;
+// Hardcoded blue for the all-countries view: distinct from the per-country red
+// so you can tell at a glance which mode is active.
+const HITBOX_ALL_RECT_STYLE = {
+    color: '#0077ff',
+    weight: 1,
+    fill: false,
+    interactive: false,
+    opacity: 0.55,
+};
+
+const getDebugMode = () => {
+    if (typeof window === 'undefined') return null;
     try {
-        const params = new URLSearchParams(window.location.search);
-        return params.get('debug') === 'hitbox';
+        return new URLSearchParams(window.location.search).get('debug');
     } catch (_e) {
-        return false;
+        return null;
     }
 };
 
@@ -59,16 +68,27 @@ const MapHitboxOutline = () => {
     useEffect(() => subscribe(setCountry), []);
 
     useEffect(() => {
-        if (!isHitboxDebugEnabled()) return undefined;
+        const mode = getDebugMode();
+        if (mode !== 'hitbox' && mode !== 'hitbox_all') return undefined;
         if (!map || typeof map.getContainer !== 'function') return undefined;
 
-        // A country's publish geofence is an array of { N, S, W, E } rects.
-        // Each maps to L.rectangle([[S, W], [N, E]]) — SW corner then NE
-        // corner, the [lat, lng] pair shape Leaflet expects.
-        const rects = COUNTRY_PUBLISH_BOUNDS[country] || [];
-        const layers = rects.map((r) =>
-            L.rectangle([[r.S, r.W], [r.N, r.E]], HITBOX_RECT_STYLE).addTo(map),
-        );
+        let layers;
+        if (mode === 'hitbox_all') {
+            // Draw every country's publish rectangles at once in blue.
+            layers = Object.values(COUNTRY_PUBLISH_BOUNDS).flatMap((rects) =>
+                rects.map((r) =>
+                    L.rectangle([[r.S, r.W], [r.N, r.E]], HITBOX_ALL_RECT_STYLE).addTo(map),
+                ),
+            );
+        } else {
+            // A country's publish geofence is an array of { N, S, W, E } rects.
+            // Each maps to L.rectangle([[S, W], [N, E]]) — SW corner then NE
+            // corner, the [lat, lng] pair shape Leaflet expects.
+            const rects = COUNTRY_PUBLISH_BOUNDS[country] || [];
+            layers = rects.map((r) =>
+                L.rectangle([[r.S, r.W], [r.N, r.E]], HITBOX_RECT_STYLE).addTo(map),
+            );
+        }
 
         return () => layers.forEach((layer) => layer.remove());
     }, [map, country]);
