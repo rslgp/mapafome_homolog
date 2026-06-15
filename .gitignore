@@ -36,6 +36,9 @@
 .DS_Store
 *.pem
 
+# translation scratch (local-only, never committed)
+/unbabel_zh*.html
+
 # debug
 npm-debug.log*
 yarn-debug.log*
