@@ -53,6 +53,9 @@ import {
 import { DROPPED_PIN_DIV_ICON, makePingRingIcon } from './mapPinIcons';
 import { MSG } from './mapMessages';
 import envVariables from './variaveisAmbiente';
+// Dev-only: red outline of the map's tap hitbox, opt-in via ?debug=hitbox.
+// Renders null (and adds no class) in every normal session. See its header.
+import MapHitboxOutline from './_debug/MapHitboxOutline';
 
 // F-4 (dropped_pin_invisible_mobile.yaml): hoist the inline style out of
 // the JSX so its identity is stable across renders. react-leaflet's
@@ -363,6 +366,9 @@ const CoffeeMap = ({
 
                 {/* Encapsulated click handler: was inline whenReady arrow in V1 and V2 */}
                 <MapClickHandler onMapClick={handleMapClick} onMapLongPress={handleMapLongPress} />
+
+                {/* Dev-only: outlines the tap hitbox in red when ?debug=hitbox. */}
+                <MapHitboxOutline />
 
                 <AttributionControl position="bottomleft" prefix={false} />
 

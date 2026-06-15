@@ -36,6 +36,9 @@ import {
   MapSizeInvalidator,
   MapViewUpdater,
 } from '../components/compatibility/components/mapComponents';
+// Dev-only: red outline do hitbox de toque, opt-in via ?debug=hitbox.
+// Renderiza null em toda sessão normal (mesmo do mapa de fome).
+import MapHitboxOutline from '../components/compatibility/components/_debug/MapHitboxOutline';
 
 // Identidade estável (F-4 do map.js): style fora do JSX para não remontar o mapa
 // e apagar marcadores adicionados imperativamente (o pin solto entre eles).
@@ -125,6 +128,9 @@ const PetMap = ({ center, pets, onPinDropped, onPetClick }) => {
         <MapSizeInvalidator />
 
         <MapClickHandler onMapClick={handleMapClick} onMapLongPress={handleMapLongPress} />
+
+        {/* Dev-only: outline vermelho do hitbox quando ?debug=hitbox. */}
+        <MapHitboxOutline />
 
         <AttributionControl position="bottomleft" prefix={false} />
 
