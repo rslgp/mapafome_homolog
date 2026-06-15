@@ -48,10 +48,21 @@ function geocoderResolving(code) {
 beforeEach(() => {
   window.localStorage.clear();
   document.documentElement.removeAttribute('lang');
+  // The engine anchors its active-locale SOT on globalThis.__MDF_I18N__ (its
+  // module-duplication fix), so vi.resetModules() — which clears the MODULE cache
+  // but NOT globalThis — does NOT reset the locale between tests. Without this, a
+  // prior test that resolved en-US (e.g. the Paris/France fix) leaves
+  // __MDF_I18N__.locale = 'en-US', and the engine's correct production init guard
+  // ("no stored value -> keep the existing in-memory pick, don't clobber it") then
+  // inherits that stale en-US on the next fresh import. Clear the global SOT here so
+  // each test's resetModules() + import re-resolves DEFAULT_LOCALE from a clean slate,
+  // exactly as it already clears localStorage and <html lang>.
+  delete globalThis.__MDF_I18N__;
 });
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  delete globalThis.__MDF_I18N__;
 });
 
 describe('resolveLocaleFromCountry() — pure country -> SUPPORTED locale (LOC-LANG)', () => {
