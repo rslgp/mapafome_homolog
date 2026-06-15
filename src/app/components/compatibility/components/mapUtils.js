@@ -130,19 +130,40 @@ export const createDirectionUrl = (coordinates) => {
 };
 
 /**
- * Checks if filter should be applied to marker
- * @param {Object} filters - Filter configuration from envVariables
- * @param {string} contato - Contact information
- * @param {string} dateMarked - Relative date string
- * @returns {boolean} True if marker should be filtered out
+ * Checks if a marker should be filtered OUT (hidden) for the active filters.
+ *
+ * Returns true => HIDE the marker. Two orthogonal gates, ORed (any true hides):
+ *  - telefoneFilter: hide markers with no contact (unchanged behavior).
+ *  - period window: hide markers OLDER than the chosen window. The window is
+ *    `filters.periodMaxHours` (in hours, from PERIOD_OPTIONS via the selected
+ *    periodId), compared against the marker's REAL ISO date through
+ *    isWithinTimeThreshold(dateISO, maxHours). This REPLACED the old
+ *    `dateMarked.includes("ano")` substring branch (fragile + binary).
+ *
+ * Risk mitigation (FILTRO_TEMPO_PLAN §7): if dateISO is absent/invalid OR the
+ * window is Infinity ('todos'), do NOT filter by period - treat the marker as
+ * always-visible, so a marker with a missing/bad DateISO never disappears under
+ * a finite window.
+ *
+ * @param {Object} filters - Filter configuration (telefoneFilter, periodMaxHours)
+ * @param {*} contato - Contact display (falsy/empty => "no contact")
+ * @param {string} dateISO - The marker's real ISO date string
+ * @returns {boolean} True if the marker should be hidden
  */
-export const shouldApplyFilter = (filters, contato, dateMarked) => {
+export const shouldApplyFilter = (filters, contato, dateISO) => {
   if (filters.telefoneFilter && (!contato || contato === '')) {
     return true;
   }
 
-  if (filters.ultimoAnoFilter && dateMarked.includes("ano")) {
-    return true;
+  const maxHours = filters.periodMaxHours;
+  if (maxHours != null && maxHours !== Infinity && dateISO) {
+    // §7: only HIDE for a VALID, parseable date that is out of window. An
+    // unparseable DateISO (NaN) must stay visible, not vanish under a finite
+    // window - so we gate on a real timestamp before testing the threshold.
+    const ts = new Date(dateISO).getTime();
+    if (!Number.isNaN(ts) && !isWithinTimeThreshold(dateISO, maxHours)) {
+      return true;
+    }
   }
 
   return false;

@@ -24,7 +24,7 @@ export default function AppMapGrid({ state, handlers, refs }) {
                 tileMapOption={state.tileMapOption}
                 filtro={state.filtro}
                 telefoneFilterActive={state.telefoneFilterLocal}
-                ultimoAnoFilterActive={state.ultimoAnoFilterLocal}
+                periodId={state.periodLocal}
                 onRemoverPonto={handlers.removerPonto}
                 onVerificarPonto={handlers.verificarPonto}
                 onEntregarAlimento={handlers.entregarAlimento}
@@ -47,7 +47,7 @@ export default function AppMapGrid({ state, handlers, refs }) {
                 numero={state.numero}
                 redesocial={state.redesocial}
                 telefoneFilterLocal={state.telefoneFilterLocal}
-                ultimoAnoFilterLocal={state.ultimoAnoFilterLocal}
+                periodLocal={state.periodLocal}
                 geofenceEligible={state.geofenceEligible}
                 onFiltroChange={handlers.setFiltro}
                 onTipoAlimentoChange={handlers.setTipoAlimento}
@@ -59,7 +59,7 @@ export default function AppMapGrid({ state, handlers, refs }) {
                 onRedeSocialChange={handlers.handleChangeRedeSocial}
                 onClickMap={handlers.handleClickMap}
                 onTelefoneFilterChange={handlers.telefoneFilterChange}
-                onUltimoAnoFilterChange={handlers.ultimoAnoFilterChange}
+                onPeriodChange={handlers.onPeriodChange}
                 dropDownMenuSemanaEntregaAlimentoPronto={refs.dropDownMenuSemanaEntregaAlimentoPronto}
                 dropDownMenuHorarioEntregaAlimentoPronto={refs.dropDownMenuHorarioEntregaAlimentoPronto}
                 dropDownMenuSemanaPrecisandoBuscar={refs.dropDownMenuSemanaPrecisandoBuscar}

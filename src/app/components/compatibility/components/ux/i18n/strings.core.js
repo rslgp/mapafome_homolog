@@ -80,11 +80,6 @@ export const pt = {
   'mainctl.filter.all_needs':     'Todas as necessidades',
   'mainctl.phone_filter.label':   'Telefone',
   'mainctl.phone_filter.aria':    'Filtrar por telefone',
-  'mainctl.year_filter.aria':     'Filtrar pelo último ano',
-  'mainctl.year_filter.title':    'Esse ano',
-  'mainctl.year_filter.info_aria':'Por que existe o filtro Esse ano?',
-  'mainctl.year_filter.caption':  'pedido na enchente do RS · 2024',
-  'mainctl.year_filter.note':     'Filtro pedido por pessoas atingidas pela enchente do Rio Grande do Sul, em 2024, para ver só os pedidos recentes do desastre. Mostra apenas as marcações deste ano.',
   'mainctl.confirm.label':        'Confirmar ponto',
   'mainctl.confirm.label_ready':  '✓ Confirmar ponto',
   'mainctl.confirm.aria_ready':   'Confirmar ponto marcado no mapa',
@@ -116,6 +111,15 @@ export const pt = {
   'need.report.remedio': 'Remédios',
   'need.report.animais': 'Animais (resgate e ração)',
   'need.report.energia': 'Carregar celular / energia',
+  // FILTRO_TEMPO Lane B - period (recency) selector that replaced the
+  // binary "Esse ano" checkbox. Mechanical duration labels (no em-dash).
+  'filter.period.label':      'Período',
+  'filter.period.daily':      'Diário (24h)',
+  'filter.period.weekly':     'Semanal (7 dias)',
+  'filter.period.monthly':    'Mensal (30 dias)',
+  'filter.period.semiannual': 'Semestral (6 meses)',
+  'filter.period.annual':     'Anual (12 meses)',
+  'filter.period.all':        'Todos',
 };
 
 export const es = {
@@ -179,11 +183,6 @@ export const es = {
   'mainctl.filter.all_needs':     'Todas las necesidades',
   'mainctl.phone_filter.label':   'Teléfono',
   'mainctl.phone_filter.aria':    'Filtrar por teléfono',
-  'mainctl.year_filter.aria':     'Filtrar por el último año',
-  'mainctl.year_filter.title':    'Este año',
-  'mainctl.year_filter.info_aria':'¿Por qué existe el filtro Este año?',
-  'mainctl.year_filter.caption':  'pedido en la inundación de RS · 2024',
-  'mainctl.year_filter.note':     'Filtro pedido por personas afectadas por la inundación de Rio Grande do Sul, en 2024, para ver solo los pedidos recientes del desastre. Muestra solo las marcaciones de este año.',
   'mainctl.confirm.label':        'Confirmar punto',
   'mainctl.confirm.label_ready':  '✓ Confirmar punto',
   'mainctl.confirm.aria_ready':   'Confirmar el punto marcado en el mapa',
@@ -208,6 +207,15 @@ export const es = {
   'need.report.remedio': '[REVISAR-HUMANO] Medicinas',
   'need.report.animais': '[REVISAR-HUMANO] Animales (rescate y alimento)',
   'need.report.energia': '[REVISAR-HUMANO] Cargar teléfono / energía',
+  // FILTRO_TEMPO Lane B - selector de período (recencia). Etiquetas
+  // mecánicas de duración (sin raya larga).
+  'filter.period.label':      'Período',
+  'filter.period.daily':      'Diario (24h)',
+  'filter.period.weekly':     'Semanal (7 días)',
+  'filter.period.monthly':    'Mensual (30 días)',
+  'filter.period.semiannual': 'Semestral (6 meses)',
+  'filter.period.annual':     'Anual (12 meses)',
+  'filter.period.all':        'Todos',
 };
 
 export const enUS = {
@@ -278,11 +286,6 @@ export const enUS = {
   'mainctl.filter.all_needs':     'All needs',
   'mainctl.phone_filter.label':   'Phone',
   'mainctl.phone_filter.aria':    'Filter by phone',
-  'mainctl.year_filter.aria':     'Filter by the last year',
-  'mainctl.year_filter.title':    'This year',
-  'mainctl.year_filter.info_aria':'Why does the This year filter exist?',
-  'mainctl.year_filter.caption':  'requested during the RS flood · 2024',
-  'mainctl.year_filter.note':     'Filter requested by people affected by the Rio Grande do Sul flood, in 2024, to see only the recent requests from the disaster. Shows only this year\'s points.',
   'mainctl.confirm.label':        'Confirm point',
   'mainctl.confirm.label_ready':  '✓ Confirm point',
   'mainctl.confirm.aria_ready':   'Confirm the point marked on the map',
@@ -306,6 +309,15 @@ export const enUS = {
   'need.report.remedio': '[REVISAR-HUMANO] Medicine',
   'need.report.animais': '[REVISAR-HUMANO] Animals (rescue and pet food)',
   'need.report.energia': '[REVISAR-HUMANO] Charge phone / power',
+  // FILTRO_TEMPO Lane B - period (recency) selector. MECHANICAL duration
+  // labels, finalized (no [REVISAR-HUMANO] marker, no em-dash).
+  'filter.period.label':      'Period',
+  'filter.period.daily':      'Daily (24h)',
+  'filter.period.weekly':     'Weekly (7 days)',
+  'filter.period.monthly':    'Monthly (30 days)',
+  'filter.period.semiannual': 'Semiannual (6 months)',
+  'filter.period.annual':     'Annual (12 months)',
+  'filter.period.all':        'All',
 };
 
 // INTL M7 — de/fr/ru/zh added at full key parity with pt. Same DRAFTED vs
@@ -377,11 +389,6 @@ export const de = {
   'mainctl.filter.all_needs':     'Alle Bedürfnisse',
   'mainctl.phone_filter.label':   'Telefon',
   'mainctl.phone_filter.aria':    'Nach Telefon filtern',
-  'mainctl.year_filter.aria':     'Nach dem letzten Jahr filtern',
-  'mainctl.year_filter.title':    'Dieses Jahr',
-  'mainctl.year_filter.info_aria':'Warum gibt es den Filter Dieses Jahr?',
-  'mainctl.year_filter.caption':  'angefragt bei der RS-Flut · 2024',
-  'mainctl.year_filter.note':     'Filter angefragt von Menschen, die von der Flut in Rio Grande do Sul 2024 betroffen sind, um nur die aktuellen Anfragen aus der Katastrophe zu sehen. Zeigt nur die Markierungen dieses Jahres.',
   'mainctl.confirm.label':        'Punkt bestätigen',
   'mainctl.confirm.label_ready':  '✓ Punkt bestätigen',
   'mainctl.confirm.aria_ready':   'Den auf der Karte markierten Punkt bestätigen',
@@ -405,6 +412,15 @@ export const de = {
   'need.report.remedio': '[REVISAR-HUMANO] Medikamente',
   'need.report.animais': '[REVISAR-HUMANO] Tiere (Rettung und Tierfutter)',
   'need.report.energia': '[REVISAR-HUMANO] Handy aufladen / Strom',
+  // FILTRO_TEMPO Lane B - period (recency) selector. MECHANICAL duration
+  // labels, finalized (no [REVISAR-HUMANO] marker, no em-dash).
+  'filter.period.label':      'Zeitraum',
+  'filter.period.daily':      'Täglich (24 Std.)',
+  'filter.period.weekly':     'Wöchentlich (7 Tage)',
+  'filter.period.monthly':    'Monatlich (30 Tage)',
+  'filter.period.semiannual': 'Halbjährlich (6 Monate)',
+  'filter.period.annual':     'Jährlich (12 Monate)',
+  'filter.period.all':        'Alle',
 };
 
 export const fr = {
@@ -469,11 +485,6 @@ export const fr = {
   'mainctl.filter.all_needs':     'Tous les besoins',
   'mainctl.phone_filter.label':   'Téléphone',
   'mainctl.phone_filter.aria':    'Filtrer par téléphone',
-  'mainctl.year_filter.aria':     'Filtrer par la dernière année',
-  'mainctl.year_filter.title':    'Cette année',
-  'mainctl.year_filter.info_aria':'Pourquoi le filtre Cette année existe-t-il ?',
-  'mainctl.year_filter.caption':  'demandé lors de l\'inondation du RS · 2024',
-  'mainctl.year_filter.note':     'Filtre demandé par les personnes touchées par l\'inondation du Rio Grande do Sul, en 2024, pour ne voir que les demandes récentes de la catastrophe. Affiche uniquement les points de cette année.',
   'mainctl.confirm.label':        'Confirmer le point',
   'mainctl.confirm.label_ready':  '✓ Confirmer le point',
   'mainctl.confirm.aria_ready':   'Confirmer le point marqué sur la carte',
@@ -498,6 +509,16 @@ export const fr = {
   'need.report.remedio': '[REVISAR-HUMANO] Médicaments',
   'need.report.animais': '[REVISAR-HUMANO] Animaux (sauvetage et nourriture)',
   'need.report.energia': '[REVISAR-HUMANO] Recharger un téléphone / énergie',
+  // FILTRO_TEMPO Lane B - period (recency) selector. MECHANICAL duration
+  // labels, finalized (no [REVISAR-HUMANO] marker). Short option labels with
+  // no : ; ! ? high marks, so no narrow NBSP needed. No em-dash.
+  'filter.period.label':      'Période',
+  'filter.period.daily':      'Quotidien (24 h)',
+  'filter.period.weekly':     'Hebdomadaire (7 jours)',
+  'filter.period.monthly':    'Mensuel (30 jours)',
+  'filter.period.semiannual': 'Semestriel (6 mois)',
+  'filter.period.annual':     'Annuel (12 mois)',
+  'filter.period.all':        'Tous',
 };
 
 export const ru = {
@@ -562,11 +583,6 @@ export const ru = {
   'mainctl.filter.all_needs':     'Все потребности',
   'mainctl.phone_filter.label':   'Телефон',
   'mainctl.phone_filter.aria':    'Фильтровать по телефону',
-  'mainctl.year_filter.aria':     'Фильтровать за последний год',
-  'mainctl.year_filter.title':    'В этом году',
-  'mainctl.year_filter.info_aria':'Зачем нужен фильтр В этом году?',
-  'mainctl.year_filter.caption':  'запрошено во время наводнения в RS · 2024',
-  'mainctl.year_filter.note':     'Фильтр запрошен людьми, пострадавшими от наводнения в Риу-Гранди-ду-Сул в 2024 году, чтобы видеть только недавние запросы по бедствию. Показывает только отметки этого года.',
   'mainctl.confirm.label':        'Подтвердить точку',
   'mainctl.confirm.label_ready':  '✓ Подтвердить точку',
   'mainctl.confirm.aria_ready':   'Подтвердить точку, отмеченную на карте',
@@ -592,6 +608,17 @@ export const ru = {
   'need.report.remedio': '[REVISAR-HUMANO] Лекарства',
   'need.report.animais': '[REVISAR-HUMANO] Животные (спасение и корм)',
   'need.report.energia': '[REVISAR-HUMANO] Зарядить телефон / электричество',
+  // FILTRO_TEMPO Lane B - period (recency) selector. MECHANICAL duration
+  // labels, finalized. Fixed citation forms for a standalone dropdown option
+  // (not a {n}-count plural message), so no numeral-driven case/declension was
+  // applied (that transform stays human-review-only). No em-dash.
+  'filter.period.label':      'Период',
+  'filter.period.daily':      'Ежедневно (24 ч)',
+  'filter.period.weekly':     'Еженедельно (7 дней)',
+  'filter.period.monthly':    'Ежемесячно (30 дней)',
+  'filter.period.semiannual': 'Раз в полгода (6 месяцев)',
+  'filter.period.annual':     'За год (12 месяцев)',
+  'filter.period.all':        'Все',
 };
 
 export const zh = {
@@ -656,11 +683,6 @@ export const zh = {
   'mainctl.filter.all_needs':     '所有需求',
   'mainctl.phone_filter.label':   '电话',
   'mainctl.phone_filter.aria':    '按电话筛选',
-  'mainctl.year_filter.aria':     '按最近一年筛选',
-  'mainctl.year_filter.title':    '今年',
-  'mainctl.year_filter.info_aria':'为什么有“今年”这个筛选？',
-  'mainctl.year_filter.caption':  '在 RS 洪水期间请求 · 2024',
-  'mainctl.year_filter.note':     '该筛选由 2024 年里奥格兰德州洪灾的受灾者请求，用于只查看本次灾害的近期请求。仅显示今年的标记。',
   'mainctl.confirm.label':        '确认地点',
   'mainctl.confirm.label_ready':  '✓ 确认地点',
   'mainctl.confirm.aria_ready':   '确认在地图上标记的地点',
@@ -686,4 +708,14 @@ export const zh = {
   'need.report.remedio': '[REVISAR-HUMANO] 药品',
   'need.report.animais': '[REVISAR-HUMANO] 动物（救援与口粮）',
   'need.report.energia': '[REVISAR-HUMANO] 给手机充电 / 电力',
+  // FILTRO_TEMPO Lane B - period (recency) selector. MECHANICAL duration
+  // labels, finalized (no [REVISAR-HUMANO] marker, no em-dash). Full-width
+  // parentheses match this shard's existing zh house style.
+  'filter.period.label':      '时间范围',
+  'filter.period.daily':      '每日（24小时）',
+  'filter.period.weekly':     '每周（7天）',
+  'filter.period.monthly':    '每月（30天）',
+  'filter.period.semiannual': '每半年（6个月）',
+  'filter.period.annual':     '每年（12个月）',
+  'filter.period.all':        '全部',
 };

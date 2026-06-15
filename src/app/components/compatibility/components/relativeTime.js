@@ -7,10 +7,12 @@
 //
 // Behavior contract preserved from the old library output (the substrings other
 // code keys on must survive):
-//   - shouldApplyFilter() in mapUtils.js tests dateMarked.includes("ano")
 //   - cleanold.js tests dateMarked.includes("semana") / .includes("mes")
 // numeric:'always' keeps the "há {n} {unidade}" shape (never the idiomatic
-// "ontem"/"semana passada"), so "ano"/"semana"/"meses" appear exactly as before.
+// "ontem"/"semana passada"), so "semana"/"meses" appear exactly as before.
+// NOTE (FILTRO_TEMPO Lane B): shouldApplyFilter() NO LONGER reads this string -
+// the period filter compares the marker's real DateISO via isWithinTimeThreshold,
+// not dateMarked.includes("ano"). cleanold.js is now the only substring consumer.
 
 const rtf = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'always' });
 

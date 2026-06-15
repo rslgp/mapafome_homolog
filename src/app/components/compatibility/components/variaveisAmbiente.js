@@ -8,6 +8,11 @@
 // when nothing is injected the resolver returns 'br', so unit tests and SSR get
 // Brazil — i.e. the legacy two-rectangle behavior, byte-identical to today.
 import { isInsideCountry } from './countries';
+// FILTRO_TEMPO Lane B: the period-filter SOT (4 windows + default) lives in
+// mapConstants; this POJO holds the ACTIVE selection so the filter predicate
+// (shouldApplyFilter) and the marker pipeline read one window. Replaced the
+// binary ultimoAnoFilter flag (FILTRO_TEMPO_PLAN §3 item 2).
+import { PERIOD_DEFAULT, periodMaxHoursFor } from './mapConstants';
 
 // The single injected accessor. Defaults to Brazil so the POJO is correct with
 // zero wiring (tests / SSR / pre-bootstrap). The bootstrap replaces it with one
@@ -35,6 +40,13 @@ const envVariables = {
         return isInsideCountry(localizacao, activeCountryResolver());
     },
     "telefoneFilter":false,
+    // FILTRO_TEMPO Lane B - the active recency window. periodId is the chosen
+    // PERIOD_OPTIONS id (default = Mensal/30d); periodMaxHours is its window in
+    // hours, kept in sync by the composition root (App.onPeriodChange). Markers
+    // older than periodMaxHours are hidden by shouldApplyFilter; 'todos'
+    // (Infinity) means "no period filter". REPLACES the binary ultimoAnoFilter.
+    "periodId": PERIOD_DEFAULT,
+    "periodMaxHours": periodMaxHoursFor(PERIOD_DEFAULT),
     "distanceInKmBetweenEarthCoordinates": ( lat1, lon1, lat2, lon2 ) => {
         var earthRadiusKm = 6371;
 

@@ -29,6 +29,7 @@ import { enqueue as enqueuePublish, bindOnlineFlush, queueSize } from './compone
 import CreatorsMapaFome from './components/CreatorsMapaFome.js'
 
 import envVariables, { setActiveCountryResolver } from './components/variaveisAmbiente';
+import { PERIOD_DEFAULT, applyPeriodToEnv } from './components/mapConstants'; // FILTRO_TEMPO period SOT
 import { activeCountryFor } from './components/geofence';
 import { getCountry } from './components/countries';
 import * as countryStore from './components/countryStore';
@@ -150,7 +151,8 @@ class App extends Component {
       lastMarkedCoords: [],
       numero: '',
       telefoneFilterLocal: false,
-      ultimoAnoFilterLocal: false,
+      // FILTRO_TEMPO Lane B - selected recency window (PERIOD_OPTIONS id; default Mensal). Was ultimoAnoFilterLocal.
+      periodLocal: PERIOD_DEFAULT,
       site: '',
       redesocial: '',
       tourOpen: false,
@@ -209,7 +211,7 @@ class App extends Component {
     this._computeGeofenceEligibility = this._computeGeofenceEligibility.bind(this);
     this._refreshGeofenceEligibility = this._refreshGeofenceEligibility.bind(this);
     this.telefoneFilterChange = this.telefoneFilterChange.bind(this);
-    this.ultimoAnoFilterChange = this.ultimoAnoFilterChange.bind(this);
+    this.onPeriodChange = this.onPeriodChange.bind(this);
     this.handleChangeRedeSocial = this.handleChangeRedeSocial.bind(this);
 
     this.verificarPonto = this.verificarPonto.bind(this);
@@ -306,11 +308,9 @@ class App extends Component {
     });
   }
 
-  ultimoAnoFilterChange(event) {
-    envVariables.ultimoAnoFilter = !envVariables.ultimoAnoFilter;
-    this.setState({
-      ultimoAnoFilterLocal: envVariables.ultimoAnoFilter
-    });
+  onPeriodChange(event) {
+    // FILTRO_TEMPO Lane B - mirror the window into env (the place shouldApplyFilter reads) + state.
+    this.setState({ periodLocal: applyPeriodToEnv(envVariables, event.target.value) });
   }
 
   // Thin wrappers over the extracted pin sheets-service layer (appPinActions.js).
@@ -945,7 +945,7 @@ class App extends Component {
       handleChangeRedeSocial: this.handleChangeRedeSocial,
       handleClickMap: this.handleClickMap,
       telefoneFilterChange: this.telefoneFilterChange,
-      ultimoAnoFilterChange: this.ultimoAnoFilterChange,
+      onPeriodChange: this.onPeriodChange,
       // <main> inline handler (was inline in renderMain)
       onOpenList: () => this.setState({ listOpen: true }),
       // overlay callbacks

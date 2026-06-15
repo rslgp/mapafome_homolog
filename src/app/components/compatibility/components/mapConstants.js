@@ -122,3 +122,48 @@ export const FILTER_TYPES = {
   VERIFICADOS: "Verificados",
   NENHUM: "Nenhum",
 };
+
+// Time-period filter - SINGLE SOURCE OF TRUTH for the 4-level recency selector
+// that REPLACED the binary "Esse ano" (ultimoAnoFilter) checkbox. Each window is
+// expressed in HOURS so it feeds isWithinTimeThreshold(dateISO, maxHours) in
+// mapUtils.js directly (the same age engine the test markers already use), i.e.
+// we filter by the marker's REAL DateISO, never the fragile relative-string
+// substring `dateMarked.includes("ano")`. `labelKey` is an i18n key resolved via
+// t() in the UI (the labels live in the pt/es/en-US blocks of strings.core.js,
+// so the keys appear as literals here AND satisfy the no-dead-key parity test).
+//
+// The 'todos' (Infinity) escape hatch preserves the legacy "see everything"
+// behavior the unchecked checkbox gave: without it, making the selector
+// mandatory would REMOVE the ability to see older points (a regression). The
+// period filter is orthogonal to the "filtro atual" category dropdown: a marker
+// shows only if it passes BOTH (logical AND).
+export const PERIOD_OPTIONS = [
+  { id: 'dia',      maxHours: 24,        labelKey: 'filter.period.daily' },
+  { id: 'semana',   maxHours: 24 * 7,    labelKey: 'filter.period.weekly' },
+  { id: 'mes',      maxHours: 24 * 30,   labelKey: 'filter.period.monthly' },
+  { id: 'semestre', maxHours: 24 * 182,  labelKey: 'filter.period.semiannual' },
+  { id: 'ano',      maxHours: 24 * 365,  labelKey: 'filter.period.annual' },
+  { id: 'todos',    maxHours: Infinity,  labelKey: 'filter.period.all' },
+];
+
+// Default = Mensal (30d).
+export const PERIOD_DEFAULT = 'mes';
+
+// Resolve a period id to its window in hours (Infinity for 'todos' / unknown ids,
+// which means "no period filtering"). One small helper so callers never re-derive
+// the lookup from PERIOD_OPTIONS by hand and drift from this SOT.
+export const periodMaxHoursFor = (periodId) => {
+  const opt = PERIOD_OPTIONS.find((o) => o.id === periodId);
+  return opt ? opt.maxHours : Infinity;
+};
+
+// FILTRO_TEMPO Lane B - composition glue for the period selector: mirror the chosen
+// window into the shared env POJO (periodId + its hours = the ONE place
+// shouldApplyFilter reads). Returns periodId so the caller can set local state in one
+// line. Kept here (next to the SOT) so App.js stays under the LOC fitness limit and
+// the env-mirror logic lives beside the data it derives from.
+export const applyPeriodToEnv = (env, periodId) => {
+  env.periodId = periodId;
+  env.periodMaxHours = periodMaxHoursFor(periodId);
+  return periodId;
+};

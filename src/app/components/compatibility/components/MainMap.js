@@ -8,7 +8,7 @@ const MainMap = ({
   center,
   filtro,
   telefoneFilterActive,
-  ultimoAnoFilterActive,
+  periodId,
   onRemoverPonto,
   onVerificarPonto,
   onEntregarAlimento,
@@ -42,7 +42,7 @@ const MainMap = ({
           avaliar={onAvaliar}
           filtro={filtro}
           telefoneFilterActive={telefoneFilterActive}
-          ultimoAnoFilterActive={ultimoAnoFilterActive}
+          periodId={periodId}
           contabilizarClicado={onContabilizarClicado}
           clicouTelefone={onClicouTelefone}
           onPinDropped={onPinDropped}

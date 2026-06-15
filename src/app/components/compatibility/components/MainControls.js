@@ -13,6 +13,9 @@ import { GEOFENCE_ELIGIBILITY_EVENT } from './geofenceEvents';
 // import red from '../images/red.svg';
 import { bean as coffeeBean, hub, green, red } from './image/svgHandler';
 import { NEED_CATEGORIES, needLabel } from './ux/needCategories';
+import { PERIOD_OPTIONS } from './mapConstants';
+// FILTRO_TEMPO Lane B - period labels are i18n; useLocale re-renders the
+// <select> options when the locale flips so t() re-reads.
 import { t, useLocale } from './ux/strings';
 
 import Link from 'next/link';
@@ -28,7 +31,7 @@ const MainControls = ({
   numero,
   redesocial,
   telefoneFilterLocal,
-  ultimoAnoFilterLocal,
+  periodLocal,
   onFiltroChange,
   onTipoAlimentoChange,
   onDiaSemanaChange,
@@ -39,7 +42,7 @@ const MainControls = ({
   onRedeSocialChange,
   onClickMap,
   onTelefoneFilterChange,
-  onUltimoAnoFilterChange,
+  onPeriodChange,
   dropDownMenuSemanaEntregaAlimentoPronto,
   dropDownMenuHorarioEntregaAlimentoPronto,
   dropDownMenuSemanaPrecisandoBuscar,
@@ -67,11 +70,9 @@ const MainControls = ({
   // CustomEvent App.js broadcasts once the GPS/IP resolvers settle — no prop
   // drilling, exactly like the MARKER_PLACED_EVENT subscription below.
   const [eligible, setEligible] = useState(geofenceEligible);
-  // Disclosure for the "Esse ano" filter's origin note (2024 RS floods).
-  const [anoInfoOpen, setAnoInfoOpen] = useState(false);
   // i18n: subscribe to locale changes so every t() below re-reads live on a
-  // language switch (no reload). t() reads the active locale at call time, so
-  // without this hook the panel would render the locale active at first mount.
+  // language switch (no reload). FILTRO_TEMPO Lane B also relies on this so the
+  // period <select> option labels re-read t() when the UI locale changes.
   useLocale();
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
@@ -135,35 +136,24 @@ const MainControls = ({
               <span>{t('mainctl.phone_filter.label')}</span>
             </article>
 
-            <article className='parte filtro-ano'>
-              <Checkbox
-                checked={ultimoAnoFilterLocal}
-                onChange={onUltimoAnoFilterChange}
-                slotProps={{ input: { 'aria-label': t('mainctl.year_filter.aria') } }}
-              />
-              <span className='filtro-ano__text'>
-                <span className='filtro-ano__title'>
-                  {t('mainctl.year_filter.title')}
-                  <button
-                    type='button'
-                    className='filtro-ano__info'
-                    aria-expanded={anoInfoOpen}
-                    aria-controls='filtro-ano-note'
-                    aria-label={t('mainctl.year_filter.info_aria')}
-                    onClick={() => setAnoInfoOpen((o) => !o)}
-                  >
-                    ⓘ
-                  </button>
-                </span>
-                <span className='filtro-ano__caption'>{t('mainctl.year_filter.caption')}</span>
-              </span>
+            {/* FILTRO_TEMPO Lane B: 4-level recency selector (+ "Todos" escape
+                hatch) that REPLACED the binary "Esse ano" checkbox. Filters every
+                dot color by the marker's real DateISO via shouldApplyFilter. A
+                <select> (like "filtro atual" above) for a11y + visual consistency;
+                labels come from the PERIOD_OPTIONS SOT, resolved through t(). */}
+            <article className='parte filtro-periodo'>
+              <label htmlFor='filtro-periodo'>{t('filter.period.label')}:</label>
+              <select
+                id='filtro-periodo'
+                aria-label='Filtrar por período'
+                value={periodLocal}
+                onChange={onPeriodChange}
+              >
+                {PERIOD_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>{t(opt.labelKey)}</option>
+                ))}
+              </select>
             </article>
-
-            {anoInfoOpen && (
-              <p id='filtro-ano-note' className='filtro-ano__note'>
-                {t('mainctl.year_filter.note')}
-              </p>
-            )}
           </article>
 
           {/* RADIO BUTTON */}

@@ -73,7 +73,7 @@ const CoffeeMap = ({
     location,
     filtro,
     telefoneFilterActive,
-    ultimoAnoFilterActive,
+    periodId,
     dataMapsProp,
     clicouTelefone,
     contabilizarClicado,
@@ -211,10 +211,18 @@ const CoffeeMap = ({
 
     // Filter state must participate in the cluster key: MarkerClusterGroup
     // caches its internal layer tree and does not re-evaluate children when
-    // only a module-scoped flag (envVariables.telefoneFilter / ultimoAnoFilter)
-    // changes. Rekeying on the active filter flags forces a clean remount so
+    // only a module-scoped value (envVariables.telefoneFilter / periodMaxHours)
+    // changes. Rekeying on the active filter inputs forces a clean remount so
     // the filter predicate in MarkerGroup actually takes effect.
-    const filterSig = `t${telefoneFilterActive ? 1 : 0}a${ultimoAnoFilterActive ? 1 : 0}`;
+    //
+    // FILTRO_TEMPO Lane B: the period window keys on periodId. We ALSO fold the
+    // minute-bucketed nowTick into the signature so the groups remount as time
+    // passes - a marker can age OUT of the chosen window between user actions,
+    // and nowTick (bumped once a minute in App) is what makes that re-filter
+    // happen with no prop/flag change. The bucket keeps the key stable within a
+    // minute so we don't thrash the cluster tree every render.
+    const tickBucket = nowTick ? Math.floor(nowTick / 60000) : 0;
+    const filterSig = `t${telefoneFilterActive ? 1 : 0}p${periodId || 'todos'}n${tickBucket}`;
 
     const addGroup = (key, filterFn, icon, clusterFn, msgFormatter, removeOutside = false) => {
         const filtered = dataMapsProp.filter(filterFn);
@@ -393,6 +401,7 @@ CoffeeMap.propTypes = {
     pingCoords:            PropTypes.arrayOf(PropTypes.number),
     onReporterPinClick:    PropTypes.func,
     nowTick:               PropTypes.number,
+    periodId:              PropTypes.string,
 };
 
 export default CoffeeMap;

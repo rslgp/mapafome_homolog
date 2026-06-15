@@ -86,7 +86,11 @@ const MarkerGroup = ({
       ) : ''
     );
 
-    if (shouldApplyFilter(envVariables, contactDisplay, dateMarked)) {
+    // Period filter keys on the marker's REAL ISO date (DateISO), not the
+    // relative display string `dateMarked` - see FILTRO_TEMPO_PLAN §2.2. The
+    // old signature took dateMarked and matched `.includes("ano")`; the new one
+    // compares DateISO against the chosen window via isWithinTimeThreshold.
+    if (shouldApplyFilter(envVariables, contactDisplay, DateISO)) {
       return null;
     }
 
