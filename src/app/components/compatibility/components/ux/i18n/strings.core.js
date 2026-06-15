@@ -352,7 +352,7 @@ export const de = {
   'pin.mark_attended':  'Als geholfen markieren',
   'pin.after_attended': 'Danke. Der Punkt wurde archiviert.',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
-  'empty.no_pins_in_view':  'In diesem Bereich wurde noch niemand kartiert. Wenn du jemanden in Not gesehen hast, tippe auf Melden.',
+  'empty.no_pins_in_view':  '[REVISAR-HUMANO] In diesem Bereich wurde noch niemand kartiert. Wenn du jemanden in Not gesehen hast, tippe auf Melden.',
   'empty.close': 'Hinweis schließen',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Melden',
@@ -425,7 +425,7 @@ export const de = {
 
 export const fr = {
   // report.* — hunger-need prompts. DIGNITY-SENSITIVE: human-reviewed.
-  'report.title':      'De quoi cette personne a-t-elle besoin maintenant ?',
+  'report.title':      'De quoi cette personne a-t-elle besoin maintenant ?',
   'report.subtitle':   'Tu peux en choisir plusieurs.',
   'report.button':     'Publier le point',
   'report.publishing': 'Publication…',
@@ -448,7 +448,7 @@ export const fr = {
   'pin.mark_attended':  'Marquer comme aidé',
   'pin.after_attended': 'Merci. Le point a été archivé.',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
-  'empty.no_pins_in_view':  'Personne n\'a encore été cartographié dans cette zone. Si tu as vu quelqu\'un dans le besoin, touche Signaler.',
+  'empty.no_pins_in_view':  '[REVISAR-HUMANO] Personne n\'a encore été cartographié dans cette zone. Si tu as vu quelqu\'un dans le besoin, touche Signaler.',
   'empty.close': 'Fermer l\'avis',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Signaler',
@@ -456,14 +456,14 @@ export const fr = {
   'cta.help':   'Comment ça marche',
   'cta.pets':   'Animaux perdus',
   // ── CountryFlagControl (INTL) — flag-driven geocoder scope. Mechanical. ──
-  'country.button':      'Pays de recherche : {name}',
+  'country.button':      'Pays de recherche : {name}',
   'country.open':        'Changer le pays de la recherche d\'adresse',
-  'country.title':       'Chercher une adresse dans quel pays ?',
+  'country.title':       'Chercher une adresse dans quel pays ?',
   'country.search':      'Chercher un pays',
   'country.empty':       'Aucun pays trouvé.',
   'country.close':       'Fermer la liste des pays',
   // ── LanguageControl (INTL) — UI language picker. Mechanical. ──
-  'lang.button':         'Langue : {name}',
+  'lang.button':         'Langue : {name}',
   'lang.open':           'Changer la langue du site',
   'lang.title':          'Choisir la langue',
   // Live-region announcement on map recenter. Mechanical, finalized.
@@ -471,7 +471,7 @@ export const fr = {
   // ── MainControls.js filter panel + confirm-point control. Mechanical. ──
   'mainctl.loading':              'Chargement...',
   'mainctl.loading_aria':         'Chargement',
-  'mainctl.filter.label':         'filtre actuel :',
+  'mainctl.filter.label':         'filtre actuel :',
   'mainctl.filter.aria':          'Filtrer par catégorie',
   'mainctl.filter.all':           'Tous',
   'mainctl.filter.donors':        'Donateurs',
@@ -546,7 +546,7 @@ export const ru = {
   'pin.mark_attended':  'Отметить как помогли',
   'pin.after_attended': 'Спасибо. Точка отправлена в архив.',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
-  'empty.no_pins_in_view':  'В этой области пока никого не отметили. Если вы видели человека в нужде, нажмите Сообщить.',
+  'empty.no_pins_in_view':  '[REVISAR-HUMANO] В этой области пока никого не отметили. Если вы видели человека в нужде, нажмите Сообщить.',
   'empty.close': 'Закрыть уведомление',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Сообщить',
@@ -646,7 +646,7 @@ export const zh = {
   'pin.mark_attended':  '标记为已帮助',
   'pin.after_attended': '谢谢。该地点已归档。',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
-  'empty.no_pins_in_view':  '这片区域还没有人被标记。如果你看到有人需要帮助，请点击举报。',
+  'empty.no_pins_in_view':  '[REVISAR-HUMANO] 这片区域还没有人被标记。如果你看到有人需要帮助，请点击举报。',
   'empty.close': '关闭提示',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': '举报',
