@@ -1,30 +1,46 @@
 'use client';
 
-// MapHitboxOutline — dev-only red outline of the map's tap hitbox.
+// MapHitboxOutline — dev-only red delimiter of the COUNTRY publish geofence.
 //
 // Opt-in diagnostic, activated only when the URL has `?debug=hitbox`
 // (same convention as TapDebugOverlay's `?debug=tap`) — it never ships
 // any visible signal to production users.
 //
-// What it draws: a 2 px red line around the Leaflet map container, i.e.
-// the exact region whose pointer/click events MapClickHandler captures
-// and where `isMapBackground` decides a tap is "on the map background".
-// That container's bounding rect IS the hitbox the tap pipeline reads:
-//   • container.getBoundingClientRect() in clientToLatLng()
-//   • container.addEventListener('pointerdown' | 'pointerup' | …)
-// so outlining the container shows the true hit area, accounting for any
-// iOS viewport / invalidateSize shift the user is trying to debug.
+// WHAT IT DRAWS, and WHY this is the real "hitbox":
+// A publish (Confirmar ponto / report sheet / address form) is only
+// allowed when the dropped pin sits INSIDE the active country's geofence.
+// That geofence is COUNTRY_PUBLISH_BOUNDS[code] in countries.js — a set
+// of { N, S, W, E } rectangles — and isInsideCountry(coords, code) is the
+// strict-edge predicate the publish guards run. So those rectangles ARE
+// the trigger area: a tap inside a box would be accepted; a tap outside
+// would be blocked (geofenceBlockMessage). This overlay draws each of the
+// active country's rectangles as a red L.rectangle so a developer can SEE,
+// directly on the map, which areas trigger in-country vs out-of-country.
 //
-// Implementation: a child of <MapContainer> so it can reach the live
-// L.Map via useMap() and style its real DOM container. We toggle a CSS
-// class (not an inline style) so the outline is trivially removable on
-// unmount and never fights Leaflet's own inline container styles. The
-// rule lives in globals.css under `.mdf-hitbox-debug`.
+// It tracks the SELECTED country (countryStore) and re-subscribes, so
+// switching the flag re-draws the boxes for the newly selected country.
+// When a country has no publish shape (COUNTRY_PUBLISH_BOUNDS[code] is
+// absent) nothing is drawn — which is itself the correct signal: every
+// pin there is blocked (countries.js D6: "no bounds → blocked").
+//
+// The rectangles are non-interactive (interactive:false) so they never
+// steal the taps the user is trying to test, and live on the overlayPane
+// below markers. We add them imperatively via useMap() and remove them on
+// unmount / country change, mirroring how map.js manages its L.markers.
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useMap } from 'react-leaflet';
+import L from 'leaflet';
+import { COUNTRY_PUBLISH_BOUNDS } from '../countries';
+import { getSelectedCountry, subscribe } from '../countryStore';
 
-const HITBOX_CLASS = 'mdf-hitbox-debug';
+// Hardcoded red on purpose: this is a diagnostic delimiter, not a palette hue.
+const HITBOX_RECT_STYLE = {
+    color: 'red',
+    weight: 2,
+    fill: false,
+    interactive: false,
+};
 
 const isHitboxDebugEnabled = () => {
     if (typeof window === 'undefined') return false;
@@ -38,16 +54,24 @@ const isHitboxDebugEnabled = () => {
 
 const MapHitboxOutline = () => {
     const map = useMap();
+    // Re-render (and so re-draw the boxes) when the selected country changes.
+    const [country, setCountry] = useState(getSelectedCountry);
+    useEffect(() => subscribe(setCountry), []);
 
     useEffect(() => {
         if (!isHitboxDebugEnabled()) return undefined;
         if (!map || typeof map.getContainer !== 'function') return undefined;
-        const container = map.getContainer();
-        if (!container) return undefined;
 
-        container.classList.add(HITBOX_CLASS);
-        return () => container.classList.remove(HITBOX_CLASS);
-    }, [map]);
+        // A country's publish geofence is an array of { N, S, W, E } rects.
+        // Each maps to L.rectangle([[S, W], [N, E]]) — SW corner then NE
+        // corner, the [lat, lng] pair shape Leaflet expects.
+        const rects = COUNTRY_PUBLISH_BOUNDS[country] || [];
+        const layers = rects.map((r) =>
+            L.rectangle([[r.S, r.W], [r.N, r.E]], HITBOX_RECT_STYLE).addTo(map),
+        );
+
+        return () => layers.forEach((layer) => layer.remove());
+    }, [map, country]);
 
     return null;
 };

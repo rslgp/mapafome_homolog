@@ -51,17 +51,6 @@ textarea {
   touch-action: manipulation;
 }
 
-/* Dev-only map hitbox outline. Toggled by MapHitboxOutline (mounted inside
- * the map) ONLY when the URL carries ?debug=hitbox — never present in a
- * normal session. Draws a red line around the Leaflet container, i.e. the
- * exact region whose pointer/click events the tap pipeline captures.
- * Hardcoded red on purpose: this is a diagnostic marker, not a palette hue.
- * box-shadow inset keeps the line inside the container so it does not change
- * layout or get clipped by the map's overflow. */
-.leaflet-container.mdf-hitbox-debug {
-  box-shadow: inset 0 0 0 2px red;
-}
-
 body {
   font-family: var(--mdf-font-stack);
   font-size: var(--mdf-fs-body);
