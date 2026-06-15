@@ -36,6 +36,7 @@ export const pt = {
   'pin.mark_attended':  'Marcar como atendido',
   'pin.after_attended': 'Obrigado. O ponto foi arquivado.',
   'empty.no_pins_in_view':  'Ninguém foi mapeado nesta área ainda. Se você viu alguém precisando, toque em Relatar.',
+  'empty.close': 'Fechar o aviso',
   'cta.report': 'Relatar',
   'cta.list':   'Lista',
   'cta.help':   'Como funciona',
@@ -140,6 +141,7 @@ export const es = {
   'pin.mark_attended':  'Marcar como atendido',
   'pin.after_attended': 'Gracias. El punto fue archivado.',
   'empty.no_pins_in_view':  'Nadie ha sido mapeado en esta área aún. Si viste a alguien en necesidad, toca Reportar.',
+  'empty.close': 'Cerrar el aviso',
   'cta.report': 'Reportar',
   'cta.list':   'Lista',
   'cta.help':   'Cómo funciona',
@@ -238,6 +240,7 @@ export const enUS = {
   'pin.after_attended': 'Thank you. The point has been archived.',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '[REVISAR-HUMANO] No one has been mapped in this area yet. If you saw someone in need, tap Report.',
+  'empty.close': 'Close the notice',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Report',
   'cta.list':   'List',
@@ -338,6 +341,7 @@ export const de = {
   'pin.after_attended': 'Danke. Der Punkt wurde archiviert.',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  'In diesem Bereich wurde noch niemand kartiert. Wenn du jemanden in Not gesehen hast, tippe auf Melden.',
+  'empty.close': 'Hinweis schließen',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Melden',
   'cta.list':   'Liste',
@@ -429,6 +433,7 @@ export const fr = {
   'pin.after_attended': 'Merci. Le point a été archivé.',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  'Personne n\'a encore été cartographié dans cette zone. Si tu as vu quelqu\'un dans le besoin, touche Signaler.',
+  'empty.close': 'Fermer l\'avis',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Signaler',
   'cta.list':   'Liste',
@@ -521,6 +526,7 @@ export const ru = {
   'pin.after_attended': 'Спасибо. Точка отправлена в архив.',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  'В этой области пока никого не отметили. Если вы видели человека в нужде, нажмите Сообщить.',
+  'empty.close': 'Закрыть уведомление',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Сообщить',
   'cta.list':   'Список',
@@ -614,6 +620,7 @@ export const zh = {
   'pin.after_attended': '谢谢。该地点已归档。',
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '这片区域还没有人被标记。如果你看到有人需要帮助，请点击举报。',
+  'empty.close': '关闭提示',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': '举报',
   'cta.list':   '列表',

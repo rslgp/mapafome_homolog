@@ -28,6 +28,14 @@
   line-height: var(--mdf-lh-body);
 }
 
+/* CTA + close sit on one row; the close X is next to Relatar. */
+.mdf-empty__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-3);
+}
+
 .mdf-empty__cta {
   min-height: var(--mdf-touch-target);
   padding: 0 var(--mdf-space-6);
@@ -43,4 +51,26 @@
 
 .mdf-empty__cta:hover {
   background: var(--mdf-brand-hover);
+}
+
+/* Close X — square 44×44 icon button (WCAG 2.2 SC 2.5.8), muted so it never
+   competes with the Report CTA. Pair with aria-label (empty.close). */
+.mdf-empty__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--mdf-touch-target);
+  min-height: var(--mdf-touch-target);
+  padding: 0;
+  background: transparent;
+  color: var(--mdf-ink-muted);
+  border: none;
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-body);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mdf-empty__close:hover {
+  color: var(--mdf-ink);
 }
