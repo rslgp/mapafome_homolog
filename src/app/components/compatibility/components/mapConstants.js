@@ -147,7 +147,7 @@ export const PERIOD_OPTIONS = [
 ];
 
 // Default = Mensal (30d).
-export const PERIOD_DEFAULT = 'mes';
+export const PERIOD_DEFAULT = 'todos';
 
 // Resolve a period id to its window in hours (Infinity for 'todos' / unknown ids,
 // which means "no period filtering"). One small helper so callers never re-derive
