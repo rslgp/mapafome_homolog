@@ -273,6 +273,11 @@ export const pt = {
   // tells someone they cannot map from where they are), so the non-pt drafts carry
   // [REVISAR-HUMANO] until a human approves the tone. pt-BR is the final SOT.
   'page.geofence.country_mismatch': 'Só podemos mapear lugares no país onde você está fisicamente. Sua localização e seu acesso à internet parecem estar em países diferentes.',
+  // CONTROLS-HIDDEN (dark-ship, default OFF): inline notice shown in place of the
+  // publish controls when the user is not yet verified in-country. Dignity-adjacent
+  // (it tells someone they cannot add a point yet), so non-pt drafts carry
+  // [REVISAR-HUMANO]. Calm tone, no alarm. pt-BR is the final SOT.
+  'page.geofence.controls_hidden': 'Para adicionar um ponto, primeiro precisamos confirmar que você está no seu país. Ative a localização e verifique a sua conexão.',
 
   // ── home: TabelaFome.js — hunger-over-time table. Headers/time/risk are
   // MECHANICAL; the conseq_* body sentences are DIGNITY-SENSITIVE (they describe
@@ -917,6 +922,7 @@ export const es = {
   'page.brand.tagline.br':     'El mapa contra el hambre en Brasil',
   'page.geofence.need_location': 'Necesitamos tu ubicación para marcar un punto en tu país. Activa la ubicación en el navegador e inténtalo de nuevo.',
   'page.geofence.country_mismatch': '[REVISAR-HUMANO] Solo podemos mapear lugares en el país donde estás físicamente. Tu ubicación y tu acceso a internet parecen estar en países diferentes.',
+  'page.geofence.controls_hidden': '[REVISAR-HUMANO] Para añadir un punto, primero necesitamos confirmar que estás en tu país. Activa la ubicación y comprueba tu conexión.',
   'page.hungertable.hdr_time':   'Tiempo de hambre',
   'page.hungertable.hdr_conseq': 'Consecuencias malas',
   'page.hungertable.hdr_risk':   'Riesgo de vida de la persona desamparada',
@@ -1547,6 +1553,7 @@ export const enUS = {
   'page.brand.tagline.br':     'The map against hunger in Brazil',
   'page.geofence.need_location': 'We need your location to mark a point in your country. Turn on location in your browser and try again.',
   'page.geofence.country_mismatch': '[REVISAR-HUMANO] We can only map places in the country where you physically are. Your location and your internet access appear to be in different countries.',
+  'page.geofence.controls_hidden': '[REVISAR-HUMANO] To add a point, we first need to confirm you are in your country. Turn on your location and check your connection.',
   'page.hungertable.hdr_time':   'Time without food',
   'page.hungertable.hdr_conseq': 'Bad consequences',
   'page.hungertable.hdr_risk':   'Risk to the life of the person in need',
@@ -2177,6 +2184,7 @@ export const de = {
   'page.brand.tagline.br':     'Die Karte gegen den Hunger in Brasilien',
   'page.geofence.need_location': 'Wir brauchen deinen Standort, um einen Punkt in deinem Land zu setzen. Aktiviere den Standort im Browser und versuche es erneut.',
   'page.geofence.country_mismatch': '[REVISAR-HUMANO] Wir können nur Orte in dem Land markieren, in dem du dich physisch befindest. Dein Standort und dein Internetzugang scheinen in verschiedenen Ländern zu liegen.',
+  'page.geofence.controls_hidden': '[REVISAR-HUMANO] Um einen Punkt hinzuzufügen, müssen wir zuerst bestätigen, dass du in deinem Land bist. Aktiviere deinen Standort und prüfe deine Verbindung.',
   'page.hungertable.hdr_time':   'Hungerdauer',
   'page.hungertable.hdr_conseq': 'Schlechte Folgen',
   'page.hungertable.hdr_risk':   'Lebensgefahr der hilflosen Person',
@@ -2807,6 +2815,7 @@ export const fr = {
   'page.brand.tagline.br':     'La carte contre la faim au Brésil',
   'page.geofence.need_location': 'Nous avons besoin de ta position pour marquer un point dans ton pays. Active la localisation dans le navigateur et réessaie.',
   'page.geofence.country_mismatch': '[REVISAR-HUMANO] Nous ne pouvons cartographier que des lieux dans le pays où tu te trouves physiquement. Ta position et ton accès à internet semblent se trouver dans des pays différents.',
+  'page.geofence.controls_hidden': '[REVISAR-HUMANO] Pour ajouter un point, nous devons d\'abord confirmer que tu es dans ton pays. Active ta localisation et vérifie ta connexion.',
   'page.hungertable.hdr_time':   'Durée de la faim',
   'page.hungertable.hdr_conseq': 'Mauvaises conséquences',
   'page.hungertable.hdr_risk':   'Risque vital de la personne démunie',
@@ -3437,6 +3446,7 @@ export const ru = {
   'page.brand.tagline.br':     'Карта против голода в Бразилии',
   'page.geofence.need_location': 'Нам нужно ваше местоположение, чтобы отметить точку в вашей стране. Включите геолокацию в браузере и попробуйте снова.',
   'page.geofence.country_mismatch': '[REVISAR-HUMANO] Мы можем отмечать места только в той стране, где вы физически находитесь. Ваше местоположение и ваш доступ в интернет, похоже, находятся в разных странах.',
+  'page.geofence.controls_hidden': '[REVISAR-HUMANO] Чтобы добавить точку, нам нужно сначала подтвердить, что вы находитесь в своей стране. Включите геолокацию и проверьте соединение.',
   'page.hungertable.hdr_time':   'Время голода',
   'page.hungertable.hdr_conseq': 'Плохие последствия',
   'page.hungertable.hdr_risk':   'Угроза жизни беспомощного человека',
@@ -4067,6 +4077,7 @@ export const zh = {
   'page.brand.tagline.br':     '巴西反饥饿地图',
   'page.geofence.need_location': '我们需要你的位置才能在你所在的国家标记地点。请在浏览器中开启定位后重试。',
   'page.geofence.country_mismatch': '[REVISAR-HUMANO] 我们只能在你实际所在的国家标记地点。你的定位和你的网络接入似乎位于不同的国家。',
+  'page.geofence.controls_hidden': '[REVISAR-HUMANO] 要添加地点，我们需要先确认你在你所在的国家。请开启定位并检查你的网络连接。',
   'page.hungertable.hdr_time':   '饥饿时长',
   'page.hungertable.hdr_conseq': '不良后果',
   'page.hungertable.hdr_risk':   '无助者的生命危险',

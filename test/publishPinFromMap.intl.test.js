@@ -98,7 +98,10 @@ describe('publishPinFromMap — REALLY emits publish_intl (wiring)', () => {
     };
     await publishPinFromMap(makeSelf(), deps, LISBON_PT);
 
-    expect(offshoreGuard).toHaveBeenCalledWith(LISBON_PT);
+    // publishPinFromMap now forwards an optional bindingCountry as the guard's 2nd arg
+    // (the LOCATION-GEOFENCE override). With no binding country it is undefined, and the
+    // App-side closure resolves `undefined || activeCountry()` — byte-identical to before.
+    expect(offshoreGuard).toHaveBeenCalledWith(LISBON_PT, undefined);
     const arg = mockTrackPublishIntl.mock.calls[0][0];
     expect(arg.country).toBe('pt');
     expect(arg.inSelectedBbox).toBe(true); // Lisbon is inside PT

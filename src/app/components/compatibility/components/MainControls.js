@@ -6,6 +6,7 @@ import { Checkbox } from '@mui/material';
 import InserirEndereco from './googlesheets/endereco';
 import MyLocationButton from './googlesheets/mylocation';
 import { MARKER_PLACED_EVENT, MARKER_CLEARED_EVENT } from './mapComponents';
+import { GEOFENCE_ELIGIBILITY_EVENT } from './geofenceEvents';
 // import coffeeBean from '../images/bean.svg';
 // import hub from '../images/hub.svg';
 // import green from '../images/green.svg';
@@ -48,6 +49,7 @@ const MainControls = ({
   dropDownMenuRedeSocial,
   dropDownMenuMesPrecisandoBuscar,
   dropDownMenuMesEntregaAlimentoPronto,
+  geofenceEligible = true,
 }) => {
   // TV-5 (tap_visibility_robustness.yaml): the "Confirmar ponto" button
   // reflects whether a marker has been placed. Subscribes to the public
@@ -56,6 +58,15 @@ const MainControls = ({
   // GPS-fallback path in App.js handleClickMap remains usable for users
   // who never tap the map.
   const [hasMarker, setHasMarker] = useState(false);
+  // LOCATION/IP GEOFENCE gate (decoupled signal, mirrors hasMarker above):
+  // `eligible` decides whether the publish controls (the "Confirmar ponto"
+  // fieldset + InserirEndereco) render at all. It is SEEDED from the
+  // `geofenceEligible` prop (default true) so first paint is correct when the
+  // geofence flags are OFF (dark-ship → always true → controls always shown),
+  // then kept live by subscribing to the public mdf:geofence-eligibility
+  // CustomEvent App.js broadcasts once the GPS/IP resolvers settle — no prop
+  // drilling, exactly like the MARKER_PLACED_EVENT subscription below.
+  const [eligible, setEligible] = useState(geofenceEligible);
   // Disclosure for the "Esse ano" filter's origin note (2024 RS floods).
   const [anoInfoOpen, setAnoInfoOpen] = useState(false);
   // i18n: subscribe to locale changes so every t() below re-reads live on a
@@ -72,6 +83,16 @@ const MainControls = ({
       document.removeEventListener(MARKER_PLACED_EVENT, onPlaced);
       document.removeEventListener(MARKER_CLEARED_EVENT, onCleared);
     };
+  }, []);
+  // Keep `eligible` live off the decoupled geofence signal (read detail.eligible).
+  // Mirrors the MARKER_PLACED_EVENT subscription above. With both geofence flags
+  // OFF App.js never dispatches, so `eligible` stays at its seeded `true` and the
+  // controls render byte-identically to today (DARK-SHIP INVARIANT).
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const onEligibility = (e) => setEligible(!!(e && e.detail && e.detail.eligible));
+    document.addEventListener(GEOFENCE_ELIGIBILITY_EVENT, onEligibility);
+    return () => document.removeEventListener(GEOFENCE_ELIGIBILITY_EVENT, onEligibility);
   }, []);
 
   return (
@@ -289,43 +310,64 @@ const MainControls = ({
             <input ref={redesocialRef} style={{ "display": "none" }} className="TextField" type="text" placeholder='@' onBlur={onRedeSocialChange} />
             <br></br>
 
-            <fieldset id="mdf-target-confirm">
-              <legend>{t('page.form.legend_step3')}</legend>
-              <MyLocationButton
-                location={center}
+            {/* LOCATION/IP GEOFENCE UX GATE — the two publish triggers (the
+                "Confirmar ponto" fieldset and the <InserirEndereco> address form)
+                render ONLY when `eligible` is true. When not eligible (the user is
+                not yet verified in-country), neither trigger is in the DOM and a
+                calm notice takes their place, so the publish action cannot fire.
+                `eligible` is seeded from the geofenceEligible prop and kept live by
+                the mdf:geofence-eligibility subscription above; with both geofence
+                flags OFF App.js never flips it false, so this renders exactly as
+                today (DARK-SHIP INVARIANT). The button keeps the defensive
+                disabled={!eligible} in case it is ever rendered in a false state. */}
+            {eligible ? (
+              <>
+                <fieldset id="mdf-target-confirm">
+                  <legend>{t('page.form.legend_step3')}</legend>
+                  <MyLocationButton
+                    location={center}
+                    alimento={alimento}
+                    telefone={telefoneEncryptado}
+                    diaSemana={diaSemana}
+                    horario={horario}
+                    numero={numero}
+                    redesocial={redesocial}
+                    mes={mes}
+                  />
+                  {false ? (
+                    <CircularProgress aria-label={t('mainctl.confirm.aria_busy')} />
+                  ) : (
+                    <button
+                      type="button"
+                      className={`SubmitButton marcar-local${hasMarker ? ' marcar-local--ready' : ''}`}
+                      onClick={onClickMap}
+                      aria-label={hasMarker ? t('mainctl.confirm.aria_ready') : t('mainctl.confirm.aria_pending')}
+                      aria-disabled={!hasMarker}
+                      disabled={!eligible}
+                    >
+                      {hasMarker ? t('mainctl.confirm.label_ready') : t('mainctl.confirm.label')}
+                    </button>
+                  )}
+                </fieldset>
+              </>
+            ) : (
+              <p className='mdf-geofence-notice' role='note'>{t('page.geofence.controls_hidden')}</p>
+            )}
+          </div>
+
+          {eligible ? (
+            <>
+              <figure><center>{t('page.form.or')}</center></figure>
+              <InserirEndereco
                 alimento={alimento}
                 telefone={telefoneEncryptado}
                 diaSemana={diaSemana}
                 horario={horario}
-                numero={numero}
                 redesocial={redesocial}
                 mes={mes}
               />
-              {false ? (
-                <CircularProgress aria-label={t('mainctl.confirm.aria_busy')} />
-              ) : (
-                <button
-                  type="button"
-                  className={`SubmitButton marcar-local${hasMarker ? ' marcar-local--ready' : ''}`}
-                  onClick={onClickMap}
-                  aria-label={hasMarker ? t('mainctl.confirm.aria_ready') : t('mainctl.confirm.aria_pending')}
-                  aria-disabled={!hasMarker}
-                >
-                  {hasMarker ? t('mainctl.confirm.label_ready') : t('mainctl.confirm.label')}
-                </button>
-              )}
-            </fieldset>
-          </div>
-
-          <figure><center>{t('page.form.or')}</center></figure>
-          <InserirEndereco
-            alimento={alimento}
-            telefone={telefoneEncryptado}
-            diaSemana={diaSemana}
-            horario={horario}
-            redesocial={redesocial}
-            mes={mes}
-          />
+            </>
+          ) : null}
         </div>
       </Paper>
     </Grid>

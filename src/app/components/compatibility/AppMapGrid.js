@@ -48,6 +48,7 @@ export default function AppMapGrid({ state, handlers, refs }) {
                 redesocial={state.redesocial}
                 telefoneFilterLocal={state.telefoneFilterLocal}
                 ultimoAnoFilterLocal={state.ultimoAnoFilterLocal}
+                geofenceEligible={state.geofenceEligible}
                 onFiltroChange={handlers.setFiltro}
                 onTipoAlimentoChange={handlers.setTipoAlimento}
                 onDiaSemanaChange={handlers.setDiaSemana}

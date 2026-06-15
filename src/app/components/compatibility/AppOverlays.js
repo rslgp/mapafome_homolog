@@ -21,6 +21,12 @@ import EmptyViewportOverlay from './components/ux/EmptyViewportOverlay';
 import NotificationPrefs from './components/ux/NotificationPrefs';
 
 export default function AppOverlays({ state, handlers }) {
+    // LOCATION/IP GEOFENCE UX GATE — the two publish triggers in this overlay
+    // tree (the Report FAB and the EmptyViewportOverlay start CTA) are armed only
+    // when the user is verified in-country. `geofenceEligible` is App.state, seeded
+    // true on dark-ship; undefined is treated as TRUE so a missing signal degrades
+    // to today's behavior (both geofence flags OFF → never set false → unchanged).
+    const geofenceEligible = state.geofenceEligible !== false;
     return (
         <>
             <GuidedTutorial
@@ -28,14 +34,18 @@ export default function AppOverlays({ state, handlers }) {
                 onClose={handlers.handleCloseTour}
             />
 
-            <button
-                type="button"
-                className="mdf-fab"
-                aria-label="Relatar ponto"
-                onClick={handlers.handleOpenReportSheet}
-            >
-                +
-            </button>
+            {/* Report FAB — not rendered when ineligible, so handleOpenReportSheet
+                cannot fire (the only way to open the report sheet from here). */}
+            {geofenceEligible ? (
+                <button
+                    type="button"
+                    className="mdf-fab"
+                    aria-label="Relatar ponto"
+                    onClick={handlers.handleOpenReportSheet}
+                >
+                    +
+                </button>
+            ) : null}
 
             <ReportSheet
                 open={state.reportSheetOpen}
@@ -66,8 +76,13 @@ export default function AppOverlays({ state, handlers }) {
                 onClose={handlers.onCloseList}
             />
 
+            {/* Empty-state start CTA is itself a publish trigger (onStartReport
+                opens the report sheet), so fold geofence eligibility into its
+                `visible` predicate: when ineligible the overlay (and its CTA)
+                disappears, making onStartReport inert. The empty-viewport
+                condition is otherwise unchanged. */}
             <EmptyViewportOverlay
-                visible={!state.isLoading && Array.isArray(state.dataMaps) && state.dataMaps.length === 0}
+                visible={geofenceEligible && !state.isLoading && Array.isArray(state.dataMaps) && state.dataMaps.length === 0}
                 onStartReport={handlers.handleOpenReportSheet}
             />
 

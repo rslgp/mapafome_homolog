@@ -10,6 +10,8 @@ import { getCountry } from '../countries';
 import { activeCountryFor } from '../geofence';
 import * as countryStore from '../countryStore';
 import { INTL_ENABLED } from '../intlConfig';
+import { LOCATION_GEOFENCE_ENABLED } from '../geofenceConfig';
+import { checkSyncBindingForPin } from '../geofencePublishGuard';
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 
@@ -101,12 +103,28 @@ class NameForm extends Component {
     //   this.setState({value: event.target.value});
     // }
   
-    handleSubmit(event) { 
+    handleSubmit(event) {
         //navigator.geolocation.getCurrentPosition(function(position) {
         if(this.state.location[0]===-8.0671132 && this.state.location[1]===-34.8766719){
           alert(t('page.address.geo_disabled'));
           event.preventDefault();
           return;
+        }
+        // LOCATION-GEOFENCE (flag ON only): the GPS/address write is a THIRD publish funnel
+        // that previously gated only on the selected-FLAG bbox (dentroLimites). Bind it to the
+        // user's verified PHYSICAL country via checkSyncBindingForPin (the SAME SOT verdict the
+        // UX gate reads). Block + notify when not eligible or when the pin sits outside the
+        // verified country. Flag OFF → skipped, byte-identical to today (the dentroLimites gate
+        // below still runs). `bindingCountry` (when allowed) overrides the flag for the Pais stamp.
+        let bindingCountry = null;
+        if (LOCATION_GEOFENCE_ENABLED) {
+          const gate = checkSyncBindingForPin(this.state.location);
+          if (!gate.allowed) {
+            alert(gate.message);
+            event.preventDefault();
+            return;
+          }
+          bindingCountry = gate.country;
         }
         this.setState({isLoading: true});
             (async function main(self) {
@@ -130,20 +148,6 @@ class NameForm extends Component {
                   return;
                 }
                 const sheet = doc.sheetsByIndex[regiao];
-                // const rows = await sheet.getRows();
-                // Total row count
-
-                // const row = { 
-                //   Roaster: self.state.alimento, 
-                //   URL:self.state.numero, 
-                //   City: "", 
-                //   Coordinates:JSON.stringify([self.props.location[0], self.props.location[1]]), 
-                //   DateISO: new Date().toISOString(), 
-                //   Telefone: self.props.telefone, 
-                //   DiaSemana:self.props.diaSemana,
-                //   Horario:self.props.horario,
-                //   AlimentoEntregue:0,
-                // };
 
                 let dadosRow = {};
                 dadosRow.alimento = self.state.alimento;
@@ -155,37 +159,14 @@ class NameForm extends Component {
                 dadosRow.horario = self.state.horario;
                 dadosRow.mes = self.state.mes;
                 dadosRow.redesocial = self.state.redesocial;
+                // INTL: when the location geofence bound this submit to the user's verified
+                // physical country, stamp THAT (not the flag-picker) so attribution matches
+                // the gate. Absent (flag OFF) → criarRow falls back to the resolver ('br' OFF).
+                if (bindingCountry) dadosRow.pais = bindingCountry;
 
               const row = envVariables.criarRow(dadosRow);
 
-                
-            // {
-            //   Dados: JSON.stringify(
-            //     { 
-            //       "Roaster": self.state.alimento, 
-            //       "URL":self.state.numero, 
-            //       "City": "", 
-            //       "Coordinates":JSON.stringify([self.props.location[0], self.props.location[1]]), 
-            //       "DateISO": new Date().toISOString(), 
-            //       "Telefone": self.props.telefone, 
-            //       "DiaSemana":self.props.diaSemana,
-            //       "Horario":self.props.horario,
-            //       "AlimentoEntregue":0,
-            //       "RedeSocial":self.state.redesocial.replace('@',''),
-            //       "Avaliacao": {
-            //         "1":0,
-            //         "2":0,
-            //         "3":0,
-            //         "4":0,
-            //         "5":0
-            //       },
-            //     }
-
-            //   )
-            // };
-                
-                const result = await sheet.addRow(row);
-                //console.log(result);
+                await sheet.addRow(row);
                 window.location.reload();
             })(this);
         //});

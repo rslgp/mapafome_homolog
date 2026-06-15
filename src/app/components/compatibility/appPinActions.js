@@ -249,15 +249,24 @@ export async function writePinToSheets(self, deps, { coords, categories, detail,
 // async Sheets write that the method previously ran via an inline IIFE
 // `(async function main(self){ ... })(this)`. `latlng` is passed in because it
 // was a closure variable computed by the synchronous prelude.
-export async function publishPinFromMap(self, deps, latlng) {
+//
+// LOCATION-GEOFENCE (optional 4th arg): when the location geofence is ON, the
+// upstream gate binds the mark to the user's GPS/IP-verified PHYSICAL country and
+// passes it down here as `bindingCountry`. When present it is the SOT for both the
+// offshore-guard expectedCode and the Pais stamp — so a user physically in country X
+// is attributed to X regardless of the flag-picker. When ABSENT (the flag-OFF /
+// dark-ship path, and every legacy caller) we fall back to deps.activeCountry()
+// exactly as today, so OFF behavior is byte-identical.
+export async function publishPinFromMap(self, deps, latlng, bindingCountry) {
     const { envVariables, offshoreGuard, activeCountry } = deps;
 
-    // INTL M5 (MISS-2): resolve the country this mark is published IN, the same
+    // INTL M5 (MISS-2): resolve the country this mark is published IN. With the
+    // location geofence ON the verified bindingCountry wins; otherwise the same
     // way the upstream geofence gated it (activeCountryFor, OFF → 'br'). Passed in
     // as a `deps.activeCountry` accessor so this module stays a pure function of
     // its inputs and never imports the store/flag (same precedent as the offshore
-    // guard). Absent (legacy caller) → DEFAULT_COUNTRY ('br'), the OFF behavior.
-    const country = (typeof activeCountry === 'function' ? activeCountry() : null) || DEFAULT_COUNTRY;
+    // guard). Absent on both → DEFAULT_COUNTRY ('br'), the OFF behavior.
+    const country = bindingCountry || (typeof activeCountry === 'function' ? activeCountry() : null) || DEFAULT_COUNTRY;
     // Verdict of the M4.5 offshore guard for THIS pin. The guard only resolves
     // (allow) or throws (confident mismatch — which exits before this point), so
     // reaching the event means: 'passed' when the guard ran and allowed, or
@@ -279,7 +288,11 @@ export async function publishPinFromMap(self, deps, latlng) {
     // (allow) — a Nominatim hiccup must never cost a legitimate publish. This is
     // data HYGIENE, not security (R6: client validation is bypassable anyway).
     if (typeof offshoreGuard === 'function') {
-        await offshoreGuard(latlng);
+        // Pass the binding country as an optional expectedCode override: with the
+        // location geofence ON the guard must verify the pin against the user's
+        // PHYSICAL country, not the flag-picker. When bindingCountry is undefined
+        // (flag-OFF path) the guard resolves its own expectedCode as today.
+        await offshoreGuard(latlng, bindingCountry);
         // Reached only if the guard RESOLVED (a confident mismatch throws above
         // and never publishes). 'passed' = guard ran and allowed this pin.
         offshoreHeuristic = 'passed';

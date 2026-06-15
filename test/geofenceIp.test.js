@@ -1,9 +1,15 @@
-// geofenceIp.test.js - IP-COUNTRY geofence (the strict-AND, fail-CLOSED rule).
+// geofenceIp.test.js - IP-COUNTRY geofence (the agreement rule, fail-CLOSED with the
+// one GPS-denied IP fallback the user chose).
 //
-// Covers the new pieces of "allow a mark only when BOTH the GPS-physical country AND
-// the IP-derived country are the country the pin is in":
-//   • decidePublishAllowed(...) - the PURE combined decision: both known + equal +
-//       inside → ALLOW; countries DISAGREE → BLOCK; IP unknown → BLOCK; GPS unknown →
+// Covers the binding-country pieces of "bind a mark to the PHYSICAL (GPS) country, with
+// the IP country required to AGREE when the IP leg is ON":
+//   • resolveBindingCountry(...) - the PURE {country, status} agreement rule (no
+//       geometry): the single SOT both the UX gate and the publish gate read. Statuses:
+//       'ok', 'mismatch', 'ip_unknown', 'ok_ip_fallback', 'no_location'.
+//   • geofenceEligibility(...) - the UX-gate view: { eligible: country != null, ... }.
+//   • decidePublishAllowed(...) - resolveBindingCountry PLUS the geometry leg: equal +
+//       inside → ALLOW; countries DISAGREE → BLOCK; IP unknown → BLOCK; GPS unknown but
+//       IP known → bind to IP and allow iff inside IP (the fallback); both unknown →
 //       BLOCK; equal+known but pin OUTSIDE the country box → BLOCK; IP flag OFF →
 //       exactly the GPS-only path (no IP considered).
 //   • createIpCountryResolver({fetchIpCountry}) - resolves the IP country ONCE per
@@ -17,7 +23,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { decidePublishAllowed } from
+import { decidePublishAllowed, resolveBindingCountry, geofenceEligibility } from
   '../src/app/components/compatibility/components/geofenceDecision.js';
 import { createIpCountryResolver } from
   '../src/app/components/compatibility/components/geofenceIp.js';
@@ -33,7 +39,7 @@ const stubInside = (coords) =>
 const INSIDE = [1, 1];     // stubInside → true
 const OUTSIDE = [9, 9];    // stubInside → false
 
-describe('decidePublishAllowed - strict AND, fail-CLOSED (IP leg ON)', () => {
+describe('decidePublishAllowed - agreement + GPS-denied IP fallback, fail-CLOSED (IP leg ON)', () => {
   const base = { ipEnabled: true, isInside: stubInside, coords: INSIDE };
 
   it('(a) both known + EQUAL + inside → ALLOW', () => {
@@ -50,9 +56,16 @@ describe('decidePublishAllowed - strict AND, fail-CLOSED (IP leg ON)', () => {
     expect(decidePublishAllowed({ ...base, physical: 'br', ip: undefined })).toBe(false);
   });
 
-  it('(d) GPS-physical unknown (null) → BLOCK', () => {
-    expect(decidePublishAllowed({ ...base, physical: null, ip: 'br' })).toBe(false);
-    expect(decidePublishAllowed({ ...base, physical: undefined, ip: 'br' })).toBe(false);
+  it('(d) GPS-physical unknown (null) + IP known → BIND to IP (the GPS-denied fallback)', () => {
+    // The user's chosen fallback: GPS denied/unavailable but IP country known → bind to
+    // the IP country and allow iff the pin is inside it. (Previously this ALWAYS blocked.)
+    expect(decidePublishAllowed({ ...base, physical: null, ip: 'br' })).toBe(true);
+    expect(decidePublishAllowed({ ...base, physical: undefined, ip: 'br' })).toBe(true);
+    // ...but only when the pin actually falls inside that IP country.
+    expect(decidePublishAllowed({ ...base, coords: OUTSIDE, physical: null, ip: 'br' }))
+      .toBe(false);
+    expect(decidePublishAllowed({ ...base, coords: OUTSIDE, physical: undefined, ip: 'br' }))
+      .toBe(false);
   });
 
   it('(e) both known + EQUAL but pin OUTSIDE the country box → BLOCK', () => {
@@ -89,6 +102,76 @@ describe('decidePublishAllowed - (f) IP flag OFF = exactly the GPS-only path', (
       .toBe(isInsideCountry(sp, 'br'));
     expect(decidePublishAllowed({ ipEnabled: false, physical: 'br', coords: madrid }))
       .toBe(isInsideCountry(madrid, 'br'));
+  });
+});
+
+describe('resolveBindingCountry - pure {country, status} agreement rule (no geometry)', () => {
+  it("ok: physical KNOWN, ip KNOWN, physical === ip → bind to it ('ok')", () => {
+    expect(resolveBindingCountry({ ipEnabled: true, physical: 'br', ip: 'br' }))
+      .toEqual({ country: 'br', status: 'ok' });
+  });
+
+  it("mismatch: physical KNOWN, ip KNOWN, physical !== ip → BLOCK ('mismatch')", () => {
+    expect(resolveBindingCountry({ ipEnabled: true, physical: 'br', ip: 'us' }))
+      .toEqual({ country: null, status: 'mismatch' });
+    expect(resolveBindingCountry({ ipEnabled: true, physical: 'us', ip: 'br' }))
+      .toEqual({ country: null, status: 'mismatch' });
+  });
+
+  it("ip_unknown: physical KNOWN, ip UNKNOWN (null/undefined) → BLOCK ('ip_unknown')", () => {
+    expect(resolveBindingCountry({ ipEnabled: true, physical: 'br', ip: null }))
+      .toEqual({ country: null, status: 'ip_unknown' });
+    expect(resolveBindingCountry({ ipEnabled: true, physical: 'br', ip: undefined }))
+      .toEqual({ country: null, status: 'ip_unknown' });
+  });
+
+  it("ok_ip_fallback: physical UNKNOWN, ip KNOWN → bind to IP ('ok_ip_fallback')", () => {
+    expect(resolveBindingCountry({ ipEnabled: true, physical: null, ip: 'br' }))
+      .toEqual({ country: 'br', status: 'ok_ip_fallback' });
+    expect(resolveBindingCountry({ ipEnabled: true, physical: undefined, ip: 'br' }))
+      .toEqual({ country: 'br', status: 'ok_ip_fallback' });
+  });
+
+  it("no_location: both UNKNOWN (IP leg ON) → BLOCK ('no_location')", () => {
+    expect(resolveBindingCountry({ ipEnabled: true, physical: null, ip: null }))
+      .toEqual({ country: null, status: 'no_location' });
+  });
+
+  it("ipEnabled:false → ip IGNORED; binds to physical ('ok') or 'no_location' if unknown", () => {
+    // The GPS-only dark-ship path: ip (even garbage) must not be consulted.
+    expect(resolveBindingCountry({ ipEnabled: false, physical: 'br', ip: 'us' }))
+      .toEqual({ country: 'br', status: 'ok' });
+    expect(resolveBindingCountry({ ipEnabled: false, physical: 'br', ip: null }))
+      .toEqual({ country: 'br', status: 'ok' });
+    expect(resolveBindingCountry({ ipEnabled: false, physical: null, ip: 'br' }))
+      .toEqual({ country: null, status: 'no_location' });
+  });
+});
+
+describe('geofenceEligibility - UX-gate view: eligible iff a binding country exists', () => {
+  it("eligible TRUE when there is a binding country (ok)", () => {
+    expect(geofenceEligibility({ ipEnabled: true, physical: 'br', ip: 'br' }))
+      .toEqual({ eligible: true, country: 'br', status: 'ok' });
+  });
+
+  it("eligible TRUE on the GPS-denied IP fallback (ok_ip_fallback)", () => {
+    expect(geofenceEligibility({ ipEnabled: true, physical: null, ip: 'br' }))
+      .toEqual({ eligible: true, country: 'br', status: 'ok_ip_fallback' });
+  });
+
+  it("eligible FALSE on mismatch (no binding country)", () => {
+    expect(geofenceEligibility({ ipEnabled: true, physical: 'br', ip: 'us' }))
+      .toEqual({ eligible: false, country: null, status: 'mismatch' });
+  });
+
+  it("eligible FALSE on ip_unknown (no binding country)", () => {
+    expect(geofenceEligibility({ ipEnabled: true, physical: 'br', ip: null }))
+      .toEqual({ eligible: false, country: null, status: 'ip_unknown' });
+  });
+
+  it("eligible FALSE on no_location (both unknown → no binding country)", () => {
+    expect(geofenceEligibility({ ipEnabled: true, physical: null, ip: null }))
+      .toEqual({ eligible: false, country: null, status: 'no_location' });
   });
 });
 

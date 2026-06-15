@@ -65,9 +65,12 @@ export function createPhysicalCountryResolver(opts = {}) {
     return dLat >= RESOLVE_MOVE_DEG || dLng >= RESOLVE_MOVE_DEG;
   }
 
-  async function resolve(coords) {
-    // Reuse the cached code while the user has not effectively relocated.
-    if (cachedCode !== undefined && !movedFar(coords)) return cachedCode;
+  async function resolve(coords, opts = {}) {
+    // Reuse the cached code while the user has not effectively relocated — UNLESS the
+    // caller forces a fresh lookup. { force: true } exists for session recovery: a single
+    // transient startup failure caches null (resolved-unknown), and without a forced retry
+    // the user would be blocked for the whole session even after the network recovers.
+    if (!opts.force && cachedCode !== undefined && !movedFar(coords)) return cachedCode;
     if (inFlight) return inFlight;
     inFlight = (async () => {
       // reverseGeocodeCountry returns alpha2 on land, null on ocean/network/throttle.

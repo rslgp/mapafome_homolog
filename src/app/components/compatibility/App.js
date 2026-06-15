@@ -30,14 +30,16 @@ import CreatorsMapaFome from './components/CreatorsMapaFome.js'
 
 import envVariables, { setActiveCountryResolver } from './components/variaveisAmbiente';
 import { activeCountryFor } from './components/geofence';
-import { getCountry } from './components/countries';
+import { getCountry, isInsideCountry } from './components/countries';
 import * as countryStore from './components/countryStore';
 import { INTL_ENABLED } from './components/intlConfig';
 import { assertPublishCountryMatches } from './components/reverseGeocodeGuard';
 import { LOCATION_GEOFENCE_ENABLED, IP_GEOFENCE_ENABLED } from './components/geofenceConfig';
 import { createPhysicalCountryResolver } from './components/geofenceLocation';
 import { createIpCountryResolver } from './components/geofenceIp';
-import { decidePublishAllowed } from './components/geofenceDecision';
+import { geofenceEligibility } from './components/geofenceDecision';
+import { dispatchGeofenceEligibility } from './components/geofenceEvents';
+import { resolveGeofenceBinding, geofenceBlockMessage } from './components/geofencePublishGuard';
 
 import qr from './images/qr.svg';
 
@@ -88,8 +90,15 @@ function outOfCountryMessage() {
 function intlPinGuardDeps() {
   if (!INTL_ENABLED) return {};
   return {
-    offshoreGuard: (coords) =>
-      assertPublishCountryMatches(coords, activeCountryFor(INTL_ENABLED, countryStore)),
+    // LOCATION-GEOFENCE: the publish path may pass an expectedCode override (the
+    // GPS/IP-verified binding country). When given it wins, so the offshore guard
+    // verifies the pin against the user's PHYSICAL country; absent (today's flag-OFF
+    // / INTL path) it resolves the flag-picker country exactly as before.
+    offshoreGuard: (coords, expectedCode) =>
+      assertPublishCountryMatches(
+        coords,
+        expectedCode || activeCountryFor(INTL_ENABLED, countryStore)
+      ),
   };
 }
 
@@ -156,6 +165,11 @@ class App extends Component {
       listOpen: false,
       notifOpen: false,
       canOpenNotif: false,
+      // LOCATION-GEOFENCE UX gate: are the publish/edit triggers eligible to be shown?
+      // Dark-ship (flag OFF) → TRUE: controls always shown, byte-identical to today.
+      // Flag ON → FALSE until the GPS/IP signals settle and _refreshGeofenceEligibility
+      // broadcasts the verdict (seeded below in the constructor for the same reason).
+      geofenceEligible: !LOCATION_GEOFENCE_ENABLED,
     }
 
     this.handleStartTour = this.handleStartTour.bind(this);
@@ -191,6 +205,9 @@ class App extends Component {
     this.removerPonto = this.removerPonto.bind(this);
     this.avaliar = this.avaliar.bind(this);
     this.handleClickMap = this.handleClickMap.bind(this);
+    // LOCATION-GEOFENCE UX gate helpers (bodies are no-ops on the flag-OFF path).
+    this._computeGeofenceEligibility = this._computeGeofenceEligibility.bind(this);
+    this._refreshGeofenceEligibility = this._refreshGeofenceEligibility.bind(this);
     this.telefoneFilterChange = this.telefoneFilterChange.bind(this);
     this.ultimoAnoFilterChange = this.ultimoAnoFilterChange.bind(this);
     this.handleChangeRedeSocial = this.handleChangeRedeSocial.bind(this);
@@ -245,8 +262,41 @@ class App extends Component {
       ? createIpCountryResolver()
       : null;
     if (this._ipCountryResolver) {
-      this._ipCountryResolver.resolve().catch(() => {});
+      // Warm the IP cache once, then re-broadcast eligibility so the UX gate can
+      // light up on the IP-fallback path even before any GPS fix lands. .finally so
+      // a failed IP lookup still settles the gate (to its fail-CLOSED verdict).
+      this._ipCountryResolver
+        .resolve()
+        .catch(() => {})
+        .finally(() => this._refreshGeofenceEligibility());
     }
+  }
+
+  // LOCATION-GEOFENCE UX gate (flag ON only): the COORDS-FREE eligibility verdict that
+  // decides whether the publish/edit triggers are shown at all. Reuses the SAME pure
+  // rule the publish gate uses (geofenceEligibility → resolveBindingCountry) so the two
+  // can never drift. Flag OFF (_physicalCountryResolver === null) → always eligible, so
+  // controls are always shown, byte-identical to today (no GPS/IP peek either).
+  _computeGeofenceEligibility() {
+    if (!this._physicalCountryResolver) {
+      return { eligible: true, country: null, status: 'ok' };
+    }
+    // peek() may be undefined (not resolved yet), null (resolved-unknown), or a code;
+    // treat undefined as null for the decision (unknown, not "OK").
+    const physical = this._physicalCountryResolver.peek() || null;
+    const ipEnabled = !!this._ipCountryResolver;
+    const ipCountry = ipEnabled ? (this._ipCountryResolver.peek() || null) : null;
+    return geofenceEligibility({ physical, ip: ipCountry, ipEnabled });
+  }
+
+  // Recompute eligibility, mirror it into state (drives any prop-based gate), and
+  // broadcast it on `document` (drives the decoupled MainControls/AppOverlays gate via
+  // GEOFENCE_ELIGIBILITY_EVENT). Called after each signal settles (IP warm-up, GPS
+  // success, GPS denied) and after a publish attempt resolves.
+  _refreshGeofenceEligibility() {
+    const elig = this._computeGeofenceEligibility();
+    this.setState({ geofenceEligible: elig.eligible });
+    dispatchGeofenceEligibility(elig);
   }
 
   telefoneFilterChange(event) {
@@ -465,74 +515,59 @@ class App extends Component {
     this._publishMarkFromMap(latlng);
   }
 
-  // LOCATION-GEOFENCE strict gate (flag ON only). Resolves the user's PHYSICAL country
-  // (GPS, cached per session; awaits a one-shot resolve only if the cache is cold) and,
-  // when the IP flag is ON, the user's IP-derived country (resolved once at startup),
-  // then enforces the combined STRICT-AND rule via the pure decidePublishAllowed:
-  //   allowed iff physical KNOWN && (IP off OR ip KNOWN && ip == physical)
-  //            && isInsideCountry(latlng, physical).
-  // Fail-CLOSED: an unknown OR disagreeing signal BLOCKS (the strict choice the user
-  // made, deliberately UNLIKE the fail-OPEN offshore guard). With the IP flag OFF the
-  // rule collapses to exactly today's GPS-only path. On success we hand off to the
-  // EXISTING publish path unchanged, so the offshore guard + write-gate still run.
-  async _enforceLocationGeofenceThenPublish(latlng) {
-    const resolver = this._physicalCountryResolver;
-    // Prefer the warm cache (resolved off the first GPS fix); fall back to a one-shot
-    // resolve from the device coords if the click beat the background warm-up.
-    let physical = resolver.peek();
-    if (physical === undefined) {
-      try {
-        physical = await resolver.resolve(envVariables.currentLocation || latlng);
-      } catch (_e) {
-        physical = null; // network/parse failure → unknown → strict block below
-      }
-    }
-
-    // IP leg (only when the IP resolver was constructed = both flags ON). Prefer the
-    // warm cache (resolved at startup); fall back to a one-shot resolve if the click
-    // beat the warm-up. null on any failure (network/parse/throttle) → strict block.
-    const ipEnabled = !!this._ipCountryResolver;
-    let ipCountry = null;
-    if (ipEnabled) {
-      ipCountry = this._ipCountryResolver.peek();
-      if (ipCountry === undefined) {
-        try {
-          ipCountry = await this._ipCountryResolver.resolve();
-        } catch (_e) {
-          ipCountry = null;
-        }
-      }
-    }
-
-    const allowed = decidePublishAllowed({
-      physical,
-      ip: ipCountry,
-      coords: latlng,
-      ipEnabled,
+  // LOCATION-GEOFENCE gate (flag ON only). Resolves the user's PHYSICAL country (GPS,
+  // cached per session) and, when the IP flag is ON, their IP-derived country, then asks
+  // the SAME pure rule the UX gate uses (geofenceEligibility → resolveBindingCountry):
+  //   • binding country = the GPS-physical country, IP must AGREE when the IP flag is on;
+  //   • GPS-denied/unknown but IP known → bind to the IP country (the user's chosen
+  //     fallback, status 'ok_ip_fallback');
+  //   • a mark is allowed iff there is a binding country AND the pin sits inside it.
+  // Fail-CLOSED: an unknown-on-both / disagreeing signal blocks (deliberately UNLIKE the
+  // fail-OPEN offshore guard). With the IP flag OFF this is exactly today's GPS-only path
+  // plus that one fallback. The PHYSICAL country is resolved ONLY from the DEVICE coords
+  // (envVariables.currentLocation) — NEVER from the clicked latlng (that was a latent bug:
+  // reverse-geocoding the pin would bind to where the user CLICKED, not where they ARE).
+  // On allow we hand off to the EXISTING publish path, passing the binding country down so
+  // the offshore guard + Pais stamp key on it instead of the flag-picker country.
+  // SHARED binding-country authority for EVERY publish funnel (map-click, report-sheet,
+  // address form). Delegates to the pure resolveGeofenceBinding helper (geofencePublishGuard.js)
+  // so App.js stays under its LOC budget and the resolution is unit-testable without React.
+  // Returns the {eligible, country, status} verdict (NO geometry — callers apply
+  // isInsideCountry against the country). The physical leg resolves ONLY from the DEVICE coords,
+  // never a clicked pin. Never called on the flag-OFF path (each funnel checks the flag first).
+  async _resolveGeofenceBinding() {
+    return resolveGeofenceBinding({
+      physicalResolver: this._physicalCountryResolver,
+      ipResolver: this._ipCountryResolver,
+      deviceCoords: envVariables.currentLocation,
     });
-    if (!allowed) {
-      // Distinguish the two block reasons for honest copy: when BOTH countries are
-      // known but DISAGREE (VPN / coarse IP), the user's location IS on, so the
-      // "turn on location" copy would mislead, so use the country-mismatch message.
-      // Every other block (unknown GPS, unknown IP, mark outside the country) keeps
-      // the existing need_location copy. Surfaced via the same offlineToast surface.
-      const countryMismatch =
-        ipEnabled && physical && ipCountry && physical !== ipCountry;
-      this.setState({
-        offlineToast: countryMismatch
-          ? t('page.geofence.country_mismatch')
-          : t('page.geofence.need_location'),
-      });
-      return;
-    }
-    this._publishMarkFromMap(latlng);
   }
 
-  // The publish tail of handleClickMap, extracted verbatim so it can be reached BOTH
-  // from the synchronous OFF path (byte-identical to today) and after the async
-  // LOCATION-GEOFENCE check resolves. The selected-country bbox gate already ran in
-  // handleClickMap before either caller reaches here.
-  _publishMarkFromMap(latlng) {
+  async _enforceLocationGeofenceThenPublish(latlng) {
+    // One verdict from the SOT rule; geometry leg applied here against the binding country.
+    const elig = await this._resolveGeofenceBinding();
+    const allowed = elig.country ? isInsideCountry(latlng, elig.country) : false;
+    if (!allowed) {
+      // Block: localized notice by reason (geofenceBlockMessage), surfaced via the same
+      // offlineToast surface, and refresh the UX gate so the controls reflect the state.
+      this.setState({ offlineToast: geofenceBlockMessage(elig.status), geofenceEligible: elig.eligible });
+      dispatchGeofenceEligibility(elig);
+      return;
+    }
+    // Allowed: publish bound to the verified country, and refresh the gate to the
+    // verified-eligible state (state + broadcast) so the UI tracks it.
+    this._publishMarkFromMap(latlng, elig.country);
+    this.setState({ geofenceEligible: elig.eligible });
+    dispatchGeofenceEligibility(elig);
+  }
+
+  // The publish tail of handleClickMap, reachable BOTH from the synchronous OFF path
+  // (byte-identical to today) and after the async LOCATION-GEOFENCE check resolves. The
+  // selected-country bbox gate already ran in handleClickMap before either caller reaches
+  // here. `bindingCountry` is the GPS/IP-verified country from the geofence gate, passed
+  // ONLY on the flag-ON allow path; the OFF path calls this with no second arg, so it is
+  // undefined and publishPinFromMap falls back to deps.activeCountry() exactly as today.
+  _publishMarkFromMap(latlng, bindingCountry) {
     this.setState({ isLoading: true });
     // The async Sheets write lives in appPinActions.publishPinFromMap (deps-
     // injected like appMainBootstrap). The synchronous coordinate resolution +
@@ -542,7 +577,7 @@ class App extends Component {
     // out-of-country geofence failure (the 'out_of_bounds' Error or the stable
     // OUT_OF_COUNTRY_BBOX reason) and surfaces the SAME localized copy via the
     // existing offlineToast surface, instead of leaving the user with a spinner.
-    pinActions.publishPinFromMap(this, this._pinDeps, latlng).catch((err) => {
+    pinActions.publishPinFromMap(this, this._pinDeps, latlng, bindingCountry).catch((err) => {
       const reason = err && (err.reason || err.message || String(err));
       const isOutOfCountry = reason === 'OUT_OF_COUNTRY_BBOX' || reason === 'out_of_bounds';
       this.setState({
@@ -580,6 +615,15 @@ class App extends Component {
   }
 
   handlePinDroppedOnMap(coords) {
+    // LOCATION-GEOFENCE (flag ON only): map long-press is a report-sheet ENTRY POINT, so it
+    // must respect eligibility like the FAB / empty-state CTA the UX gate hides. When the
+    // user is not verified in-country we refuse to open the sheet and surface the same
+    // localized notice instead of letting them start an un-publishable report. Flag OFF
+    // (geofenceEligible seeds TRUE, never flipped) → byte-identical to today.
+    if (this._physicalCountryResolver && this.state.geofenceEligible === false) {
+      this.setState({ offlineToast: t('page.geofence.controls_hidden') });
+      return;
+    }
     trackReportStarted({ entryPoint: 'map_long_press' });
     this.setState({ reportSheetOpen: true, reportSheetCoords: coords });
   }
@@ -661,6 +705,27 @@ class App extends Component {
   // M1 publish path — writes through writePinToSheets and handles the UX-side
   // effects (ping-ring). Falls back to IndexedDB queue when offline (M7).
   async handlePublishFromSheet(payload) {
+    // LOCATION-GEOFENCE (flag ON only) — the report-sheet funnel is a SECOND publish path
+    // that previously bypassed the physical/IP geofence entirely (it stamped + gated on the
+    // FLAG country). Enforce the SAME binding-country rule here so a user physically in
+    // country X cannot publish a pin in country Y through this path either: resolve the
+    // verified country, block (+ notify) when not eligible or when the pin sits outside it,
+    // and OVERRIDE the payload's country with the verified one so the Pais stamp + the
+    // downstream writePinToSheets bbox gate both key on PHYSICAL, not the flag-picker. Flag
+    // OFF (_physicalCountryResolver === null) → skipped, byte-identical to today.
+    if (this._physicalCountryResolver) {
+      const elig = await this._resolveGeofenceBinding();
+      const coords = payload && payload.coords;
+      const allowed = elig.country && coords ? isInsideCountry(coords, elig.country) : false;
+      this.setState({ geofenceEligible: elig.eligible });
+      dispatchGeofenceEligibility(elig);
+      if (!allowed) {
+        this.setState({ offlineToast: geofenceBlockMessage(elig.status) });
+        return;
+      }
+      payload = { ...payload, country: elig.country };
+    }
+
     const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
     if (offline) {
       await enqueuePublish(payload);
@@ -818,11 +883,14 @@ class App extends Component {
         envVariables.currentLocation = coords;
         // LOCATION-GEOFENCE (flag ON only): kick off the physical-country resolve
         // off the FIRST real device fix, so the synchronous click handler later reads
-        // a cached code instead of blocking on the network. Fire-and-forget: the
-        // promise is intentionally not awaited here (it only warms the cache); the
-        // click path still awaits/falls back if it lands before this resolves.
+        // a cached code instead of blocking on the network. Not awaited for runMain
+        // (it only warms the cache; the click path still awaits/falls back), but once
+        // it settles we refresh eligibility so the UX gate lights up with the GPS leg.
         if (self._physicalCountryResolver) {
-          self._physicalCountryResolver.resolve(coords).catch(function () {});
+          self._physicalCountryResolver
+            .resolve(coords)
+            .catch(function () {})
+            .finally(function () { self._refreshGeofenceEligibility(); });
         }
         self.setState({ center: coords }, function () {
           console.log('[geo] state.center after setState:', self.state.center);
@@ -831,6 +899,10 @@ class App extends Component {
       },
       function (err) {
         console.warn('[geo] FAILED (code=' + err.code + '):', err.message, '- using default center:', self.state.center);
+        // LOCATION-GEOFENCE: GPS denied/unavailable. Refresh eligibility so the gate
+        // settles on its GPS-denied verdict — the IP-fallback path makes it eligible
+        // iff the IP leg is on AND a country came back; otherwise it stays ineligible.
+        self._refreshGeofenceEligibility();
         runMain(self, bootstrapDeps);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
