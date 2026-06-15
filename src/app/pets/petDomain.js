@@ -56,6 +56,7 @@ export {
   isValidSize,
   isValidColor,
   normalizePetColorToBucket,
+  petColorBucketLabelPtBR,
   PET_RESOLVED_AT_KEY,
   PET_FRESHNESS_AT_KEY,
   isPetResolved,

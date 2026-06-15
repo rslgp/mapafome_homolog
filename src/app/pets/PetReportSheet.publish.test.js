@@ -17,13 +17,16 @@
 
 import React from 'react';
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor, within } from '@testing-library/react';
 import PetReportSheet from './PetReportSheet';
 import {
   PET_STATUSES,
+  PET_COLORS,
   PET_PUBLISH_FAILURE,
   PET_PUBLISH_FAILURE_COPY,
+  normalizePetColorToBucket,
 } from './petDomain';
+import { t } from '../components/compatibility/components/ux/strings';
 
 afterEach(cleanup);
 
@@ -116,6 +119,73 @@ describe('PetReportSheet — cópia calma por classe de falha (PET-M1)', () => {
 
     const expected = PET_PUBLISH_FAILURE_COPY[PET_PUBLISH_FAILURE.GENERIC];
     await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(expected));
+  });
+});
+
+describe('PetReportSheet — CHIP de cor predefinida (round-trip reporter↔finder)', () => {
+  // O radiogroup de cor é rotulado por t('pets.report.aria.color'). Resolvemos o
+  // nome acessível pela SOT (i18n) — NUNCA hardcodado nem a chave crua: a chave
+  // existe na i18n (idioma ativo pt-BR → "Cor do pet"), então casamos o valor
+  // traduzido para escopar o grupo de cor sem colidir com situação/espécie/porte.
+  const COLOR_GROUP = t('pets.report.aria.color');
+
+  function colorGroup() {
+    return within(screen.getByRole('radiogroup', { name: COLOR_GROUP }));
+  }
+
+  it('renderiza um radio para CADA bucket de PET_COLORS (incl. "outro")', () => {
+    render(<PetReportSheet open coords={COORDS} onClose={() => {}} onPublish={() => {}} />);
+    const radios = colorGroup().getAllByRole('radio');
+    expect(radios).toHaveLength(PET_COLORS.length);
+    // o balde-âncora 'outro' está presente (rotulado "Outra" em pt-BR via SOT)
+    const outro = PET_COLORS.find((c) => c.id === 'outro');
+    expect(colorGroup().getByRole('radio', { name: new RegExp(outro.label, 'i') })).not.toBeNull();
+  });
+
+  it('escolher um bucket publica um color que NORMALIZA de volta ao bucket (round-trip)', async () => {
+    const onPublish = vi.fn().mockResolvedValue(undefined);
+    render(<PetReportSheet open coords={COORDS} onClose={() => {}} onPublish={onPublish} />);
+
+    const caramelo = PET_COLORS.find((c) => c.id === 'caramelo');
+    fireEvent.click(screen.getByRole('radio', { name: new RegExp(STATUS.label, 'i') }));
+    fireEvent.click(colorGroup().getByRole('radio', { name: new RegExp(caramelo.label, 'i') }));
+    fireEvent.click(screen.getByRole('button', { name: PUBLISH_BTN }));
+
+    await waitFor(() => expect(onPublish).toHaveBeenCalledTimes(1));
+    const payload = onPublish.mock.calls[0][0];
+    // o texto persistido (token pt-BR canônico) mapeia de volta ao bucket escolhido
+    expect(normalizePetColorToBucket(payload.color)).toBe('caramelo');
+  });
+
+  it('bucket + detalhe de texto livre: o color AINDA normaliza ao bucket (precedência)', async () => {
+    const onPublish = vi.fn().mockResolvedValue(undefined);
+    render(<PetReportSheet open coords={COORDS} onClose={() => {}} onPublish={onPublish} />);
+
+    const preto = PET_COLORS.find((c) => c.id === 'preto');
+    fireEvent.click(screen.getByRole('radio', { name: new RegExp(STATUS.label, 'i') }));
+    fireEvent.click(colorGroup().getByRole('radio', { name: new RegExp(preto.label, 'i') }));
+
+    // digita uma NUANCE de cor no campo de texto livre (existe no DOM mesmo com o
+    // expander "mais detalhes" recolhido — <details> não desmonta seus filhos)
+    const detailInput = document.getElementById('pet-color');
+    fireEvent.change(detailInput, { target: { value: 'com manchas brancas no peito' } });
+
+    fireEvent.click(screen.getByRole('button', { name: PUBLISH_BTN }));
+
+    await waitFor(() => expect(onPublish).toHaveBeenCalledTimes(1));
+    const payload = onPublish.mock.calls[0][0];
+    // o token do bucket lidera ("Preto · ...") → a precedência do normalize o mantém preto
+    expect(payload.color).toMatch(/·/);
+    expect(normalizePetColorToBucket(payload.color)).toBe('preto');
+  });
+
+  it('SEM escolher chip e SEM texto: color vai vazio (continua opcional)', async () => {
+    const onPublish = vi.fn().mockResolvedValue(undefined);
+    render(<PetReportSheet open coords={COORDS} onClose={() => {}} onPublish={onPublish} />);
+    fireEvent.click(screen.getByRole('radio', { name: new RegExp(STATUS.label, 'i') }));
+    fireEvent.click(screen.getByRole('button', { name: PUBLISH_BTN }));
+    await waitFor(() => expect(onPublish).toHaveBeenCalledTimes(1));
+    expect(onPublish.mock.calls[0][0].color).toBe('');
   });
 });
 

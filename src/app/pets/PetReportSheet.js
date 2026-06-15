@@ -7,7 +7,9 @@ import {
   PET_STATUSES,
   PET_SPECIES,
   PET_SIZES,
+  PET_COLORS,
   PET_PUBLISH_FAILURE,
+  petColorBucketLabelPtBR,
 } from './petDomain';
 import { resizeImageFile, maxPhotoMb } from './petPhoto';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
@@ -49,6 +51,11 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
   const [species, setSpecies] = useState(DEFAULT_SPECIES);
   const [size, setSize] = useState('');
   const [name, setName] = useState('');
+  // COR — o CHIP de bucket (id de PET_COLORS ou '') é a cor MATCHÁVEL que o finder
+  // filtra; `color` (texto livre, abaixo) é nuance OPCIONAL. Single-select como o
+  // porte. Ao publicar, o bucket vira o token pt-BR canônico que round-trips de
+  // volta pelo normalizePetColorToBucket → o reporter e o finder falam UMA língua.
+  const [colorBucket, setColorBucket] = useState('');
   const [color, setColor] = useState('');
   const [contact, setContact] = useState('');
   const [detail, setDetail] = useState('');
@@ -84,6 +91,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
     setSpecies(DEFAULT_SPECIES);
     setSize('');
     setName('');
+    setColorBucket('');
     setColor('');
     setContact('');
     setDetail('');
@@ -226,13 +234,28 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
     setErrorMsg(null);
     setPublishError(null);
 
+    // COR persistida (texto livre pt-BR — o schema do blob NÃO muda). Regra de
+    // precedência que GARANTE o round-trip de volta ao bucket escolhido:
+    //   • bucket + detalhe → "<TokenPtBR> · <detalhe>": o token canônico do bucket
+    //     lidera, então normalizePetColorToBucket casa a 1ª keyword (a do bucket)
+    //     e ignora o que vem depois → mapeia de volta ao bucket escolhido;
+    //   • só bucket → o token pt-BR canônico;
+    //   • só texto livre (reporter pulou o chip) → o texto como antes (back-compat:
+    //     o normalize ADIVINHA o bucket na leitura, como sempre);
+    //   • nenhum → '' (sanitizeFreeText em buildPetDados apara/capa de novo).
+    const bucketLabel = colorBucket ? petColorBucketLabelPtBR(colorBucket) : '';
+    const detail2 = color.trim();
+    const finalColor = bucketLabel
+      ? (detail2 ? `${bucketLabel} · ${detail2}` : bucketLabel)
+      : detail2;
+
     try {
       await onPublish?.({
         coords,
         status,
         species,
         size,
-        color: color.trim(),
+        color: finalColor,
         name: name.trim(),
         contact: contact.trim(),
         detail: detail.trim(),
@@ -389,6 +412,35 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
           </div>
         </fieldset>
 
+        {/* COR — chip de bucket FECHADO (PET_COLORS), espelha o fieldset de porte:
+            single-select radio-like, opcional. É a cor MATCHÁVEL — o finder filtra
+            o mapa por estes MESMOS baldes (PetFilterBar), então escolher aqui em vez
+            de digitar texto livre alinha reporter e finder no MESMO vocabulário e
+            melhora os pareamentos. O texto livre de cor segue existindo no expander
+            "mais detalhes" como NUANCE opcional. */}
+        <fieldset className="pet-fieldset">
+          <legend className="pet-legend">{t('pets.report.legend.color')}</legend>
+          <div className="mdf-sheet__chips" role="radiogroup" aria-label={t('pets.report.aria.color')}>
+            {PET_COLORS.map((c) => {
+              const checked = colorBucket === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={checked}
+                  className={`mdf-chip${checked ? ' mdf-chip--on' : ''}`}
+                  onClick={() => setColorBucket(checked ? '' : c.id)}
+                  disabled={busy}
+                >
+                  <span className="mdf-chip__label">{t(`pets.color.${c.id}.label`)}</span>
+                  {checked && <span className="mdf-chip__check" aria-hidden="true">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+
         {/* Album — the single biggest recognition aid (PET-M13/PET-M15). Promoted
             out of the optional expander into an always-visible, emphasized field so
             a reporter actually sees it. Still optional: publishing works with no
@@ -529,6 +581,11 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
             onChange={(e) => setColor(e.target.value)}
             disabled={busy}
           />
+          {/* O CHIP de cor acima é a cor MATCHÁVEL (o que o finder filtra); este
+              campo é nuance OPCIONAL (ex.: "caramelo bem clarinho, peito branco"). */}
+          <p className="mdf-sheet__helper">
+            {t('pets.report.field.color.help')}
+          </p>
 
           <label className="mdf-sr-only" htmlFor="pet-detail">{t('pets.report.field.detail')}</label>
           <input

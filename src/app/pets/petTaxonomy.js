@@ -227,6 +227,38 @@ export function normalizePetColorToBucket(rawColor) {
   return 'outro';
 }
 
+// ─── COR — TOKEN canônico pt-BR de um bucket (escrita do CHIP do reporter) ────
+// O REPORTER agora escolhe a cor por CHIP (um id de PET_COLORS), mas o blob `Dados`
+// continua armazenando `pet.color` como TEXTO LIVRE pt-BR (status/espécie já são
+// ids pt-BR neste sheet) — NÃO mudamos o schema. Esta função converte o id do
+// bucket no rótulo pt-BR CANÔNICO que será persistido, de forma DETERMINÍSTICA e
+// SEM depender do idioma ativo (o getter `.label` resolveria no locale corrente —
+// errado para a verdade gravada). É um mapa frozen, PURO, nunca lança; id
+// desconhecido/vazio → '' (o chamador decide o fallback).
+//
+// INVARIANTE DE ROUND-TRIP (o que torna o reporter e o finder UMA voz): para todo
+// id de PET_COLORS, normalizePetColorToBucket(petColorBucketLabelPtBR(id)) === id.
+// Cada rótulo aqui CASA a 1ª palavra-chave do seu próprio bucket em
+// COLOR_KEYWORD_BUCKETS (preto→'preto', rajado→'rajado', ...), e 'Outra' não casa
+// nenhuma keyword → cai no balde-âncora 'outro' (o que é exatamente o desejado).
+// Um teste fixa o round-trip dos 8 ids. Re-exportado pelo barrel petDomain.
+const PET_COLOR_BUCKET_PTBR = Object.freeze({
+  preto: 'Preto',
+  branco: 'Branco',
+  caramelo: 'Caramelo',
+  marrom: 'Marrom',
+  cinza: 'Cinza',
+  rajado: 'Rajado',
+  claro: 'Claro',
+  outro: 'Outra',
+});
+
+export function petColorBucketLabelPtBR(id) {
+  return Object.prototype.hasOwnProperty.call(PET_COLOR_BUCKET_PTBR, id)
+    ? PET_COLOR_BUCKET_PTBR[id]
+    : '';
+}
+
 // ─── PRIMITIVAS GEOGRÁFICAS (compartilhadas) ─────────────────────────────────
 // Validação pura de um par [lat,lng]: ambos finitos. (O range Brasil é validado
 // no writer via validateCoordinatePair do sheetsClient — aqui só garantimos a

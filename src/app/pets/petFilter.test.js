@@ -22,6 +22,7 @@ import {
   togglePetFilterValue,
   setPetFilterRecency,
   normalizePetColorToBucket,
+  petColorBucketLabelPtBR,
   PET_STATUSES,
   PET_SPECIES,
   PET_SIZES,
@@ -310,6 +311,31 @@ describe('normalizePetColorToBucket — texto livre → bucket de PET_COLORS', (
       expect(() => { result = normalizePetColorToBucket(garbage); }).not.toThrow();
       expect(BUCKET_IDS.has(result)).toBe(true);
     }
+  });
+});
+
+describe('petColorBucketLabelPtBR — token pt-BR canônico do bucket (escrita do chip)', () => {
+  it('o token de CADA bucket de PET_COLORS round-trips de volta ao MESMO id', () => {
+    // A INVARIANTE que faz reporter e finder falarem uma língua só: o reporter
+    // escolhe um id de bucket → persistimos o token pt-BR → o finder (e qualquer
+    // re-leitura) normaliza esse texto de volta EXATAMENTE ao bucket escolhido.
+    // 'Outra' não casa nenhuma keyword → cai no balde-âncora 'outro' (correto).
+    for (const c of PET_COLORS) {
+      const token = petColorBucketLabelPtBR(c.id);
+      expect(token).not.toBe(''); // todo id da SOT tem um token
+      expect(normalizePetColorToBucket(token)).toBe(c.id);
+    }
+  });
+
+  it('id desconhecido/vazio → \'\' (o chamador decide o fallback)', () => {
+    for (const bad of ['', 'roxo', null, undefined, 123, {}]) {
+      expect(petColorBucketLabelPtBR(bad)).toBe('');
+    }
+  });
+
+  it('é PURO/determinístico: mesma entrada → mesma saída', () => {
+    expect(petColorBucketLabelPtBR('preto')).toBe(petColorBucketLabelPtBR('preto'));
+    expect(petColorBucketLabelPtBR('outro')).toBe('Outra');
   });
 });
 
