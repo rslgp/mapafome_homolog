@@ -129,3 +129,56 @@ export function decidePublishAllowed(args = {}) {
 
   return isInside(coords, country);
 }
+
+// isClickAllowed({ pin, physical, ip, ipEnabled, isInside }) → boolean.
+//   pin       = the clicked mark's [lat, lng].
+//   physical  = GPS-physical country (lowercase alpha-2) or null/undefined if unknown.
+//   ip        = IP-derived country (lowercase alpha-2) or null/undefined if unknown.
+//   ipEnabled = is the IP sub-check ON? (IP_GEOFENCE_ENABLED) When false, ip is IGNORED
+//               entirely (it is never collected as a signal).
+//   isInside  = injectable inside-country predicate (defaults to the real
+//               isInsideCountry); lets a test drive the AND/veto logic without bounds.
+//
+// THE INDEPENDENT-VETO RULE (the user's locked decision: "each signal vetoes
+// independently"). A click/publish is ALLOWED ONLY IF the pin is inside EVERY enabled,
+// KNOWN location signal's country. The two signals — GPS-physical and IP-derived — are
+// each their OWN gate:
+//   • GPS known and pin OUTSIDE its country → BLOCK (veto by location).
+//   • IP known (and ipEnabled) and pin OUTSIDE its country → BLOCK (veto by IP).
+//   • BOTH known and pin outside EITHER (or both) → BLOCK (veto by either).
+//   • ALLOWED iff the pin is inside the GPS country AND inside the IP country (both known).
+//   • At least ONE signal must be KNOWN and must BIND the pin — if NO signal is known
+//     (or none is enabled), there is nothing to bind to → BLOCK (fail-CLOSED).
+//   • IP flag OFF → only the GPS signal is collected; ip is never consulted.
+//   • GPS unknown but IP known (ipEnabled) → the IP signal ALONE governs (GPS-denied
+//     fallback): inside ip → allow.
+//   • IP unknown while GPS known (ipEnabled) → the IP signal cannot veto (it is not a
+//     KNOWN signal); the GPS signal alone binds the pin.
+//
+// RELATION TO resolveBindingCountry (the agree case is IDENTICAL; the veto generalizes):
+// resolveBindingCountry picks ONE binding country then checks geometry once. When GPS
+// and IP both resolve to a KNOWN country under ipEnabled they AGREE (same code — its
+// 'ok' verdict), so "inside both" collapses to "inside that one country": this function
+// returns the SAME boolean as decidePublishAllowed there. isClickAllowed differs only by
+// making each KNOWN signal an INDEPENDENT gate rather than requiring agreement first —
+// e.g. GPS=br/IP=us no longer short-circuits to a 'mismatch' block decision; instead
+// every pin is vetoed by whichever country it falls outside (here, always at least one),
+// which is the stricter, per-signal framing the user specified. The single-signal cases
+// (IP-off GPS-only, and the GPS-denied IP fallback) match resolveBindingCountry exactly.
+// PURE: no flag/network/store; just collect the known governing signals and AND them.
+export function isClickAllowed(args = {}) {
+  const { pin, physical, ip, ipEnabled } = args;
+  const isInside = args.isInside || isInsideCountry;
+
+  // Collect the KNOWN signal countries that GOVERN: the GPS-physical country whenever
+  // it is known; the IP country ONLY when ipEnabled AND it is known.
+  const signals = [];
+  if (physical) signals.push(physical);
+  if (ipEnabled && ip) signals.push(ip);
+
+  // No usable signal bound the pin → fail-CLOSED.
+  if (signals.length === 0) return false;
+
+  // Every KNOWN governing signal must contain the pin (independent per-signal veto).
+  return signals.every((country) => isInside(pin, country));
+}

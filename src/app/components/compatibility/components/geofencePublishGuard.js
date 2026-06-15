@@ -20,7 +20,7 @@
 // where they ARE). A cached null (a single transient startup-lookup failure) is force-retried
 // so a one-time network blip does not brick publishing for the whole session.
 
-import { geofenceEligibility } from './geofenceDecision';
+import { geofenceEligibility, isClickAllowed } from './geofenceDecision';
 import { isInsideCountry } from './countries';
 import { peekGeofenceEligibility } from './geofenceEvents';
 import { t } from './ux/strings';
@@ -32,14 +32,18 @@ function isDeviceCoords(c) {
     && typeof c[0] === 'number' && typeof c[1] === 'number';
 }
 
-// resolveGeofenceBinding({ physicalResolver, ipResolver, deviceCoords }) → Promise<verdict>
+// _resolveSignals({ physicalResolver, ipResolver, deviceCoords }) → Promise<{ physical, ip, ipEnabled }>
+// The SHARED signal-resolution step both publish gates depend on:
+//   • resolveGeofenceBinding (the UX/status verdict — picks ONE binding country); and
+//   • checkClickAllowed (the per-PIN independent-veto allow decision).
+// It is the ONE place that turns the two live resolvers + the device coords into the raw
+// {physical, ip, ipEnabled} signal triple, so the two gates can never drift on HOW a signal is
+// resolved (warm peek → force-retry a cached null → DEVICE coords only, NEVER the clicked pin).
 //   physicalResolver = the GPS physical-country resolver (peek()/resolve(coords, opts)); REQUIRED.
 //   ipResolver       = the IP-country resolver (peek()/resolve(opts)) or null when the IP flag is OFF.
 //   deviceCoords     = the user's DEVICE coords (envVariables.currentLocation), or anything
 //                      non-coord when no fix yet.
-// Returns the geofenceEligibility() verdict ({ eligible, country, status }). NO geometry — the
-// caller applies isInsideCountry(pin, verdict.country) for its own pin.
-export async function resolveGeofenceBinding({ physicalResolver, ipResolver, deviceCoords } = {}) {
+async function _resolveSignals({ physicalResolver, ipResolver, deviceCoords } = {}) {
   // PHYSICAL leg: warm cache first; one-shot resolve from DEVICE coords only when present. A
   // cached null (resolved-but-unknown from a transient failure) is re-tried with { force }.
   let physical = physicalResolver.peek();
@@ -67,7 +71,41 @@ export async function resolveGeofenceBinding({ physicalResolver, ipResolver, dev
     }
   }
 
-  return geofenceEligibility({ physical: physical || null, ip: ipCountry || null, ipEnabled });
+  return { physical: physical || null, ip: ipCountry || null, ipEnabled };
+}
+
+// resolveGeofenceBinding({ physicalResolver, ipResolver, deviceCoords }) → Promise<verdict>
+//   physicalResolver = the GPS physical-country resolver (peek()/resolve(coords, opts)); REQUIRED.
+//   ipResolver       = the IP-country resolver (peek()/resolve(opts)) or null when the IP flag is OFF.
+//   deviceCoords     = the user's DEVICE coords (envVariables.currentLocation), or anything
+//                      non-coord when no fix yet.
+// Returns the geofenceEligibility() verdict ({ eligible, country, status }). NO geometry — the
+// caller applies the pin check separately (today: checkClickAllowed's per-signal veto). This is
+// STILL the UX gate's authority (show/hide the publish triggers) + the block-message status, so it
+// stays even though the per-PIN allow now runs through checkClickAllowed.
+export async function resolveGeofenceBinding(args = {}) {
+  const { physical, ip, ipEnabled } = await _resolveSignals(args);
+  return geofenceEligibility({ physical, ip, ipEnabled });
+}
+
+// checkClickAllowed({ physicalResolver, ipResolver, deviceCoords, pin }) → Promise<{ allowed, status, physical, ip }>
+// The per-PIN PUBLISH gate for the ASYNC funnels (map-click + report-sheet). It resolves BOTH
+// signal countries the SAME way resolveGeofenceBinding does (shared _resolveSignals: warm peek →
+// force-retry a cached null → DEVICE coords only, NEVER the clicked pin), then applies the
+// INDEPENDENT-VETO rule (isClickAllowed): the pin must be inside EVERY known, enabled signal's
+// country. This is STRICTER than resolveGeofenceBinding's single-binding check — e.g. a GPS=br /
+// IP=us disagreement vetoes every pin instead of resolving to one 'mismatch' country — but the
+// AGREE case (GPS===IP, today's 'ok') is identical.
+//   `allowed` = isClickAllowed({ pin, physical, ip, ipEnabled }).
+//   `status`  = the resolveBindingCountry status for the SAME signals, so the caller maps the block
+//               copy via geofenceBlockMessage(status) and the 'mismatch' vs need_location notice is
+//               unchanged. (We re-derive it from geofenceEligibility on the resolved signals.)
+//   `physical` / `ip` = the resolved signal countries (for the Pais stamp / downstream override).
+export async function checkClickAllowed({ physicalResolver, ipResolver, deviceCoords, pin } = {}) {
+  const { physical, ip, ipEnabled } = await _resolveSignals({ physicalResolver, ipResolver, deviceCoords });
+  const { status } = geofenceEligibility({ physical, ip, ipEnabled });
+  const allowed = isClickAllowed({ pin, physical, ip, ipEnabled });
+  return { allowed, status, physical, ip };
 }
 
 // geofenceBlockMessage(status) → the localized notice for a blocked publish. A 'mismatch'
@@ -89,6 +127,18 @@ export function geofenceBlockMessage(status) {
 // localized notice to show on a block ('mismatch' → country_mismatch, else need_location).
 // `country` is the verified binding country (for the Pais stamp) when allowed. Callers gate
 // this behind the location flag, so OFF (no broadcast → undefined verdict) never reaches here.
+//
+// INDEPENDENT-VETO EQUIVALENCE (why this single-country check IS the per-signal veto here):
+// The async funnels run the stricter isClickAllowed veto (checkClickAllowed) over BOTH raw
+// signals, but this sync funnel only has the broadcast verdict's ONE binding country. That is
+// faithful — NOT a gap — because in EVERY status where a binding country exists, all KNOWN
+// governing signals AGREE on it (see resolveBindingCountry): 'ok' (IP off → GPS is the only
+// signal; or IP on with physical===ip → both signals ARE that country) and 'ok_ip_fallback'
+// (GPS unknown → IP is the only signal). In each case the set of known signals' countries is
+// {binding}, so "inside the binding country" == "inside EVERY known signal" == the veto. The
+// veto only DIVERGES from single-binding when signals DISAGREE (GPS=br/IP=us) or one is unknown
+// while the other binds — but those resolve to a NULL binding country ('mismatch'/'ip_unknown'/
+// 'no_location'), which this function already blocks. So checkSyncBindingForPin needs no change.
 export function checkSyncBindingForPin(coords) {
   const elig = peekGeofenceEligibility();
   const country = elig && elig.country;
