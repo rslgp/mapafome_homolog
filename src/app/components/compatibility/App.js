@@ -34,8 +34,10 @@ import { getCountry } from './components/countries';
 import * as countryStore from './components/countryStore';
 import { INTL_ENABLED } from './components/intlConfig';
 import { assertPublishCountryMatches } from './components/reverseGeocodeGuard';
-import { LOCATION_GEOFENCE_ENABLED } from './components/geofenceConfig';
+import { LOCATION_GEOFENCE_ENABLED, IP_GEOFENCE_ENABLED } from './components/geofenceConfig';
 import { createPhysicalCountryResolver } from './components/geofenceLocation';
+import { createIpCountryResolver } from './components/geofenceIp';
+import { decidePublishAllowed } from './components/geofenceDecision';
 
 import qr from './images/qr.svg';
 
@@ -228,6 +230,23 @@ class App extends Component {
     this._physicalCountryResolver = LOCATION_GEOFENCE_ENABLED
       ? createPhysicalCountryResolver()
       : null;
+
+    // IP-GEOFENCE (separate dark-ship flag, default OFF): the SECOND signal of the
+    // strict-AND rule: resolve the visitor's IP-derived country so the publish gate
+    // can require it to AGREE with the GPS-physical country (a VPN / coarse-IP
+    // mismatch blocks). Built ONLY when BOTH the location geofence AND the IP flag are
+    // ON (the IP leg is meaningless without the GPS leg it tightens). When either flag
+    // is OFF this stays null and the IP branch is skipped, so OFF behavior is
+    // byte-identical to today: no IP API call, no change to the gate. Same DI shape as
+    // the physical resolver (it never imports the store/flag). Warm it ONCE here at
+    // construction: unlike GPS it has no coords dependency, so it can resolve before
+    // any device fix; the click path still awaits/falls back if it lands first.
+    this._ipCountryResolver = LOCATION_GEOFENCE_ENABLED && IP_GEOFENCE_ENABLED
+      ? createIpCountryResolver()
+      : null;
+    if (this._ipCountryResolver) {
+      this._ipCountryResolver.resolve().catch(() => {});
+    }
   }
 
   telefoneFilterChange(event) {
@@ -447,12 +466,15 @@ class App extends Component {
   }
 
   // LOCATION-GEOFENCE strict gate (flag ON only). Resolves the user's PHYSICAL country
-  // (cached per session; awaits a one-shot resolve only if the cache is cold), then
-  // requires the clicked mark's coords to be INSIDE that physical country via the pure
-  // isInsideCountry predicate. If the physical country is UNKNOWN (geolocation denied /
-  // no GPS / reverse-geocode failed or offline) we BLOCK with a localized message (the
-  // strict fallback the user chose). On success we hand off to the EXISTING publish
-  // path unchanged, so the offshore guard + write-gate still run as before.
+  // (GPS, cached per session; awaits a one-shot resolve only if the cache is cold) and,
+  // when the IP flag is ON, the user's IP-derived country (resolved once at startup),
+  // then enforces the combined STRICT-AND rule via the pure decidePublishAllowed:
+  //   allowed iff physical KNOWN && (IP off OR ip KNOWN && ip == physical)
+  //            && isInsideCountry(latlng, physical).
+  // Fail-CLOSED: an unknown OR disagreeing signal BLOCKS (the strict choice the user
+  // made, deliberately UNLIKE the fail-OPEN offshore guard). With the IP flag OFF the
+  // rule collapses to exactly today's GPS-only path. On success we hand off to the
+  // EXISTING publish path unchanged, so the offshore guard + write-gate still run.
   async _enforceLocationGeofenceThenPublish(latlng) {
     const resolver = this._physicalCountryResolver;
     // Prefer the warm cache (resolved off the first GPS fix); fall back to a one-shot
@@ -465,10 +487,42 @@ class App extends Component {
         physical = null; // network/parse failure → unknown → strict block below
       }
     }
-    if (!resolver.allows(latlng)) {
-      // Unknown physical country OR mark falls outside it → strict block. Surfaced via
-      // the same offlineToast surface the out-of-country path already uses.
-      this.setState({ offlineToast: t('page.geofence.need_location') });
+
+    // IP leg (only when the IP resolver was constructed = both flags ON). Prefer the
+    // warm cache (resolved at startup); fall back to a one-shot resolve if the click
+    // beat the warm-up. null on any failure (network/parse/throttle) → strict block.
+    const ipEnabled = !!this._ipCountryResolver;
+    let ipCountry = null;
+    if (ipEnabled) {
+      ipCountry = this._ipCountryResolver.peek();
+      if (ipCountry === undefined) {
+        try {
+          ipCountry = await this._ipCountryResolver.resolve();
+        } catch (_e) {
+          ipCountry = null;
+        }
+      }
+    }
+
+    const allowed = decidePublishAllowed({
+      physical,
+      ip: ipCountry,
+      coords: latlng,
+      ipEnabled,
+    });
+    if (!allowed) {
+      // Distinguish the two block reasons for honest copy: when BOTH countries are
+      // known but DISAGREE (VPN / coarse IP), the user's location IS on, so the
+      // "turn on location" copy would mislead, so use the country-mismatch message.
+      // Every other block (unknown GPS, unknown IP, mark outside the country) keeps
+      // the existing need_location copy. Surfaced via the same offlineToast surface.
+      const countryMismatch =
+        ipEnabled && physical && ipCountry && physical !== ipCountry;
+      this.setState({
+        offlineToast: countryMismatch
+          ? t('page.geofence.country_mismatch')
+          : t('page.geofence.need_location'),
+      });
       return;
     }
     this._publishMarkFromMap(latlng);
