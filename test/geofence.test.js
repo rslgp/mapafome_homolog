@@ -132,11 +132,11 @@ describe('isInsideCountry — non-BR country + no-bounds (D6 block)', () => {
     expect(isInsideCountry([40.42, -3.70], 'es')).toBe(true); // Madrid (mainland ES)
   });
 
-  it('returns false for a known country NOT in the launch subset (D6 block)', () => {
-    // Mexico is a real ISO country but has no publish shape in the M2 launch set
-    // → blocked, never "allow without clamp". Same for Australia.
-    expect(isInsideCountry([19.43, -99.13], 'mx')).toBe(false); // Mexico City
-    expect(isInsideCountry([-33.87, 151.21], 'au')).toBe(false); // Sydney
+  it('returns false for a code NOT in the publish subset (D6 block)', () => {
+    // Only invented / non-catalog codes should now be blocked — every country in
+    // COUNTRY_NAMES has a hitbox. Use fake codes to prove D6 still applies.
+    expect(isInsideCountry([35.68, 139.69], 'zz')).toBe(false); // fake code
+    expect(isInsideCountry([-33.87, 151.21], 'xx')).toBe(false); // fake code
   });
 
   it('is case/whitespace tolerant on the code (Postel: liberal input form)', () => {

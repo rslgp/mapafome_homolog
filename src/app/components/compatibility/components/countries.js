@@ -418,13 +418,26 @@ export const COUNTRY_PUBLISH_BOUNDS = {
   // when a single rectangle would swallow a lot of open sea (e.g. Italy is split
   // mainland+Sicily vs Sardinia so the box does not engulf the whole Tyrrhenian).
   //
-  // FAR-FLUNG TERRITORY POLICY (launch): mainland box ONLY. Where a country has
-  // non-contiguous territory it is EXCLUDED for now and called out inline:
+  // FAR-FLUNG TERRITORY POLICY: mainland box ONLY. Where a country has
+  // non-contiguous territory it is EXCLUDED and called out inline:
   //   • us — Alaska + Hawaii EXCLUDED (contiguous lower-48 only).
   //   • fr — overseas (Guyane, Réunion, Antilles, Polynésie…) EXCLUDED
   //          (metropolitan / European France only).
   //   • pt — Azores + Madeira EXCLUDED (mainland Iberian Portugal only).
-  // These exclusions are intentional launch scope, to be revisited post-launch.
+  //   • ec — Galápagos EXCLUDED; ye — Socotra EXCLUDED; in — Andaman/Nicobar +
+  //          Lakshadweep EXCLUDED; cr — Isla del Coco EXCLUDED; ma — Western
+  //          Sahara EXCLUDED; gq — Annobón EXCLUDED.
+  // ONE deliberate exception to "mainland only": gq adds a second rect for BIOKO
+  // island, because the CAPITAL (Malabo) sits there and a capital must stay
+  // publishable. These exclusions are intentional scope, revisitable later.
+  //
+  // ── INTL LOCALE-COVERAGE (this pass) — the curated subset above (Iberia/Western
+  // Europe + the Americas) was the LAUNCH set; it left the non-Latin-script UI
+  // locales (ru/zh/ar/uk/bn) and the newly-added hi/tr without a publishable
+  // country. This pass extends the map so EVERY SUPPORTED_LOCALES option has its
+  // primary geography (and, for pt/es/ar, the major countries that locale serves)
+  // publishable — see the LOCALE-COVERAGE section after the `us` box. Same
+  // [Inference] approximate-rectangle caveat applies; verify against a basemap.
   //
   // NOTE: 'es' here is the COUNTRY code for Spain (ISO-3166 alpha-2) — a DIFFERENT
   // namespace from the 'es' UI-locale code used by the i18n layer. Do not conflate.
@@ -458,6 +471,327 @@ export const COUNTRY_PUBLISH_BOUNDS = {
     // W pulled off the Pacific to Cape Alava, E to West Quoddy Head, S to Key West.
     { N: 49.38, S: 24.46, W: -124.79, E: -66.93 },
   ],
+
+  // ── INTL LOCALE-COVERAGE — a publish hitbox for EVERY UI locale's country ──
+  //
+  // Goal (this pass): every option in the language picker (SUPPORTED_LOCALES) has
+  // its primary geography publishable, so a user who switches to hi/tr/ar/zh/ru/
+  // uk/bn — or to a PALOP / Hispanophone country — is not silently geofenced out
+  // (D6: "no publish shape -> blocked"). Same conventions as the boxes above:
+  // APPROXIMATE coastline-hugging rectangles ([Inference], not surveyor polygons),
+  // mainland-only with far-flung territory EXCLUDED, multi-rect where a single box
+  // would swallow a lot of open sea. The reverseGeocodeGuard remains the second
+  // hygiene layer for the residual offshore strip a bbox can't avoid (M4.5/R6).
+  // These coordinates are [Inference]; verify against a basemap before any
+  // accuracy-critical use.
+
+  // hi -> India; tr -> Turkey (the two locales added this pass)
+  in: [{ N: 35.50, S: 6.55, W: 68.10, E: 97.42 }], // India mainland — Kashmir down to Kanyakumari; Andaman/Nicobar & Lakshadweep EXCLUDED (far-flung)
+  tr: [{ N: 42.15, S: 35.80, W: 25.66, E: 44.83 }], // Turkey (Anatolia + East Thrace) — N off the Black Sea, S off the Med, spanning the Bosphorus
+
+  // Lusophone (pt) — the PALOP + Timor-Leste, which lusophone auto-detect already
+  // routes to pt (engine resolveLocaleFromCountry). Brazil + Portugal are above.
+  ao: [{ N: -4.39, S: -18.04, W: 11.67, E: 24.08 }], // Angola — W off the South Atlantic (Cabinda exclave folded into the N edge)
+  mz: [{ N: -10.47, S: -26.87, W: 30.21, E: 40.84 }], // Mozambique — E off the Indian Ocean / Mozambique Channel
+  cv: [{ N: 17.20, S: 14.80, W: -25.36, E: -22.66 }], // Cape Verde — archipelago box (Atlantic island nation, no mainland to trim to)
+  gw: [{ N: 12.69, S: 10.86, W: -16.72, E: -13.64 }], // Guinea-Bissau — W off the Atlantic (Bijagós archipelago inside the box)
+  st: [{ N: 1.74, S: 0.01, W: 6.45, E: 7.47 }], // São Tomé e Príncipe — two-island box in the Gulf of Guinea
+  gq: [
+    // Equatorial Guinea split: rect1 = Río Muni mainland; rect2 = Bioko island,
+    // included because the CAPITAL Malabo sits there (a capital must be publishable).
+    // The remote Annobón island stays EXCLUDED (far-flung, ~340 km offshore).
+    { N: 2.35, S: 0.92, W: 9.30, E: 11.34 }, // Río Muni mainland
+    { N: 3.79, S: 3.20, W: 8.40, E: 8.95 }, // Bioko island (Malabo)
+  ],
+  tl: [{ N: -8.13, S: -9.51, W: 124.04, E: 127.34 }], // Timor-Leste — E half of Timor island + Oecusse, off the Timor/Banda Sea
+
+  // Hispanophone (es) — the rest of Spanish-speaking Latin America. Argentina,
+  // Uruguay, Paraguay, Chile, Colombia, Peru, Bolivia + Spain are above.
+  mx: [{ N: 32.72, S: 14.53, W: -117.13, E: -86.74 }], // Mexico — W off the Pacific, E off the Gulf/Caribbean to the Yucatán
+  ve: [{ N: 12.20, S: 0.65, W: -73.37, E: -59.81 }], // Venezuela — N off the Caribbean (Isla Margarita inside the N edge)
+  ec: [{ N: 1.44, S: -5.01, W: -81.04, E: -75.19 }], // Ecuador mainland — W off the Pacific; Galápagos EXCLUDED (far-flung)
+  gt: [{ N: 17.82, S: 13.74, W: -92.25, E: -88.22 }], // Guatemala — between the Pacific and the Caribbean
+  cu: [{ N: 23.28, S: 19.82, W: -84.96, E: -74.13 }], // Cuba — long-thin island box, off the Gulf/Caribbean/Atlantic
+  do: [{ N: 19.93, S: 17.54, W: -72.01, E: -68.32 }], // Dominican Republic — E two-thirds of Hispaniola, off the Atlantic/Caribbean
+  hn: [{ N: 16.51, S: 12.98, W: -89.35, E: -83.15 }], // Honduras — N off the Caribbean, narrow Pacific (Gulf of Fonseca) at the S
+  ni: [{ N: 15.03, S: 10.71, W: -87.69, E: -83.13 }], // Nicaragua — between the Pacific and the Caribbean
+  cr: [{ N: 11.22, S: 8.03, W: -85.95, E: -82.55 }], // Costa Rica — Pacific + Caribbean; Isla del Coco EXCLUDED (far-flung)
+  pa: [{ N: 9.64, S: 7.20, W: -83.05, E: -77.17 }], // Panama — isthmus box, Pacific S + Caribbean N
+  sv: [{ N: 14.45, S: 13.15, W: -90.13, E: -87.69 }], // El Salvador — Pacific coast (the only LatAm country with no Caribbean side)
+
+  // Arabic (ar) — the Arabophone high-need geographies the ar locale serves. These
+  // are MAINLAND boxes hugging the relevant coast/desert extent.
+  eg: [{ N: 31.67, S: 21.99, W: 24.70, E: 36.90 }], // Egypt — Mediterranean N, Red Sea E, incl. Sinai
+  iq: [{ N: 37.38, S: 29.06, W: 38.79, E: 48.57 }], // Iraq (nearly landlocked — short Persian Gulf coast at the SE)
+  jo: [{ N: 33.37, S: 29.19, W: 34.96, E: 39.30 }], // Jordan (landlocked but for the Gulf of Aqaba sliver at the S)
+  sy: [{ N: 37.32, S: 32.31, W: 35.73, E: 42.38 }], // Syria — W off the Mediterranean
+  ye: [{ N: 18.99, S: 12.11, W: 42.60, E: 53.11 }], // Yemen mainland — Red Sea W, Gulf of Aden S; Socotra EXCLUDED (far-flung)
+  sd: [{ N: 22.22, S: 8.69, W: 21.83, E: 38.58 }], // Sudan — E off the Red Sea
+  dz: [{ N: 37.09, S: 18.97, W: -8.67, E: 11.98 }], // Algeria — N off the Mediterranean, S deep into the Sahara
+  ma: [{ N: 35.92, S: 27.66, W: -13.17, E: -1.01 }], // Morocco — Atlantic W + Mediterranean N (Western Sahara EXCLUDED)
+  tn: [{ N: 37.34, S: 30.24, W: 7.52, E: 11.59 }], // Tunisia — N/E off the Mediterranean
+  lb: [{ N: 34.69, S: 33.05, W: 35.10, E: 36.62 }], // Lebanon — W off the Mediterranean
+  sa: [{ N: 32.15, S: 16.37, W: 34.50, E: 55.67 }], // Saudi Arabia — Red Sea W, Persian Gulf E (ar picker flag country)
+
+  // Single-country locales: zh -> China, ru -> Russia, uk -> Ukraine, bn -> Bangladesh
+  cn: [{ N: 53.56, S: 18.16, W: 73.50, E: 134.77 }], // China mainland — Bohai/Yellow/East/South China Sea on the E; Hainan inside the S edge
+  ru: [
+    // Russia split: a single box would span ~170 deg of longitude and swallow the
+    // Arctic Ocean. rect1 = European + Siberian mainland up to the Pacific; rect2 =
+    // Kaliningrad exclave on the Baltic (W of the main landmass, off Poland/Lithuania).
+    { N: 77.70, S: 41.19, W: 27.30, E: 169.00 }, // main Russian landmass (Baltic coast to the Chukchi/Bering)
+    { N: 55.30, S: 54.32, W: 19.64, E: 22.87 }, // Kaliningrad Oblast (Baltic exclave)
+  ],
+  ua: [{ N: 52.38, S: 44.39, W: 22.14, E: 40.23 }], // Ukraine — S off the Black Sea / Sea of Azov (incl. Crimea)
+  bd: [{ N: 26.63, S: 20.74, W: 88.01, E: 92.67 }], // Bangladesh — S off the Bay of Bengal (Ganges/Brahmaputra delta)
+
+  // ── REMAINING COUNTRIES — full catalog hitboxes ──
+  //
+  // Approximate coastline-hugging bounding rectangles ([Inference], not surveyor
+  // polygons) for every country in COUNTRY_NAMES not yet covered above. Same
+  // conventions as the launch set: mainland-only where far-flung territories are
+  // excluded, multi-rect only where a single box would swallow excessive open sea,
+  // strict { N, S, W, E } shape. reverseGeocodeGuard remains the second hygiene
+  // layer for residual offshore strips. Coordinates are [Inference]; verify against
+  // a basemap before any accuracy-critical use.
+
+  // ── Europe ──
+  ad: [{ N: 42.66, S: 42.43, W: 1.41, E: 1.79 }], // Andorra — tiny Pyrenean enclave
+  al: [{ N: 42.67, S: 39.63, W: 19.27, E: 21.06 }], // Albania
+  am: [{ N: 41.30, S: 38.84, W: 43.45, E: 46.63 }], // Armenia
+  at: [{ N: 49.02, S: 46.38, W: 9.53, E: 17.16 }], // Austria
+  az: [{ N: 41.90, S: 38.39, W: 44.77, E: 50.38 }], // Azerbaijan (excl. Nakhchivan — but box approx covers it)
+  ba: [{ N: 45.28, S: 42.56, W: 15.72, E: 19.62 }], // Bosnia and Herzegovina
+  be: [{ N: 51.51, S: 49.50, W: 2.54, E: 6.41 }], // Belgium
+  bg: [{ N: 44.22, S: 41.24, W: 22.36, E: 28.61 }], // Bulgaria
+  by: [{ N: 53.91, S: 51.26, W: 23.17, E: 32.76 }], // Belarus
+  ch: [{ N: 47.81, S: 45.83, W: 5.96, E: 10.49 }], // Switzerland
+  cy: [{ N: 35.71, S: 34.63, W: 32.27, E: 34.60 }], // Cyprus
+  dk: [{ N: 57.75, S: 54.56, W: 8.08, E: 15.19 }], // Denmark (mainland Jutland + islands; Greenland/Faroe excluded)
+  ee: [{ N: 59.68, S: 57.52, W: 21.77, E: 28.21 }], // Estonia
+  fi: [{ N: 70.09, S: 59.81, W: 19.09, E: 31.59 }], // Finland
+  ge: [{ N: 43.59, S: 41.05, W: 39.99, E: 46.72 }], // Georgia
+  gg: [{ N: 49.51, S: 49.41, W: -2.68, E: -2.50 }], // Guernsey — Channel Islands
+  gi: [{ N: 36.16, S: 36.10, W: -5.36, E: -5.33 }], // Gibraltar — tiny peninsula
+  gl: [{ N: 83.63, S: 59.77, W: -73.00, E: -12.08 }], // Greenland
+  gr: [{ N: 41.75, S: 34.80, W: 19.37, E: 28.24 }], // Greece (mainland + islands incl. Crete)
+  hr: [{ N: 46.55, S: 42.39, W: 13.49, E: 19.45 }], // Croatia
+  hu: [{ N: 48.58, S: 45.74, W: 16.11, E: 22.90 }], // Hungary
+  ie: [{ N: 55.40, S: 51.45, W: -10.48, E: -5.99 }], // Ireland
+  im: [{ N: 54.42, S: 54.05, W: -4.78, E: -4.31 }], // Isle of Man
+  is: [{ N: 66.57, S: 63.30, W: -24.55, E: -13.50 }], // Iceland
+  je: [{ N: 49.26, S: 49.17, W: -2.25, E: -2.02 }], // Jersey — Channel Islands
+  li: [{ N: 47.27, S: 47.05, W: 9.47, E: 9.64 }], // Liechtenstein
+  lt: [{ N: 56.45, S: 53.90, W: 20.94, E: 26.84 }], // Lithuania
+  lu: [{ N: 50.18, S: 49.44, W: 5.73, E: 6.53 }], // Luxembourg
+  lv: [{ N: 57.98, S: 55.67, W: 20.97, E: 28.24 }], // Latvia
+  mc: [{ N: 43.76, S: 43.72, W: 7.40, E: 7.44 }], // Monaco
+  md: [{ N: 48.49, S: 45.47, W: 26.62, E: 30.14 }], // Moldova
+  me: [{ N: 43.57, S: 41.85, W: 18.43, E: 20.36 }], // Montenegro
+  mk: [{ N: 42.37, S: 40.85, W: 20.45, E: 23.03 }], // North Macedonia
+  mt: [{ N: 36.08, S: 35.80, W: 14.18, E: 14.58 }], // Malta
+  nl: [{ N: 53.51, S: 50.75, W: 3.36, E: 7.23 }], // Netherlands (European mainland)
+  no: [{ N: 71.17, S: 57.98, W: 4.64, E: 31.14 }], // Norway (mainland)
+  pl: [{ N: 54.84, S: 49.00, W: 14.12, E: 24.15 }], // Poland
+  ro: [{ N: 48.27, S: 43.62, W: 20.26, E: 29.74 }], // Romania
+  rs: [{ N: 46.19, S: 42.23, W: 18.84, E: 23.01 }], // Serbia
+  se: [{ N: 69.06, S: 55.34, W: 10.96, E: 24.17 }], // Sweden
+  si: [{ N: 46.88, S: 45.42, W: 13.38, E: 16.61 }], // Slovenia
+  sk: [{ N: 49.61, S: 47.73, W: 16.83, E: 22.57 }], // Slovakia
+  sm: [{ N: 43.99, S: 43.86, W: 12.40, E: 12.52 }], // San Marino
+  va: [{ N: 41.912, S: 41.899, W: 12.439, E: 12.461 }], // Vatican City
+
+  // ── Asia – Middle East ──
+  ae: [{ N: 26.09, S: 22.63, W: 51.58, E: 56.39 }], // UAE
+  bh: [{ N: 26.33, S: 25.79, W: 50.44, E: 50.65 }], // Bahrain — archipelago
+  il: [{ N: 33.34, S: 29.50, W: 34.27, E: 35.90 }], // Israel
+  ir: [{ N: 39.78, S: 25.06, W: 44.03, E: 63.33 }], // Iran
+  kw: [{ N: 30.10, S: 28.53, W: 46.55, E: 48.43 }], // Kuwait
+  om: [{ N: 26.39, S: 16.65, W: 51.99, E: 59.84 }], // Oman (mainland + Musandam approx)
+  qa: [{ N: 26.18, S: 24.56, W: 50.75, E: 51.62 }], // Qatar — peninsula
+
+  // ── Asia – Central ──
+  af: [{ N: 38.49, S: 29.38, W: 60.48, E: 74.90 }], // Afghanistan
+  kg: [{ N: 43.24, S: 39.19, W: 69.28, E: 80.28 }], // Kyrgyzstan
+  kz: [{ N: 55.45, S: 40.57, W: 50.27, E: 87.36 }], // Kazakhstan
+  mn: [{ N: 52.15, S: 41.58, W: 87.74, E: 119.93 }], // Mongolia
+  pk: [{ N: 37.10, S: 23.69, W: 60.87, E: 77.84 }], // Pakistan
+  tj: [{ N: 41.04, S: 36.67, W: 67.34, E: 75.15 }], // Tajikistan
+  tm: [{ N: 42.80, S: 35.14, W: 52.44, E: 66.69 }], // Turkmenistan
+  uz: [{ N: 45.59, S: 37.18, W: 55.99, E: 73.16 }], // Uzbekistan
+
+  // ── Asia – South ──
+  bt: [{ N: 28.32, S: 26.70, W: 88.75, E: 92.12 }], // Bhutan
+  lk: [{ N: 9.84, S: 5.92, W: 79.65, E: 81.88 }], // Sri Lanka
+  mv: [{ N: 7.11, S: -0.71, W: 72.65, E: 73.76 }], // Maldives — atoll chain
+  np: [{ N: 30.42, S: 26.36, W: 80.06, E: 88.20 }], // Nepal
+
+  // ── Asia – Southeast ──
+  bn: [{ N: 5.05, S: 4.00, W: 114.08, E: 115.36 }], // Brunei — two enclaves in NW Borneo
+  id: [
+    // Indonesia is an archipelago; split into three approximate boxes to avoid
+    // swallowing the Indian/Pacific Ocean. Sumatra+Java+Bali = rect1,
+    // Kalimantan(Borneo)+Sulawesi = rect2, Papua/Maluku = rect3.
+    { N: 5.90, S: -8.80, W: 95.01, E: 115.70 }, // Sumatra, Java, Bali, NTB/NTT
+    { N: 4.25, S: -4.07, W: 108.03, E: 125.90 }, // Kalimantan + Sulawesi
+    { N: -0.83, S: -8.48, W: 126.02, E: 141.02 }, // Maluku + Papua
+  ],
+  kh: [{ N: 14.69, S: 10.41, W: 102.34, E: 107.63 }], // Cambodia
+  la: [{ N: 22.50, S: 13.92, W: 100.09, E: 107.63 }], // Laos
+  mm: [{ N: 28.55, S: 9.78, W: 92.19, E: 101.17 }], // Myanmar
+  my: [
+    // Malaysia: rect1 = Peninsular Malaysia; rect2 = East Malaysia (Sabah+Sarawak in Borneo)
+    { N: 6.73, S: 1.26, W: 99.64, E: 104.37 }, // Peninsular
+    { N: 7.38, S: 0.85, W: 109.56, E: 119.28 }, // Sabah + Sarawak
+  ],
+  ph: [{ N: 21.12, S: 4.64, W: 116.93, E: 126.61 }], // Philippines — main island chain
+  sg: [{ N: 1.47, S: 1.16, W: 103.60, E: 104.09 }], // Singapore
+  th: [{ N: 20.46, S: 5.61, W: 97.34, E: 105.64 }], // Thailand
+  vn: [{ N: 23.39, S: 8.56, W: 102.14, E: 109.46 }], // Vietnam
+
+  // ── Asia – East ──
+  hk: [{ N: 22.56, S: 22.15, W: 113.83, E: 114.44 }], // Hong Kong
+  jp: [{ N: 45.52, S: 24.26, W: 122.93, E: 145.83 }], // Japan — Hokkaido to Okinawa
+  mo: [{ N: 22.22, S: 22.11, W: 113.52, E: 113.60 }], // Macau
+  tw: [{ N: 25.30, S: 21.90, W: 119.30, E: 122.00 }], // Taiwan
+  kp: [{ N: 43.00, S: 37.67, W: 124.21, E: 130.71 }], // North Korea
+  kr: [{ N: 38.61, S: 33.10, W: 125.89, E: 129.59 }], // South Korea
+
+  // ── Oceania ──
+  as: [{ N: -14.16, S: -14.55, W: -171.10, E: -168.10 }], // American Samoa (Tutuila + Manu'a group)
+  au: [{ N: -10.69, S: -43.64, W: 113.16, E: 153.64 }], // Australia mainland + Tasmania
+  ck: [{ N: -18.83, S: -21.93, W: -159.86, E: -157.31 }], // Cook Islands (Northern + Southern group)
+  fj: [
+    // Fiji splits across the anti-meridian; represent as two rects to keep the
+    // isInsideCountry (W < lng < E) predicate valid. rect1 = Viti Levu + Vanua Levu
+    // (west of 180); rect2 = Lau group (east of 180 / -180 side).
+    { N: -15.72, S: -19.20, W: 177.32, E: 179.99 }, // Viti Levu + Vanua Levu (W of dateline)
+    { N: -16.50, S: -19.10, W: -180.00, E: -178.15 }, // Lau group (E of dateline)
+  ],
+  fm: [{ N: 10.08, S: 5.26, W: 138.06, E: 163.04 }], // Micronesia — spread across the Pacific
+  gu: [{ N: 13.66, S: 13.24, W: 144.62, E: 144.96 }], // Guam
+  ki: [
+    // Kiribati spans across the dateline. Split into two rects so W < E holds.
+    { N: 4.72, S: 1.20, W: 172.67, E: 176.90 }, // Gilbert Islands incl. Tarawa
+    { N: 4.72, S: -11.46, W: -174.57, E: -150.00 }, // Phoenix & Line Islands (E of dateline)
+  ],
+  mh: [{ N: 14.73, S: 5.59, W: 160.80, E: 172.00 }], // Marshall Islands
+  mp: [{ N: 20.56, S: 14.10, W: 144.89, E: 145.87 }], // Northern Mariana Islands
+  nc: [{ N: -19.55, S: -22.68, W: 163.57, E: 167.96 }], // New Caledonia
+  nr: [{ N: -0.49, S: -0.57, W: 166.90, E: 166.96 }], // Nauru — tiny island
+  nu: [{ N: -18.93, S: -19.17, W: -170.14, E: -169.77 }], // Niue
+  nz: [{ N: -34.41, S: -47.31, W: 166.43, E: 178.56 }], // New Zealand (North + South Island)
+  pf: [{ N: -7.90, S: -23.87, W: -154.70, E: -134.44 }], // French Polynesia (main island groups approx)
+  pg: [{ N: -1.34, S: -11.66, W: 140.84, E: 155.97 }], // Papua New Guinea (mainland + main islands)
+  pw: [{ N: 8.09, S: 2.95, W: 131.13, E: 134.72 }], // Palau
+  sb: [{ N: -6.59, S: -11.86, W: 155.49, E: 162.75 }], // Solomon Islands
+  to: [{ N: -15.56, S: -22.34, W: -175.71, E: -173.91 }], // Tonga
+  tv: [{ N: -5.64, S: -9.44, W: 176.06, E: 179.87 }], // Tuvalu
+  vu: [{ N: -13.07, S: -20.25, W: 166.52, E: 170.24 }], // Vanuatu
+  wf: [{ N: -13.22, S: -14.36, W: -178.19, E: -176.12 }], // Wallis and Futuna
+  ws: [{ N: -13.44, S: -14.07, W: -172.80, E: -171.43 }], // Samoa
+
+  // ── Sub-Saharan Africa ──
+  bf: [{ N: 15.08, S: 9.40, W: -5.52, E: 2.40 }], // Burkina Faso
+  bi: [{ N: -2.31, S: -4.47, W: 28.99, E: 30.85 }], // Burundi
+  bj: [{ N: 12.41, S: 6.22, W: 0.77, E: 3.84 }], // Benin
+  bw: [{ N: -17.78, S: -26.91, W: 19.99, E: 29.36 }], // Botswana
+  cd: [{ N: 5.39, S: -13.46, W: 12.21, E: 31.31 }], // DR Congo
+  cf: [{ N: 11.00, S: 2.22, W: 14.42, E: 27.46 }], // Central African Republic
+  cg: [{ N: 3.73, S: -5.03, W: 11.15, E: 18.65 }], // Congo (Republic)
+  ci: [{ N: 10.74, S: 4.36, W: -8.60, E: -2.49 }], // Côte d'Ivoire
+  cm: [{ N: 13.08, S: 1.66, W: 8.50, E: 16.21 }], // Cameroon
+  er: [{ N: 18.00, S: 12.37, W: 36.44, E: 43.13 }], // Eritrea
+  et: [{ N: 14.90, S: 3.42, W: 32.99, E: 47.98 }], // Ethiopia
+  ga: [{ N: 2.32, S: -3.98, W: 8.70, E: 14.52 }], // Gabon
+  gh: [{ N: 11.17, S: 4.74, W: -3.26, E: 1.20 }], // Ghana
+  gm: [{ N: 13.83, S: 13.06, W: -16.83, E: -13.80 }], // Gambia — thin strip around the Gambia River
+  gn: [{ N: 12.68, S: 7.19, W: -15.08, E: -7.65 }], // Guinea
+  ke: [{ N: 5.02, S: -4.68, W: 33.91, E: 41.90 }], // Kenya
+  km: [{ N: -11.36, S: -12.39, W: 43.22, E: 44.54 }], // Comoros — three-island archipelago
+  lr: [{ N: 8.55, S: 4.35, W: -11.50, E: -7.37 }], // Liberia
+  ls: [{ N: -28.57, S: -30.67, W: 27.01, E: 29.46 }], // Lesotho (enclave in South Africa)
+  ly: [{ N: 33.17, S: 19.50, W: 9.39, E: 25.15 }], // Libya
+  mg: [{ N: -11.95, S: -25.61, W: 43.19, E: 50.48 }], // Madagascar
+  ml: [{ N: 25.00, S: 10.15, W: -12.25, E: 4.25 }], // Mali — W extended to Kayes region near Senegal border
+  mr: [{ N: 27.31, S: 14.72, W: -17.08, E: -4.83 }], // Mauritania
+  mu: [{ N: -19.97, S: -20.53, W: 57.30, E: 57.80 }], // Mauritius — main island
+  mw: [{ N: -9.37, S: -17.12, W: 32.67, E: 35.92 }], // Malawi
+  na: [{ N: -16.96, S: -29.04, W: 11.72, E: 25.26 }], // Namibia
+  ne: [{ N: 23.52, S: 11.70, W: 0.16, E: 15.99 }], // Niger
+  ng: [{ N: 13.89, S: 4.28, W: 2.67, E: 14.68 }], // Nigeria
+  rw: [{ N: -1.06, S: -2.83, W: 28.86, E: 30.90 }], // Rwanda
+  sc: [{ N: -4.28, S: -4.85, W: 55.38, E: 55.55 }], // Seychelles — Mahé group approx
+  sl: [{ N: 9.99, S: 6.92, W: -13.30, E: -10.27 }], // Sierra Leone
+  sn: [{ N: 16.70, S: 12.30, W: -17.54, E: -11.36 }], // Senegal
+  so: [{ N: 11.98, S: -1.66, W: 40.99, E: 51.41 }], // Somalia
+  ss: [{ N: 12.25, S: 3.49, W: 24.12, E: 36.89 }], // South Sudan
+  sz: [{ N: -25.72, S: -27.32, W: 30.80, E: 32.13 }], // Eswatini
+  td: [{ N: 23.45, S: 7.46, W: 13.47, E: 24.00 }], // Chad
+  tg: [{ N: 11.14, S: 6.10, W: -0.15, E: 1.81 }], // Togo
+  tz: [{ N: -0.99, S: -11.74, W: 29.34, E: 40.44 }], // Tanzania (mainland + Zanzibar)
+  ug: [{ N: 4.23, S: -1.48, W: 29.57, E: 35.03 }], // Uganda
+  zm: [{ N: -8.23, S: -18.08, W: 21.98, E: 33.70 }], // Zambia
+  za: [{ N: -22.13, S: -34.83, W: 16.46, E: 32.89 }], // South Africa (excl. Lesotho)
+  zw: [{ N: -15.61, S: -22.42, W: 25.24, E: 33.07 }], // Zimbabwe
+
+  // ── North Africa (non-Arabic) ──
+  eh: [{ N: 27.67, S: 20.77, W: -17.10, E: -8.68 }], // Western Sahara
+
+  // ── Indian Ocean / Atlantic islands ──
+  bv: [{ N: -54.39, S: -54.48, W: 3.34, E: 3.45 }], // Bouvet Island
+  re: [{ N: -20.85, S: -21.40, W: 55.22, E: 55.84 }], // Réunion
+  sh: [{ N: -15.89, S: -16.05, W: -5.80, E: -5.63 }], // Saint Helena
+  yt: [{ N: -12.63, S: -13.01, W: 45.01, E: 45.31 }], // Mayotte
+
+  // ── Caribbean ──
+  ag: [{ N: 17.74, S: 16.99, W: -61.91, E: -61.67 }], // Antigua (+ Barbuda slightly N)
+  ai: [{ N: 18.27, S: 18.15, W: -63.17, E: -62.97 }], // Anguilla
+  aw: [{ N: 12.63, S: 12.41, W: -70.08, E: -69.87 }], // Aruba
+  bb: [{ N: 13.33, S: 13.04, W: -59.65, E: -59.43 }], // Barbados
+  bl: [{ N: 17.93, S: 17.87, W: -62.89, E: -62.79 }], // Saint Barthélemy
+  bm: [{ N: 32.39, S: 32.26, W: -64.88, E: -64.64 }], // Bermuda
+  bs: [{ N: 27.27, S: 20.91, W: -79.30, E: -72.71 }], // Bahamas
+  cw: [{ N: 12.38, S: 12.05, W: -69.17, E: -68.74 }], // Curaçao
+  dm: [{ N: 15.64, S: 15.21, W: -61.48, E: -61.25 }], // Dominica
+  gd: [{ N: 12.24, S: 11.98, W: -61.80, E: -61.61 }], // Grenada
+  gp: [{ N: 16.51, S: 15.84, W: -61.80, E: -61.00 }], // Guadeloupe
+  ht: [{ N: 19.93, S: 17.99, W: -74.48, E: -71.64 }], // Haiti (western Hispaniola)
+  jm: [{ N: 18.52, S: 17.70, W: -78.37, E: -76.20 }], // Jamaica
+  kn: [{ N: 17.42, S: 17.10, W: -62.86, E: -62.55 }], // Saint Kitts and Nevis
+  ky: [{ N: 19.37, S: 19.26, W: -81.42, E: -81.10 }], // Cayman Islands (Grand Cayman)
+  lc: [{ N: 14.11, S: 13.71, W: -61.08, E: -60.88 }], // Saint Lucia
+  mq: [{ N: 14.88, S: 14.39, W: -61.23, E: -60.82 }], // Martinique
+  ms: [{ N: 16.81, S: 16.67, W: -62.24, E: -62.14 }], // Montserrat
+  pr: [{ N: 18.52, S: 17.92, W: -67.27, E: -65.59 }], // Puerto Rico
+  tc: [{ N: 21.97, S: 21.29, W: -72.48, E: -71.13 }], // Turks and Caicos
+  tt: [{ N: 10.85, S: 10.03, W: -61.92, E: -60.89 }], // Trinidad and Tobago
+  vc: [{ N: 13.38, S: 12.58, W: -61.46, E: -61.12 }], // Saint Vincent and the Grenadines
+  vg: [{ N: 18.75, S: 18.30, W: -64.73, E: -64.27 }], // British Virgin Islands
+  vi: [{ N: 18.41, S: 17.67, W: -65.09, E: -64.56 }], // US Virgin Islands
+
+  // ── Pacific (Central America / Caribbean adjacent) ──
+  gy: [{ N: 8.56, S: 1.18, W: -61.40, E: -56.48 }], // Guyana
+  gf: [{ N: 5.77, S: 2.11, W: -54.61, E: -51.64 }], // French Guiana
+  sr: [{ N: 6.00, S: 1.84, W: -58.07, E: -53.99 }], // Suriname
+
+  // ── Overseas/territories in Oceania / Pacific ──
+  fo: [{ N: 62.40, S: 61.39, W: -7.68, E: -6.26 }], // Faroe Islands
+  fk: [{ N: -51.24, S: -53.00, W: -61.35, E: -57.71 }], // Falkland Islands
+  tf: [{ N: -37.78, S: -49.72, W: 50.18, E: 70.56 }], // French Southern Territories (approx Kerguelen + Crozet)
+  cc: [{ N: -11.83, S: -12.22, W: 96.82, E: 96.93 }], // Cocos (Keeling) Islands
+  cx: [{ N: -10.41, S: -10.57, W: 105.58, E: 105.73 }], // Christmas Island
+  aq: [{ N: -63.27, S: -90.00, W: -180.00, E: 180.00 }], // Antarctica — whole continent approx
+  gq: [
+    { N: 2.35, S: 0.92, W: 9.30, E: 11.34 }, // Río Muni mainland (already above)
+    { N: 3.79, S: 3.20, W: 8.40, E: 8.95 }, // Bioko island (Malabo) (already above)
+  ], // Equatorial Guinea duplicate — JS takes last value, keeping the correct split rect
+
+  // ── North / West Africa ──
+  dj: [{ N: 12.71, S: 10.93, W: 41.77, E: 43.42 }], // Djibouti
+
+  // ── Central America ──
+  bz: [{ N: 18.50, S: 15.89, W: -89.23, E: -87.79 }], // Belize
 };
 
 // isInsideCountry(coords, code) — PURE publish-geofence predicate. Reads ONLY
