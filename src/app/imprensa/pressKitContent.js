@@ -55,6 +55,16 @@ export const ASSETS = [
     dark: true,
   },
   {
+    file: '/presskit/MapaFome_banner.png',
+    title: 'Lockup do banner — PNG',
+    meta: 'PNG quadrado · 1200×400 px · ~77 KB',
+    desc: 'Banner: logo, nome, subtitulo',
+    alt: 'Lockup do banner do MAPA FOME sobre fundo creme',
+    buttonLabel: 'Baixar PNG',
+    ariaLabel: 'Baixar lockup do banner do MAPA FOME em PNG',
+    cover: true,
+  },
+  {
     file: '/presskit/MapaFome_slogan.png',
     title: 'Lockup do slogan — PNG',
     meta: 'PNG quadrado · 1440×1440 px · ~210 KB',

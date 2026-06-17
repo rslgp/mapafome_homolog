@@ -755,6 +755,12 @@ a.tgme_widget_share_btn {
   animation: mdf-fade-in var(--mdf-dur-slow) var(--mdf-ease-out);
 }
 
+.banner {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 /* ── Non-mobile: map height tracks the controls column ──
  * On desktop the map + controls sit side by side in one MUI Grid row, which
  * stretches both columns to the height of the TALLER one (the controls form).

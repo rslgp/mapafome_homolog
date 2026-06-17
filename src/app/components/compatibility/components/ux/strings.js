@@ -27,10 +27,13 @@ export {
   LOCALE_LABELS,
   // INTL M6 — en-US locale wiring. detectLocale is the pure browser-tag matcher;
   // useAutoDetectLocale is the first-session mount-effect (R12, NOT module-load);
-  // applyDocumentLang is the single <html lang> writer (R14).
+  // applyDocumentLang is the single <html lang>/<html dir> writer (R14).
   detectLocale,
   useAutoDetectLocale,
   applyDocumentLang,
+  // INTL HUMANITARIAN EXPANSION — pure RTL predicate (true for Arabic). Exported
+  // for testability and for any consumer that branches layout on text direction.
+  isRtlLocale,
   // LOC-LANG — first-session location-derived UI language. resolveLocaleFromCountry
   // is the pure country->SUPPORTED-locale map; useLocationLocale is the mount-effect
   // (R12, NOT module-load) that auto-requests geolocation, reverse-geocodes (the

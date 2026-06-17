@@ -250,6 +250,15 @@ const InfoPanel = ({ rowCount }) => {
               <span aria-hidden="true">★</span>
               Patreon
             </a>
+
+            <p align="center">
+              <img
+                src="/presskit/MapaFome_banner.png"
+                alt="Banner"
+                width="100%"
+              />
+            </p>
+          
           </div>
         </section>
 
