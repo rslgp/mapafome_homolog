@@ -101,6 +101,16 @@ export default function StepsHint({ activeStep = 0 }) {
         >
           <span aria-hidden="true">👦👧 2a9 anos</span>
         </Link>
+        <a
+                    className="mdf-btn mdf-btn--secondary mdf-btn--lg"
+                    target="_blank"
+                    rel="noreferrer"
+                    href="https://www.youtube.com/watch?v=h30BO_6kFNM"
+                    aria-label={t('page.info.globo_aria')}
+                  >
+                    <span className="mdf-btn__emoji" aria-hidden="true">📺</span>
+                    <span>Ilha das Flores</span>
+                  </a>
       </div>
     </aside>
   );

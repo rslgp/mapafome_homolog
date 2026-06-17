@@ -178,6 +178,16 @@ const InfoPanel = ({ rowCount }) => {
             <span>{t('page.info.pets_label')}</span>
           </Link>
           <a
+            className="mdf-btn mdf-btn--secondary mdf-btn--lg"
+            target="_blank"
+            rel="noreferrer"
+            href="https://www.youtube.com/watch?v=h30BO_6kFNM"
+            aria-label={t('page.info.globo_aria')}
+          >
+            <span className="mdf-btn__emoji" aria-hidden="true">📺</span>
+            <span>Ilha das Flores</span>
+          </a>
+          <a
             className="mdf-btn mdf-btn--badge mdf-btn--framed ip-apps__globo"
             target="_blank"
             rel="noreferrer"
