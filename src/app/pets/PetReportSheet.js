@@ -13,6 +13,7 @@ import {
 } from './petDomain';
 import { resizeImageFile, maxPhotoMb } from './petPhoto';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
+import { newIdempotencyKey } from '../components/compatibility/components/ux/idempotencyKey';
 
 // /pets — reporter bottom-sheet, forked from the hunger ReportSheet.
 // Key difference from the hunger flow: STATUS is a SINGLE-SELECT, REQUIRED
@@ -34,14 +35,6 @@ function failureCopyFor(reasonCode) {
   const key = `pets.publish.failed.${reasonCode}`;
   const resolved = t(key);
   return resolved === key ? t(`pets.publish.failed.${PET_PUBLISH_FAILURE.GENERIC}`) : resolved;
-}
-
-function newIdempotencyKey() {
-  // Survives retries so a double-tap after a slow publish does not double-write.
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 export default function PetReportSheet({ open, coords, onClose, onPublish }) {

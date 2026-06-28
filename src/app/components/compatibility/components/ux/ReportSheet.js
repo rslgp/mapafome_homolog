@@ -16,6 +16,7 @@ import { NEED_CATEGORIES, needLabel } from './needCategories';
 import { activeCountryFor } from '../geofence';
 import * as countryStore from '../countryStore';
 import { INTL_ENABLED } from '../intlConfig';
+import { newIdempotencyKey } from './idempotencyKey';
 
 // M1 — three-step reporter flow (design_brief § three_step_promise).
 // Step 1 (map click) happens outside; this sheet hosts Steps 2 and 3.
@@ -134,11 +135,8 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
     const timeFromStartMs = Date.now() - (startedAtRef.current || Date.now());
 
     // M5 — idempotency key survives retries so a double-tap after a 10s
-    // timeout does not double-write the pin.
-    const idempotencyKey =
-      (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    // timeout does not double-write the pin (shared SOT: ./idempotencyKey).
+    const idempotencyKey = newIdempotencyKey();
 
     try {
       await onPublish?.({
