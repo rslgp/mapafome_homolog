@@ -27,7 +27,7 @@
 // deps shape:
 //   { envVariables, EXPIRE_DAY, sheetsAppendRow, updatePinDadosByCoords,
 //     trackError, getCookie, setCookie, coordsFromPin }
-import { getSheet } from './components/googlesheets/sheetsClient';
+import { getSheet, SHEET_INDEX } from './components/googlesheets/sheetsClient';
 // INTL M4b (STATE-1): the publish/flush write gate validates against the country
 // CAPTURED IN THE PAYLOAD (stamped at enqueue time), via the same pure predicate
 // M1 unified — NOT the live selected country. Importing isInsideCountry here
@@ -46,7 +46,7 @@ export function removerPonto(self, deps, coords, categoriaPonto) {
     const motivo = prompt("por qual motivo (em resumo) gostaria de deletar esse ponto?");
     if (motivo === null) return;
     const row = { Motivo: motivo, Ponto: JSON.stringify(coords), DateISO: new Date().toISOString(), CategoriaPonto: categoriaPonto };
-    sheetsAppendRow(4, row)
+    sheetsAppendRow(SHEET_INDEX.DELETE_REQUEST, row)
         .then(() => {
             // INTL M5 (MOD-1): instrument the moderation channel per-country so the
             // rollout's VOLUME axis (R16) is observable. No-op-safe; country 'br' OFF.
@@ -61,7 +61,7 @@ export function verificarPonto(self, deps, coords, categoriaPonto) {
     const motivo = prompt("Insira o CNPJ da entidade, nome da entidade, nome do responsável, email, telefone e se é credenciada para receber recurso do governo");
     if (motivo === null) return;
     const row = { Motivo: motivo, Ponto: JSON.stringify(coords), DateISO: new Date().toISOString(), CategoriaPonto: categoriaPonto };
-    sheetsAppendRow(3, row)
+    sheetsAppendRow(SHEET_INDEX.VERIFY_CNPJ, row)
         .then(() => {
             trackModerationIntl({ country: (typeof activeCountry === 'function' ? activeCountry() : null) || DEFAULT_COUNTRY, kind: 'verify' });
             alert("pedido de cnpj enviado com sucesso");

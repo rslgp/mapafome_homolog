@@ -20,6 +20,7 @@
 
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { isInsideCountry } from '../countries';
+import { Telefone } from '../../domain/Telefone';
 
 let docInstance = null;
 let initPromise = null;
@@ -51,6 +52,18 @@ export function ensureReady() {
     });
     return initPromise;
 }
+
+// Named worksheet indices — the single home documenting what each tab is, so a
+// call site reads `SHEET_INDEX.DELETE_REQUEST` instead of a bare `4` whose
+// meaning lived only in prose. REGION_BASE (1) is the base for the per-region
+// tabs addressed dynamically as `sheetsByIndex[regiao]`.
+export const SHEET_INDEX = Object.freeze({
+    MAIN: 0,
+    REGION_BASE: 1,
+    SUGESTAO: 2,
+    VERIFY_CNPJ: 3,
+    DELETE_REQUEST: 4,
+});
 
 // Returns sheet at index N, ready for read/write. Caller awaits.
 export async function getSheet(idx) {
@@ -120,17 +133,18 @@ export function validateRating(rating) {
     return n;
 }
 
-const BR_PHONE_LEN = new Set([10, 11]);
+// BR phone validity (10/11 digits, +55 strip) is owned by the Telefone value
+// object (domain SOT). This barricade keeps its own typed error + stripped-digit
+// return contract but delegates the actual rule so the two cannot drift.
 export function validateTelefoneBR(telefone) {
     if (typeof telefone !== 'string') {
         throw new SheetsValidationError('Telefone', 'must be string of digits', telefone);
     }
-    const digits = telefone.replace(/\D/g, '');
-    const stripped = digits.startsWith('55') && digits.length > 11 ? digits.slice(2) : digits;
-    if (!BR_PHONE_LEN.has(stripped.length)) {
+    const parsed = Telefone.tryParse(telefone);
+    if (!parsed) {
         throw new SheetsValidationError('Telefone', 'must be 10 or 11 BR digits (DDD + number)', telefone);
     }
-    return stripped;
+    return parsed.digits;
 }
 
 // INTL M2 (§4.4): `code` is threaded EXPLICITLY from the publish action (which
