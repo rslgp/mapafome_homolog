@@ -20,7 +20,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { TileLayer, LayersControl, useMap } from 'react-leaflet';
-import { MAP_CONFIG } from './mapConstants';
+import { MAP_CONFIG, TILE_LAYERS } from './mapConstants';
 import {
     trackMapTap,
     trackMapLongPress,
@@ -72,23 +72,23 @@ export { ROASTER_CONFIGS, FILTER_CONFIGS } from './mapRegistries';
 // ─── TileLayersControl ────────────────────────────────────────────────────────
 // V1 had LayersControl with 3 tile layers; V2 had a single hardcoded TileLayer.
 // V1's LayersControl is kept: users can switch between Waze, OSM, and Satellite.
-
+// url/attribution read from the TILE_LAYERS SOT (mapConstants); UI label stays local.
 const TILE_LAYER_DEFS = [
     {
         name: 'Waze',
         checked: true,
-        url: 'https://worldtiles1.waze.com/tiles/{z}/{x}/{y}.png',
-        attribution: " &copy; <a href='https://www.waze.com/pt-BR/live-map' target='_blank' rel='noreferrer'>Waze</a>",
+        url: TILE_LAYERS.WAZE.url,
+        attribution: TILE_LAYERS.WAZE.attribution,
     },
     {
         name: 'Mapa',
-        url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-        attribution: " &copy; <a href='http://openstreetmap.org' target='_blank' rel='noreferrer'>OSM</a>",
+        url: TILE_LAYERS.OPENSTREETMAP.url,
+        attribution: TILE_LAYERS.OPENSTREETMAP.attribution,
     },
     {
         name: 'Satelite',
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        attribution: " &copy; <a href='https://www.arcgis.com/apps/mapviewer/index.html' target='_blank' rel='noreferrer'>Esri</a>",
+        url: TILE_LAYERS.SATELLITE.url,
+        attribution: TILE_LAYERS.SATELLITE.attribution,
     },
 ];
 
