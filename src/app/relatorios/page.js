@@ -18,15 +18,16 @@ import {
 } from '../components/compatibility/components/ux/reports';
 import { downloadBlob } from '../components/compatibility/components/ux/downloadBlob';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
+import { getSheet, SHEET_INDEX } from '../components/compatibility/components/googlesheets/sheetsClient';
 
 // Public-interest aggregate reports surface. Intended for:
 //   • Ministério Público (SAN / direitos humanos)
 //   • Secretarias de saúde municipais e estaduais
 //   • Organizações parceiras em segurança alimentar
 //
-// Fetches the Google Sheet client-side using the same NEXT_PUBLIC_* creds
-// the rest of the app already uses. All data shown here is aggregated —
-// no PII, no raw coordinates, k-anonymized at k=5. See reports.js.
+// Fetches the Google Sheet client-side via the shared sheetsClient (the same
+// auth the rest of the app uses). All data shown here is aggregated: no PII,
+// no raw coordinates, k-anonymized at k=5. See reports.js.
 
 export default function RelatoriosPage() {
   useLocale(); // re-render on locale change so t() re-reads
@@ -38,14 +39,9 @@ export default function RelatoriosPage() {
     setStatus('loading');
     setError(null);
     try {
-      const { GoogleSpreadsheet } = await import('google-spreadsheet');
-      const doc = new GoogleSpreadsheet(process.env.NEXT_PUBLIC_GOOGLESHEETID);
-      await doc.useServiceAccountAuth({
-        client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.NEXT_PUBLIC_GOOGLE_PRIVATE_KEY,
-      });
-      await doc.loadInfo();
-      const sheet = doc.sheetsByIndex[0];
+      // Reuse the shared sheets client (auth + loadInfo happen once, cached) so
+      // this page no longer re-spreads the NEXT_PUBLIC_GOOGLE_PRIVATE_KEY surface.
+      const sheet = await getSheet(SHEET_INDEX.MAIN);
       const rows = await sheet.getRows();
       setReport(buildReport(rows));
       setStatus('ready');
