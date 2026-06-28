@@ -22,12 +22,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
 import { render, cleanup } from '@testing-library/react';
-import { axe } from 'vitest-axe';
 import * as axeMatchers from 'vitest-axe/matchers';
 
 import ListView from '../src/app/components/compatibility/components/ux/ListView.js';
 import ReportSheet from '../src/app/components/compatibility/components/ux/ReportSheet.js';
 import PinDetailSheet from '../src/app/components/compatibility/components/ux/PinDetailSheet.js';
+import { expectNoSeriousViolations } from './helpers/axeAudit.js';
 
 expect.extend(axeMatchers);
 
@@ -38,34 +38,9 @@ vi.mock('../src/app/components/compatibility/components/ux/analytics', () => ({
   trackError: vi.fn(),
 }));
 
-// ─── axe configuration ──────────────────────────────────────────────────────
-// Run WCAG 2.0/2.1 A + AA structural rules. Disable color-contrast (unreliable
-// in jsdom — see header). impactLevels restricts the matcher's failure set to
-// serious + critical, matching the P9 acceptance bar ("0 serious/critical").
-const AXE_OPTS = {
-  runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
-  rules: {
-    'color-contrast': { enabled: false },
-  },
-};
-
-// Assert no SERIOUS or CRITICAL violations. Minor/moderate findings (e.g.
-// jsdom-specific landmark heuristics) are surfaced in the log but do not fail
-// the gate — they are out of P9's scope and tracked separately.
-async function expectNoSeriousViolations(container, label) {
-  const results = await axe(container, AXE_OPTS);
-  const seriousOrCritical = results.violations.filter(
-    (v) => v.impact === 'serious' || v.impact === 'critical',
-  );
-  if (seriousOrCritical.length > 0) {
-    // Print a compact, reviewable summary before the assertion fails.
-    const summary = seriousOrCritical
-      .map((v) => `  • [${v.impact}] ${v.id}: ${v.help} — ${v.nodes.length} node(s)\n      ${v.nodes.map((n) => n.target.join(' ')).join('\n      ')}`)
-      .join('\n');
-    console.error(`\naxe serious/critical violations in ${label}:\n${summary}\n`);
-  }
-  expect(seriousOrCritical).toEqual([]);
-}
+// axe configuration + the serious/critical assertion live in the shared
+// test/helpers/axeAudit.js (single source of truth, serialized to avoid the
+// parallel "Axe is already running" flake).
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 const NOW = Date.now();

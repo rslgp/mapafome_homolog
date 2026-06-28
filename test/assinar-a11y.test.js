@@ -21,33 +21,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, cleanup, fireEvent, within } from '@testing-library/react';
-import { axe } from 'vitest-axe';
 import * as axeMatchers from 'vitest-axe/matchers';
 
 import AssinarPage from '../src/app/assinar/page.js';
 import { setLocale } from
   '../src/app/components/compatibility/components/ux/strings.js';
+import { expectNoSeriousViolations } from './helpers/axeAudit.js';
 
 expect.extend(axeMatchers);
-
-const AXE_OPTS = {
-  runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
-  rules: { 'color-contrast': { enabled: false } },
-};
-
-async function expectNoSeriousViolations(container, label) {
-  const results = await axe(container, AXE_OPTS);
-  const seriousOrCritical = results.violations.filter(
-    (v) => v.impact === 'serious' || v.impact === 'critical',
-  );
-  if (seriousOrCritical.length > 0) {
-    const summary = seriousOrCritical
-      .map((v) => `  • [${v.impact}] ${v.id}: ${v.help} — ${v.nodes.length} node(s)\n      ${v.nodes.map((n) => n.target.join(' ')).join('\n      ')}`)
-      .join('\n');
-    console.error(`\naxe serious/critical violations in ${label}:\n${summary}\n`);
-  }
-  expect(seriousOrCritical).toEqual([]);
-}
 
 beforeEach(() => { setLocale('pt-BR'); });
 afterEach(() => { cleanup(); setLocale('pt-BR'); });
