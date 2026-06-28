@@ -250,15 +250,15 @@ const InfoPanel = ({ rowCount }) => {
               {t('page.info.subscribe_label')}
             </a>
             <a
-              className="mdf-btn mdf-btn--secondary mdf-btn--channel-patreon mdf-btn--lg"
+              className="mdf-btn mdf-btn--secondary mdf-btn--channel-paypal mdf-btn--lg"
               target="_blank"
               rel="noreferrer"
-              href="https://www.patreon.com/reifel/membership"
-              aria-label="Apoio mensal no Patreon"
-              title="Apoio mensal no Patreon"
+              href="https://www.paypal.com/donate/?business=M5WSKX9GDVMS4&no_recurring=0&currency_code=USD"
+              aria-label="Apoio mensal no paypal"
+              title="Apoio mensal no paypal"
             >
               <span aria-hidden="true">★</span>
-              Patreon
+              Paypal(USD)
             </a>
 
             <p align="center">

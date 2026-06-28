@@ -225,14 +225,14 @@
   box-shadow: var(--mdf-elev-2);
 }
 
-/* CHANNEL — Patreon: keeps its dark identity but as a SECONDARY so it does not
+/* CHANNEL paypal: keeps its dark identity but as a SECONDARY so it does not
    shout beside the brand-fill primary. White label on ink = 17.4:1. */
-.mdf-btn--channel-patreon {
+.mdf-btn--channel-paypal {
   background: var(--mdf-ink);
   color: var(--mdf-surface-1);
   border-color: var(--mdf-ink);
 }
-.mdf-btn--channel-patreon:hover {
+.mdf-btn--channel-paypal:hover {
   background: var(--mdf-ink);
   border-color: var(--mdf-ink-subtle);
   box-shadow: var(--mdf-elev-1);
