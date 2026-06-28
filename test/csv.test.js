@@ -8,7 +8,7 @@
 // into a public-interest CSV).
 
 import { describe, it, expect } from 'vitest';
-import { csvEsc } from '../src/app/components/compatibility/components/ux/csv.js';
+import { csvEsc, toCsv } from '../src/app/components/compatibility/components/ux/csv.js';
 
 describe('csvEsc', () => {
   it('passes plain values through unquoted', () => {
@@ -48,5 +48,25 @@ describe('csvEsc', () => {
   it('does not quote a lone single-quote or other punctuation', () => {
     expect(csvEsc("O'Brien")).toBe("O'Brien");
     expect(csvEsc('a;b|c')).toBe('a;b|c');
+  });
+});
+
+describe('toCsv', () => {
+  it('joins a header + data rows with comma cells and newline rows', () => {
+    expect(toCsv([['a', 'b'], ['1', '2'], ['3', '4']])).toBe('a,b\n1,2\n3,4');
+  });
+
+  it('escapes each cell via csvEsc (commas, quotes, newlines)', () => {
+    expect(toCsv([['name', 'note'], ['joao', 'a,b'], ['ana', 'he "said"']]))
+      .toBe('name,note\njoao,"a,b"\nana,"he ""said"""');
+  });
+
+  it('coerces null/undefined/numbers per csvEsc inside a matrix', () => {
+    expect(toCsv([['x', 'y'], [0, null], [false, undefined]]))
+      .toBe('x,y\n0,\nfalse,');
+  });
+
+  it('serializes a header-only matrix to just the header line', () => {
+    expect(toCsv([['only', 'header']])).toBe('only,header');
   });
 });

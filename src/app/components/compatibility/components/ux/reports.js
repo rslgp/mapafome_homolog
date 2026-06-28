@@ -14,7 +14,7 @@
 // Output: plain JS objects. Serialize to JSON or CSV via the helpers below.
 
 import { resolveRegion } from './regionResolver';
-import { csvEsc } from './csv';
+import { toCsv } from './csv';
 import { NEED_CATEGORIES, needReportLabel } from './needCategories';
 
 const K_ANON = 5;
@@ -385,10 +385,8 @@ export function buildReport(rows, { now = Date.now() } = {}) {
 }
 
 // ────────────────────────────────────────────────────────────
-// CSV serializers — one per section. Field escape lives in ./csv (csvEsc);
-// aliased so the per-row `r.map(esc)` call sites stay byte-for-byte unchanged.
-
-const esc = csvEsc;
+// CSV serializers — one per section. Field escape + row serialization live in
+// ./csv (toCsv); each serializer only builds its header + data rows.
 
 export function toCsvCategoryMonth(report) {
   const rows = [['categoria', 'mes', 'pontos']];
@@ -398,7 +396,7 @@ export function toCsvCategoryMonth(report) {
       rows.push([cat, month, count]);
     }
   }
-  return rows.map((r) => r.map(esc).join(',')).join('\n');
+  return toCsv(rows);
 }
 
 export function toCsvRegionMonth(report) {
@@ -409,7 +407,7 @@ export function toCsvRegionMonth(report) {
       rows.push([region, month, count]);
     }
   }
-  return rows.map((r) => r.map(esc).join(',')).join('\n');
+  return toCsv(rows);
 }
 
 export function toCsvAttendance(report) {
@@ -418,19 +416,19 @@ export function toCsvAttendance(report) {
   for (const [region, rec] of Object.entries(data)) {
     rows.push([region, rec.total, rec.atendidos, rec.taxa_atendimento]);
   }
-  return rows.map((r) => r.map(esc).join(',')).join('\n');
+  return toCsv(rows);
 }
 
 export function toCsvWeekday(report) {
   const rows = [['dia_semana', 'pontos']];
   for (const [day, n] of Object.entries(report.sazonalidade_dia_semana || {})) rows.push([day, n]);
-  return rows.map((r) => r.map(esc).join(',')).join('\n');
+  return toCsv(rows);
 }
 
 export function toCsvHour(report) {
   const rows = [['hora', 'pontos']];
   for (const [h, n] of Object.entries(report.sazonalidade_hora_dia || {})) rows.push([h, n]);
-  return rows.map((r) => r.map(esc).join(',')).join('\n');
+  return toCsv(rows);
 }
 
 export function toCsvGrowth(report) {
@@ -438,7 +436,7 @@ export function toCsvGrowth(report) {
   for (const g of (report.crescimento_mensal || [])) {
     rows.push([g.mes, g.total, g.delta ?? '', g.delta_pct ?? '']);
   }
-  return rows.map((r) => r.map(esc).join(',')).join('\n');
+  return toCsv(rows);
 }
 
 export function toCsvDemandRegionCategory(report) {
@@ -446,7 +444,7 @@ export function toCsvDemandRegionCategory(report) {
   for (const [region, cats] of Object.entries(report.demanda_regiao_categoria || {})) {
     for (const [cat, n] of Object.entries(cats)) rows.push([region, cat, n]);
   }
-  return rows.map((r) => r.map(esc).join(',')).join('\n');
+  return toCsv(rows);
 }
 
 export function toCsvCategoryShare(report) {
@@ -454,7 +452,7 @@ export function toCsvCategoryShare(report) {
   for (const [cat, rec] of Object.entries(report.distribuicao_categorias || {})) {
     rows.push([cat, rec.total, rec.share_pct]);
   }
-  return rows.map((r) => r.map(esc).join(',')).join('\n');
+  return toCsv(rows);
 }
 
 export function toCsvGrowthMapaFome(report) {
@@ -465,7 +463,7 @@ export function toCsvGrowthMapaFome(report) {
       rows.push([s.mes, s.novos_pontos, s.pontos_acumulado, s.atendidos_no_mes, s.taxa_atendimento_mes_pct, s.regioes_ativas_no_mes]);
     }
   }
-  return rows.map((r) => r.map(esc).join(',')).join('\n');
+  return toCsv(rows);
 }
 
 export function toCsvVulnerability(report) {
@@ -474,5 +472,5 @@ export function toCsvVulnerability(report) {
   for (const [region, rec] of Object.entries(data)) {
     rows.push([region, rec.alimento_pronto, rec.cesta_basica, rec.comida_generico, rec.total, rec.atendidos, rec.taxa_atendimento]);
   }
-  return rows.map((r) => r.map(esc).join(',')).join('\n');
+  return toCsv(rows);
 }

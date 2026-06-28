@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { buildReport } from '../src/app/components/compatibility/components/ux/reports.js';
+import {
+  buildReport,
+  toCsvCategoryMonth,
+  toCsvVulnerability,
+  toCsvGrowth,
+} from '../src/app/components/compatibility/components/ux/reports.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Characterization tests for buildReport (reports.js).
@@ -208,5 +213,48 @@ describe('buildReport — meta.nota_dignidade is always present', () => {
     expect(typeof report.meta.nota_dignidade).toBe('string');
     expect(report.meta.nota_dignidade.length).toBeGreaterThan(0);
     expect(report.meta.total_pontos_reportados).toBe(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CSV serializers — characterization after the shared toCsv() extraction (R-09).
+// Locks the header + escaping + row-join contract end to end so the refactor to
+// the ./csv toCsv() helper cannot silently change a public-interest CSV's bytes.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('reports.js CSV serializers — toCsv() contract', () => {
+  it('toCsvCategoryMonth: header + one row per category/month', () => {
+    const csv = toCsvCategoryMonth({
+      pontos_por_categoria_mes: { comida: { '2026-01': 3, '2026-02': 5 }, agua: { '2026-01': 1 } },
+    });
+    expect(csv).toBe('categoria,mes,pontos\ncomida,2026-01,3\ncomida,2026-02,5\nagua,2026-01,1');
+  });
+
+  it('toCsvCategoryMonth: header-only when the section is empty', () => {
+    expect(toCsvCategoryMonth({})).toBe('categoria,mes,pontos');
+  });
+
+  it('toCsvGrowth: empty delta fields serialize to blank cells, not "null"', () => {
+    const csv = toCsvGrowth({
+      crescimento_mensal: [
+        { mes: '2026-01', total: 10 },
+        { mes: '2026-02', total: 14, delta: 4, delta_pct: 40 },
+      ],
+    });
+    expect(csv).toBe('mes,total,delta,delta_pct\n2026-01,10,,\n2026-02,14,4,40');
+  });
+
+  it('toCsvVulnerability: full fixed-width row for one region', () => {
+    const csv = toCsvVulnerability({
+      vulnerabilidade_alimentar_por_regiao: {
+        'Boa Vista': {
+          alimento_pronto: 2, cesta_basica: 1, comida_generico: 0,
+          total: 3, atendidos: 1, taxa_atendimento: 0.33,
+        },
+      },
+    });
+    expect(csv).toBe(
+      'regiao,alimento_pronto,cesta_basica,comida_generico,total,atendidos,taxa_atendimento\n'
+      + 'Boa Vista,2,1,0,3,1,0.33',
+    );
   });
 });

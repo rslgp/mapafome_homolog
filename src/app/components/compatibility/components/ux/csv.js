@@ -10,3 +10,13 @@ export function csvEsc(v) {
   const s = String(v ?? '');
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
+
+// Serialize a matrix of rows (the first row being the header) into an RFC-4180
+// CSV string. Each cell is escaped via csvEsc, cells are comma-joined, rows are
+// newline-joined. Extracted from the byte-identical
+// `rows.map((r) => r.map(esc).join(',')).join('\n')` tail repeated by every
+// toCsv* serializer in reports.js / marketingReports.js (SOT/DRY): one
+// serialization rule, one home.
+export function toCsv(rows) {
+  return rows.map((r) => r.map(csvEsc).join(',')).join('\n');
+}
