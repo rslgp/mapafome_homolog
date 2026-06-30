@@ -10,7 +10,7 @@ import {
 import { downloadBlob } from '../components/compatibility/components/ux/downloadBlob';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
 
-// Marketing report — destined for sponsor/advertiser companies. Separate
+// Marketing report destined for sponsor/advertiser companies. Separate
 // from /relatorios (public-policy) because the audience and framing differ.
 
 // Campaign-status -> full i18n key. The visible label is resolved via t() at
@@ -50,7 +50,7 @@ export default function RelatorioMarketingPage() {
     }
   }, []);
 
-  // Fetch-on-mount of external data (Google Sheet) — the React-sanctioned use of
+  // Fetch-on-mount of external data (Google Sheet), the React-sanctioned use of
   // an effect (synchronizing with an external system). `load` is reused by the
   // retry button, so its internal status resets must stay; the setState here is
   // intentional, not a derivable value.
@@ -144,10 +144,10 @@ export default function RelatorioMarketingPage() {
                         </span>
                       </td>
                       <td>
-                        {c.inicio || '—'}<br />
-                        <small>{t('page.mktreport.until')} {c.fim || '—'}</small>
+                        {c.inicio || 'n/d'}<br />
+                        <small>{t('page.mktreport.until')} {c.fim || 'n/d'}</small>
                       </td>
-                      <td>{c.raio_km != null ? `${c.raio_km} km` : '—'}</td>
+                      <td>{c.raio_km != null ? `${c.raio_km} km` : 'n/d'}</td>
                       <td><b>{c.audiencia_potencial_no_periodo}</b></td>
                       <td>{c.audiencia_engajada_no_periodo}</td>
                       <td>{c.ate_agora_no_periodo}</td>

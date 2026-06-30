@@ -52,7 +52,7 @@ export default function RelatoriosPage() {
     }
   }, []);
 
-  // Fetch-on-mount of external data (Google Sheet) — the React-sanctioned use of
+  // Fetch-on-mount of external data (Google Sheet), the React-sanctioned use of
   // an effect (synchronizing with an external system). `load` is reused by the
   // retry button, so its internal status resets must stay; the setState here is
   // intentional, not a derivable value.
@@ -124,9 +124,9 @@ export default function RelatoriosPage() {
               <dt>{t('page.reports.exec_global_rate')}</dt>
               <dd>{report.resumo_executivo.taxa_atendimento_global_pct}%</dd>
               <dt>{t('page.reports.exec_median_time')}</dt>
-              <dd>{report.resumo_executivo.tempo_mediano_atendimento_h != null ? `${report.resumo_executivo.tempo_mediano_atendimento_h} h` : '—'}</dd>
+              <dd>{report.resumo_executivo.tempo_mediano_atendimento_h != null ? `${report.resumo_executivo.tempo_mediano_atendimento_h} h` : 'n/d'}</dd>
               <dt>{t('page.reports.exec_p90_time')}</dt>
-              <dd>{report.resumo_executivo.tempo_p90_atendimento_h != null ? `${report.resumo_executivo.tempo_p90_atendimento_h} h` : '—'}</dd>
+              <dd>{report.resumo_executivo.tempo_p90_atendimento_h != null ? `${report.resumo_executivo.tempo_p90_atendimento_h} h` : 'n/d'}</dd>
               <dt>{t('page.reports.exec_unattended_24h')}</dt>
               <dd>{report.resumo_executivo.pontos_sem_atendimento_24h}</dd>
             </dl>
@@ -205,7 +205,7 @@ export default function RelatoriosPage() {
                   <dt>{t('page.reports.growth_regions_reached')}</dt>
                   <dd>{report.crescimento_mapafome.resumo.regioes_ativas_total}</dd>
                   <dt>{t('page.reports.growth_total_growth')}</dt>
-                  <dd>{report.crescimento_mapafome.resumo.crescimento_total_pct == null ? '—' : `${report.crescimento_mapafome.resumo.crescimento_total_pct}%`}</dd>
+                  <dd>{report.crescimento_mapafome.resumo.crescimento_total_pct == null ? 'n/d' : `${report.crescimento_mapafome.resumo.crescimento_total_pct}%`}</dd>
                 </dl>
                 <table className="mdf-reports__table">
                   <caption>{t('page.reports.growth_series_caption')}</caption>
@@ -250,8 +250,8 @@ export default function RelatoriosPage() {
                   <tr key={g.mes}>
                     <td>{g.mes}</td>
                     <td>{g.total}</td>
-                    <td>{g.delta == null ? '—' : (g.delta > 0 ? `+${g.delta}` : g.delta)}</td>
-                    <td>{g.delta_pct == null ? '—' : `${g.delta_pct > 0 ? '+' : ''}${g.delta_pct}%`}</td>
+                    <td>{g.delta == null ? 'n/d' : (g.delta > 0 ? `+${g.delta}` : g.delta)}</td>
+                    <td>{g.delta_pct == null ? 'n/d' : `${g.delta_pct > 0 ? '+' : ''}${g.delta_pct}%`}</td>
                   </tr>
                 ))}
               </tbody>
