@@ -110,7 +110,7 @@ const FF2_BASELINE = new Set([
     // here because refactoring them is out of scope for the gate-widening change.
     // Split the component below 100 LOC to remove an entry; refresh anchor on move.
     'src/app/assinar/page.js:36',                                              // AssinarPage (215)
-    'src/app/components/compatibility/components/header.js:14',                 // Header (172)
+    'src/app/components/compatibility/components/header.js:13',                 // Header (154)
     'src/app/components/compatibility/components/InfoPanel.js:20',              // InfoPanel (445)
     'src/app/components/compatibility/components/ux/GuidedTutorial.js:97',      // GuidedTutorial (292)
     'src/app/components/compatibility/components/ux/InstallToast.js:48',        // InstallToast (253)

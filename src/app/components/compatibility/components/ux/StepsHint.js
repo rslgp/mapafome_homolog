@@ -79,7 +79,7 @@ export default function StepsHint({ activeStep = 0 }) {
           aria-label={t('page.steps.pets_aria')}
         >
           <span aria-hidden="true">🐾</span>
-          <span className="mdf-steps__pets-label">{t('page.steps.pets_label')}</span>
+          <span className="mdf-steps__pets-label">{t('cta.pets')}</span>
         </Link>
 
         <Link

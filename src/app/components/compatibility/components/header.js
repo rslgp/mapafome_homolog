@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import './ux/Header.css';
 import mapaFomeMark from '../images/MapaFome_Icons_Blue.svg';
 import useInstallPrompt from './ux/useInstallPrompt';
@@ -160,24 +159,6 @@ export default function Header({ rowCountProp, onStartTour, onStartReport }) {
             />
             <span className="mdf-header__donate-label">{t('page.header.donate_label')}</span>
           </a>
-
-          {/* PET-M22 — discoverable cross-link from the hunger map to the
-           * /pets (achados e perdidos) map. next/link (NOT a raw <a>) so it is
-           * a client-side navigation and passes no-html-link-for-pages; the
-           * return path is PetsApp's "← Mapa" link back to "/". Reuses the
-           * secondary header-button look (surface-2 / ink / border) + the
-           * shared --mdf-focus-ring; >=44px via --mdf-touch-target. The paw
-           * glyph is decorative; the visible "Pets perdidos" label + aria-label
-           * carry the meaning a worried owner recognizes. */}
-          <Link
-            href="/pets"
-            className="mdf-header__pets"
-            aria-label={t('page.header.pets_aria')}
-            title={t('page.header.pets_aria')}
-          >
-            <span className="mdf-header__pets-icon" aria-hidden="true">🐾</span>
-            <span className="mdf-header__pets-label">{t('cta.pets')}</span>
-          </Link>
         </div>
       </div>
     </header>

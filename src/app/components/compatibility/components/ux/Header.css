@@ -191,7 +191,7 @@
   justify-content: flex-start;
   gap: var(--mdf-space-2);
   /* Horizontally scrollable on narrow screens: the CTA cluster (Relatar, tour,
-     MapaPets, Doar, install…) overflows on small phones — let it scroll
+     Doar, install…) overflows on small phones, so let it scroll
      sideways instead of wrapping or being squished/clipped. */
   flex-wrap: nowrap;
   overflow-x: auto;
@@ -296,69 +296,6 @@
   }
 }
 
-/* Pets perdidos — PET-M22 cross-link to the /pets (achados e perdidos) map.
- * Quiet/secondary look: reuses the SAME proven --mdf-surface-2 bg / --mdf-ink
- * text / --mdf-border pairing already shipped on "Como funciona", "Instalar"
- * and "Doar" (so its AA contrast is the audited secondary-button contrast — no
- * new color literal). >=44px touch target via --mdf-touch-target. The paw glyph
- * is decorative; the label carries the meaning. Additive only — it sits inside
- * the existing flex actions row and does not change the header grid. */
-.mdf-header__pets {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--mdf-space-1);
-  min-height: var(--mdf-touch-target);
-  min-width: var(--mdf-touch-target);
-  padding: 0 var(--mdf-space-2);
-  background: var(--mdf-surface-2);
-  color: var(--mdf-ink);
-  border: 1px solid var(--mdf-border);
-  border-radius: var(--mdf-radius-pill);
-  font-family: inherit;
-  font-size: var(--mdf-fs-caption);
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background var(--mdf-dur-fast) var(--mdf-ease-out),
-              transform var(--mdf-dur-fast) var(--mdf-ease-out);
-}
-
-.mdf-header__pets:hover {
-  background: var(--mdf-border);
-}
-
-.mdf-header__pets:active {
-  transform: scale(0.98);
-}
-
-/* Perceivable, non-animated focus ring (WCAG 2.4.7) using the shared token. */
-.mdf-header__pets:focus-visible {
-  outline: none;
-  box-shadow: var(--mdf-focus-ring);
-  transition: none;
-}
-
-.mdf-header__pets-icon {
-  font-size: 1.05em;
-  line-height: 1;
-}
-
-/* The label is always shown (this is a primary discovery affordance, not an
- * icon-only utility); the actions row is on its own line on mobile so there is
- * room. The aria-label carries the full description for AT either way. */
-.mdf-header__pets-label {
-  display: inline;
-}
-
-@media (min-width: 768px) {
-  .mdf-header__pets {
-    padding: 0 var(--mdf-space-4);
-    font-size: var(--mdf-fs-small);
-  }
-}
-
 /* Instalar — installs the PWA-lite. Secondary look (matches "Como funciona");
  * "Relatar" keeps the only brand-red primary. Icon-only on phones to spare
  * width with three actions; icon + label from 640px. */
@@ -414,8 +351,9 @@
 }
 
 /* Doar — opens the Pix donation link. Quiet/secondary (Relatar keeps the only
- * brand-red primary); the heart icon carries the meaning. Icon-only on phones,
- * icon + label from 640px — same pattern as Instalar. */
+ * brand-red primary); the heart icon carries the meaning. The "Doar" label is
+ * always shown (including narrow phones) so the donation affordance reads as a
+ * word, not an isolated icon; the actions row scrolls sideways if it overflows. */
 .mdf-header__donate {
   display: inline-flex;
   align-items: center;
@@ -454,13 +392,7 @@
 }
 
 .mdf-header__donate-label {
-  display: none;
-}
-
-@media (min-width: 640px) {
-  .mdf-header__donate-label {
-    display: inline;
-  }
+  display: inline;
 }
 
 @media (min-width: 768px) {
