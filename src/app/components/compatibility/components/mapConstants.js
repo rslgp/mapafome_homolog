@@ -12,11 +12,17 @@ import { bean, hub, green, red, currentLocation } from './image/svgHandler';
 // the URL, no network request, no cache, no 404 ever possible. Kept
 // minimal — a blue dot with a white ring, matching the design tokens
 // already used elsewhere on the map.
+// SOT for the dropped-pin blue. A CSS var cannot be read at module-eval
+// time when this inline-SVG data URI is built, so this synced JS constant
+// mirrors the --mdf-pin-blue token in components/ux/tokens.css. The two
+// MUST stay equal; change both together (color specialist owns the hue).
+const PIN_BLUE = '#1f3d8a';
+
 const DROPPED_PIN_INLINE_SVG =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'>" +
-      "<ellipse cx='250' cy='250' rx='200' ry='200' fill='#1f3d8a' stroke='#ffffff' stroke-width='40'/>" +
+      "<ellipse cx='250' cy='250' rx='200' ry='200' fill='" + PIN_BLUE + "' stroke='#ffffff' stroke-width='40'/>" +
       "<ellipse cx='250' cy='250' rx='80'  ry='80'  fill='#ffffff'/>" +
     "</svg>"
   );

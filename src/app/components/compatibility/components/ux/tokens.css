@@ -58,6 +58,13 @@
   --mdf-accent-water: #2E6E9E;
   --mdf-accent-shelter: #6B4C93;
 
+  /* Color: dropped-pin / blue-hub accent (the map "this place" marker).
+     SOT for the deep blue used by the dropped-pin SVG and the .blueHub
+     legend chip. NOTE: mapConstants.js builds an inline-SVG data URI at
+     module-eval time and cannot read a CSS var, so it carries a synced JS
+     constant PIN_BLUE that MUST equal this value. Change both together. */
+  --mdf-pin-blue: #1f3d8a;
+
   /* Color — risk scale (statistics surfaces only; never in primary flow) */
   --mdf-risk-none-bg: #E6EFE7;
   --mdf-risk-none-ink: #2F5A35;

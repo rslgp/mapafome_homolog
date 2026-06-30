@@ -223,7 +223,7 @@
 }
 
 .greenHub  { background: #d4f4cf; border-left: 3px solid #2f7a36; }
-.blueHub   { background: #cfd7fa; border-left: 3px solid #1f3d8a; }
+.blueHub   { background: #cfd7fa; border-left: 3px solid var(--mdf-pin-blue); }
 .yellowHub { background: #ffe7b3; border-left: 3px solid #8a5a00; }
 .redHub    { background: #fbcdc6; border-left: 3px solid #8a2a1f; }
 
