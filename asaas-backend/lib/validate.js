@@ -6,6 +6,13 @@
 // DEBIT/BANK_DEBIT are rejected and DEBIT_CARD is not allowed for subscriptions).
 const RAILS = ['pix', 'cartao', 'boleto'];
 
+// Minimum recurring donation value in R$. This is the authoritative server-side floor.
+// The asaas-backend is a SEPARATE package and cannot import from the Next app, so this
+// constant MUST be kept equal to the front-end SOT in
+// src/app/components/compatibility/components/payments/subscriptionConfig.js
+// (MIN_SUBSCRIPTION_VALUE). Change both together, or a layer mis-validates.
+const MIN_SUBSCRIPTION_VALUE = 5;
+
 // Strip non-digits from a CPF/CNPJ and validate length + check digits (CPF).
 function onlyDigits(s) {
   return String(s || '').replace(/\D/g, '');
@@ -65,7 +72,7 @@ function validateSubscriptionInput(body) {
   if (!RAILS.includes(rail)) errors.push(`rail inválido: use ${RAILS.join(' | ')}`);
 
   const value = Number(body.value);
-  if (!Number.isFinite(value) || value < 5) errors.push('value deve ser número ≥ 5 (R$)');
+  if (!Number.isFinite(value) || value < MIN_SUBSCRIPTION_VALUE) errors.push(`value deve ser número ≥ ${MIN_SUBSCRIPTION_VALUE} (R$)`);
 
   if (!body.name || String(body.name).trim().length < 2) errors.push('name obrigatório');
   if (!isValidEmail(body.email)) errors.push('email inválido');

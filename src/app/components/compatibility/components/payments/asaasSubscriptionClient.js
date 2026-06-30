@@ -6,6 +6,9 @@
 //
 // Pure, framework-free, and unit-testable: the fetch impl is injectable.
 
+// MIN_SUBSCRIPTION_VALUE is the shared front-end money floor (see subscriptionConfig).
+import { MIN_SUBSCRIPTION_VALUE } from './subscriptionConfig';
+
 // RAILS is the structural source of truth: the rail ids + their stable order are
 // authoritative here (and asserted by asaasSubscriptionClient.test.js). The
 // pt-BR label/hint remain as a non-i18n fallback, but the rendered display copy
@@ -290,7 +293,7 @@ export async function fetchSubscriptionPayment(subscriptionId, opts = {}) {
 export function validateBeforeSubmit({ rail, value, name, email, cpfCnpj }) {
   const errors = [];
   if (!RAILS.some((r) => r.id === rail)) errors.push('Escolha uma forma de pagamento.');
-  if (!(Number(value) >= 5)) errors.push('O valor mínimo é R$ 5.');
+  if (!(Number(value) >= MIN_SUBSCRIPTION_VALUE)) errors.push(`O valor mínimo é R$ ${MIN_SUBSCRIPTION_VALUE}.`);
   if (!name || name.trim().length < 2) errors.push('Informe seu nome.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '')) errors.push('Informe um e-mail válido.');
   const digits = String(cpfCnpj || '').replace(/\D/g, '');

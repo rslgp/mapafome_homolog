@@ -7,6 +7,7 @@ import {
   createSubscription,
   validateBeforeSubmit,
 } from '../components/compatibility/components/payments/asaasSubscriptionClient';
+import { MIN_SUBSCRIPTION_VALUE } from '../components/compatibility/components/payments/subscriptionConfig';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
 import { useRovingRadioGroup } from './useRovingRadioGroup';
 import { PaymentArtifacts } from './PaymentArtifacts';
@@ -190,7 +191,7 @@ export default function AssinarPage() {
             <span>{t('assinar.value.other')}</span>
             <input
               type="number"
-              min="5"
+              min={MIN_SUBSCRIPTION_VALUE}
               step="1"
               inputMode="numeric"
               value={value}
