@@ -27,6 +27,22 @@
 //      flag-control switch could freeze the whole queue (STATE-1). Structural
 //      grep; the freeze-prevention + payload-keyed validation behavior is covered
 //      by test/publishQueue.test.js.
+// FF9: no raw hex color literal (#RGB / #RRGGBB / #RRGGBBAA) in CODE under src/
+//      outside a CURATED allowlist of legitimate homes (the color SOT tokens.css
+//      and the documented synced-const inline-SVG pins). The color SOT is
+//      --mdf-* CSS custom properties in tokens.css; a stray `#abcdef` in a random
+//      component is unguarded drift away from that SOT (Norman: a forcing function,
+//      not a "use the token" comment). Comments are stripped before matching, so a
+//      hex named in documentation is fine; only a raw literal in shipping CODE
+//      trips it. The allowlist (FF9_HEX_ALLOWLIST) carries one entry per legitimate
+//      home with its reason, the same shape as FF1_BASELINE / FF2_BASELINE, so a
+//      NEW raw hex in an un-allowlisted file fails the gate. The Exclude clause of
+//      this milestone forbids RELOCATING any existing color, so pre-existing
+//      legitimate homes are allowlisted (not moved). swRegister.js is the noted
+//      drift example: its update-toast styles bake #1A1A1A/#FFF/#D64545 into a DOM
+//      string injected before the React tree (and thus before tokens.css var
+//      resolution exists), pre-existing debt, allowlisted with that reason, a
+//      candidate for a later relocation pass (software-engineer scope, not here).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -59,16 +75,19 @@ const FF1_BASELINE = new Set([
     'src/app/components/compatibility/components/ux/i18n/strings.page.js',
 ]);
 
-// FF2 baseline (pre-existing debt allowlist). Widening the FF2 regex to catch
-// exported arrows (`export const X = (..) => {`) surfaced ONE genuine >100-LOC
-// arrow that the old regex was blind to. It is a REAL long-method finding, not
-// a regex false positive — refactoring it is out of scope for the gate change.
-// Allowlisted here so the gate (a) still hard-fails on any NEW long arrow and
-// (b) does not pretend this one does not exist. Delete this entry when the
-// component (MapClickHandler — one big useEffect of event-binding closures) is
-// split; do NOT raise FUNCTION_LOC_HARD_LIMIT to hide it.
+// FF2 baseline (pre-existing debt allowlist). Earlier widenings caught exported
+// arrows (`export const X = (..) => {`); the latest widening also catches
+// `export default function Foo(..) {` (named OR anonymous) and `const`-declared
+// brace-bodied arrows (`const X = (..) => {`, incl. destructured params). That
+// surfaced a batch of REAL >100-LOC functions the old regex was structurally
+// blind to (it required a leading identifier, so `const X =` and
+// `export default function` slipped past). These are pre-existing debt that was
+// always there but invisible, NOT new debt and NOT regex false positives.
+// Allowlisted here so the gate (a) still hard-fails on any NEW long function and
+// (b) does not pretend these do not exist. Delete an entry when its component is
+// split below the limit; do NOT raise FUNCTION_LOC_HARD_LIMIT to hide them.
 //   key = `<rel-path>:<1-based-decl-line>` (matches the FF2 failure string).
-//   NOTE: line-anchored — refresh the line number if the component moves.
+//   NOTE: line-anchored, so refresh the line number if the component moves.
 const FF2_BASELINE = new Set([
     // MapClickHandler moved 387→119 when the pure tap logic / event contract /
     // registries were extracted into siblings (tapRecognition/markerEvents/
@@ -79,12 +98,96 @@ const FF2_BASELINE = new Set([
     // that predate this allowlist (red across every recent commit, e.g. c15fb8d):
     // the constructor (state init + many bound handlers) and componentDidMount
     // (the mount-time wiring sequence). Both are REAL long-method debt, NOT in
-    // scope for the i18n locale work that surfaced this gate run — allowlisted so
+    // scope for the i18n locale work that surfaced this gate run, allowlisted so
     // the gate still hard-fails any NEW long method while not pretending these two
     // do not exist. Delete each entry when App.js is decomposed; do NOT raise
     // FUNCTION_LOC_HARD_LIMIT to hide them. Line-anchored — refresh on move.
     'src/app/components/compatibility/App.js:135',
     'src/app/components/compatibility/App.js:802',
+    // Surfaced by the export-default / const-arrow widening (regex was blind to
+    // these forms). Each is a pre-existing top-level page or sheet component whose
+    // single render function is over the limit (real long-method debt), allowlisted
+    // here because refactoring them is out of scope for the gate-widening change.
+    // Split the component below 100 LOC to remove an entry; refresh anchor on move.
+    'src/app/assinar/page.js:36',                                              // AssinarPage (215)
+    'src/app/components/compatibility/components/header.js:14',                 // Header (172)
+    'src/app/components/compatibility/components/InfoPanel.js:20',              // InfoPanel (445)
+    'src/app/components/compatibility/components/ux/GuidedTutorial.js:97',      // GuidedTutorial (292)
+    'src/app/components/compatibility/components/ux/InstallToast.js:48',        // InstallToast (253)
+    'src/app/components/compatibility/components/ux/NotificationPrefs.js:44',   // NotificationPrefs (109)
+    'src/app/components/compatibility/components/ux/PinDetailSheet.js:83',      // PinDetailSheet (202)
+    'src/app/components/compatibility/components/ux/ReportSheet.js:28',         // ReportSheet (295)
+    'src/app/imprensa/page.js:38',                                             // ImprensaPage (252)
+    'src/app/iniciativas/cadastrar/page.js:21',                                // InitiativeRegisterPage (174)
+    'src/app/parceiros/page.js:19',                                            // ParceirosPage (232)
+    'src/app/pets/PetDetailSheet.js:54',                                       // PetDetailSheet (633)
+    'src/app/pets/PetFilterBar.js:82',                                         // PetFilterBar (162)
+    'src/app/pets/PetListView.js:54',                                          // PetListView (101)
+    'src/app/pets/PetLocateControl.js:30',                                     // PetLocateControl (109)
+    'src/app/pets/PetReportSheet.js:40',                                       // PetReportSheet (634)
+    'src/app/pets/PetsApp.js:83',                                              // PetsApp (589)
+    'src/app/pets/PetSearchField.js:145',                                      // PetSearchField (112)
+    'src/app/relatorio-marketing/page.js:25',                                  // RelatorioMarketingPage (170)
+    'src/app/relatorios/page.js:32',                                           // RelatoriosPage (339)
+]);
+
+// FF9 allowlist (legitimate raw-hex homes). The color SOT is the --mdf-* tokens
+// in tokens.css; every other surface should read a token / CSS var. These files
+// legitimately carry a raw hex literal in CODE and CANNOT just switch to a var
+// today, so they are allowlisted with a reason (the Exclude clause of this gate
+// forbids RELOCATING colors, so a real home rides here rather than being moved).
+// Add an entry ONLY for a genuine SOT or a documented can-not-be-a-var case; do
+// NOT widen this to silence a new stray hex in a component (that is the drift the
+// rule exists to catch). key = forward-slash rel-path (OS-independent), matching
+// the FF1/FF2 keying. Comments are stripped before matching, so a file that names
+// a hex ONLY in a comment never reaches this list (e.g. header.js documents the
+// base brand hex in a comment but uses --mdf-* in code, so it is intentionally
+// absent here and the rule still passes for it).
+const FF9_HEX_ALLOWLIST = new Set([
+    //, The two documented synced-const inline-SVG pins (M15/M21). A CSS var
+    //   cannot be read at module-eval time when the inline-SVG data-URI / HTML
+    //   string is built, so each carries a JS constant (PIN_BLUE / PIN_CYAN) that
+    //   MUST equal its --mdf-pin-* token in tokens.css (the SOT pair). The same
+    //   inline-SVG strings also hard-code structural #ffffff (the white ring/dot),
+    //   which is geometry, not a themeable brand color.
+    'src/app/components/compatibility/components/mapConstants.js',  // PIN_BLUE synced const + inline-SVG #ffffff ring/dot
+    'src/app/components/compatibility/components/mapPinIcons.js',   // PIN_CYAN synced const + inline-SVG #ffffff
+    //, The /pets dropped-pin inline-SVG: same module-eval-time class as the two
+    //   pins above. Fill is `var(--pet-perdido, #d8572a)` (a CSS-var WITH a literal
+    //   fallback, the safe inline-SVG idiom) plus structural #ffffff paw dots.
+    'src/app/pets/PetMap.js',
+    //, countryBrand.js is itself a small per-country brand-accent SOT: `br:
+    //   '#C8102E'` is Brazil's deepened accent that overrides --mdf-brand where the
+    //   base fails AA. It is the single home for that per-country hue (one row per
+    //   country), not drift away from a token. Relocating it is color-specialist
+    //   scope, out of this gate.
+    'src/app/components/compatibility/components/countryBrand.js',
+    //, layout.js themeColor is Next.js metadata (the PWA browser-chrome theme
+    //   color); it is a manifest/meta value, not a CSS context, so it cannot be a
+    //   CSS var and must be a literal hex.
+    'src/app/layout.js',
+    //, pressKitContent.js is press-kit DATA: the hex strings ARE the content
+    //   (a swatch table that documents the brand palette for journalists, each row
+    //   pairs the hex with its token name). The hex is the payload, not styling.
+    'src/app/imprensa/pressKitContent.js',
+    //, strings.page.js (FF1-baselined i18n data table): the press "colors_note"
+    //   copy quotes brand hexes inside translated user-facing strings across 12
+    //   locales. Documentation content, not a style literal.
+    'src/app/components/compatibility/components/ux/i18n/strings.page.js',
+    //, DRIFT EXAMPLE (item M9): swRegister.js bakes #1A1A1A / #FFF / #D64545 into
+    //   the update-toast style string it injects directly into the DOM. That toast
+    //   is built by the service-worker registration shim that can run BEFORE the
+    //   React tree mounts (and thus before tokens.css var resolution is reliable in
+    //   that injected element), so it uses literal hexes. This is pre-existing debt
+    //   and a real relocation candidate (software-engineer scope, NOT this gate's
+    //   Exclude-bound change), allowlisted now so the gate is GREEN on the current
+    //   tree while the drift is named.
+    'src/app/components/compatibility/components/ux/swRegister.js',
+    //, Dev-only debug overlays, gated behind ?debug=hitbox / ?debug=tap; they
+    //   never render for production users, so their diagnostic literals (#0077ff
+    //   outline, #0077ff/#fff overlay chrome) are not user-facing theme surfaces.
+    'src/app/components/compatibility/components/_debug/MapHitboxOutline.js',
+    'src/app/components/compatibility/components/_debug/TapDebugOverlay.js',
 ]);
 
 function walk(dir) {
@@ -118,22 +221,26 @@ for (const file of walk(SRC)) {
     }
 }
 
-// FF2: per-function LOC. Naive — counts braces per function/method declaration.
+// FF2: per-function LOC. Naive (counts braces per function/method declaration).
 // Flags the long-method smell where it matters most: class methods, top-level
-// function declarations, assignment arrows (`x = (..) => {`), and top-level
-// exported arrows (`export const X = (..) => {`, incl. async).
+// function declarations, assignment arrows (`x = (..) => {`), `const`-declared
+// arrows (`const X = (..) => {`, incl. destructured params `({a,b}) => {`),
+// exported arrows (`export const X = (..) => {`), and exported-default functions
+// (`export default function Foo(..) {` named OR anonymous). The `\([^)]*\)`
+// param span already admits destructured params `({a, b})` for every braced
+// form, so object/array destructuring in the signature is measured too.
 //
 // Residual gap (honest): only brace-bodied forms are measured. Implicit-return
 // arrows (`export const f = (..) => expr`, `=> (`, or a multi-line arrow whose
-// `=>` sits on a later line than the signature) are NOT matched — the brace
-// counter can't bound a body that has no opening `{` on the declaration line,
-// and matching them would mis-measure across the next braced sibling. These
+// `=>` sits on a later line than the signature) are NOT matched, because the
+// brace counter can't bound a body that has no opening `{` on the declaration
+// line, and matching them would mis-measure across the next braced sibling. These
 // expression-bodied arrows are inherently short, so the long-method risk there
 // is low; long logic belongs in a braced body, which IS caught.
 function approxFunctionLOCs(source) {
     const lines = source.split('\n');
     const fnStarts = [];
-    const fnPattern = /^(\s*)(async\s+)?(function\s+\w+|[\w$]+\s*\([^)]*\)\s*\{|[\w$]+\s*=\s*(async\s+)?\([^)]*\)\s*=>|export\s+const\s+[\w$]+\s*=\s*(async\s+)?\([^)]*\)\s*=>\s*\{)/;
+    const fnPattern = /^(\s*)(export\s+default\s+)?(async\s+)?(function\s*\w*\s*\([^)]*\)\s*\{|[\w$]+\s*\([^)]*\)\s*\{|(export\s+)?(const\s+)?[\w$]+\s*=\s*(async\s+)?\([^)]*\)\s*=>\s*\{)/;
     for (let i = 0; i < lines.length; i++) {
         if (fnPattern.test(lines[i])) fnStarts.push(i);
     }
@@ -258,6 +365,57 @@ const FF8_COUNTRY_FIELD_TOKEN = /country\s*:\s*activeCountryFor\s*\(/;
     }
 }
 
+// FF9: no raw hex color literal in CODE outside the curated homes. Models the
+// FF6 structural-grep shape (walk src/, per-file allowlist, line-anchored report)
+// but strips comments first so the rule targets a raw literal in SHIPPING CODE,
+// not a hex named in documentation. The color SOT is the --mdf-* tokens in
+// tokens.css; a stray `#abcdef` in a component is unguarded drift away from it.
+// Matches #RGB, #RRGGBB, #RRGGBBAA (case-insensitive), longest-first so an 8-hex
+// is reported whole and never mis-split into a 6-hex + stray chars.
+function stripComments(source) {
+    // Blank out /* block */ comments, then // line comments, PRESERVING line
+    // count so a reported `:line` still maps to the source (the block strip keeps
+    // every newline and only blanks the non-newline chars). Naive but safe for
+    // this gate: it can over-strip a hex inside a string that itself contains a
+    // `//` or `/*` (none do in src/ today), and the only cost of over-stripping is
+    // a MISSED catch, never a false FAIL, acceptable for a forcing function whose
+    // job is to fail on NEW drift, backed by review.
+    const noBlock = source.replace(/\/\*[\s\S]*?\*\//g, (block) =>
+        block.replace(/[^\n]/g, ' '));
+    // Normalize CRLF first: on Windows a trailing `\r` survives the `\n` split,
+    // and `.` does not match `\r`, so an end-anchored `//.*$` would NOT strip a
+    // line ending in CRLF (the `$` cannot sit before the final `\r`). Drop the
+    // `\r`, then strip from the first `//` to end of line.
+    return noBlock
+        .replace(/\r/g, '')
+        .split('\n')
+        .map((line) => line.replace(/\/\/.*/, ''))
+        .join('\n');
+}
+const HEX_LITERAL = /#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g;
+const FF9_TOKENS_CSS_REL =
+    'src/app/components/compatibility/components/ux/tokens.css';
+for (const file of walk(SRC)) {
+    const relForward = rel(file).split(path.sep).join('/');
+    // tokens.css is the color SOT and is not a .js/.jsx file (walk only yields
+    // code files), so it is never scanned here; the allowlist above documents the
+    // synced-const homes that mirror its tokens.
+    if (FF9_HEX_ALLOWLIST.has(relForward)) continue;
+    const lines = stripComments(fs.readFileSync(file, 'utf8')).split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        HEX_LITERAL.lastIndex = 0;
+        const m = HEX_LITERAL.exec(lines[i]);
+        if (m) {
+            failures.push(
+                `FF9: raw-hex-SOT, \`${m[0]}\` found at ${relForward}:${i + 1} ` +
+                `(color SOT is the --mdf-* tokens in ${FF9_TOKENS_CSS_REL}; read a ` +
+                `token / CSS var, do not inline a hex). If this is a legitimate home ` +
+                `(a SOT or a can-not-be-a-var case), add it to FF9_HEX_ALLOWLIST ` +
+                `with a reason; otherwise replace the literal with a token.`);
+        }
+    }
+}
+
 // FF5: token-level WCAG contrast forcing-function.
 // WHY: the browser axe gate is render-state-flaky — it has missed real AA
 // regressions and caught them only by render-timing luck. A `--mdf-*` token
@@ -324,41 +482,41 @@ const OSM_LIGHTEST_TILE = '#F2EFE9';
 // the 4.5:1 edge as a NON-text accent (e.g. raw --mdf-brand at 4.38:1, used as
 // a large heading accent) are deliberately NOT asserted at the text floor.
 const CONTRAST_PAIRS = [
-    // — Body/caption text on the two page surfaces (the spine of readability) —
+    //, Body/caption text on the two page surfaces (the spine of readability)
     { label: 'ink on surface-0 (primary body text)',           fg: '--mdf-ink',        bg: '--mdf-surface-0', min: AA_TEXT },
     { label: 'ink on surface-1 (text on cards/sheets)',         fg: '--mdf-ink',        bg: '--mdf-surface-1', min: AA_TEXT },
     { label: 'ink-muted on surface-0 (de-emphasized body)',     fg: '--mdf-ink-muted',  bg: '--mdf-surface-0', min: AA_TEXT },
     { label: 'ink-muted on surface-1 (de-emphasized on cards)', fg: '--mdf-ink-muted',  bg: '--mdf-surface-1', min: AA_TEXT },
 
-    // — The two labels that JUST regressed: ink-subtle FAILED here (3.30/3.45),
-    //   moved to ink-muted. These guard the fix from silently reverting. —
+    //, The two labels that JUST regressed: ink-subtle FAILED here (3.30/3.45)
+    //   moved to ink-muted. These guard the fix from silently reverting.
     { label: 'sponsor __label (ink-muted on white slot — was ink-subtle 3.45)', fg: '--mdf-ink-muted', bg: '--mdf-surface-1', min: AA_TEXT },
     { label: 'version-footer (ink-muted on surface-0 — was ink-subtle 3.30)',   fg: '--mdf-ink-muted', bg: '--mdf-surface-0', min: AA_TEXT },
 
-    // — Primary CTA: text on the AA-safe brand-hover fill, and brand-hover used
+    //, Primary CTA: text on the AA-safe brand-hover fill, and brand-hover used
     //   AS text on white (the AA-safe brand text rail; raw --mdf-brand is the
-    //   non-text-only variant and is excluded on purpose). —
+    //   non-text-only variant and is excluded on purpose).
     { label: 'brand-ink on brand-hover (primary CTA label)',    fg: '--mdf-brand-ink',  bg: '--mdf-brand-hover', min: AA_TEXT },
     { label: 'brand-hover as text on surface-1 (links/accents)', fg: '--mdf-brand-hover', bg: '--mdf-surface-1', min: AA_TEXT },
 
-    // — Category accents used as text/glyph: accent-water is documented "AA on
-    //   white"; food/shelter ride the same caption/legend text role. —
+    //, Category accents used as text/glyph: accent-water is documented "AA on
+    //   white"; food/shelter ride the same caption/legend text role.
     { label: 'accent-water as text on surface-1',               fg: '--mdf-accent-water',   bg: '--mdf-surface-1', min: AA_TEXT },
     { label: 'accent-food as text on surface-1',                fg: '--mdf-accent-food',    bg: '--mdf-surface-1', min: AA_TEXT },
     { label: 'accent-shelter as text on surface-1',             fg: '--mdf-accent-shelter', bg: '--mdf-surface-1', min: AA_TEXT },
 
-    // — Risk-scale badges (statistics surfaces): ink-on-bg pairs are real text. —
+    //, Risk-scale badges (statistics surfaces): ink-on-bg pairs are real text.
     { label: 'risk-none ink on bg (badge text)',                fg: '--mdf-risk-none-ink',      bg: '--mdf-risk-none-bg',      min: AA_TEXT },
     { label: 'risk-low ink on bg (badge text)',                 fg: '--mdf-risk-low-ink',       bg: '--mdf-risk-low-bg',       min: AA_TEXT },
     { label: 'risk-mod ink on bg (badge text)',                 fg: '--mdf-risk-mod-ink',       bg: '--mdf-risk-mod-bg',       min: AA_TEXT },
     { label: 'risk-high ink on bg (badge text)',                fg: '--mdf-risk-high-ink',      bg: '--mdf-risk-high-bg',      min: AA_TEXT },
     { label: 'risk-very-high ink on bg (badge text)',           fg: '--mdf-risk-very-high-ink', bg: '--mdf-risk-very-high-bg', min: AA_TEXT },
 
-    // — Urgency marker rings: NON-text graphics (SC 1.4.11, 3:1). Must clear the
+    //, Urgency marker rings: NON-text graphics (SC 1.4.11, 3:1). Must clear the
     //   floor on BOTH the white marker fill AND the lightest OSM map tile the
     //   ring is drawn over (the worst-case background). 'done' is excluded: it
     //   renders at 0.4 opacity as the de-emphasized/attended state, so its
-    //   composited contrast is intentionally below the active-marker floor. —
+    //   composited contrast is intentionally below the active-marker floor.
     { label: 'urgency-fresh ring on white marker',             fg: '--mdf-urgency-fresh',   bg: '--mdf-surface-1', min: AA_NONTEXT },
     { label: 'urgency-waiting ring on white marker',           fg: '--mdf-urgency-waiting', bg: '--mdf-surface-1', min: AA_NONTEXT },
     { label: 'urgency-stale ring on white marker',             fg: '--mdf-urgency-stale',   bg: '--mdf-surface-1', min: AA_NONTEXT },
@@ -405,10 +563,10 @@ if (failures.length > 0) {
     process.exit(1);
 }
 
-console.log(`[fitness] OK — file-loc, function-loc, todo-density, bbox-SOT, Pais-stamp, queue-country-capture, token-contrast all within v5 hard limits.`);
+console.log(`[fitness] OK, file-loc, function-loc, todo-density, bbox-SOT, Pais-stamp, queue-country-capture, raw-hex-SOT, token-contrast all within v5 hard limits.`);
 if (ff1BaselineHits > 0) {
-    console.log(`[fitness] note: ${ff1BaselineHits} FF1 baseline-allowlisted data-table shard(s) (i18n strings — see FF1_BASELINE).`);
+    console.log(`[fitness] note: ${ff1BaselineHits} FF1 baseline-allowlisted data-table shard(s) (i18n strings, see FF1_BASELINE).`);
 }
 if (ff2BaselineHits > 0) {
-    console.log(`[fitness] note: ${ff2BaselineHits} FF2 baseline-allowlisted long function(s) (pre-existing debt — see FF2_BASELINE).`);
+    console.log(`[fitness] note: ${ff2BaselineHits} FF2 baseline-allowlisted long function(s) (pre-existing debt, see FF2_BASELINE).`);
 }
