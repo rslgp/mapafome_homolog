@@ -14,6 +14,17 @@
 import { SPONSORS, parseDate, isActiveNow } from './sponsors';
 import { Coordinates } from '../../domain/Coordinates';
 import { toCsv } from './csv';
+import { K_ANON } from './reports';
+
+// Small-cell suppression for a single per-campaign audience count. reports.js
+// folds small buckets into an 'outros' sibling, but a campaign count is a lone
+// scalar with no sibling to merge into, so the equivalent k-anonymity collapse
+// is suppression: any precise geo+time bucket below K_ANON reads as 0 instead of
+// surfacing a re-identifying 1, 2, 3, or 4 on the public page. Stays an integer,
+// so the sponsor data contract (field names and types) is unchanged.
+function kAnonCount(n, { minCount = K_ANON } = {}) {
+  return n < minCount ? 0 : n;
+}
 
 // Haversine, km — delegated to Coordinates.distanceKmTo (VM10), the single
 // home of the formula. Thin wrapper keeps the tuple-in / Infinity-on-bad-input
@@ -86,13 +97,17 @@ function sponsorReach(sponsor, pins, now) {
     }
   }
 
+  // k-anonymity: collapse each per-campaign count below K_ANON to 0 so a
+  // narrow-radius, short-window campaign can never surface a count of 1, 2, 3,
+  // or 4 (a precise geo+time bucket) on the public page. Same K_ANON=5 threshold
+  // as reports.js; see kAnonCount above.
   return {
     hasWindow,
     hasGeo,
-    audiencia_potencial_no_periodo: potencial,
-    audiencia_engajada_no_periodo: engajada,
-    ate_agora_no_periodo: noPeriodoSoFar,
-    atendidos_no_periodo_ate_agora: engajadaSoFar,
+    audiencia_potencial_no_periodo: kAnonCount(potencial),
+    audiencia_engajada_no_periodo: kAnonCount(engajada),
+    ate_agora_no_periodo: kAnonCount(noPeriodoSoFar),
+    atendidos_no_periodo_ate_agora: kAnonCount(engajadaSoFar),
     pode_aumentar: Number.isFinite(end) ? (now < end) : true,
   };
 }

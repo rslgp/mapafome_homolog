@@ -17,7 +17,9 @@ import { resolveRegion } from './regionResolver';
 import { toCsv } from './csv';
 import { NEED_CATEGORIES, needReportLabel } from './needCategories';
 
-const K_ANON = 5;
+// Exported so other public-surface builders (e.g. marketingReports.js) collapse
+// small buckets against the SAME k-anonymity threshold, one source of truth.
+export const K_ANON = 5;
 
 // Legend for the public aggregate. The reporter-need labels come from the
 // needCategories SOT (so disaster needs added there — remédios/animais/carregar —
