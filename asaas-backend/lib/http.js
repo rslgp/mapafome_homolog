@@ -1,9 +1,12 @@
 // http.js — small request/response helpers shared by the serverless functions.
 // Keeps each endpoint focused on Asaas logic, not boilerplate.
 
-// NOTE: CORS is currently WILDCARD (applyCors sends Access-Control-Allow-Origin: *),
-// so the allowlist below no longer gates browser access. allowedOrigins() is kept
-// as a utility (and to re-lock CORS later by switching applyCors back to it).
+// CORS: in PRODUCTION (ASAAS_ENV=production) applyCors restricts the origin to
+// allowedOrigins(): it echoes the caller's Origin only when allowlisted (with
+// Vary: Origin) and otherwise fails closed to the first allowed origin, never a
+// wildcard. In dev/sandbox it stays wildcard so `next dev` across :3000-:3002 is
+// not broken. ASAAS_ENV is the project's existing production signal (see
+// asaasClient.js / health.js); no new env var is introduced.
 //
 // Origins that WOULD be allowed if CORS were re-locked. The static site is the
 // only first-party caller; localhost is for dev. Set ALLOWED_ORIGINS (comma-sep)
@@ -30,13 +33,36 @@ function allowedOrigins() {
   return fromEnv.length ? fromEnv : DEV_FALLBACK_ORIGINS;
 }
 
-function applyCors(_req, res) {
-  // Wildcard: any origin may call this backend from the browser. Safe here only
-  // because no endpoint uses cookies/Authorization (credentialed CORS forbids
-  // `*`); auth is via request-body fields, not ambient credentials.
-  res.setHeader('Access-Control-Allow-Origin', '*');
+function isProduction() {
+  return (process.env.ASAAS_ENV || 'sandbox').toLowerCase() === 'production';
+}
+
+function applyCors(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (!isProduction()) {
+    // Dev/sandbox: wildcard so `next dev` across :3000-:3002 is not broken. Safe
+    // because no endpoint uses cookies/Authorization (credentialed CORS forbids
+    // `*`); auth is via request-body fields, not ambient credentials.
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return;
+  }
+
+  // Production: restrict to the allowlist, never wildcard. Echo the caller's
+  // Origin only when it is allowlisted (and Vary on Origin so caches key per
+  // origin). An empty allowlist fails closed: send no ACAO header rather than
+  // wildcard, and never crash.
+  const allowed = allowedOrigins();
+  const requestOrigin = req && req.headers ? req.headers.origin : undefined;
+  res.setHeader('Vary', 'Origin');
+  if (requestOrigin && allowed.includes(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+  } else if (allowed.length) {
+    // Disallowed or Origin-less caller: fall back to the canonical first allowed
+    // origin so a browser from any other origin is denied by CORS.
+    res.setHeader('Access-Control-Allow-Origin', allowed[0]);
+  }
 }
 
 // Returns true if the request was a preflight and has been answered (caller should return).
