@@ -30,7 +30,7 @@ import { getSheet, SHEET_INDEX } from '../components/compatibility/components/go
 // no raw coordinates, k-anonymized at k=5. See reports.js.
 
 export default function RelatoriosPage() {
-  useLocale(); // re-render on locale change so t() re-reads
+  const locale = useLocale(); // re-render on locale change so t() re-reads; drives toLocale* below
   const [status, setStatus] = useState('loading'); // loading | ready | error
   const [error, setError] = useState(null);
   const [report, setReport] = useState(null);
@@ -116,7 +116,7 @@ export default function RelatoriosPage() {
             <h2>{t('page.reports.exec_title')}</h2>
             <dl className="mdf-reports__kv">
               <dt>{t('page.reports.exec_generated')}</dt>
-              <dd>{new Date(report.meta.gerado_em).toLocaleString('pt-BR')}</dd>
+              <dd>{new Date(report.meta.gerado_em).toLocaleString(locale)}</dd>
               <dt>{t('page.reports.exec_total_reported')}</dt>
               <dd>{report.resumo_executivo.total_pontos_reportados}</dd>
               <dt>{t('page.reports.exec_total_attended')}</dt>
@@ -360,7 +360,7 @@ export default function RelatoriosPage() {
           <section className="mdf-reports__section mdf-reports__section--cite">
             <h2>{t('page.reports.cite_title')}</h2>
             <p>
-              {t('page.reports.cite_lead')}{new Date(report.meta.gerado_em).toLocaleDateString('pt-BR')}{t('page.reports.cite_mid')}<code>mapafome.com.br/relatorios</code>{t('page.reports.cite_tail')}
+              {t('page.reports.cite_lead')}{new Date(report.meta.gerado_em).toLocaleDateString(locale)}{t('page.reports.cite_mid')}<code>mapafome.com.br/relatorios</code>{t('page.reports.cite_tail')}
             </p>
           </section>
         </>

@@ -23,7 +23,7 @@ const STATUS_KEY = {
 };
 
 export default function RelatorioMarketingPage() {
-  useLocale(); // re-render on locale change so t() re-reads
+  const locale = useLocale(); // re-render on locale change so t() re-reads; drives toLocaleDateString below
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState(null);
   const [report, setReport] = useState(null);
@@ -184,7 +184,7 @@ export default function RelatorioMarketingPage() {
             <h2>{t('page.mktreport.cite_title')}</h2>
             <p>
               {t('page.mktreport.cite_lead')}
-              &quot;<b>{t('page.mktreport.cite_quote')} {new Date(report.meta.gerado_em).toLocaleDateString('pt-BR')}</b>&quot;{t('page.mktreport.cite_tail')}
+              &quot;<b>{t('page.mktreport.cite_quote')} {new Date(report.meta.gerado_em).toLocaleDateString(locale)}</b>&quot;{t('page.mktreport.cite_tail')}
             </p>
           </section>
         </>
