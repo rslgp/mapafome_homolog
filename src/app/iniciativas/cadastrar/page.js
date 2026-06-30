@@ -13,6 +13,9 @@ import { t, useLocale } from '../../components/compatibility/components/ux/strin
 // t() at render so it follows the active locale.
 const CATEGORY_IDS = ['comida', 'agua', 'roupa', 'higiene', 'abrigo'];
 
+// Weekday ids (Sun..Sat, index 0..6) are the source of truth persisted in the
+// payload; the visible chip label is resolved via t(`page.initiative.day_${i}`)
+// at render so it follows the active locale (mirrors the cat_ chips above).
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 
 export default function InitiativeRegisterPage() {
@@ -134,7 +137,7 @@ export default function InitiativeRegisterPage() {
         <fieldset className="mdf-field">
           <legend>{t('page.initiative.days_legend')}</legend>
           <div className="mdf-chips">
-            {WEEKDAYS.map((d) => (
+            {WEEKDAYS.map((d, i) => (
               <button
                 key={d}
                 type="button"
@@ -143,7 +146,7 @@ export default function InitiativeRegisterPage() {
                 className={`mdf-chip${dias.has(d) ? ' mdf-chip--on' : ''}`}
                 onClick={() => toggleDay(d)}
               >
-                {d}
+                {t(`page.initiative.day_${i}`)}
               </button>
             ))}
           </div>

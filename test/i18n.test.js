@@ -247,6 +247,10 @@ describe('dictionary — P8: parity + zero dead keys', () => {
       'pets.status.', 'pets.species.', 'pets.size.', 'pets.lifecycle.',
       'pets.publish.failed.', 'pets.publish.throttle.', 'pets.share.lead.',
       'page.partners.tier_', 'page.initiative.cat_',
+      // M17: /iniciativas also composes the weekday chip label by index as
+      // t(`page.initiative.day_${i}`) (day_0..day_6), so the full key never
+      // appears as a literal either; its template PREFIX does.
+      'page.initiative.day_',
       // NEED categories — the needCategories accessors resolve the label/legend by
       // id (needLabel/needReportLabel call t(`need.label.${id}`) / t(`need.report.${id}`)),
       // so the full key never appears as a literal; its template PREFIX does.
