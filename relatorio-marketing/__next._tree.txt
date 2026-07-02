@@ -1,0 +1,3 @@
+:HL["/_next/static/css/258dd780e6058adf.css","style"]
+:HL["/_next/static/css/42726a82897f99ab.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"relatorio-marketing","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"W3LYe9zSTIKOMaJUUToOP"}
