@@ -101,6 +101,20 @@ describe('InfoPanel: live count + collapse sections', () => {
     expect(table.querySelectorAll('tbody tr').length).toBeGreaterThan(0);
   });
 
+  it('clicking an install badge with no native prompt shows the manual hint (useInfoPanel handler)', () => {
+    // jsdom fires no beforeinstallprompt and sets no window.__mdf_install_prompt,
+    // and detectPlatform reports desktop (isIOS/isInAppBrowser false), so the
+    // extracted handleInstall falls to the "other browser" manual-install hint.
+    // This covers the handler moved into useInfoPanel, not just the badge render.
+    const { container } = render(<InfoPanel rowCount={0} />);
+    expect(container.querySelector('.ip-apps__hint')).toBeNull();
+    const badge = container.querySelector('.ip-apps__install-badges button');
+    fireEvent.click(badge);
+    const hint = container.querySelector('.ip-apps__hint');
+    expect(hint).toBeTruthy();
+    expect(hint.textContent).toBe(t('page.info.install_hint_other'));
+  });
+
   it('collapsing an open section hides it again (toggle is symmetric)', () => {
     const { container, getByText } = render(<InfoPanel rowCount={3} />);
     fireEvent.click(getByText(t('page.info.show_conseq')));

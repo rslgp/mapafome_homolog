@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
@@ -7,92 +7,26 @@ import ImagemInstagram from './home/ImagemInstagram';
 import Apoiadores from './home/Apoiadores';
 import SponsorSlot from './ux/SponsorSlot';
 import { PLACEMENTS } from './ux/sponsors';
-import useInstallPrompt from './ux/useInstallPrompt';
+import useInfoPanel from './useInfoPanel';
 import { LEGEND, ACKNOWLEDGEMENTS, HUNGER_TIMELINE } from './infoPanelContent';
 import './InfoPanel.css';
 import { t, useLocale } from './ux/strings';
 
 // The static content data (the color legend, the acknowledgements list, and the
-// hunger-timeline rows — plus the legend icon refs) moved to ./infoPanelContent
-// (SRP: content vs presentation). This file owns the panel's JSX + the PWA-install
-// wiring. The PWA-install hook extraction is deliberately deferred to a follow-up.
+// hunger-timeline rows, plus the legend icon refs) moved to ./infoPanelContent
+// (SRP: content vs presentation). The PWA-install state, effect, and handler
+// moved to ./useInfoPanel (SRP: browser-install logic vs presentation, M10d).
+// This file now owns only the panel's JSX + its trivial collapse-toggle UI state.
 
 const InfoPanel = ({ rowCount }) => {
   useLocale(); // re-render on locale change so t() re-reads
   const [showAgradecimentos, setShowAgradecimentos] = useState(false);
   const [showApoiadores, setShowApoiadores] = useState(false);
   const [showTabela, setShowTabela] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [installHint, setInstallHint] = useState('');
 
-  // Platform flags from the shared single-source classifier (LBR-D). InfoPanel
-  // keeps its OWN beforeinstallprompt wiring + store badges intact (LBR-A:
-  // non-regression beats DRY here); it only consumes isIOS/isInAppBrowser to
-  // pick the right manual-install hint instead of re-sniffing the UA.
-  const { isIOS, isInAppBrowser } = useInstallPrompt();
-
-  // Captura o evento de instalação do PWA (Chrome/Edge/Android) para oferecer
-  // a instalação da versão lite direto no botão, sem passar pela loja.
-  useEffect(() => {
-    const onBeforeInstall = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    const onInstalled = () => {
-      setDeferredPrompt(null);
-      setIsInstalled(true);
-    };
-
-    // Adota um evento que disparou ANTES deste componente montar — capturado
-    // cedo pelo bridge em layout.js (window.__mdf_install_prompt). Estes
-    // setState leem estado de navegador (window.*/matchMedia) após a montagem
-    // de propósito; derivar no render tocaria window e arriscaria hydration
-    // mismatch neste componente client.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads window install-prompt bridge / matchMedia (external state) post-mount to avoid hydration mismatch
-    if (window.__mdf_install_prompt) setDeferredPrompt(window.__mdf_install_prompt);
-    if (window.__mdf_app_installed) setIsInstalled(true);
-
-    window.addEventListener('beforeinstallprompt', onBeforeInstall);
-    window.addEventListener('appinstalled', onInstalled);
-
-    if (window.matchMedia?.('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
-    }
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
-      window.removeEventListener('appinstalled', onInstalled);
-    };
-  }, []);
-
-  const handleInstall = async () => {
-    // Usa o evento do state ou o capturado cedo pelo bridge (layout.js).
-    const promptEvent = deferredPrompt || (typeof window !== 'undefined' ? window.__mdf_install_prompt : null);
-    if (promptEvent) {
-      promptEvent.prompt();
-      const { outcome } = await promptEvent.userChoice;
-      if (outcome === 'accepted') {
-        setIsInstalled(true);
-      }
-      setDeferredPrompt(null);
-      if (typeof window !== 'undefined') window.__mdf_install_prompt = null;
-      setInstallHint('');
-      return;
-    }
-    // Sem prompt nativo (Safari/iOS, ou navegador que ainda não atingiu o
-    // critério de instalabilidade): orienta a instalação manual usando a
-    // classificação central (isIOS/isInAppBrowser), não um novo sniff de UA.
-    if (isIOS && isInAppBrowser) {
-      // Webview do Instagram/Facebook/WhatsApp não tem "Adicionar à Tela de
-      // Início" (D3): orienta a abrir no Safari primeiro.
-      setInstallHint(t('page.info.hint_ios_safari'));
-    } else if (isIOS) {
-      setInstallHint(t('page.info.hint_ios_add'));
-    } else {
-      setInstallHint(t('page.info.install_hint_other'));
-    }
-  };
+  // PWA-install state + action live in the extracted hook (M10d). InfoPanel is
+  // now a pure presentation shell over this + the collapse booleans above.
+  const { isInstalled, installHint, handleInstall } = useInfoPanel();
 
   return (
     <Grid size={{ xs: 12, sm: 12 }}>
