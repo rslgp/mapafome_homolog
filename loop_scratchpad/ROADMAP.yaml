@@ -1,0 +1,108 @@
+# === ROADMAP.yaml ===
+# Phased delivery plan that sequences the MILESTONES.yaml items. Every delivers[] id
+# exists in MILESTONES.yaml. Dispatch follows the cost rule: read-only/analysis agents
+# fan out in parallel; any agent that builds or runs the full suite is dispatched serially.
+meta:
+  project: "MAPA FOME"
+  ordering: "highest-tier-first; dependencies precede dependents; report-only precedes implementation"
+  cost_rule: "parallel = read-only analysis; serial = anything that runs npm run build or the full suite (this machine OOMs on parallel builds)"
+phases:
+
+  - id: "PH-A"
+    name: "Discovery and analysis (report-only fan-out)"
+    delivers: ["M1","M2","M3","M4","M5","M6","M9","M10","M11","M12","M13","M16","M19","M21","M22","M90"]
+    entry_criteria: "Live repo readable; MILESTONES.yaml + CLAUDE.md detected; no build needed."
+    exit_criteria: "Every report-only finding has evidence read this run and a tier; nothing edited or committed."
+    agents:
+      - name: "arch-fitness-reviewer"
+        dispatch: "parallel"
+        report_only: true
+      - name: "security-audit-specialist"
+        dispatch: "parallel"
+        report_only: true
+      - name: "a11y-architect_remote_affaan-m_ecc"
+        dispatch: "parallel"
+        report_only: true
+      - name: "agent_translation-localization"
+        dispatch: "parallel"
+        report_only: true
+      - name: "code-quality-metrics-specialist"
+        dispatch: "serial"
+        report_only: true
+
+  - id: "PH-B"
+    name: "Accessibility ship-blockers (tier S+)"
+    delivers: ["M1","M2","M3","M4"]
+    entry_criteria: "PH-A a11y findings accepted; remediation designs approved by the human."
+    exit_criteria: "npm run a11y green on the affected routes; modal focus-trap + labels + map keyboard alternative verified; smoke200 still green."
+    agents:
+      - name: "a11y-architect_remote_affaan-m_ecc"
+        dispatch: "parallel"
+        report_only: true
+      - name: "uiux-defold"
+        dispatch: "serial"
+        report_only: false
+      - name: "agent_backlog-orchestrator"
+        dispatch: "serial"
+        report_only: false
+
+  - id: "PH-C"
+    name: "Gate integrity then PII / re-identification (tier S+/S)"
+    delivers: ["M5","M6","M7","P14"]
+    entry_criteria: "M5 lands first so the FF2 gate counts the real long-method debt before any decomposition; PII findings have a human/DPO policy confirmation."
+    exit_criteria: "FF2 counts all functions over 100 LOC; marketing aggregate k-anonymized; raw-PII transit proxy designed; gate green (fitness/test/build/smoke200)."
+    agents:
+      - name: "code-quality-metrics-specialist"
+        dispatch: "serial"
+        report_only: true
+      - name: "security-audit-specialist"
+        dispatch: "parallel"
+        report_only: true
+      - name: "agent_backlog-orchestrator"
+        dispatch: "serial"
+        report_only: false
+
+  - id: "PH-D"
+    name: "SOT consolidation and i18n parity (tier S/A)"
+    delivers: ["M8","M9","M12","M15","M16","M17","M18"]
+    entry_criteria: "PH-A SOT-drift + i18n findings accepted; dignity copy queued for human translation, never machine-translated."
+    exit_criteria: "Shared MIN_SUBSCRIPTION_VALUE + pin-color token landed; weekday/date locale gaps closed at 12-locale parity; parity + fitness tests green."
+    agents:
+      - name: "arch-fitness-reviewer"
+        dispatch: "parallel"
+        report_only: true
+      - name: "agent_translation-localization"
+        dispatch: "parallel"
+        report_only: false
+      - name: "agent_backlog-orchestrator"
+        dispatch: "serial"
+        report_only: false
+
+  - id: "PH-E"
+    name: "Test coverage and complexity paydown (tier S/A/B)"
+    delivers: ["M10","M11","M19","M13","M14","M20"]
+    entry_criteria: "M5 (FF2 widened) shipped so decomposition is measurable; zero-test modules identified."
+    exit_criteria: "God-components decomposed under the FF2 limit; InfoPanel/GuidedTutorial/InstallToast/TapTracker tested; CORS allowlist live; coverage.include widened with the new tests green."
+    agents:
+      - name: "code-quality-metrics-specialist"
+        dispatch: "serial"
+        report_only: true
+      - name: "security-audit-specialist"
+        dispatch: "parallel"
+        report_only: true
+      - name: "agent_backlog-orchestrator"
+        dispatch: "serial"
+        report_only: false
+
+  - id: "PH-F"
+    name: "Low-priority polish (tier B)"
+    delivers: ["M21","M22","M90"]
+    entry_criteria: "All higher-tier phases closed; maintainer confirms the cosmetic source-render changes."
+    exit_criteria: "Brand-cyan token homed; em-dash null placeholders removed; out-of-scope game consultants recorded; gate green."
+    agents:
+      - name: "arch-fitness-reviewer"
+        dispatch: "parallel"
+        report_only: true
+      - name: "agent_translation-localization"
+        dispatch: "parallel"
+        report_only: false

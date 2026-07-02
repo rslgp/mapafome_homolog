@@ -1,0 +1,130 @@
+# =====================================================================
+# BACKLOG do loop autonomo - MAPA FOME homolog (slug loop-manager: mapafome_h)
+# Consumido pelo loop-manager (campo backlog do status + metrics.ps1) e, quando o
+# humano apontar o maker para ele, executado item a item (backlog-orchestrator).
+# NAO confundir com: MILESTONES.yaml (roadmap de engenharia humano P1..P21 - so
+# referenciar) e MILESTONES_UIUX.yaml / ROADMAP_UIUX.md (donos: o loop de
+# planejamento UIUX existente - nunca editar).
+# Regras: append-only; status de conjunto FECHADO (pendente | shipped); 'shipped'
+# SO o loop flipa apos ler o gate verde do item. human_gate: true => o maker emite
+# 'NEEDS_HUMAN: <pergunta> | ITEM: <id>' e pula.
+# Roadmap narrativo + mapa das 11 etapas: ROADMAP_LOOP.md (irmao deste arquivo).
+# Cap por wake (projects.json): max 6 chamadas, 20 min wall-clock, 3 USD/dia.
+# ATENCAO (estado atual): o maker_prompt do mapafome_h em config.json e
+# planning-only de UIUX; apontar o maker para ESTE backlog e decisao humana
+# (ver ROADMAP_LOOP.md, secao "Como ligar").
+# =====================================================================
+
+itens:
+
+  # ---------- M1: Prontidao do loop (etapas 1-3 + wrappers) ----------
+
+  - id: MF-L-001
+    titulo: "Gate por item verde fora de main: branch de loop + lint+test lidos de verdade"
+    acao: "Criar/atualizar a branch loop/mapafome_h, rodar 'npm run lint && npm run test', ler a saida real e registrar em loop_reports/gate_baseline.md"
+    tier: S+
+    status: pendente
+    why: "O preflight bloqueia em main; sem baseline verde lido, o judge dos wakes seguintes compara contra ruido"
+    etapa: judge
+    gate: "npm run lint && npm run test"
+    human_gate: false
+    refs: ["P1"]
+    milestone: M1
+    esforco_wake: "cabe: 2 comandos + 1 relatorio, ~6 min, <= 6 chamadas"
+
+  - id: MF-L-002
+    titulo: "Relatorio de triagem do MILESTONES.yaml e deferidos (report-only)"
+    acao: "Ler MILESTONES.yaml como DADO e emitir loop_reports/triagem.md: o que resta aberto (P14 'later'), o que foi deferido (seam fetchSheetRows/useSheetReport do P12) e o que esta fora de escopo; nao editar MILESTONES.yaml"
+    tier: S
+    status: pendente
+    why: "TRIAGE escolhe UM item acionavel; o catalogo humano ja diz que P14 e o unico aberto e por que"
+    etapa: triage
+    gate: "bash -c 'test -s loop_reports/triagem.md'"
+    human_gate: false
+    refs: ["P14", "P12"]
+    milestone: M1
+    esforco_wake: "cabe: leitura de 1 yaml + 1 relatorio, sem build"
+
+  # ---------- M2: Seguranca P14 (segredo no bundle do cliente) ----------
+
+  - id: MF-L-101
+    titulo: "Inventario report-only dos usos de NEXT_PUBLIC_GOOGLE_PRIVATE_KEY / NEXT_PUBLIC_CRYPTSEED"
+    acao: "Grep de todos os sites cliente que leem os dois segredos (arquivo:linha; P14 cita 9 arquivos), emitir loop_reports/p14_inventario.md com o mapa e as dependencias; nenhuma edicao de codigo"
+    tier: S+
+    status: pendente
+    why: "P14 e HIGH severity (chave privada de service-account inlined no export estatico); a decisao precisa do mapa exato de sites"
+    etapa: context
+    gate: "bash -c 'test -s loop_reports/p14_inventario.md'"
+    human_gate: false
+    refs: ["P14", "P13"]
+    milestone: M2
+    esforco_wake: "cabe: greps + 1 relatorio, sem build, ~10 min"
+
+  - id: MF-L-102
+    titulo: "Decidir a remediacao do P14 (proxy de escrita server-side vs token rotacionado de menor privilegio)"
+    acao: "DECISAO HUMANA (handoff bug-bounty registrado no proprio P14): escolher a arquitetura de remediacao e registrar 'DECISAO-P14: <escolha>' em loop_reports/decisoes.md"
+    tier: S+
+    status: pendente
+    why: "O catalogo humano marca P14 como fora de escopo autonomo (threat-model handoff); o loop nao decide arquitetura de segredo"
+    etapa: builder
+    gate: "bash -c 'grep -q DECISAO-P14 loop_reports/decisoes.md'"
+    human_gate: true
+    refs: ["P14"]
+    milestone: M2
+    esforco_wake: "cabe: o wake so emite NEEDS_HUMAN e pula; custo ~0"
+
+  # ---------- M3: Qualidade e testes ----------
+
+  - id: MF-L-201
+    titulo: "Caracterizar e extrair o seam fetchSheetRows/useSheetReport deferido do P12"
+    acao: "Primeiro testes de caracterizacao do load() duplicado das paginas de relatorio, depois a extracao do seam; se nao couber num wake, shipar so a caracterizacao e appendar um item para a extracao"
+    tier: A
+    status: pendente
+    why: "Foi o unico pedaco do P12 deferido (entrelacado com estado React de pagina); caracterizar primeiro evita regressao"
+    etapa: builder
+    gate: "npm run test && npm run lint"
+    human_gate: false
+    refs: ["P12"]
+    milestone: M3
+    esforco_wake: "cabe: item ja preve auto-quebra (caracterizacao neste wake, extracao no proximo)"
+
+  - id: MF-L-202
+    titulo: "Triagem real-vs-flake do subconjunto a11y do E2E no HDD"
+    acao: "Rodar 'npm run a11y' (subconjunto servido, nao a suite E2E inteira que satura o HDD), classificar cada falha como REAL ou ambiente/flake com evidencia, e registrar em loop_reports/a11y_triagem.md"
+    tier: A
+    status: pendente
+    why: "A suite completa estoura o teto de 20 min no HDD; o subconjunto a11y cabe e ja pegou achados reais (contraste/touch-target) antes"
+    etapa: judge
+    gate: "npm run a11y"
+    human_gate: false
+    refs: ["P6", "P17"]
+    milestone: M3
+    esforco_wake: "cabe: 1 comando servido + relatorio; explicito NAO rodar a E2E completa"
+
+  # ---------- M4: Merge e deploy (human-gates) ----------
+
+  - id: MF-L-301
+    titulo: "Wake de JUDGE dedicado pre-merge (fitness + build + smoke200)"
+    acao: "Rodar 'npm run fitness && npm run build && npm run smoke200' num wake dedicado so ao gate e emitir parecer com o resultado por rota do smoke200 em loop_reports/judge_premerge.md; parecer do checker (agent_arch-fitness-reviewer), nao do builder"
+    tier: A
+    status: pendente
+    why: "Neste repo o smoke200 e parte do gate (build exit 0 nao prova render); maker != checker no parecer de merge"
+    etapa: judge
+    gate: "npm run fitness && npm run build && npm run smoke200"
+    human_gate: false
+    refs: ["P21"]
+    milestone: M4
+    esforco_wake: "cabe: wake dedicado SO ao gate; se estourar 20 min no HDD, quebrar em build num wake e smoke200 no seguinte"
+
+  - id: MF-L-302
+    titulo: "Publicacao (push/PR/homolog->producao) - sempre ato humano"
+    acao: "DECISAO HUMANA: push, PR e promocao de homolog sao do humano; o loop para no commit local em branch de feature com gate verde"
+    tier: B
+    status: pendente
+    why: "DEPLOY e a etapa 7 e e sempre human-gated; o loop nunca publica"
+    etapa: deploy
+    gate: "npm run smoke200"
+    human_gate: true
+    refs: []
+    milestone: M4
+    esforco_wake: "cabe: o wake so emite NEEDS_HUMAN e pula; custo ~0"

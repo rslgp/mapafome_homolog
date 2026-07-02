@@ -99,7 +99,7 @@ export default function StepsHint({ activeStep = 0 }) {
           rel="noopener noreferrer"
           aria-label={t('page.steps.bluey_aria')}
         >
-          <span aria-hidden="true">👦👧 2a9 anos</span>
+          <span aria-hidden="true">👦👧 Bluey</span>
         </Link>
         <a
                     className="mdf-btn mdf-btn--secondary mdf-btn--lg"

@@ -1,0 +1,144 @@
+# loops/loop.yaml: the MAPA FOME loop-engineering ENGINE spec.
+#
+# What this is: a DESIGN artifact, not a runner. It encodes one autonomous /
+# semi-autonomous coding loop modeled on Addy Osmani's "Loop Engineering" essay
+# (the loop = FIND work -> DISPATCH to agents -> CHECK -> RECORD -> DECIDE next,
+# bounded by a GUARD). It describes WHAT the loop would do and the exact STOP
+# conditions; it does NOT run anything. Authoring this file spends zero tokens
+# and ships no code.
+#
+# Grounding: every primitive below is anchored to a real file in THIS repo, per
+# the loop-engineer audit (report-only). The one MISSING primitive is GUARD, and
+# it is the next thing to build (see loops/roadmap.yaml, phase LP-0).
+#
+# House rules baked in: report-only by default; no unattended run until a COMPLETE
+# guard plus an explicit human OK exist; builds are SERIALIZED (this machine OOMs
+# on parallel builds); GREEN != VERIFIED (a green gate is "no known check failed",
+# not "a human confirmed the behavior"). No em-dash anywhere.
+
+meta:
+  project: "MAPA FOME"
+  kind: "loop-engineering design spec"
+  model: "Addy Osmani, Loop Engineering (find -> dispatch -> check -> record -> decide, guarded)"
+  designed_by: "loop-engineer agent (report-only audit)"
+  designed_on: "2026-06-30"
+  status: "design-only"          # never 'running'; this file is a spec
+  reads:
+    backlog: "loops/backlog.yaml"
+    roadmap: "loops/roadmap.yaml"
+    work_sot: "MILESTONES.yaml"   # the live tiered backlog SOT (P1..P21 shipped, P14 later)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTONOMY / COST STANCE (top of file on purpose: read before anything else)
+# ─────────────────────────────────────────────────────────────────────────────
+autonomy:
+  stance: "report-only"          # default; zero autonomous spend
+  unattended: false              # flips true ONLY when BOTH preconditions hold
+  preconditions_for_unattended:
+    - "guard.complete == true (per_run_cap AND kill_switch AND spend_log all wired)"
+    - "an explicit human opt-in THIS session, in words ('let it run', 'schedule it', 'turn it on'). 'Set it up' is design only."
+  refusal: "Today guard.complete == false, so an unattended run is REFUSED. This file may be authored, reviewed, and dry-run-reasoned, but not executed."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THE SIX PRIMITIVES (each: what fills it HERE, what realizes it, its STOP rule)
+# ─────────────────────────────────────────────────────────────────────────────
+primitives:
+
+  find:
+    role: "dispatch-source: where the next unit of work comes from"
+    present: true
+    evidence: "MILESTONES.yaml; src/app/pets/PETS_MILESTONES.yaml; prompts/mapafome-milestones-roadmap-orchestrator.yaml"
+    fills_with: "the MILESTONES.yaml backlog (items whose status is pending or open, never shipped, never later)"
+    realized_by: "read MILESTONES.yaml + loops/backlog.yaml; select items where status in {pending, open}"
+    stop_when: "no item with status in {pending, open} remains -> loop exits 'backlog empty'"
+
+  dispatch:
+    role: "hand-out: which agent does the item, and who checks it"
+    present: partial      # thin: only content agents on disk today; maker != checker not wired
+    evidence: ".claude/agents/ (currently agent_outreach-letter_mapafome.md, agent_mapapet-social-announcer.md only)"
+    fills_with: "a MAKER agent (writes the change) AND a DIFFERENT CHECKER agent (verifies it)"
+    realized_by: "maker = a coding subagent (e.g. agent_principalengineer); checker = a SEPARATE report-only reviewer (arch-fitness-reviewer / security-audit-specialist / a11y-architect), different agent, ideally different effort level"
+    constraint: "MAKER != CHECKER. The agent that writes an item never signs off on it."
+    note: ".claude/ is local-only and never committed (see CLAUDE.md), so this spec must not hard-depend on committed agent paths; agent identities are referenced by role, resolved at run time."
+    stop_when: "no maker resolves for the item owner, OR no distinct checker is defined -> halt THAT item, record why, continue to the next"
+
+  check:
+    role: "verify-gate: the strongest primitive in this repo"
+    present: true
+    evidence: "package.json scripts; .claude/skills/gate/SKILL.md; .github/workflows/ci.yml; .github/workflows/a11y.yml"
+    fills_with: "the repo verification gate"
+    realized_by:
+      - "npm run lint"
+      - "npm run test"
+      - "npm run fitness"
+      - "npm run build"
+      - "npm run smoke200"     # served-build HTTP-200 + real-render gate; ALWAYS after build, never skip
+      - "npm run a11y"         # when a server is up
+      - "cd asaas-backend && npm test"   # only for backend items
+    builds_serial: true        # never two `npm run build` at once (OOM)
+    constraint: "GREEN != VERIFIED. A green gate means 'no known check failed', not 'a human confirmed the behavior'."
+    stop_when: "any gate step exits non-zero -> loop STOPS on that item, records red, does NOT advance"
+
+  record:
+    role: "state: what survives the run so the next iteration is informed"
+    present: true
+    evidence: "MILESTONES.yaml (status enum + per-item commit hash); loops/runlog.jsonl (to be created with the guard)"
+    fills_with: "the MILESTONES.yaml item (status + commit hash) PLUS an on-disk loop run log"
+    realized_by: "flip status to shipped ONLY on real green-gate evidence read THIS run; append the commit hash; append one run entry (item id, gate result, cost) to the spend log"
+    constraint: "commits route through the git-commit-specialist agent; never `git add -A`; never push / PR / version-bump unasked"
+    stop_when: "cannot write the state file -> halt (memory must survive the run; if it cannot, do not proceed)"
+
+  decide:
+    role: "next-selector: which item runs next, and when to stop the whole loop"
+    present: partial      # convention (orchestrator R7), not a wired selector step
+    evidence: "MILESTONES.yaml phase comments + status enum; prompts/mapafome-milestones-roadmap-orchestrator.yaml R7 (tier, highest-first)"
+    fills_with: "a highest-tier-first selector over the remaining backlog"
+    realized_by: "after a green + recorded item, pick the next highest-tier pending item; respect status: later (P14 is skipped); serialize, never pick two build-heavy items concurrently"
+    stop_when: "per-run cap reached (guard) OR backlog empty OR a human-meaningful review is pending"
+
+  guard:
+    role: "budget + autonomy bound: the block we refuse to run a loop without"
+    present: false        # MISSING. This is the next primitive to build (LP-0).
+    evidence: "none detected; the only two 'kill-switch' grep hits both explicitly say 'NOT a kill-switch' (scripts/rollback-drill.mjs, INTEL/INTERNATIONAL_PLAN.md)"
+    per_run_cap:
+      token_ceiling: null    # SET a hard token/cost ceiling that HALTS the run when reached
+      call_ceiling: null     # max agent calls per run
+      wall_clock_minutes: 10 # starting reference: mirrors ci.yml `timeout-minutes: 10`
+      builds_serial: true    # never two `npm run build` at once (OOM constraint)
+    kill_switch:
+      flag_file: "loops/STOP"          # if this file exists, the loop stops at the TOP of the next iteration
+      documented_in: "loops/README.md"
+    spend_log:
+      path: "loops/runlog.jsonl"        # each run APPENDS: item id, tokens, calls, wall-clock, gate result
+    complete: false          # true only when per_run_cap (a real ceiling) AND kill_switch AND spend_log all exist
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THE LOOP (one iteration, in order). This is the control flow a runner WOULD
+# execute once autonomy.unattended flips true. It is described, not run.
+# ─────────────────────────────────────────────────────────────────────────────
+iteration:
+  - step: "0. GUARD CHECK"
+    do: "if loops/STOP exists -> stop now. if per-run cap (tokens/calls/wall-clock) reached -> stop now and record."
+  - step: "1. FIND"
+    do: "select the next item per decide.realized_by from the pending/open backlog."
+    on_empty: "exit 'backlog empty'."
+  - step: "2. DISPATCH"
+    do: "hand the item to its MAKER agent; reserve a DISTINCT CHECKER agent."
+    on_no_agent: "halt this item, log, go to DECIDE."
+  - step: "3. CHECK"
+    do: "run the gate (lint -> test -> fitness -> build -> smoke200 [-> a11y] [-> backend test]); builds serial."
+    on_red: "STOP the loop on this item, record red, do NOT advance."
+  - step: "4. RECORD"
+    do: "on real green, route the commit through git-commit-specialist; flip status to shipped; append commit hash; append a runlog entry."
+    note: "GREEN != VERIFIED: a human still confirms the item did what its scope Include line promised, and that smoke200 was a real render not a 200 error shell, before shipped is trusted."
+  - step: "5. DECIDE"
+    do: "pick the next highest-tier pending item; respect status: later; honor the per-run cap; loop back to step 0."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HANDOFFS (who owns what; this engine spec stays in its lane)
+# ─────────────────────────────────────────────────────────────────────────────
+handoffs:
+  loop_engineering: "the guard primitive, the loop block shapes, the maker/checker split (this file)."
+  agent_authoring: "writing the actual maker and the distinct checker agent .md files is prompt-authoring -> prompt-engineer."
+  feature_code: "the product changes a maker would implement -> software-engineer."
+  release_and_autonomy: "flipping any unattended:true, scheduling, and the explicit opt-in are the human's (H7)."

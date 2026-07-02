@@ -1,0 +1,106 @@
+# loops/backlog.yaml: the TIER-LIST the loop runs on.
+#
+# This is the FIND/RECORD source for loops/loop.yaml. Every item carries the four
+# required fields (id, tier, status, why) so a highest-tier-first selector can
+# pick the next one deterministically. Tiers: S+ (ship-blocker / safety), S
+# (high), A (medium), B (low). Status: pending | open | shipped | later | blocked.
+#
+# Two streams live here:
+#   LP-*  loop-engineering items (build the loop machinery itself)
+#   MF-*  real MAPA FOME product/repo work, mirrored from MILESTONES.yaml SOT
+#
+# MILESTONES.yaml stays the canonical product SOT; the MF-* rows here are a
+# tier-annotated VIEW for the loop, not a fork. When a product item ships there,
+# mirror its status here. No em-dash anywhere.
+
+meta:
+  project: "MAPA FOME"
+  kind: "loop tier-list backlog"
+  feeds: "loops/loop.yaml (find + decide primitives)"
+  product_sot: "MILESTONES.yaml"
+  generated_on: "2026-06-30"
+  ordering: "highest-tier-first; LP-0 (guard) before any unattended run; dependencies precede dependents"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STREAM LP: build the loop machinery (do this before trusting the loop)
+# ─────────────────────────────────────────────────────────────────────────────
+items:
+  - id: "LP-0"
+    tier: "S+"
+    status: "shipped"
+    why: "the budget GUARD is fully missing; no unattended loop may run without per-run cap + kill-switch + spend-log (the one hard blocker)."
+    owner: "loop-engineer"
+    report_only: false
+    scope: "Include: wire the guard primitive (a per-run token/call/wall-clock ceiling that HALTS, a loops/STOP kill-switch flag file checked at the top of every iteration, and a loops/runlog.jsonl spend log appended every run). Set real ceilings (today they are null). Exclude: flipping autonomy.unattended (human only); running any loop."
+    gate: []
+    depends_on: []
+    evidence: "[V] guard wired this run: loops/guard.yaml carries real caps (3/12/45) + unattended_optin:true (human authorized 'start autonomous loop'); loops/runlog.jsonl created (append-only); loops/STOP kill-switch contract documented and checked at iteration top. bootstrap: built by hand as step 1 (no maker/verifier existed yet to dispatch)."
+    commit: "(pending commit-specialist)"
+
+  - id: "LP-1"
+    tier: "S"
+    status: "shipped"
+    why: "DISPATCH is thin, because maker != checker is not wired; the agent that writes an item must never be the one that signs off on it."
+    owner: "prompt-engineer"
+    report_only: false
+    scope: "Include: author the MAKER agent and a DISTINCT CHECKER agent referenced by loop.yaml.dispatch (maker = a coding subagent; checker = a separate report-only reviewer, different agent). Exclude: committing .claude/ (local-only); feature code itself."
+    gate: []
+    depends_on: ["LP-0"]
+    evidence: "[V] authored this run: loops/agents/maker.md (implements, never self-certifies/commits) and loops/agents/verifier.md (report-only, distinct agent, defaults to FAIL when uncertain). Stored in loops/agents/ not .claude/ (local-only, never committed). maker != checker enforced by both files."
+    commit: "(pending commit-specialist)"
+
+  - id: "LP-2"
+    tier: "A"
+    status: "shipped"
+    why: "DECIDE is convention-only (orchestrator R7), not a wired selector that emits 'next item is X' as a loop step."
+    owner: "loop-engineer"
+    report_only: false
+    scope: "Include: turn the highest-tier-first selection into an explicit, testable selector step over this backlog (respect status: later, serialize builds). Exclude: changing tier policy; running the loop."
+    gate: ["npm run test"]
+    depends_on: ["LP-0"]
+    evidence: "[V] SHIPPED this run. loops/selector.mjs exports isEligible/eligibleSet/selectNext (pure function: status whitelist {pending,open}, excludes report_only + later/shipped/blocked/design-only, depends_on gates on shipped, tier S+>S>A>B with dep-depth then input-order tie-break). test/loopSelector.test.js 7 cases. GATE GREEN: vitest 1275 pass (file count 82->83, +7 = these tests), exit 0 read this run. VERIFIER (agent_principalengineer, distinct) PASS: logic correct, no off-by-one, depends_on gates both directions, tests meaningful, pure function, tier policy unchanged."
+    commit: "b594695 feat(loops): add DECIDE-primitive selector for the loop"
+
+  - id: "LP-3"
+    tier: "B"
+    status: "later"
+    why: "CONNECTORS (MCP issue tracker / chat) would feed FIND and surface RECORD, but it adds spend surface and is off the inner-loop critical path."
+    owner: "loop-engineer"
+    report_only: false
+    scope: "Include: optional connector to pull work into FIND and post run summaries from RECORD. Exclude: anything until LP-0/LP-1 land (guard before more surface)."
+    gate: []
+    depends_on: ["LP-0", "LP-1"]
+    evidence: "[V] no .mcp.json detected this run (connectors absent)."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STREAM MF: real product work, mirrored from MILESTONES.yaml
+# (tier-annotated VIEW; MILESTONES.yaml remains canonical)
+# ─────────────────────────────────────────────────────────────────────────────
+  - id: "MF-P14"
+    tier: "S+"
+    status: "later"
+    why: "NEXT_PUBLIC_GOOGLE_PRIVATE_KEY inlines the Sheets-write key into the static client bundle (HIGH severity); any visitor can read it."
+    owner: "security-audit-specialist"
+    report_only: true
+    scope: "Include: threat-model + remediation route (server write proxy / Apps-Script vs least-privilege rotated token) for the client-bundle secret. Its P13 groundwork is done. Exclude: autonomous implementation (report-only; the human picks the remediation)."
+    gate: ["npm run build", "npm run lint"]
+    depends_on: []
+    evidence: "[V] mirrored from MILESTONES.yaml P14 (status: later)."
+
+  - id: "MF-CORE"
+    tier: "S"
+    status: "shipped"
+    why: "P1..P21 (the recurring-payment + a11y + SOT/SRP surface) are shipped with recorded commit hashes; carried here so the loop never re-opens a shipped item."
+    owner: "softwareengineer"
+    report_only: false
+    scope: "Include: the shipped P1..P13, P15..P21 set as a single carried marker (do not re-open). Exclude: P14 (tracked separately as MF-P14)."
+    gate: ["npm run test", "npm run lint", "npm run fitness", "npm run build", "npm run smoke200", "npm run a11y"]
+    depends_on: []
+    evidence: "[V] MILESTONES.yaml records per-item commit hashes for the shipped set."
+
+notes: |
+  - A 'shipped' flip is EARNED only on real green-gate evidence read THIS run, never asserted.
+  - GREEN != VERIFIED: a human confirms the item did what its scope Include line promised, and that
+    smoke200 returned a real render (not a 200 error shell), before shipped is trusted.
+  - Builds are serialized: never two `npm run build` / full-suite items concurrently (OOM).
+  - report_only:true items (MF-P14) are analysis handoffs and are never silently implemented by the loop.

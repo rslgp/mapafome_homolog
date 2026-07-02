@@ -1,0 +1,25 @@
+# loops/guard.yaml: the populated budget guard for the autonomous shipping loop.
+#
+# This is the GUARD primitive (LP-0) the prompt's LBR-GUARD refuses to run without.
+# The loop reads these caps at the top of every iteration; it HALTS when any is reached.
+# Authorized by the human in words ("start autonomous loop") on 2026-06-30 with the
+# conservative cap set. No em-dash anywhere.
+
+budget:
+  max_items_per_run: 8            # raised by human OK to finish the 5 remaining eligible items
+  max_agent_calls_per_run: 30     # maker plus verifier dispatches combined
+  max_wallclock_minutes: 180      # 3 hours; raised with the item/call caps
+  kill_switch_file: "loops/STOP"  # existence halts at the top of every iteration
+  runlog_file: "loops/runlog.jsonl"   # append-only, one JSON line per iteration
+  unattended_optin: true          # human said "start autonomous loop" this session
+  supervision: "attended"         # report each iteration; human is watching, may interrupt
+  builds_serial: true             # never two `npm run build` at once (OOM)
+
+authorized:
+  by: "human (in words: 'start autonomous loop')"
+  on: "2026-06-30"
+  cap_choice: "conservative (3 items / 12 agent calls / 45 min)"
+  bootstrap: "LP-0 (guard) and LP-1 (maker + verifier agents) built by hand first, then live loop on product items"
+
+# KILL SWITCH: to stop the loop, create an empty file at loops/STOP. The loop checks
+# for it at the top of every iteration and halts immediately, before any spend.

@@ -1,0 +1,72 @@
+# loops/roadmap.yaml: phased plan to STAND UP the loop, then RUN it.
+#
+# Groups loops/backlog.yaml items into ordered phases. The hard gate is between
+# LP-0 (the guard) and any unattended run: phase LP-RUN cannot start until the
+# guard is complete AND the human gives an explicit, in-words opt-in. Every id in
+# delivers[] exists in loops/backlog.yaml. No em-dash anywhere.
+
+meta:
+  project: "MAPA FOME"
+  kind: "loop-engineering roadmap"
+  backlog: "loops/backlog.yaml"
+  engine: "loops/loop.yaml"
+  ordering: "guard-first; design-before-run; report-only until a complete guard + explicit human OK"
+  generated_on: "2026-06-30"
+
+phases:
+  - id: "LP-0"
+    name: "Guard the loop (the non-negotiable precondition)"
+    delivers: ["LP-0"]
+    entry_criteria: "loops/loop.yaml authored and reviewed; autonomy.stance == report-only."
+    exit_criteria: "guard.complete == true: a real per-run cap (token/call/wall-clock) that HALTS, a loops/STOP kill-switch checked every iteration, and a loops/runlog.jsonl spend log. No ceiling left null."
+    agents:
+      - name: "loop-engineer"
+        dispatch: "serial"
+        report_only: false
+    blocks: ["LP-DISPATCH", "LP-RUN"]
+
+  - id: "LP-DISPATCH"
+    name: "Wire maker != checker"
+    delivers: ["LP-1", "LP-2"]
+    entry_criteria: "LP-0 exit met (guard complete)."
+    exit_criteria: "a MAKER agent and a DISTINCT CHECKER agent are defined and referenced by loop.yaml.dispatch; the selector (LP-2) emits 'next item is X' as a testable step."
+    agents:
+      - name: "prompt-engineer"
+        dispatch: "serial"
+        report_only: false
+      - name: "loop-engineer"
+        dispatch: "serial"
+        report_only: false
+
+  - id: "LP-RUN"
+    name: "Run the loop (GATED on human OK)"
+    delivers: ["MF-P14", "MF-CORE"]
+    entry_criteria: "BOTH hold: guard.complete == true (LP-0) AND an explicit human opt-in this session in words ('let it run' / 'schedule it'). Until both hold, this phase is REFUSED."
+    exit_criteria: "the pending/open backlog is drained to shipped on real green-gate evidence, OR the per-run cap is reached, OR a human-meaningful review is pending. report_only items (MF-P14) are routed as analysis handoffs, never auto-implemented."
+    agents:
+      - name: "maker (software-engineer role)"
+        dispatch: "serial"        # build-heavy; never two builds at once (OOM)
+        report_only: false
+      - name: "checker (distinct reviewer role)"
+        dispatch: "parallel"      # report-only reviewers are read-only and parallel-safe
+        report_only: true
+      - name: "git-commit-specialist"
+        dispatch: "serial"
+        report_only: false
+    note: "loop-operator may MONITOR this phase, but starting it is the human's call (H7)."
+
+  - id: "LP-EXTEND"
+    name: "Extend reach (optional, after the loop is trusted)"
+    delivers: ["LP-3"]
+    entry_criteria: "LP-RUN has completed at least one clean, human-reviewed cycle."
+    exit_criteria: "an optional connector feeds FIND and posts RECORD summaries, behind the same guard."
+    agents:
+      - name: "loop-engineer"
+        dispatch: "serial"
+        report_only: false
+
+stop_conditions:
+  - "loops/STOP exists -> halt at the top of the next iteration."
+  - "per-run cap (tokens / calls / wall-clock) reached -> halt and record."
+  - "any gate step red -> stop the loop on that item, do not advance."
+  - "backlog drained (no pending/open item) -> exit 'backlog empty'."
