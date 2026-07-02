@@ -42,19 +42,9 @@ module.exports = async function handler(
   if (handlePreflight(req, res)) return;
   applyCors(req, res);
 
-  // ── GATEWAY DESLIGADO — migração de gateway de pagamento (02/07/2026) ───────
-  // Este endpoint está DESATIVADO enquanto migramos o gateway. Enquanto a flag
-  // estiver true ele NÃO cria assinaturas/cobranças no Asaas: responde 503 para
-  // todo request (após CORS, para o navegador receber uma resposta limpa). Toda
-  // a lógica original segue intacta abaixo. Para REATIVAR: mude a flag para false
-  // (ou remova este bloco).
   const GATEWAY_DISABLED = true;
   if (GATEWAY_DISABLED) {
-    return sendJson(res, 503, {
-      error: 'gateway_disabled',
-      message:
-        'Doações por assinatura estão temporariamente indisponíveis durante a migração de gateway.',
-    });
+    return sendJson(res, 503, { error: 'gateway_disabled' });
   }
 
   if (req.method !== 'POST') {
