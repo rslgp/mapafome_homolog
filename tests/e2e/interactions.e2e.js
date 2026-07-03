@@ -203,6 +203,11 @@ test.describe('interactions: map recenters on country pick @interactions', () =>
     const mapBox = await page.locator('.leaflet-container').first().boundingBox();
     const cx = mapBox.x + mapBox.width / 2;
     const cy = mapBox.y + mapBox.height / 2;
+    // UX-M01 cooperative wheel: scroll-wheel zoom is LOCKED until the map is
+    // engaged (click or focus), so a wheel here would scroll the PAGE. Focus
+    // the container (activates the gate via focusin) instead of clicking —
+    // a click at center would also drop a pin and mutate map state.
+    await page.locator('.leaflet-container').first().focus();
     await page.mouse.move(cx, cy);
     for (let i = 0; i < 8; i++) {
       await page.mouse.wheel(0, 600); // wheel down = zoom out in Leaflet default

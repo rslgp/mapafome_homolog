@@ -1,0 +1,40 @@
+/* Cooperative-wheel hint pill (UX-M01). Lives INSIDE .leaflet-container via
+   portal. Pointer-only instruction: display gated to (pointer: fine) devices
+   — touch users never see it (their story is UX-M02) — and pointer-events
+   none so the click it invites lands on the map and unlocks the wheel. */
+.mdf-coopwheel {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: var(--mdf-space-4);
+  transform: translateX(-50%);
+  /* Leaflet control plane (panes run 200-700, controls 1000). */
+  z-index: 1000;
+  max-width: calc(100% - var(--mdf-space-8));
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  box-shadow: var(--mdf-elev-2);
+  color: var(--mdf-ink);
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+  transition: transform var(--mdf-dur-base) var(--mdf-ease-out),
+              box-shadow var(--mdf-dur-base) var(--mdf-ease-out);
+}
+
+@media (pointer: fine) {
+  .mdf-coopwheel {
+    display: block;
+  }
+}
+
+/* Wheel spun while locked: one brief lift at the exact moment of intent.
+   Transition-based (duration tokens zero out under prefers-reduced-motion,
+   so vestibular users get the state change with no motion). */
+.mdf-coopwheel--nudge {
+  transform: translateX(-50%) scale(1.06);
+  box-shadow: var(--mdf-elev-3);
+}

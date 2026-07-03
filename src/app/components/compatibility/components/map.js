@@ -56,6 +56,9 @@ import envVariables from './variaveisAmbiente';
 // Dev-only: red outline of the map's tap hitbox, opt-in via ?debug=hitbox.
 // Renders null (and adds no class) in every normal session. See its header.
 import MapHitboxOutline from './_debug/MapHitboxOutline';
+// UX-M01: cooperative wheel — wheel scrolls the page until the map is
+// clicked/focused (flagged via coopGesturesConfig; renders its own hint pill).
+import CooperativeWheelZoom from './CooperativeWheelZoom';
 
 // F-4 (dropped_pin_invisible_mobile.yaml): hoist the inline style out of
 // the JSX so its identity is stable across renders. react-leaflet's
@@ -366,6 +369,10 @@ const CoffeeMap = ({
 
                 {/* Encapsulated click handler: was inline whenReady arrow in V1 and V2 */}
                 <MapClickHandler onMapClick={handleMapClick} onMapLongPress={handleMapLongPress} />
+
+                {/* UX-M01: wheel-over-map scrolls the page until first click/focus
+                    (kills the desktop scroll-trap). Flag-gated; null when off. */}
+                <CooperativeWheelZoom />
 
                 {/* Dev-only: outlines the tap hitbox in red when ?debug=hitbox. */}
                 <MapHitboxOutline />
