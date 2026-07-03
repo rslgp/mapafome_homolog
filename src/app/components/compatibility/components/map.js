@@ -59,6 +59,9 @@ import MapHitboxOutline from './_debug/MapHitboxOutline';
 // UX-M01: cooperative wheel — wheel scrolls the page until the map is
 // clicked/focused (flagged via coopGesturesConfig; renders its own hint pill).
 import CooperativeWheelZoom from './CooperativeWheelZoom';
+// UX-M02: cooperative touch — one finger scrolls the page, two fingers move
+// the map (same flag; coarse-pointer only; renders its own "two fingers" veil).
+import CooperativeTouchPan from './CooperativeTouchPan';
 
 // F-4 (dropped_pin_invisible_mobile.yaml): hoist the inline style out of
 // the JSX so its identity is stable across renders. react-leaflet's
@@ -373,6 +376,10 @@ const CoffeeMap = ({
                 {/* UX-M01: wheel-over-map scrolls the page until first click/focus
                     (kills the desktop scroll-trap). Flag-gated; null when off. */}
                 <CooperativeWheelZoom />
+
+                {/* UX-M02: one-finger drag scrolls the page; the map pans with
+                    two fingers (touch scroll-trap). Flag-gated; null when off. */}
+                <CooperativeTouchPan />
 
                 {/* Dev-only: outlines the tap hitbox in red when ?debug=hitbox. */}
                 <MapHitboxOutline />

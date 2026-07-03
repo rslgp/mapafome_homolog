@@ -1,0 +1,43 @@
+/* Cooperative-touch veil (UX-M02). Lives INSIDE .leaflet-container via
+   portal. Never intercepts input (pointer-events:none) — while it shows,
+   the one-finger gesture keeps scrolling the page underneath, which is
+   itself the lesson. */
+
+/* While the gate is attached, one finger must belong to the BROWSER (page
+   scroll). pan-x pan-y still suppresses double-tap zoom (tap contract safe,
+   like the manipulation baseline) but hands single-finger panning to the
+   page; Leaflet touchZoom keeps owning two-finger pan/zoom via its own
+   non-passive listeners. Double class keeps specificity above the
+   .leaflet-container baseline in globals.css. */
+.leaflet-container.mdf-coop-touch {
+  touch-action: pan-x pan-y;
+}
+
+.mdf-cooptouch {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;               /* Leaflet control plane */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 26, 26, 0.45);  /* --mdf-ink at 45%, scrim */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--mdf-dur-base) var(--mdf-ease-out);
+}
+
+.mdf-cooptouch--on {
+  opacity: 1;
+}
+
+.mdf-cooptouch__pill {
+  max-width: calc(100% - var(--mdf-space-8));
+  padding: var(--mdf-space-3) var(--mdf-space-5);
+  background: var(--mdf-surface-1);
+  border-radius: var(--mdf-radius-pill);
+  box-shadow: var(--mdf-elev-3);
+  color: var(--mdf-ink);
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  text-align: center;
+}
