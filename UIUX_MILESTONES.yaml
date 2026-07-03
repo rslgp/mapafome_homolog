@@ -43,10 +43,12 @@ milestones:
     title: "Desktop cooperative-wheel: scrollWheelZoom desligado ate click/focus no mapa (padrao Google-embed)"
     tier: S+
     owner: ict6-uiux-session
-    scope: "Include: scrollWheelZoom=false no MapContainer ate primeiro click/focus dentro do mapa; hint discreto 'clique para ativar o zoom' (i18n 15 locales); reativar wheel apos ativacao; flag build-time NEXT_PUBLIC_FF_COOP_GESTURES para rollback por rebuild. Exclude: touch (UX-M02); dependencia nova (implementacao caseira, sem leaflet-gesture-handling)."
+    scope: "Include: scrollWheelZoom desligado ate primeiro click/focus dentro do mapa (wheelGate puro + CooperativeWheelZoom via portal); hint pointer-only 'clique para ativar o zoom' (i18n 12 locales, chave page.map.wheel_hint); wheel pre-ativacao da nudge no hint; flag build-time NEXT_PUBLIC_COOP_GESTURES para rollback por rebuild (off = legado byte-identico). Exclude: touch (UX-M02); dependencia nova (implementacao caseira, sem leaflet-gesture-handling)."
     why: "Wheel sobre o mapa hoje da zoom em vez de rolar a pagina — causa numero 1 do scroll-trap em desktop."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "tap-compat e2e verde"]
-    status: pending
+    status: shipped
+    commit: "3e8359e feat(map): gate wheel-zoom behind cooperative engagement"
+    evidence: "eslint 0; vitest 1340/1340 (6 testes wheelGate novos + paridade i18n); fitness verde; build 0; smoke200 16/16; axe 0; e2e country-pick Brasil+Franca verdes com o novo contrato (focus antes do wheel); 2 falhas e2e de disclosure provadas PRE-EXISTENTES via stash-rerun (gap CSS [hidden] do .mdf-flag__panel, concern separado)."
 
   - id: UX-M02
     title: "Mobile two-finger pan: 1 dedo rola a pagina, 2 dedos movem o mapa, com veu educativo"
