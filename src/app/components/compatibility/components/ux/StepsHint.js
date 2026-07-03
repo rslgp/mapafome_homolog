@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import './StepsHint.css';
 import { t, useLocale } from './strings';
@@ -34,8 +34,88 @@ function scrollToSelectors(selectors) {
   }
 }
 
+// Observa as métricas de scroll do trilho e devolve quais bordas têm conteúdo
+// cortado (esquerda/direita). Alimenta os véus de gradiente + o chevron de
+// arraste: o véu só aparece quando há de fato algo escondido daquele lado.
+function useRailEdgeFades(railRef) {
+  const [fades, setFades] = useState({ left: false, right: false });
+
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return undefined;
+    const update = () => {
+      const max = rail.scrollWidth - rail.clientWidth;
+      setFades({ left: rail.scrollLeft > 8, right: rail.scrollLeft < max - 8 });
+    };
+    update();
+    rail.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => {
+      rail.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [railRef]);
+
+  return fades;
+}
+
+// Atalhos de navegação do trilho (MapaPet, Solone, Bluey, Ilha das Flores) —
+// links reais (Next Link/<a href>), operáveis por teclado e antes da
+// hidratação. Extraídos do render principal para manter cada função abaixo
+// do limite FF2 (100 LOC). O Bluey carrega .mdf-pulse (anel de respiração,
+// SOT em globals.css): é um dos dois CTAs que geram receita da plataforma.
+function RailShortcuts() {
+  return (
+    <>
+      <Link
+        href="/pets"
+        className="mdf-steps__pets"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={t('page.steps.pets_aria')}
+      >
+        <span aria-hidden="true">🐾</span>
+        <span className="mdf-steps__pets-label">{t('cta.pets')}</span>
+      </Link>
+
+      <Link
+        href="/solone"
+        className="mdf-steps__pets"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={t('page.steps.solone_aria')}
+      >
+        <span aria-hidden="true">🎮</span>
+      </Link>
+
+      <Link
+        href="/bluey"
+        className="mdf-steps__pets mdf-pulse"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={t('page.steps.bluey_aria')}
+      >
+        <span aria-hidden="true">👦👧 Bluey</span>
+      </Link>
+      <a
+        className="mdf-btn mdf-btn--secondary mdf-btn--lg"
+        target="_blank"
+        rel="noreferrer"
+        href="https://www.youtube.com/watch?v=h30BO_6kFNM"
+        aria-label={t('page.info.globo_aria')}
+      >
+        <span className="mdf-btn__emoji" aria-hidden="true">📺</span>
+        <span>Ilha das Flores</span>
+      </a>
+    </>
+  );
+}
+
 export default function StepsHint({ activeStep = 0 }) {
   useLocale(); // re-render on locale change so t() re-reads
+  const railRef = useRef(null);
+  const fades = useRailEdgeFades(railRef);
+
   const scrollToInstall = () => {
     // Leva a pessoa até os botões de instalar (badges no InfoPanel). Quando o
     // app já está instalado as badges não renderizam, então caímos no painel.
@@ -47,9 +127,19 @@ export default function StepsHint({ activeStep = 0 }) {
     }
   };
 
+  const nudgeRight = () => {
+    const rail = railRef.current;
+    if (!rail) return;
+    rail.scrollBy({ left: rail.clientWidth * 0.8, behavior: 'smooth' });
+  };
+
   return (
     <aside
-      className="mdf-steps"
+      className={
+        'mdf-steps' +
+        (fades.left ? ' mdf-steps--fade-left' : '') +
+        (fades.right ? ' mdf-steps--fade-right' : '')
+      }
       role="region"
       aria-label={t('page.steps.region_aria')}
     >
@@ -58,7 +148,7 @@ export default function StepsHint({ activeStep = 0 }) {
           <aside>) garante o scroll lateral em telas estreitas independente do
           padding/flex do aside — os filhos não encolhem (flex:0 0 auto no CSS),
           então o trilho rola em vez de espremer/cortar os botões. */}
-      <div className="mdf-steps__scroll">
+      <div className="mdf-steps__scroll" ref={railRef}>
         {/* Os três passos numerados ficam desativados por ora (fluxo guiado em
             revisão); os atalhos abaixo continuam ativos. */}
         <button
@@ -69,49 +159,23 @@ export default function StepsHint({ activeStep = 0 }) {
         >
           {t('page.steps.more')}
         </button>
-        {/* Atalho para o MapaPet (achados e perdidos) — link de navegação real
-            (Next Link/<a href>), operável por teclado e antes da hidratação. */}
-        <Link
-          href="/pets"
-          className="mdf-steps__pets"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={t('page.steps.pets_aria')}
-        >
-          <span aria-hidden="true">🐾</span>
-          <span className="mdf-steps__pets-label">{t('cta.pets')}</span>
-        </Link>
-
-        <Link
-          href="/solone"
-          className="mdf-steps__pets"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={t('page.steps.solone_aria')}
-        >
-          <span aria-hidden="true">🎮</span>
-        </Link>
-
-        <Link
-          href="/bluey"
-          className="mdf-steps__pets"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={t('page.steps.bluey_aria')}
-        >
-          <span aria-hidden="true">👦👧 Bluey</span>
-        </Link>
-        <a
-                    className="mdf-btn mdf-btn--secondary mdf-btn--lg"
-                    target="_blank"
-                    rel="noreferrer"
-                    href="https://www.youtube.com/watch?v=h30BO_6kFNM"
-                    aria-label={t('page.info.globo_aria')}
-                  >
-                    <span className="mdf-btn__emoji" aria-hidden="true">📺</span>
-                    <span>Ilha das Flores</span>
-                  </a>
+        <RailShortcuts />
       </div>
+      {/* Chevron de arraste — reforço APONTÁVEL do véu de gradiente: um véu
+          sozinho lê como "a tela acabou" para quem tem pouca familiaridade
+          digital. Decorativo para AT/teclado (aria-hidden + tabIndex -1):
+          teclado já alcança cada pílula por Tab e o scroll segue o foco. */}
+      {fades.right && (
+        <button
+          type="button"
+          className="mdf-steps__nudge"
+          aria-hidden="true"
+          tabIndex={-1}
+          onClick={nudgeRight}
+        >
+          ›
+        </button>
+      )}
     </aside>
   );
 }

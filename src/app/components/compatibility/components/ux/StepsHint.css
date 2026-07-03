@@ -5,6 +5,44 @@
   /* The aside no longer scrolls itself; the inner .mdf-steps__scroll is the
      horizontal scroller. Keeping the aside as a plain block avoids the
      flex+overflow padding-clip that squished/cut the last button. */
+  /* Anchor for the edge-fade overlays below. */
+  position: relative;
+}
+
+/* Edge fades — gradient veils at each end of the rail signalling clipped
+   content ("there is more, drag sideways"). JS (StepsHint.js) toggles the
+   modifier classes from live scroll metrics, so a fade only shows when
+   content is actually hidden on that side. pointer-events:none keeps the
+   buttons under them fully tappable. */
+.mdf-steps::before,
+.mdf-steps::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--mdf-space-8);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--mdf-dur-base) var(--mdf-ease-out);
+  z-index: 1;
+}
+
+.mdf-steps::before {
+  left: 0;
+  background: linear-gradient(to right, var(--mdf-surface-1), rgba(255, 255, 255, 0));
+}
+
+.mdf-steps::after {
+  right: 0;
+  background: linear-gradient(to left, var(--mdf-surface-1), rgba(255, 255, 255, 0));
+}
+
+.mdf-steps--fade-left::before {
+  opacity: 1;
+}
+
+.mdf-steps--fade-right::after {
+  opacity: 1;
 }
 
 /* Horizontal scroll rail — the actual overflow container. Children do not
@@ -19,11 +57,15 @@
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;   /* momentum scroll on iOS */
-  scrollbar-width: none;               /* hidden bar, Firefox */
+  /* Bar was hidden here before; user testing showed people never realized
+     the rail scrolls. Now it inherits the global apple-like thin bar
+     (globals.css) — visible, quiet, redundant with the edge fades. */
+  scrollbar-color: var(--mdf-scrollbar-thumb) transparent;
+  scroll-snap-type: x proximity;
 }
 
-.mdf-steps__scroll::-webkit-scrollbar {
-  display: none;
+.mdf-steps__scroll > * {
+  scroll-snap-align: start;
 }
 
 /* Every direct child of the rail keeps its intrinsic size — the load-bearing
@@ -163,6 +205,39 @@
 .mdf-steps__pets:focus-visible {
   outline: none;
   box-shadow: var(--mdf-focus-ring);
+}
+
+/* Chevron de arraste — sits ON TOP of the right edge fade (z-index above the
+   ::after veil) and converts it into an action: tap → rail slides one page.
+   Pointer-only affordance (aria-hidden + tabindex -1 in the JSX); keyboard
+   users reach every pill by Tab and the rail follows focus natively. */
+.mdf-steps__nudge {
+  position: absolute;
+  top: 50%;
+  right: var(--mdf-space-1);
+  transform: translateY(-50%);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  box-shadow: var(--mdf-elev-1);
+  color: var(--mdf-ink-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--mdf-dur-fast) var(--mdf-ease-out),
+              box-shadow var(--mdf-dur-fast) var(--mdf-ease-out);
+}
+
+.mdf-steps__nudge:hover {
+  color: var(--mdf-ink);
+  box-shadow: var(--mdf-elev-2);
 }
 
 /* Hide secondary labels on narrow screens — dots and active-step label stay */

@@ -1,0 +1,59 @@
+/* Both overlays are decorative reinforcement (aria-hidden in the JSX):
+   pointer-events:none everywhere so they can never eat a tap, and z-indexes
+   sit BELOW the header (900) and every sheet/modal, so they underlay real UI
+   instead of competing with it. */
+
+/* ── Scroll progress bar ─────────────────────────────
+   Thin track pinned under the sticky header. The bar is SOLID brand red
+   (#D64545 via token ≈ 4:1 on the light surfaces — passes the 3:1 non-text
+   floor, SC 1.4.11); width = reading position via transform: scaleX, the
+   compositor-only property (no layout/paint per frame). */
+.mdf-scrollprogress {
+  position: fixed;
+  top: var(--mdf-header-h);
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 890;
+  pointer-events: none;
+  background: transparent;
+}
+
+.mdf-scrollprogress__bar {
+  height: 100%;
+  background: var(--mdf-brand);
+  transform: scaleX(0);
+  transform-origin: left;
+  /* No transition: the bar answers the finger 1:1. A trailing ease here
+     would read as motion the user did not make (vestibular no-no). */
+}
+
+.mdf-scrollprogress--off {
+  display: none;
+}
+
+/* ── Bottom veil (pre-first-scroll only) ─────────────
+   Gradient from transparent to the page surface — the classic "content
+   continues" cue. rgba stop = --mdf-surface-0 (#FAFAF7) at alpha 0, kept in
+   sync by comment because gradients cannot alpha a var() without
+   color-mix() (not yet in our support floor). */
+.mdf-scrollveil {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 64px;
+  z-index: 880;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(250, 250, 247, 0),
+    var(--mdf-surface-0)
+  );
+  opacity: 1;
+  transition: opacity var(--mdf-dur-slow) var(--mdf-ease-out);
+}
+
+.mdf-scrollveil--off {
+  opacity: 0;
+}

@@ -143,7 +143,7 @@ export default function Header({ rowCountProp, onStartTour, onStartReport }) {
             </button>
           )}
           <a
-            className="mdf-header__donate"
+            className="mdf-header__donate mdf-pulse"
             href="./assinar"
             target="_blank"
             rel="noreferrer"

@@ -198,6 +198,8 @@
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;   /* momentum scroll on iOS */
   scrollbar-width: thin;               /* slim bar, Firefox */
+  /* Apple-like thumb — same SOT tokens as the global bars (globals.css). */
+  scrollbar-color: var(--mdf-scrollbar-thumb) transparent;
   scroll-snap-type: x proximity;
   /* room for the bar so it doesn't overlap the buttons; negative-margin keeps
      the visual edge flush with the header padding. */

@@ -755,6 +755,17 @@ a.tgme_widget_share_btn {
   animation: mdf-fade-in var(--mdf-dur-slow) var(--mdf-ease-out);
 }
 
+/* Map reads as an elevated CARD inside the page, not as the page itself.
+ * Rounded corners + shadow give it an explicit visual boundary, which is
+ * the strongest "this is one element among others — the page continues"
+ * signal we can send without touching map gestures. overflow:hidden clips
+ * the square Leaflet canvas to the radius. */
+.mdf-map-paper {
+  border-radius: var(--mdf-radius-sheet);
+  overflow: hidden;
+  box-shadow: var(--mdf-elev-2);
+}
+
 .banner {
   width: 100%;
   height: auto;
@@ -790,16 +801,20 @@ a.tgme_widget_share_btn {
 
 @media (max-width: 600px) {
   /* Map shrinks so the controls panel sits visibly below the fold,
-   * not buried 84vh down (Foundation 1 perceptual_limits). */
+   * not buried 84vh down (Foundation 1 perceptual_limits). 60vh → 56vh
+   * (2026-07 scroll-discovery pass): with header 56px + steps rail 44px,
+   * 60vh left zero peek of the next section on short phones — and a sliver
+   * of real content above the fold beats any cue at proving the page
+   * continues (user testing: ~80% never scrolled). */
   #CoffeeMap,
   .leaflet-container {
-    height: 60vh !important;
+    height: 56vh !important;
     overflow: hidden !important;
   }
 
   .mdf-main [style*="height: 70vh"],
   .mdf-main [style*="height:70vh"] {
-    height: 60vh !important;
+    height: 56vh !important;
   }
 
   #CoffeeTable.toolPanel2 {

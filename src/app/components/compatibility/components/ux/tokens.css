@@ -128,6 +128,23 @@
   --mdf-fab-size: 60px;
   --mdf-touch-target: 44px;
   --mdf-hud-target: 60px;
+
+  /* Scrollbars — apple-like: thin, rounded, translucent thumb on a
+     transparent track. Single SOT for every scroll surface (page vertical,
+     header CTA rail, StepsHint pill rail, tables, list panels). Thumb is
+     ink at 45% alpha: composites to ~#959595 over the lightest surface,
+     ~3:1 against white — visible on sun-lit low-end screens (SC 1.4.11
+     spirit) while staying quiet; hover darkens to 65% for pointer users. */
+  --mdf-scrollbar-thumb: rgba(26, 26, 26, 0.45);
+  --mdf-scrollbar-thumb-hover: rgba(26, 26, 26, 0.65);
+  --mdf-scrollbar-w: 10px;      /* page vertical bar (incl. 2px inset) */
+  --mdf-scrollbar-rail-h: 6px;  /* horizontal pill rails (incl. 2px inset) */
+
+  /* Revenue-CTA pulse (assinar + Bluey): one slow, calm breathing ring.
+     Duration deliberately long (3.2s) so it reads as a heartbeat, not a
+     siren — the calm-tone governor for this humanitarian surface. */
+  --mdf-pulse-dur: 3.2s;
+  --mdf-pulse-ring: rgba(214, 69, 69, 0.35);
 }
 
 @media (min-width: 768px) {

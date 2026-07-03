@@ -24,6 +24,94 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* ── Apple-like scrollbars (page vertical + every inner rail) ─────────
+ * A visible-but-quiet scrollbar is itself a scroll affordance: user testing
+ * showed most people never scroll because the map swallows gestures and
+ * nothing signals more content. Thin rounded translucent thumb, transparent
+ * track — macOS look on every platform. Firefox first (its own property),
+ * then the WebKit pseudo-elements everywhere else. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mdf-scrollbar-thumb) transparent;
+}
+
+::-webkit-scrollbar {
+  width: var(--mdf-scrollbar-w);
+  height: var(--mdf-scrollbar-rail-h);
+  background: transparent;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--mdf-scrollbar-thumb);
+  border-radius: var(--mdf-radius-pill);
+  /* 2px transparent inset floats the thumb off the edge, apple-style. */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--mdf-scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Smooth in-page jumps ("Ver mais", steps shortcuts, skip link) for people
+ * who have not opted out of motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* In-page scroll landings ("Ver mais", steps shortcuts) must not bury the
+ * target's top edge under the sticky header + progress bar. Applied to the
+ * known landing targets rather than *, so nothing else shifts. */
+.mdf-context-bar,
+#MoreInfo,
+#CoffeeTable,
+.ip-apps__install-badges {
+  scroll-margin-top: calc(var(--mdf-header-h) + var(--mdf-space-3));
+}
+
+/* ── Revenue-CTA pulse (assinar heart + Bluey pill) ───────────────────
+ * Single SOT for the breathing ring both buttons reference. Gentle by
+ * design (calm-tone governor): a soft brand-tinted ring that swells and
+ * fades once per --mdf-pulse-dur, no displacement, no color flashing.
+ * BOUNDED loop — 6 cycles ≈ 19s, the ViewMoreCue precedent — enough to
+ * catch the eye at load, then stops for good (SC 2.2.2: no indefinite
+ * auto-motion without a pause control, and a perpetual throb on a donate
+ * button would read as pressure, not invitation). Stopped on hover/focus
+ * and fully disabled under prefers-reduced-motion (WCAG 2.3.3). */
+@keyframes mdf-revenue-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--mdf-pulse-ring); }
+  55%  { box-shadow: 0 0 0 9px rgba(214, 69, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(214, 69, 69, 0); }
+}
+
+.mdf-pulse {
+  animation: mdf-revenue-pulse var(--mdf-pulse-dur) var(--mdf-ease-out) 6;
+}
+
+/* animation:none (not paused): a paused box-shadow frame would keep
+ * overriding the static :focus-visible focus ring (animations beat normal
+ * declarations even while paused) and break SC 2.4.7 focus visibility. */
+.mdf-pulse:hover,
+.mdf-pulse:focus-visible {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mdf-pulse {
+    animation: none;
+  }
+}
+
 /* iOS Safari auto-zooms any input with font-size < 16px on focus. Our design
  * token is 16px, but explicit inputs override; this floor is a safety net so
  * the page never zooms when a user focuses an input on an iPhone. */
