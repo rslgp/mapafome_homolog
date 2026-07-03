@@ -1,0 +1,385 @@
+# UIUX_MILESTONES.yaml — roadmap vivo de UI/UX do MAPA FOME.
+# Dono: sessao ICT6 / Principal Staff UI/UX (mandato permanente,
+# vault 10-DECISOES/2026-07-03-mapafome-mandato-ict6-uiux).
+#
+# Formato da casa (mesmo idioma do MILESTONES.yaml): cada item carrega
+# id, title, tier, owner, scope (Include/Exclude), why, gate, status.
+# Regras de operacao (append-only, nunca reescrever historico):
+#   - tier: S+ (move o KPI diretamente) > S > A > B. Trabalhar do maior para o menor.
+#   - status: pending -> in-progress -> shipped (SO com gate verde LIDO na sessao) | later | blocked-human.
+#   - "continue" = pegar o proximo pending de maior tier sem depends abertos.
+#   - Todo shipped ganha o campo commit (hash + subject).
+#   - human_gate: true = decisao/acao do humano (deploy, endpoint de telemetria,
+#     consentimento, politica de produto). Claude PROPOE, nao executa.
+#   - Gate minimo de qualquer item que toque src/: lint + test + fitness + build +
+#     smoke200 (+ a11y quando UI). Nunca pular smoke200.
+#
+# Governadores fixos do produto (nao negociaveis por item):
+#   - Tom calmo / dignidade: nenhum padrao de pressao (pulse infinito, urgencia falsa,
+#     contadores inflados). Ver InfoPanel Art.135 framing: INTENCIONAL, nao re-flagar.
+#   - WCAG 2.2 AA e bloqueador de ship (SC 2.2.2 / 2.3.3 / 2.4.7 / 1.4.11 ja pegaram
+#     defeitos reais neste roadmap).
+#   - Personas de teste: Android low-end, tela ao sol, baixa alfabetizacao digital.
+#
+# KPI norte (definido na FASE 2; numeros de baseline vem de medicao, nunca de chute):
+#   KPI-1: % de sessoes com scroll-depth > 25% (hoje ~20% por teste com usuarios; meta > 60%).
+#   KPI-2: % de sessoes que interagem com QUALQUER superficie abaixo do mapa (meta > 40%).
+#   KPI-3: taxa de clique nos CTAs de receita (assinar + bluey) por sessao (baseline a medir).
+
+milestones:
+  # ---------- FASE 0 — Scroll-discovery pass (SHIPPED 2026-07-03) ----------
+  - id: UX-M00
+    title: "Pass de scroll-discovery: barras apple-like, pulse limitado nos CTAs de receita, 7 affordances de 'tem mais conteudo'"
+    tier: S+
+    owner: ict6-uiux-session
+    scope: "Include: scrollbars finas translucidas globais (SOT em tokens.css), trilho de pills des-escondido + scroll-snap + veus de borda + chevron de arraste, ScrollAffordance (barra de progresso 3px + veu inferior pre-scroll), mapa como card elevado, 60vh->56vh mobile (peek), ViewMoreCue como botao-pilula real, .mdf-pulse 6 ciclos em assinar + Bluey, scroll-margin-top nos alvos de ancora. Exclude: gesto do mapa em si (FASE 1)."
+    why: "Teste com usuarios: ~80% nunca rolam; acham que a pagina e so a primeira tela."
+    gate: ["npm run lint", "vitest forks 1334/1334", "npm run fitness", "npm run build", "npm run smoke200", "axe-core CLI / (0 violacoes)"]
+    status: shipped
+    commit: "3f8bcec feat(ux): surface below-map content and pulse revenue CTA"
+
+  # ---------- FASE 1 — Raiz do problema: o mapa engole o gesto ----------
+  - id: UX-M01
+    title: "Desktop cooperative-wheel: scrollWheelZoom desligado ate click/focus no mapa (padrao Google-embed)"
+    tier: S+
+    owner: ict6-uiux-session
+    scope: "Include: scrollWheelZoom=false no MapContainer ate primeiro click/focus dentro do mapa; hint discreto 'clique para ativar o zoom' (i18n 15 locales); reativar wheel apos ativacao; flag build-time NEXT_PUBLIC_FF_COOP_GESTURES para rollback por rebuild. Exclude: touch (UX-M02); dependencia nova (implementacao caseira, sem leaflet-gesture-handling)."
+    why: "Wheel sobre o mapa hoje da zoom em vez de rolar a pagina — causa numero 1 do scroll-trap em desktop."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "tap-compat e2e verde"]
+    status: pending
+
+  - id: UX-M02
+    title: "Mobile two-finger pan: 1 dedo rola a pagina, 2 dedos movem o mapa, com veu educativo"
+    tier: S+
+    owner: ict6-uiux-session
+    scope: "Include: dragging desabilitado para toque unico + veu semitransparente 'use dois dedos para mover o mapa' (aparece so no gesto errado, some em 1.5s, i18n); pinch-zoom e 2-finger pan preservados; NAO pode quebrar o contrato de tap (drop pin por tap, long-press contextmenu — suite tap-compat inteira e o guarda); mesma flag FF_COOP_GESTURES. Exclude: desktop (UX-M01)."
+    why: "No touch, arrastar com 1 dedo sobre 56vh de mapa pana o mapa e nunca rola a pagina; e o scroll-trap dos ~80%."
+    gate: ["npm run test", "tap-compat e2e verde em touch profile", "npm run build", "npm run smoke200"]
+    status: pending
+    depends: [UX-M01]
+
+  - id: UX-M03
+    title: "Suite e2e de gesture-handling (regressao do contrato de tap + do scroll da pagina)"
+    tier: S
+    owner: test-playwright-e2e-engineer
+    scope: "Include: specs Playwright — wheel sobre mapa rola pagina antes do click e da zoom depois; 1-dedo drag rola pagina com flag on; drop-pin por tap e long-press continuam funcionando; flag off = comportamento legado byte-identico. Exclude: unit tests (ja cobertos)."
+    why: "UX-M01/M02 mexem no seam mais sensivel do produto; sem rede de regressao viram roleta."
+    gate: ["npm run test:e2e (specs novos verdes)", "npm run lint"]
+    status: pending
+    depends: [UX-M01, UX-M02]
+
+  # ---------- FASE 2 — Medicao: provar que os 80% caem ----------
+  - id: UX-M04
+    title: "Beacon de scroll-depth privacy-safe (agregado, sem PII, sem consent-wall se anonimo)"
+    tier: S+
+    owner: ict6-uiux-session
+    human_gate: true
+    scope: "Include: proposta tecnica + implementacao atras de aprovacao — evento unico por sessao com bucket de scroll max (0/25/50/75/100), sem ID de usuario, sem coordenada, batched no visibilitychange; destino a decidir pelo humano (Sheets append como o resto do app vs endpoint). LGPD: dado anonimo agregado. Exclude: qualquer coisa com PII ou fingerprint."
+    why: "Sem medicao o roadmap inteiro e fe; KPI-1/2/3 precisam de baseline e de prova do delta."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "aprovacao humana do destino dos dados"]
+    status: blocked-human
+
+  - id: UX-M05
+    title: "Eventos de interacao nos affordances (cue, nudge, veil, pulse, progress) no mesmo beacon"
+    tier: S
+    owner: ict6-uiux-session
+    scope: "Include: contadores agregados por sessao — ViewMoreCue click, nudge click, veil visto/dispensado, CTA assinar/bluey click; mesmo canal do UX-M04. Exclude: heatmaps, session-replay (invasivos, fora do tom do produto)."
+    why: "Separa 'affordance que converte' de 'decoracao'; alimenta a decisao do UX-M09."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+    depends: [UX-M04]
+
+  - id: UX-M06
+    title: "KPI SOT + leitura antes/depois no /relatorio-marketing"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: secao no relatorio-marketing lendo os agregados do beacon (KPI-1/2/3, semana a semana); definicao dos KPIs como SOT neste arquivo. Exclude: dashboards externos."
+    why: "Fecha o loop: cada fase seguinte cita numero, nao impressao."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+    depends: [UX-M04, UX-M05]
+
+  # ---------- FASE 3 — Funil de receita ----------
+  - id: UX-M07
+    title: "/assinar above-the-fold: proposta de valor + PIX default + 'menos de 1 minuto'"
+    tier: S+
+    owner: ict6-uiux-session
+    scope: "Include: reordenar o above-fold do /assinar (valor -> valor sugerido -> PIX default -> tempo estimado); rails continuam pix|cartao|boleto (Asaas NAO tem debito — decisao gravada, nao re-adicionar); cartao continua hosted checkout (PCI — nao re-adicionar form inline). Exclude: precos/valores (humano define), backend asaas."
+    why: "O pulse leva o olho ate o CTA; a pagina de destino e quem converte ou perde."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "npm run a11y em /assinar"]
+    status: pending
+
+  - id: UX-M08
+    title: "Prova social digna no /assinar (contador real de apoiadores, nunca inflado)"
+    tier: S
+    owner: ict6-uiux-session
+    human_gate: true
+    scope: "Include: contador de assinantes ativos vindo de dado real (fonte a aprovar pelo humano); esconder abaixo de N=10 (numero baixo constrange em vez de provar); copy calma ('voce estaria em boa companhia', nunca 'so hoje!'). Exclude: qualquer contador sintetico ou urgencia fabricada."
+    why: "Prova social e o maior alavancador etico de conversao; o teto e a dignidade do produto."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "aprovacao humana da fonte do numero"]
+    status: blocked-human
+
+  - id: UX-M09
+    title: "Decisao data-driven do pulse: manter 6 ciclos, reduzir ou remover"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: comparar CTR do CTA (UX-M05) em builds com pulse on/off (flag build-time, coortes semanais — o site e estatico, A/B real nao existe sem infra); decidir e documentar aqui. Exclude: aumentar o pulse alem de 6 ciclos (teto WCAG SC 2.2.2 + tom)."
+    why: "O pulse e hipotese, nao dogma; se nao mover KPI-3, morre (menos motion = melhor)."
+    gate: ["dados de >= 2 semanas por coorte lidos", "npm run build", "npm run smoke200"]
+    status: pending
+    depends: [UX-M05]
+
+  - id: UX-M10
+    title: "/bluey com retorno ao funil (link discreto 'apoie o MAPA FOME')"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: cross-link calmo do /bluey de volta ao /assinar; consistencia visual com o resto (tokens). Exclude: redesign do /bluey."
+    why: "Bluey gera trafego de criancas/familias; hoje e beco sem saida no funil."
+    gate: ["npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  # ---------- FASE 4 — Compreensao first-run ----------
+  - id: UX-M11
+    title: "Reativar os 3 passos numerados do StepsHint integrados ao GuidedTutorial"
+    tier: S
+    owner: ict6-uiux-session
+    human_gate: true
+    scope: "Include: reavaliar o fluxo guiado hoje desativado (STEPS existe no codigo, render comentado); proposta de reativacao com os seletores ja espelhados do GuidedTutorial; decisao de produto e do humano (foi desativado 'em revisao'). Exclude: reescrever o GuidedTutorial."
+    why: "Passos numerados sao o mapa mental do first-run; desativados, o onboarding depende de sorte."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "aprovacao humana de reativar"]
+    status: blocked-human
+
+  - id: UX-M12
+    title: "Auditar EmptyViewportOverlay: mensagem + CTA quando o viewport tem 0 pontos"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: copy e CTA do overlay de viewport vazio (hoje existe; auditar acao sugerida — 'afaste o zoom' vs 'seja o primeiro a marcar'); i18n 15 locales. Exclude: logica de dados do mapa."
+    why: "Primeiro contato num municipio sem pontos e a pior primeira impressao possivel; o overlay e a unica defesa."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M13
+    title: "Microcopy one-shot 'o que significam as cores' no primeiro pin visivel"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: tooltip/chip dispensavel (localStorage one-shot) explicando amarelo/azul/vermelho no primeiro render com pins; calmo, dispensavel, i18n. Exclude: repetir a legenda inteira do InfoPanel."
+    why: "A cor e o vocabulario central do mapa e hoje so e explicada abaixo do fold — exatamente onde 80% nao chegam."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  # ---------- FASE 5 — Conteudo below-fold rende mais ----------
+  - id: UX-M14
+    title: "ContextBar vira mini-barra sticky ao rolar (contagem + botao Lista sempre a mao)"
+    tier: S
+    owner: ict6-uiux-session
+    scope: "Include: versao condensada da ContextBar que gruda sob o header quando a original sai do viewport (IntersectionObserver); Lista a 1 toque de qualquer ponto da pagina. Exclude: mudar o conteudo da barra."
+    why: "Depois que a pessoa rola, o caminho de volta para a acao (Lista/contagem) nao pode se perder."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "npm run a11y"]
+    status: pending
+
+  - id: UX-M15
+    title: "Hierarquia do InfoPanel por frequencia de uso (sem tocar no framing Art.135)"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: reordenar blocos do InfoPanel (legenda de cores primeiro, badges de instalacao depois, agradecimentos por ultimo); o acknowledgement 'Omissao de Socorro / Art.135' e INTENCIONAL e permanece intocado. Exclude: reescrever copy dos blocos."
+    why: "O below-fold recem-descoberto precisa recompensar o scroll na ordem certa."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M16
+    title: "Footer com mapa-do-site textual (todas as rotas, links reais)"
+    tier: B
+    owner: ict6-uiux-session
+    scope: "Include: bloco de links no fim do main (pets, assinar, imprensa, parceiros, relatorios, iniciativas, privacy, terms); acessivel pre-hidratacao. Exclude: SEO tecnico alem dos links (sitemap.xml ja e outro assunto)."
+    why: "Ultimo recurso de descoberta + fim de pagina claro (a pagina 'termina' num lugar util)."
+    gate: ["npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  # ---------- FASE 6 — Internacional e plataforma ----------
+  - id: UX-M17
+    title: "RTL correctness dos affordances novos (locale ar): propriedades logicas + nudge invertido"
+    tier: S
+    owner: ict6-uiux-session
+    scope: "Include: veus de borda, chevron de arraste e fades do StepsHint com inset-inline/margin-inline (hoje left/right fisicos — em arabe o chevron aponta para o lado errado); useRailEdgeFades ciente de scrollLeft negativo/invertido em RTL; verificar barra de progresso e veu inferior. Exclude: traducao (ar ja existe)."
+    why: "O app tem locale arabe; affordance espelhada errada e pior que nenhuma (aponta para o vazio)."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200 com dir=rtl smoke manual"]
+    status: pending
+
+  - id: UX-M18
+    title: "Dark mode dos tokens de affordance (scrollbar thumb, veus, veil inferior)"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: variantes prefers-color-scheme dos tokens novos (thumb ink-claro, veil com surface escura — hoje o rgba 250,250,247 do veil e light-only); NAO e o dark mode do app inteiro. Exclude: dark mode completo do produto (projeto proprio)."
+    why: "Nos aparelhos low-end o dark mode do sistema e comum (economia de bateria); veil claro em tema escuro vira mancha."
+    gate: ["npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M19
+    title: "CWV budget: LCP do mapa (preconnect tiles, defer do nao-critico) medido antes/depois"
+    tier: A
+    owner: vercel:performance-optimizer
+    scope: "Include: preconnect/dns-prefetch dos tile servers, auditoria do que bloqueia o first paint, budget documentado (LCP < 2.5s em Moto G-class); medicao Lighthouse CLI gravada aqui. Exclude: trocar provedor de tiles."
+    why: "Personas low-end: cada segundo de mapa branco e um usuario que fecha antes de qualquer affordance existir."
+    gate: ["lighthouse CLI antes/depois lido", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M20
+    title: "Skip-link 'pular o mapa' + auditoria de ordem de foco da pagina inteira"
+    tier: S
+    owner: a11y-architect
+    scope: "Include: segundo skip-link (apos o existente) direto para o conteudo pos-mapa; tab-order audit documentado (header -> rail -> mapa -> controles -> cue -> contexto -> painel); armadilhas de foco do Leaflet anotadas. Exclude: refazer o skip-link existente."
+    why: "Usuario de teclado atravessa o mapa inteiro (dezenas de tab stops do Leaflet) para chegar ao conteudo — o scroll-trap tem um irmao de teclado."
+    gate: ["npm run a11y", "npm run test", "npm run lint", "npm run smoke200"]
+    status: pending
+
+  # ---------- FASE 7 — Guardioes (a licao vira forcing function) ----------
+  - id: UX-M21
+    title: "FF10: proibir animation infinite em CSS fora de allowlist curada"
+    tier: A
+    owner: softwareengineer
+    scope: "Include: fitness function nova no fitness-functions.mjs — grep de 'animation:' com 'infinite' em src/**/*.css fora de FF10_BASELINE (spinner de loading e o unico candidato legitimo hoje); mesma forma do FF9. Exclude: animacoes JS."
+    why: "SC 2.2.2 ja pegou defeito real nesta sessao (pulse infinito); regra que so vive em nota de vault repete o erro — gate nao esquece."
+    gate: ["npm run fitness (FF10 verde + falha em fixture de teste)", "npm run test"]
+    status: pending
+
+  - id: UX-M22
+    title: "Smoke visual Playwright dos affordances (veil some ao rolar, progress cresce, fades reagem)"
+    tier: B
+    owner: test-playwright-e2e-engineer
+    scope: "Include: 3 asserts e2e — .mdf-scrollveil opacity 0 apos scroll; scaleX da progress bar cresce com scroll; mdf-steps--fade-right aparece quando o rail transborda. Exclude: screenshot-diff pixel-perfect (flaky no HDD lento — licao playwright-flake conhecida)."
+    why: "Affordances sao JS+CSS acoplados a scroll real; unit test nao prova que aparecem."
+    gate: ["npm run test:e2e (specs novos verdes)", "npm run lint"]
+    status: pending
+    depends: [UX-M00]
+
+  # ---------- FASE 8 — Formularios e estados de sistema ----------
+  - id: UX-M23
+    title: "ReportSheet form UX: inputmode/autocomplete corretos, validacao inline calma, erro junto ao campo"
+    tier: S
+    owner: ict6-uiux-session
+    scope: "Include: inputmode=tel/numeric onde cabe, autocomplete semantico, validacao no blur (nunca a cada tecla), mensagem de erro adjacente ao campo com aria-describedby, foco vai ao primeiro erro no submit; preservar o contrato do payload (country/PET_COLORS invariantes existentes). Exclude: mudar campos ou fluxo de publicacao."
+    why: "O formulario de marcar um ponto E o produto; cada friccao aqui e uma doacao que nao acontece."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "npm run a11y"]
+    status: pending
+
+  - id: UX-M24
+    title: "Skeleton states: mapa e lista com esqueleto em vez de texto 'loading'"
+    tier: S
+    owner: ict6-uiux-session
+    scope: "Include: skeleton shimmer (respeitando reduced-motion: estatico) para o card do mapa e linhas da ListView enquanto dataMaps carrega; tokens de superficie existentes. Exclude: mudar o fetch/fluxo de dados."
+    why: "Percepcao de velocidade em aparelho low-end vale tanto quanto velocidade; texto 'loading' parece quebrado."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M25
+    title: "UX da fila offline: badge visivel 'N marcacoes aguardando conexao' + confirmacao ao sincronizar"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: superficie de estado para a publishQueue existente (badge no header/ContextBar + toast calmo ao flush com sucesso); nunca perder silenciosamente; cuidado com o poison-pin conhecido (achado no vault). Exclude: mexer na logica da fila."
+    why: "A fila offline ja funciona por baixo; invisivel, o usuario acha que a marcacao sumiu e re-publica ou desiste."
+    gate: ["npm run test (publishQueue.test.js verde)", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M26
+    title: "Estados de erro humanos: falha de fetch do Sheets com mensagem + retry, error boundary com recuperacao"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: mensagem pt-BR digna quando a planilha nao responde ('nao conseguimos carregar os pontos agora' + botao tentar de novo), error boundary React que preserva o header/nav; i18n. Exclude: retry automatico agressivo (custo de rede em plano limitado)."
+    why: "Hoje falha de rede degrada em silencio ou em tela crua; publico com dados moveis limitados ve isso com frequencia."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M27
+    title: "404/_not-found util: link de volta ao mapa + pets + assinar"
+    tier: B
+    owner: ict6-uiux-session
+    scope: "Include: pagina not-found com navegacao real (o smoke200 ja a exclui como error shell intencional — manter exclusao). Exclude: redirects automaticos."
+    why: "Link quebrado compartilhado em grupo de WhatsApp nao pode ser beco sem saida."
+    gate: ["npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  # ---------- FASE 9 — Linguagem visual, tipografia e motion ----------
+  - id: UX-M28
+    title: "Auditoria tipografica para sol e telas pequenas (caption 13px, line-length, hierarquia do InfoPanel)"
+    tier: S
+    owner: ict6-uiux-session
+    scope: "Include: revisar --mdf-fs-caption 13px nos rotulos criticos (rail, ContextBar) contra a persona tela-ao-sol; max-width de linha no InfoPanel (65-75ch); pesos e escala consistentes via tokens; qualquer texto sobre o mapa ganha fundo/contraste reforcado. Exclude: trocar a font stack."
+    why: "Tipografia e o affordance mais barato que existe; 13px cinza sob sol simplesmente desaparece."
+    gate: ["npm run a11y", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M29
+    title: "Iconografia consistente: CTAs e sinais criticos de emoji para SVG tokenizado"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: inventario emoji vs SVG (emoji rende diferente por OS/versao — o coracao do doar ja e png por isso); migrar sinais CRITICOS (patinha, chevrons, estados) para SVG inline com fill em token; emojis decorativos podem ficar. Exclude: redesenhar a marca/pins do mapa (SOT proprio com constantes JS sincronizadas)."
+    why: "Em Android antigo o emoji quebra o tom visual e a legibilidade que os tokens garantem em todo o resto."
+    gate: ["npm run lint", "npm run fitness (FF9 hex SOT)", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M30
+    title: "Motion system: catalogo unico de transicoes (sheets, toasts, overlays) sobre os tokens dur/ease"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: inventariar toda animacao/transicao viva (sheets, toasts, veus, pulse), normalizar sobre --mdf-dur-*/--mdf-ease-* + reduced-motion, documentar o catalogo num comment-block do tokens.css; alimenta o FF10 (UX-M21). Exclude: animacoes novas."
+    why: "Motion coerente = produto que parece um so; hoje cada superficie anima do seu jeito."
+    gate: ["npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+    depends: [UX-M21]
+
+  # ---------- FASE 10 — Arquitetura de informacao e ergonomia ----------
+  - id: UX-M31
+    title: "Navegacao consistente entre rotas: voltar ao mapa em 1 toque de /pets, /assinar, /imprensa, /parceiros"
+    tier: S
+    owner: ict6-uiux-session
+    scope: "Include: header minimo compartilhado (marca -> /) nas rotas satelites; hoje /pets e /assinar abrem em nova aba e viram ilhas; auditar target=_blank (manter so onde preserva o estado do mapa de proposito). Exclude: SPA-navigation refactor."
+    why: "Cada rota satelite sem caminho de volta vaza usuarios que o pulse e o funil trouxeram."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M32
+    title: "Auditoria thumb-zone mobile: acoes primarias alcancaveis com uma mao"
+    tier: S
+    owner: ict6-uiux-session
+    scope: "Include: mapa de calor manual dos alvos (Relatar no topo = zona ruim; Confirmar ponto, Lista, cue = zona boa?), mover/duplicar acoes primarias para o terco inferior quando barato (ex.: FAB Relatar), documentar a decisao aqui. Exclude: redesign do header."
+    why: "Persona segura o telefone com uma mao no ponto de onibus; CTA fora do polegar e CTA que nao existe."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "npm run a11y"]
+    status: pending
+
+  - id: UX-M33
+    title: "Densidade desktop >1024px: aproveitar o espaco (lista lado a lado do mapa)"
+    tier: B
+    owner: ict6-uiux-session
+    scope: "Include: em desktop largo, ListView como painel lateral persistente opcional em vez de sheet modal; grid ja e 2-col, avaliar 3-col. Exclude: mudar mobile."
+    why: "Desktop e minoria mas e onde imprensa/parceiros/gestores avaliam o projeto — a primeira impressao institucional."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  # ---------- FASE 11 — PWA, compartilhamento e pesquisa continua ----------
+  - id: UX-M34
+    title: "InstallToast com timing de valor: oferecer instalacao apos acao de valor, nao na chegada"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: disparar o InstallToast existente apos 2a visita OU apos primeira acao de valor (publicou ponto, abriu lista), nunca no load inicial; frequencia com cooldown em localStorage. Exclude: mudar o fluxo beforeinstallprompt em si."
+    why: "Prompt de instalacao na chegada e ruido que treina o dismiss; depois do valor entregue, e servico."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M35
+    title: "Compartilhamento nativo: navigator.share em pin/lista + og-image por rota"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: botao compartilhar (share sheet nativo, fallback copiar-link) no PinDetailSheet e na ListView; og:title/og:image decentes por rota para o preview no WhatsApp. Exclude: SDKs de rede social."
+    why: "O canal de crescimento real do publico e WhatsApp; um preview bonito com um toque vale uma campanha."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: UX-M36
+    title: "Protocolo permanente de teste de usabilidade barato (5 tarefas x 5 usuarios, guerrilla)"
+    tier: S
+    owner: ict6-uiux-session
+    human_gate: true
+    scope: "Include: roteiro versionado no repo (docs/usability-protocol.md) — 5 tarefas canonicas (achar comida perto, marcar um ponto, entender as cores, achar o assinar, instalar), criterio de sucesso por tarefa, template de anotacao; humano recruta e conduz; resultados alimentam este arquivo como evidencia de re-priorizacao. Exclude: ferramentas pagas de user-testing."
+    why: "Foi um teste com usuarios que revelou os 80%; institucionalizar o teste e o que impede o roadmap de virar opiniao."
+    gate: ["documento revisado pelo humano", "npm run lint"]
+    status: blocked-human
