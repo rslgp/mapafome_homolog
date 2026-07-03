@@ -57,8 +57,10 @@ milestones:
     scope: "Include: dragging desabilitado para toque unico + veu semitransparente 'use dois dedos para mover o mapa' (aparece so no gesto errado, some em 1.5s, i18n); pinch-zoom e 2-finger pan preservados; NAO pode quebrar o contrato de tap (drop pin por tap, long-press contextmenu — suite tap-compat inteira e o guarda); mesma flag FF_COOP_GESTURES. Exclude: desktop (UX-M01)."
     why: "No touch, arrastar com 1 dedo sobre 56vh de mapa pana o mapa e nunca rola a pagina; e o scroll-trap dos ~80%."
     gate: ["npm run test", "tap-compat e2e verde em touch profile", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
     depends: [UX-M01]
+    commit: "fcc420a feat(map): move map with two fingers, scroll page with one"
+    evidence: "eslint 0; vitest 1346/1346 (+6 touchGate); fitness verde; build 0; smoke200 16/16; axe 0; e2e mobile-chrome (interactions+intl-marking) 5 passed — unicas falhas sao as 2 de disclosure ja provadas pre-existentes (gap CSS [hidden], concern separado). Listeners passivos, sem preventDefault: contrato de tap/long-press intacto."
 
   - id: UX-M03
     title: "Suite e2e de gesture-handling (regressao do contrato de tap + do scroll da pagina)"
