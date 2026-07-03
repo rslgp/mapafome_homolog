@@ -129,34 +129,18 @@ export default function AssinarPage() {
       <p className="mdf-assinar__sub">
         {t('assinar.sub')}
       </p>
+      {/* UX-M07: time estimate above the fold — the single cheapest objection
+          killer on a donation form ("this will be a chore" -> "under a
+          minute"). Decorative clock, text carries the meaning. */}
+      <p className="mdf-assinar__time">
+        <span aria-hidden="true">⏱</span> {t('assinar.time_estimate')}
+      </p>
 
       <form onSubmit={handleSubmit} noValidate>
-        <fieldset className="mdf-field">
-          <legend>{t('assinar.legend.rail')}</legend>
-          <div
-            className="mdf-rails"
-            role="radiogroup"
-            aria-label={t('assinar.legend.rail')}
-            onKeyDown={onRailKeyDown}
-          >
-            {RAILS.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                role="radio"
-                aria-checked={rail === r.id}
-                tabIndex={rail === r.id ? 0 : -1}
-                data-radio-id={r.id}
-                className={`mdf-rail ${rail === r.id ? 'is-on' : ''}`}
-                onClick={() => setRail(r.id)}
-              >
-                <span className="mdf-rail__label">{t(r.labelKey)}</span>
-                <span className="mdf-rail__hint">{t(r.hintKey)}</span>
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
+        {/* UX-M07 above-the-fold order: VALUE first (the decision that anchors
+            commitment), then rail — Pix is already the default, so most donors
+            only ever confirm an amount and submit. Pure JSX reorder: state,
+            handlers, and the radiogroup contracts are untouched. */}
         <fieldset className="mdf-field">
           <legend>{t('assinar.legend.value')}</legend>
           <div
@@ -198,6 +182,32 @@ export default function AssinarPage() {
               onChange={(e) => setValue(e.target.value)}
             />
           </label>
+        </fieldset>
+
+        <fieldset className="mdf-field">
+          <legend>{t('assinar.legend.rail')}</legend>
+          <div
+            className="mdf-rails"
+            role="radiogroup"
+            aria-label={t('assinar.legend.rail')}
+            onKeyDown={onRailKeyDown}
+          >
+            {RAILS.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                role="radio"
+                aria-checked={rail === r.id}
+                tabIndex={rail === r.id ? 0 : -1}
+                data-radio-id={r.id}
+                className={`mdf-rail ${rail === r.id ? 'is-on' : ''}`}
+                onClick={() => setRail(r.id)}
+              >
+                <span className="mdf-rail__label">{t(r.labelKey)}</span>
+                <span className="mdf-rail__hint">{t(r.hintKey)}</span>
+              </button>
+            ))}
+          </div>
         </fieldset>
 
         <label className="mdf-field">

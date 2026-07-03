@@ -279,3 +279,19 @@
 .mdf-pay__copy {
   margin-top: 0;
 }
+
+/* UX-M07: time-estimate badge under the subtitle — quiet objection killer
+   ("under a minute"), not a countdown or urgency device (calm-tone). */
+.mdf-assinar__time {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-2);
+  margin: var(--mdf-space-2) 0 0;
+  padding: var(--mdf-space-1) var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-caption);
+  font-weight: 600;
+}
