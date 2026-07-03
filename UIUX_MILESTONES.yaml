@@ -69,8 +69,10 @@ milestones:
     scope: "Include: specs Playwright — wheel sobre mapa rola pagina antes do click e da zoom depois; 1-dedo drag rola pagina com flag on; drop-pin por tap e long-press continuam funcionando; flag off = comportamento legado byte-identico. Exclude: unit tests (ja cobertos)."
     why: "UX-M01/M02 mexem no seam mais sensivel do produto; sem rede de regressao viram roleta."
     gate: ["npm run test:e2e (specs novos verdes)", "npm run lint"]
-    status: pending
+    status: shipped
     depends: [UX-M01, UX-M02]
+    commit: "3bcae55 test(map): add cooperative-gestures e2e regression lane"
+    evidence: "tests/e2e/gestures.e2e.js: 2 passed + 2 skips cross-project corretos, exit 0; eslint 0. Armadilhas documentadas no spec: focus() rola ~170px sob o header sticky (preventScroll no baseline), scroll-behavior:smooth exige scrollTo instant, CDP synthesizeScrollGesture inerte neste headless (probe de controle 0px fora do mapa) -> touch testado por contrato (touch-action pan-y, leaflet-touch-drag ausente, leaflet-touch-zoom presente, veil --on em drag sintetico)."
 
   # ---------- FASE 2 — Medicao: provar que os 80% caem ----------
   - id: UX-M04
