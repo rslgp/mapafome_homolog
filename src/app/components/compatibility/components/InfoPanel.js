@@ -57,6 +57,27 @@ const InfoPanel = ({ rowCount }) => {
           <span>{t('page.info.stats_points')}</span>
         </div>
 
+        {/* Quem a plataforma atende — fatos fornecidos pelo mantenedor
+            (2026-07-03): ativa desde 2022; atende vitimas de desastres
+            naturais, pessoas refugiadas, familias de baixa renda e pessoas
+            em situacao de rua; reduz desperdicio de alimentos e aproxima
+            voluntarios da causa. Tom calmo: lista digna, sem apelo de pena
+            ("pessoas em situacao de rua" e o termo digno, nao "morador de
+            rua" — governador de tom do produto). */}
+        <section className="ip-serve" aria-labelledby="ip-serve-title">
+          <h3 id="ip-serve-title" className="ip-serve__title">
+            {t('page.info.serve_title')}
+          </h3>
+          <p className="ip-serve__since">{t('page.info.serve_since')}</p>
+          <ul className="ip-serve__list">
+            <li className="ip-serve__chip">{t('page.info.serve_disasters')}</li>
+            <li className="ip-serve__chip">{t('page.info.serve_refugees')}</li>
+            <li className="ip-serve__chip">{t('page.info.serve_lowincome')}</li>
+            <li className="ip-serve__chip">{t('page.info.serve_homeless')}</li>
+          </ul>
+          <p className="ip-serve__impact">{t('page.info.serve_impact')}</p>
+        </section>
+
         <div className="ip-apps">
           {!isInstalled && (
             <div className="ip-apps__install-badges" role="group" aria-label={t('page.info.install_group')}>

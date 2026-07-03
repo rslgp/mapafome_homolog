@@ -35,6 +35,47 @@
   }
 }
 
+/* ── Quem a plataforma atende (desde 2022) ─────────────────────
+   Fatos do mantenedor apresentados como chips calmos: informacao,
+   nao apelo. Chips nao-interativos (li), superficie neutra. */
+.ip-serve {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mdf-space-3);
+}
+
+.ip-serve__title {
+  margin: 0;
+  font-size: var(--mdf-fs-h2);
+  line-height: var(--mdf-lh-heading);
+}
+
+.ip-serve__since,
+.ip-serve__impact {
+  margin: 0;
+  color: var(--mdf-ink-muted);
+  max-width: 70ch;
+}
+
+.ip-serve__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mdf-space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ip-serve__chip {
+  padding: var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  color: var(--mdf-ink);
+}
+
 /* ============================================================
    Unified button system — .mdf-btn
    One base + variants, token-only, works for <button> AND <a>.
