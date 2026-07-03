@@ -34,18 +34,37 @@ function scrollToSelectors(selectors) {
   }
 }
 
-// Observa as métricas de scroll do trilho e devolve quais bordas têm conteúdo
-// cortado (esquerda/direita). Alimenta os véus de gradiente + o chevron de
-// arraste: o véu só aparece quando há de fato algo escondido daquele lado.
+// Observa as métricas de scroll do trilho e devolve quais bordas FÍSICAS têm
+// conteúdo cortado (left/right, para os véus) + se ainda há conteúdo na
+// direção de leitura (atEnd/isRtl, para o chevron). RTL-correto (UX-M17):
+// em árabe o Chrome anda scrollLeft de 0 para NEGATIVO, então a posição usa
+// Math.abs e o mapeamento início/fim -> esquerda/direita inverte com a
+// direção computada do trilho.
 function useRailEdgeFades(railRef) {
-  const [fades, setFades] = useState({ left: false, right: false });
+  const [edges, setEdges] = useState({
+    left: false,
+    right: false,
+    atEnd: true,
+    isRtl: false,
+  });
 
   useEffect(() => {
     const rail = railRef.current;
     if (!rail) return undefined;
     const update = () => {
       const max = rail.scrollWidth - rail.clientWidth;
-      setFades({ left: rail.scrollLeft > 8, right: rail.scrollLeft < max - 8 });
+      const pos = Math.abs(rail.scrollLeft); // 0..max em LTR e RTL
+      const isRtl = getComputedStyle(rail).direction === 'rtl';
+      const atStart = pos <= 8;
+      const atEnd = pos >= max - 8;
+      setEdges({
+        // Véu esquerdo: há conteúdo escondido do lado FÍSICO esquerdo —
+        // em LTR isso é "já rolou" (!atStart); em RTL é "ainda há fim" (!atEnd).
+        left: isRtl ? !atEnd : !atStart,
+        right: isRtl ? !atStart : !atEnd,
+        atEnd,
+        isRtl,
+      });
     };
     update();
     rail.addEventListener('scroll', update, { passive: true });
@@ -56,7 +75,7 @@ function useRailEdgeFades(railRef) {
     };
   }, [railRef]);
 
-  return fades;
+  return edges;
 }
 
 // Atalhos de navegação do trilho (MapaPet, Solone, Bluey, Ilha das Flores) —
@@ -127,10 +146,13 @@ export default function StepsHint({ activeStep = 0 }) {
     }
   };
 
-  const nudgeRight = () => {
+  const nudgeForward = () => {
     const rail = railRef.current;
     if (!rail) return;
-    rail.scrollBy({ left: rail.clientWidth * 0.8, behavior: 'smooth' });
+    // Avança na direção de LEITURA: em RTL o fim fica em scrollLeft mais
+    // negativo, então o delta inverte o sinal.
+    const dir = fades.isRtl ? -1 : 1;
+    rail.scrollBy({ left: dir * rail.clientWidth * 0.8, behavior: 'smooth' });
   };
 
   return (
@@ -164,14 +186,17 @@ export default function StepsHint({ activeStep = 0 }) {
       {/* Chevron de arraste — reforço APONTÁVEL do véu de gradiente: um véu
           sozinho lê como "a tela acabou" para quem tem pouca familiaridade
           digital. Decorativo para AT/teclado (aria-hidden + tabIndex -1):
-          teclado já alcança cada pílula por Tab e o scroll segue o foco. */}
-      {fades.right && (
+          teclado já alcança cada pílula por Tab e o scroll segue o foco.
+          Gate por atEnd (direção de leitura), não por lado físico: em RTL o
+          "fim" fica à esquerda; o CSS posiciona via inset-inline-end e
+          espelha o glifo. */}
+      {!fades.atEnd && (
         <button
           type="button"
           className="mdf-steps__nudge"
           aria-hidden="true"
           tabIndex={-1}
-          onClick={nudgeRight}
+          onClick={nudgeForward}
         >
           ›
         </button>

@@ -28,6 +28,11 @@
      would read as motion the user did not make (vestibular no-no). */
 }
 
+/* RTL (UX-M17): reading progress fills from the reading start — the right. */
+[dir='rtl'] .mdf-scrollprogress__bar {
+  transform-origin: right;
+}
+
 .mdf-scrollprogress--off {
   display: none;
 }

@@ -214,7 +214,9 @@
 .mdf-steps__nudge {
   position: absolute;
   top: 50%;
-  right: var(--mdf-space-1);
+  /* Logical: senta no FIM da direção de leitura (direita em LTR, esquerda
+     em RTL — UX-M17); o glifo '›' espelha no bloco RTL abaixo. */
+  inset-inline-end: var(--mdf-space-1);
   transform: translateY(-50%);
   z-index: 2;
   display: inline-flex;
@@ -238,6 +240,11 @@
 .mdf-steps__nudge:hover {
   color: var(--mdf-ink);
   box-shadow: var(--mdf-elev-2);
+}
+
+/* RTL (UX-M17): o chevron aponta para o FIM da leitura — espelha o glifo. */
+[dir='rtl'] .mdf-steps__nudge {
+  transform: translateY(-50%) scaleX(-1);
 }
 
 /* Hide secondary labels on narrow screens — dots and active-step label stay */
