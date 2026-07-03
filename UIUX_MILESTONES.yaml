@@ -92,8 +92,9 @@ milestones:
     scope: "Include: contadores agregados por sessao — ViewMoreCue click, nudge click, veil visto/dispensado, CTA assinar/bluey click; mesmo canal do UX-M04. Exclude: heatmaps, session-replay (invasivos, fora do tom do produto)."
     why: "Separa 'affordance que converte' de 'decoracao'; alimenta a decisao do UX-M09."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: blocked-human
     depends: [UX-M04]
+    note: "Bloqueado por transitividade: UX-M04 (canal do beacon) e blocked-human."
 
   - id: UX-M06
     title: "KPI SOT + leitura antes/depois no /relatorio-marketing"
@@ -102,8 +103,9 @@ milestones:
     scope: "Include: secao no relatorio-marketing lendo os agregados do beacon (KPI-1/2/3, semana a semana); definicao dos KPIs como SOT neste arquivo. Exclude: dashboards externos."
     why: "Fecha o loop: cada fase seguinte cita numero, nao impressao."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: blocked-human
     depends: [UX-M04, UX-M05]
+    note: "Bloqueado por transitividade: UX-M04/M05 sao blocked-human."
 
   # ---------- FASE 3 — Funil de receita ----------
   - id: UX-M07
@@ -113,7 +115,8 @@ milestones:
     scope: "Include: reordenar o above-fold do /assinar (valor -> valor sugerido -> PIX default -> tempo estimado); rails continuam pix|cartao|boleto (Asaas NAO tem debito — decisao gravada, nao re-adicionar); cartao continua hosted checkout (PCI — nao re-adicionar form inline). Exclude: precos/valores (humano define), backend asaas."
     why: "O pulse leva o olho ate o CTA; a pagina de destino e quem converte ou perde."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "npm run a11y em /assinar"]
-    status: pending
+    status: shipped
+    evidence: "Reordem above-fold: VALOR primeiro (ancora o compromisso), rail depois (Pix ja e default) — reorder JSX puro, contratos radiogroup intactos; selo calmo 'leva menos de 1 minuto' (chave assinar.time_estimate x12). Gate: lint 0, vitest 1346/1346, fitness, build 0, smoke200 16/16, axe 0 em / E em /assinar. Nao tocou rails nem precos (Exclude respeitado)."
 
   - id: UX-M08
     title: "Prova social digna no /assinar (contador real de apoiadores, nunca inflado)"
@@ -132,8 +135,9 @@ milestones:
     scope: "Include: comparar CTR do CTA (UX-M05) em builds com pulse on/off (flag build-time, coortes semanais — o site e estatico, A/B real nao existe sem infra); decidir e documentar aqui. Exclude: aumentar o pulse alem de 6 ciclos (teto WCAG SC 2.2.2 + tom)."
     why: "O pulse e hipotese, nao dogma; se nao mover KPI-3, morre (menos motion = melhor)."
     gate: ["dados de >= 2 semanas por coorte lidos", "npm run build", "npm run smoke200"]
-    status: pending
+    status: blocked-human
     depends: [UX-M05]
+    note: "Bloqueado por transitividade (cadeia M04->M05) + exige 2 semanas de dados reais."
 
   - id: UX-M10
     title: "/bluey com retorno ao funil (link discreto 'apoie o MAPA FOME')"
@@ -209,7 +213,8 @@ milestones:
     scope: "Include: veus de borda, chevron de arraste e fades do StepsHint com inset-inline/margin-inline (hoje left/right fisicos — em arabe o chevron aponta para o lado errado); useRailEdgeFades ciente de scrollLeft negativo/invertido em RTL; verificar barra de progresso e veu inferior. Exclude: traducao (ar ja existe)."
     why: "O app tem locale arabe; affordance espelhada errada e pior que nenhuma (aponta para o vazio)."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200 com dir=rtl smoke manual"]
-    status: pending
+    status: shipped
+    evidence: "useRailEdgeFades agora fisico-correto em RTL (Math.abs(scrollLeft) + direction computada; veu esquerdo/direito mapeado por atStart/atEnd); chevron gated por atEnd (direcao de leitura), posicionado com inset-inline-end e glifo espelhado em [dir=rtl]; scrollBy com sinal por direcao; barra de progresso transform-origin right em RTL. engine.js:93 ja seta dir por locale. Gate do lote: lint 0, vitest 1346/1346, fitness, build 0, smoke200 16/16, axe 0."
 
   - id: UX-M18
     title: "Dark mode dos tokens de affordance (scrollbar thumb, veus, veil inferior)"
@@ -218,7 +223,8 @@ milestones:
     scope: "Include: variantes prefers-color-scheme dos tokens novos (thumb ink-claro, veil com surface escura — hoje o rgba 250,250,247 do veil e light-only); NAO e o dark mode do app inteiro. Exclude: dark mode completo do produto (projeto proprio)."
     why: "Nos aparelhos low-end o dark mode do sistema e comum (economia de bateria); veil claro em tema escuro vira mancha."
     gate: ["npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: later
+    note: "Re-escopado 2026-07-03 (ICT6): o app FORCA tema claro (body surface-0 claro sempre; nao ha dark mode global). Variantes dark so dos tokens de affordance escureceriam scrollbar/veu sobre superficie CLARA — errado. Este item so faz sentido DEPOIS de um dark mode de produto (projeto proprio, Exclude deste item). Nao shipar errado para zerar o backlog."
 
   - id: UX-M19
     title: "CWV budget: LCP do mapa (preconnect tiles, defer do nao-critico) medido antes/depois"
