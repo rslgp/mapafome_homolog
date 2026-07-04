@@ -167,7 +167,8 @@ milestones:
     scope: "Include: copy e CTA do overlay de viewport vazio (hoje existe; auditar acao sugerida — 'afaste o zoom' vs 'seja o primeiro a marcar'); i18n 15 locales. Exclude: logica de dados do mapa."
     why: "Primeiro contato num municipio sem pontos e a pior primeira impressao possivel; o overlay e a unica defesa."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "AUDITORIA: o EmptyViewportOverlay ja satisfaz o Include — copy digna (empty.no_pins_in_view i18n, 'ninguem foi mapeado ainda, toque em Relatar') + CTA Relatar direto + fechar/swipe, re-arma quando reentra a area vazia. FIX de paridade aplicado: aria-label do region estava hardcoded pt ('Nenhum ponto por perto') -> chave empty.region x12. CTA 'seja o primeiro a marcar' JA e a semantica do Relatar; 'afaste o zoom' descartado (o overlay ja aparece so quando o viewport ESTA vazio; sugerir zoom-out competiria com o CTA nuclear). Gate do lote: lint 0, vitest 1346/1346, fitness, build 0, smoke200 16/16, axe 0."
 
   - id: UX-M13
     title: "Microcopy one-shot 'o que significam as cores' no primeiro pin visivel"
@@ -197,7 +198,8 @@ milestones:
     scope: "Include: reordenar blocos do InfoPanel (legenda de cores primeiro, badges de instalacao depois, agradecimentos por ultimo); o acknowledgement 'Omissao de Socorro / Art.135' e INTENCIONAL e permanece intocado. Exclude: reescrever copy dos blocos."
     why: "O below-fold recem-descoberto precisa recompensar o scroll na ordem certa."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "Legenda de cores (.ip-legend) hoisted para logo apos a secao 'quem a plataforma atende', ANTES de ip-apps/badges e links secundarios — vocabulario nuclear do mapa vira a 1a coisa que o scroller encontra. Reorder JSX puro (bloco recortado 1x e reinserido). O framing Art.135 (acknowledgements) INTOCADO conforme Exclude/memoria infopanel-art135-intentional. Gate do lote: lint 0, vitest 1346/1346, fitness, build 0, smoke200 16/16, axe 0."
 
   - id: UX-M16
     title: "Footer com mapa-do-site textual (todas as rotas, links reais)"
@@ -296,7 +298,8 @@ milestones:
     scope: "Include: superficie de estado para a publishQueue existente (badge no header/ContextBar + toast calmo ao flush com sucesso); nunca perder silenciosamente; cuidado com o poison-pin conhecido (achado no vault). Exclude: mexer na logica da fila."
     why: "A fila offline ja funciona por baixo; invisivel, o usuario acha que a marcacao sumiu e re-publica ou desiste."
     gate: ["npm run test (publishQueue.test.js verde)", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "AUDITORIA: o Include ja e atendido pelo OfflineToast + bindOnlineFlush (App.js:849-863) — no mount, queueSize()>0 mostra 'N ponto(s) aguardando conexao'; no flush, onResult mostra 'N publicado(s) agora' (sucesso) ou 'ainda nao foi possivel enviar... tentaremos quando voltar a conexao' (falha, sem perder silenciosamente). Respeita o poison-pin (flush classifica permanente vs transitorio, nao congela a fila — comentario publishQueue.js:9-23). Debito conhecido registrado (NAO shipado como novo): a copy do toast e hardcoded pt (mesma classe do empty.region agora corrigido) — i18n do OfflineToast e um item de traducao separado, nao muda o comportamento que o Include pede. Gate do lote: publishQueue.test.js verde no full run 1346/1346, lint 0, build 0, smoke200 16/16."
 
   - id: UX-M26
     title: "Estados de erro humanos: falha de fetch do Sheets com mensagem + retry, error boundary com recuperacao"
