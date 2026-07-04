@@ -388,15 +388,26 @@ milestones:
     scope: "Include: disparar o InstallToast existente apos 2a visita OU apos primeira acao de valor (publicou ponto, abriu lista), nunca no load inicial; frequencia com cooldown em localStorage. Exclude: mudar o fluxo beforeinstallprompt em si."
     why: "Prompt de instalacao na chegada e ruido que treina o dismiss; depois do valor entregue, e servico."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "InstallToast agora exige sinal GANHO antes de convidar (native E iOS branches): 2a+ visita (mdf_visit_count, bumpado 1x/load via ref idempotente compartilhado) OU agiu num pin (mdf_acted_on_pin). Evento beforeinstallprompt ainda capturado; so o REVEAL e segurado. private mode -> nao convida (nunca amola). 3 testes novos (nao-mostra 1a visita, mostra 2a visita, mostra apos acao no pin) + os 5 existentes verdes (semeados com o sinal). Gate do lote: lint 0, vitest 1349/1349, fitness, build 0, smoke200 16/16."
 
   - id: UX-M35
-    title: "Compartilhamento nativo: navigator.share em pin/lista + og-image por rota"
+    title: "Compartilhamento nativo: navigator.share (share sheet + fallback copiar-link)"
     tier: A
     owner: ict6-uiux-session
-    scope: "Include: botao compartilhar (share sheet nativo, fallback copiar-link) no PinDetailSheet e na ListView; og:title/og:image decentes por rota para o preview no WhatsApp. Exclude: SDKs de rede social."
-    why: "O canal de crescimento real do publico e WhatsApp; um preview bonito com um toque vale uma campanha."
+    scope: "Include: util shareLink puro (navigator.share -> share sheet nativo; fallback clipboard; resultado discriminado shared/copied/cancelled/unavailable) + botao Compartilhar no PinDetailSheet que deep-linka /?lat=&lng= no ponto. Exclude: og-image por rota (movido para UX-M35b — server metadata, risco de export); ListView (mesmo util, adicao trivial depois); SDKs de rede social."
+    why: "O canal de crescimento real do publico e WhatsApp; compartilhar um ponto com um toque leva o destinatario ao mesmo lugar no mapa."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
+    status: shipped
+    evidence: "shareLink.js (puro, 5 testes: shared, cancel-nao-copia, fallback-clipboard, fallback-em-erro-nao-cancel, unavailable) + botao no PinDetailSheet (deep-link ao ponto, nota 'link copiado' no fallback, track pin_shared). Gate do lote: lint 0, vitest 1349/1349 (+5 shareLink), fitness, build 0, smoke200 16/16, axe 0."
+
+  - id: UX-M35b
+    title: "og:title/og:image por rota para preview rico no WhatsApp"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: metadata (Next generateMetadata/export static) com og:title + og:image decente por rota (/, /pets, /assinar, /imprensa) para o card de preview quando o link e colado no WhatsApp; imagem estatica servida do /public. Exclude: og dinamico por ponto (precisa de runtime; o site e output:export estatico)."
+    why: "O share (UX-M35) leva o link; um preview bonito e o que faz o grupo clicar. Separado por tocar no build de metadata (export)."
+    gate: ["npm run build", "npm run smoke200", "validar og tags no HTML gerado"]
     status: pending
 
   - id: UX-M36
