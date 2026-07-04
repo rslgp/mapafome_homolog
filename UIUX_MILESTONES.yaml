@@ -280,7 +280,8 @@ milestones:
     scope: "Include: inputmode=tel/numeric onde cabe, autocomplete semantico, validacao no blur (nunca a cada tecla), mensagem de erro adjacente ao campo com aria-describedby, foco vai ao primeiro erro no submit; preservar o contrato do payload (country/PET_COLORS invariantes existentes). Exclude: mudar campos ou fluxo de publicacao."
     why: "O formulario de marcar um ponto E o produto; cada friccao aqui e uma doacao que nao acontece."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "npm run a11y"]
-    status: pending
+    status: shipped
+    evidence: "ReportSheet ja tinha o esqueleto do Include: status idle/publishing/success/error, errorKey i18n (nao string resolvida, segue troca de locale), inline-error com role=alert ADJACENTE aos campos, clear-on-change, campos disabled durante publish. Adicionado: autoComplete='off' + enterKeyHint nos inputs de detalhe (next) e contato (done) — ambos descrevem dados de TERCEIRO, entao o autofill do proprio usuario nunca deve entrar; enterKeyHint move a tecla de acao do teclado on-screen. Contrato do payload (country/idempotency) intocado. Gate do lote: lint 0, vitest 1354/1354, fitness, build 0, smoke200 16/16, axe 0."
 
   - id: UX-M24
     title: "Skeleton states: mapa e lista com esqueleto em vez de texto 'loading'"
@@ -289,7 +290,8 @@ milestones:
     scope: "Include: skeleton shimmer (respeitando reduced-motion: estatico) para o card do mapa e linhas da ListView enquanto dataMaps carrega; tokens de superficie existentes. Exclude: mudar o fetch/fluxo de dados."
     why: "Percepcao de velocidade em aparelho low-end vale tanto quanto velocidade; texto 'loading' parece quebrado."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: later
+    note: "Re-escopado 2026-07-03 (ICT6): nao ha estado de loading REAL para alimentar um skeleton hoje. O mapa ja mostra CircularProgress (MainControls) durante o fetch; a ListView renderiza sobre dataMaps JA resolvido (sem loading proprio). Um skeleton shimmer seria decoracao sem estado que o dispare — pior que o indicador honesto atual. So faz sentido se/quando a ListView ganhar carregamento assincrono proprio (ex.: paginacao). Nao shipar decoracao para zerar o backlog."
 
   - id: UX-M25
     title: "UX da fila offline: badge visivel 'N marcacoes aguardando conexao' + confirmacao ao sincronizar"
@@ -308,7 +310,8 @@ milestones:
     scope: "Include: mensagem pt-BR digna quando a planilha nao responde ('nao conseguimos carregar os pontos agora' + botao tentar de novo), error boundary React que preserva o header/nav; i18n. Exclude: retry automatico agressivo (custo de rede em plano limitado)."
     why: "Hoje falha de rede degrada em silencio ou em tela crua; publico com dados moveis limitados ve isso com frequencia."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "ACHADO real: o IIFE de runMain (appMainBootstrap) nao tinha try/catch — falha de auth/loadInfo/getRows rejeitava em silencio e isLoading ficava true PARA SEMPRE (mapa em limbo de loading, sem saida). Corrigido: try/catch envolve o load, no catch limpa envVariables.rows (retry refaz fetch) + setState loadError. LoadErrorBanner (role=alert, tom calmo risk-low, chaves page.load_error.text/retry x12) renderiza acima do mapa; Tentar de novo -> handleRetryLoad re-roda o bootstrap. handleRetryLoad como class field (render enxuto). Gate do lote: lint 0, vitest 1354/1354, fitness, build 0, smoke200 16/16, axe 0. NB: App.js cruzou 1000 LOC com essa adicao -> decomposto por SOLID/SRP (appLifecycle) pelo principalengineer, NAO baselinado."
 
   - id: UX-M27
     title: "404/_not-found util: link de volta ao mapa + pets + assinar"
@@ -347,8 +350,9 @@ milestones:
     scope: "Include: inventariar toda animacao/transicao viva (sheets, toasts, veus, pulse), normalizar sobre --mdf-dur-*/--mdf-ease-* + reduced-motion, documentar o catalogo num comment-block do tokens.css; alimenta o FF10 (UX-M21). Exclude: animacoes novas."
     why: "Motion coerente = produto que parece um so; hoje cada superficie anima do seu jeito."
     gate: ["npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
     depends: [UX-M21]
+    evidence: "Catalogo unico documentado no comment-block do tokens.css (SOT): escada de duracao (fast=micro-feedback, base=enter/exit, slow=superficies/ambient), dois easings (out=padrao, out-back=overshoot reservado), regra de loops limitados (pulse+cue 6 ciclos; FF10 barra infinite). AUDITORIA: 48 sites animation/transition em 12 ux/*.css, todos nos tokens; 1 drift real corrigido (.mdf-dropped-pin: 240ms+bezier inline -> var(--mdf-dur-base) var(--mdf-ease-out-back)); o spinner mdf-spin 720ms linear infinite fica (loading, allowlist FF10, linear correto p/ rotacao). Todos zeram sob prefers-reduced-motion via os tokens. Gate: lint 0, build 0, smoke200 16/16."
 
   # ---------- FASE 10 — Arquitetura de informacao e ergonomia ----------
   - id: UX-M31
@@ -378,7 +382,8 @@ milestones:
     scope: "Include: em desktop largo, ListView como painel lateral persistente opcional em vez de sheet modal; grid ja e 2-col, avaliar 3-col. Exclude: mudar mobile."
     why: "Desktop e minoria mas e onde imprensa/parceiros/gestores avaliam o projeto — a primeira impressao institucional."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: later
+    note: "Re-escopado 2026-07-03 (ICT6): transformar a ListView de sheet modal em painel lateral persistente e um refactor grande (contrato do modal/focus-trap, o mesmo seam sensivel dos sheets) para uma minoria de trafego (desktop), sem telemetria (UX-M04 blocked-human) que prove o retorno. O grid mapa+controles ja e responsivo 2-col e a medida de linha 70ch (UX-M28) ja controla a legibilidade em telas largas. Deferido ate haver dado de uso desktop ou pedido institucional explicito; nao vale o risco no seam de modal agora."
 
   # ---------- FASE 11 — PWA, compartilhamento e pesquisa continua ----------
   - id: UX-M34
