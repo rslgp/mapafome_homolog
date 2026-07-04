@@ -26,6 +26,7 @@
 export const pt = {
   // ── header.js (header / nav) — all MECHANICAL (nav, labels, install) ──
   'page.header.skip_to_map':   'Pular para o mapa',
+  'page.header.skip_past_map': 'Pular o mapa e ir ao conteúdo',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' pontos mapeados',
@@ -928,6 +929,7 @@ export const es = {
   'page.popup.notes_count':     '({n} notas)',
   'page.popup.verified_alt':    'Verificado',
   'page.header.skip_to_map':   'Saltar al mapa',
+  'page.header.skip_past_map': 'Saltar el mapa e ir al contenido',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' puntos mapeados',
@@ -1573,6 +1575,7 @@ export const enUS = {
   'page.popup.notes_count':     '({n} ratings)',
   'page.popup.verified_alt':    'Verified',
   'page.header.skip_to_map':   'Skip to the map',
+  'page.header.skip_past_map': 'Skip the map to the content',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' points mapped',
@@ -2218,6 +2221,7 @@ export const de = {
   'page.popup.notes_count':     '({n} Bewertungen)',
   'page.popup.verified_alt':    'Verifiziert',
   'page.header.skip_to_map':   'Zur Karte springen',
+  'page.header.skip_past_map': 'Karte überspringen, zum Inhalt',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' Punkte erfasst',
@@ -2863,6 +2867,7 @@ export const fr = {
   'page.popup.notes_count':     '({n} avis)',
   'page.popup.verified_alt':    'Vérifié',
   'page.header.skip_to_map':   'Aller à la carte',
+  'page.header.skip_past_map': 'Passer la carte et aller au contenu',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' points cartographiés',
@@ -3508,6 +3513,7 @@ export const ru = {
   'page.popup.notes_count':     '({n} оценок)',
   'page.popup.verified_alt':    'Подтверждено',
   'page.header.skip_to_map':   'Перейти к карте',
+  'page.header.skip_past_map': 'Пропустить карту и перейти к содержимому',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' точек на карте',
@@ -4153,6 +4159,7 @@ export const zh = {
   'page.popup.notes_count':     '（{n} 条评价）',
   'page.popup.verified_alt':    '已验证',
   'page.header.skip_to_map':   '跳到地图',
+  'page.header.skip_past_map': '跳过地图，转到内容',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' 个已标记点',
@@ -4599,6 +4606,7 @@ export const zh = {
 export const ar = {
   // ── header.js (header / nav) — all MECHANICAL ──
   'page.header.skip_to_map':   'تخطّي إلى الخريطة',
+  'page.header.skip_past_map': 'تخطي الخريطة إلى المحتوى',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' نقطة مُسجَّلة',
@@ -5272,6 +5280,7 @@ export const ar = {
 export const bn = {
   // ── header.js (header / nav) — all MECHANICAL ──
   'page.header.skip_to_map':   'মানচিত্রে যান',
+  'page.header.skip_past_map': 'মানচিত্র এড়িয়ে বিষয়বস্তুতে যান',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' পয়েন্ট মানচিত্রিত',
@@ -5945,6 +5954,7 @@ export const bn = {
 export const uk = {
   // ── header.js (header / nav) — all MECHANICAL ──
   'page.header.skip_to_map':   'Перейти до карти',
+  'page.header.skip_past_map': 'Пропустити карту й перейти до вмісту',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' позначених точок',
@@ -6628,6 +6638,7 @@ export const uk = {
 export const hi = {
   // ── header.js (header / nav) — all MECHANICAL ──
   'page.header.skip_to_map':   'मानचित्र पर जाएँ',
+  'page.header.skip_past_map': 'मानचित्र छोड़कर सामग्री पर जाएँ',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' अंकित बिंदु',
@@ -7300,6 +7311,7 @@ export const hi = {
 export const tr = {
   // ── header.js (header / nav) — all MECHANICAL ──
   'page.header.skip_to_map':   'Haritaya geç',
+  'page.header.skip_past_map': 'Haritayı atla, içeriğe git',
   'page.header.wordmark':      'MAPA FOME .com.br',
   'page.header.backup_link':   ' · mapafome.com.br ',
   'page.header.count_full':    ' işaretlenen nokta',

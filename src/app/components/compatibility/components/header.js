@@ -46,6 +46,13 @@ export default function Header({ rowCountProp, onStartTour, onStartReport }) {
       <a href="#mdf-main" className="mdf-skip-link">
         {t('page.header.skip_to_map')}
       </a>
+      {/* UX-M20: second skip link — a keyboard user otherwise tabs through
+          dozens of Leaflet stops to reach the content below the map (the
+          keyboard sibling of the scroll-trap). #MoreInfo already carries
+          scroll-margin-top for the sticky header. */}
+      <a href="#MoreInfo" className="mdf-skip-link">
+        {t('page.header.skip_past_map')}
+      </a>
       <div className="mdf-header__inner">
         <div
           className="mdf-header__brand"
