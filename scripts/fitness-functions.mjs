@@ -94,16 +94,17 @@ const FF2_BASELINE = new Set([
     // mapRegistries). The handler body itself (one big event-binding useEffect)
     // is unchanged and still over the limit — same debt, refreshed anchor.
     'src/app/components/compatibility/components/mapComponents.js:119',
-    // App.js (the root class component) carries two pre-existing >100-LOC methods
-    // that predate this allowlist (red across every recent commit, e.g. c15fb8d):
-    // the constructor (state init + many bound handlers) and componentDidMount
-    // (the mount-time wiring sequence). Both are REAL long-method debt, NOT in
-    // scope for the i18n locale work that surfaced this gate run, allowlisted so
-    // the gate still hard-fails any NEW long method while not pretending these two
-    // do not exist. Delete each entry when App.js is decomposed; do NOT raise
-    // FUNCTION_LOC_HARD_LIMIT to hide them. Line-anchored — refresh on move.
-    'src/app/components/compatibility/App.js:135',
-    'src/app/components/compatibility/App.js:802',
+    // App.js (the root class component) carries ONE pre-existing >100-LOC method:
+    // the constructor (state init + many bound handlers). It is REAL long-method
+    // debt, allowlisted so the gate still hard-fails any NEW long method while not
+    // pretending it does not exist. Delete this entry when the constructor is
+    // decomposed; do NOT raise FUNCTION_LOC_HARD_LIMIT to hide it. Line-anchored —
+    // refresh on move (it moved 135 -> 136 when the appLifecycle import was added).
+    //   componentDidMount was the SECOND App.js long method here (was :802): its
+    //   full mount-wiring sequence was extracted into appLifecycle.installLifecycle
+    //   (mirroring runMain), so it is now a thin wrapper under the limit and needs
+    //   NO baseline entry — real decomposition, not a hidden allowlist.
+    'src/app/components/compatibility/App.js:136',
     // Surfaced by the export-default / const-arrow widening (regex was blind to
     // these forms). Each is a pre-existing top-level page or sheet component whose
     // single render function is over the limit (real long-method debt), allowlisted

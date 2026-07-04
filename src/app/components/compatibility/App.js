@@ -59,6 +59,7 @@ import AesEncryption from 'aes-encryption';
 import { getCookie, setCookie } from './components/cookies';
 
 import { runMain, installDebugHelpers, filterRowsByCountry } from './appMainBootstrap';
+import { installLifecycle, teardownLifecycle } from './appLifecycle';
 import { coordsFromPin } from './domain/pinCoords';
 import { normalizeTelefoneInput } from './domain/telefoneInput';
 import { alimentoFieldVisibility } from './domain/alimentoFieldVisibility';
@@ -137,6 +138,7 @@ class App extends Component {
 
     this.state = {
       isLoading: true,
+      loadError: false, // UX-M26: Sheets load failed; show a retry banner
       dataMaps: [],
       dataHeader: [{ label: "Índice" }, { label: "Lugar" }],
       rowCount: '',
@@ -790,130 +792,47 @@ class App extends Component {
     this.setState({ dataMaps, rowCount: dataMaps.length });
   }
 
+  // Thin wrapper over the extracted lifecycle module (appLifecycle.js). The
+  // teardown body — clear the urgency ticker, unbind the online-flush + country
+  // subscriptions, remove the locale-change listener — lives there so both halves
+  // of the mount/unmount pair stay in one cohesive module. No behavior change.
   componentWillUnmount() {
-    if (this._urgencyTicker) clearInterval(this._urgencyTicker);
-    if (this._unbindOnlineFlush) this._unbindOnlineFlush();
-    if (this._unbindCountry) this._unbindCountry();
-    if (this._onLocaleChange && typeof window !== 'undefined') {
-      window.removeEventListener('mdf-locale-change', this._onLocaleChange);
-    }
+    teardownLifecycle(this);
   }
 
+  // Thin wrapper over the extracted lifecycle module (appLifecycle.js). The full
+  // mount-time wiring sequence (country resolver, country-change subscription,
+  // live locale switch, urgency ticker, SW + online-flush bind, offline-queue
+  // toast, first-visit tour timer, geolocation fix + geofence warm-up, debug
+  // helpers) lives in installLifecycle so App.js stays under the FF1 file-LOC
+  // budget and this method under the FF2 function-LOC budget. The collaborators
+  // it needs are passed in as `deps` (same precedent as runMain/appPinActions).
+  // UX-M26 retry contract preserved: installLifecycle assigns this._bootstrapDeps
+  // so handleRetryLoad can re-run runMain. No behavior change; same wiring order.
   componentDidMount() {
-
-    // INTL M1 (§4.2) — composition root: wire the POJO's injected country
-    // accessor here (client-only, after mount, where window/localStorage exist).
-    // variaveisAmbiente stays import-free of the store/flag; it learns the active
-    // publish country through this single resolver. With INTL_ENABLED OFF (the
-    // dark-ship default) activeCountryFor returns 'br', so dentroLimites is
-    // byte-identical to today. This is the only place the store+flag meet the
-    // pure POJO.
-    setActiveCountryResolver(() => activeCountryFor(INTL_ENABLED, countryStore));
-
-    // INTL — on a country change (the flag control's pick() recenters the camera
-    // but does NOT touch markers), re-derive the marker set from the cached rows.
-    // The store only notifies on an ACTUAL code change, and with the INTL flag OFF
-    // the picker never mounts, so this subscription is effectively inert on the OFF
-    // path — _refilterForCountry resolves activeCountryFor → 'br' regardless. The
-    // callback arg is intentionally ignored: we re-resolve the active country the
-    // SAME way the bootstrap does so OFF behavior stays byte-identical. Unbound in
-    // componentWillUnmount (no subscription leak).
-    this._unbindCountry = countryStore.subscribe(() => this._refilterForCountry());
-
-    // INTL — INSTANT language switch. App is a class component that renders ~11
-    // t() strings (the map shell: alerts, buttons, error copy). t() resolves at
-    // render time against the active locale, but a manual language pick only
-    // dispatches the 'mdf-locale-change' CustomEvent (setLocale) — the small
-    // useLocale() hook consumers re-render, but THIS class component does not
-    // subscribe to anything that re-renders it, so its strings stayed stale until
-    // a reload. Listen for the event and forceUpdate() so the WHOLE site (shell
-    // included) switches language live, with no reload. Removed in unmount.
-    if (typeof window !== 'undefined') {
-      this._onLocaleChange = () => this.forceUpdate();
-      window.addEventListener('mdf-locale-change', this._onLocaleChange);
-    }
-
-    // M2 — tick once a minute so the context bar and marker urgency re-derive
-    // without any backend push. Client clock is the source of truth here; a
-    // server-time correction is deferred until real drift is observed.
-    this._urgencyTicker = setInterval(() => {
-      this.setState({ nowTick: Date.now() });
-    }, 60 * 1000);
-
-    // M8 — prior acted-on-pin unlocks the notifications entry.
-    if (hasActedOnPin()) this.setState({ canOpenNotif: true });
-
-    // M7 — register SW for offline shell + tile caching, then attach an
-    // online-flush handler so queued publishes drain opportunistically.
-    registerServiceWorker();
-    this._unbindOnlineFlush = bindOnlineFlush(
-      (payload) => this.writePinToSheets(payload),
-      {
-        onResult: ({ succeeded, failed }) => {
-          if (succeeded > 0) {
-            this.setState({ offlineToast: `${succeeded} ponto${succeeded > 1 ? 's' : ''} publicado${succeeded > 1 ? 's' : ''} agora.` });
-          } else if (failed > 0) {
-            this.setState({ offlineToast: 'Ainda não foi possível enviar os pontos salvos. Tentaremos de novo quando voltar a conexão.' });
-          }
-        },
-      },
-    );
-    queueSize().then((n) => {
-      if (n > 0) this.setState({ offlineToast: `${n} ponto${n > 1 ? 's' : ''} aguardando conexão.` });
+    installLifecycle(this, {
+      bootstrapDeps: { doc, envVariables, aes, sheetsGetSheet },
+      envVariables,
+      setActiveCountryResolver,
+      activeCountryFor,
+      INTL_ENABLED,
+      countryStore,
+      hasActedOnPin,
+      registerServiceWorker,
+      bindOnlineFlush,
+      queueSize,
+      hasSeenTour,
+      runMain,
+      installDebugHelpers,
     });
-
-    // First-visit guided tutorial — cookie-gated, contextual, never blocks the map.
-    // Defer one tick so the DOM nodes referenced by tour stops exist.
-    if (typeof window !== 'undefined' && !hasSeenTour()) {
-      setTimeout(() => this.setState({ tourOpen: true }), 600);
-    }
-
-    // Google Sheets API
-    // Based on https://github.com/theoephraim/node-google-spreadsheet
-
-    var self = this;
-
-    // Collaborators passed into the extracted bootstrap/debug helpers
-    // (appMainBootstrap.js) so that module stays a pure function of its inputs.
-    const bootstrapDeps = { doc, envVariables, aes, sheetsGetSheet };
-
-    console.log('[geo] requesting device location...');
-    navigator.geolocation.getCurrentPosition(
-      function (position) {
-        const coords = [position.coords.latitude, position.coords.longitude];
-        console.log('[geo] SUCCESS - device coords:', coords);
-        envVariables.currentLocation = coords;
-        // LOCATION-GEOFENCE (flag ON only): kick off the physical-country resolve
-        // off the FIRST real device fix, so the synchronous click handler later reads
-        // a cached code instead of blocking on the network. Not awaited for runMain
-        // (it only warms the cache; the click path still awaits/falls back), but once
-        // it settles we refresh eligibility so the UX gate lights up with the GPS leg.
-        if (self._physicalCountryResolver) {
-          self._physicalCountryResolver
-            .resolve(coords)
-            .catch(function () {})
-            .finally(function () { self._refreshGeofenceEligibility(); });
-        }
-        self.setState({ center: coords }, function () {
-          console.log('[geo] state.center after setState:', self.state.center);
-          runMain(self, bootstrapDeps);
-        });
-      },
-      function (err) {
-        console.warn('[geo] FAILED (code=' + err.code + '):', err.message, '- using default center:', self.state.center);
-        // LOCATION-GEOFENCE: GPS denied/unavailable. Refresh eligibility so the gate
-        // settles on its GPS-denied verdict — the IP-fallback path makes it eligible
-        // iff the IP leg is on AND a country came back; otherwise it stays ineligible.
-        self._refreshGeofenceEligibility();
-        runMain(self, bootstrapDeps);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-
-    installDebugHelpers(self, bootstrapDeps);
-
   }
 
+  // UX-M26: retry the Sheets load after the error banner. Bound as a class
+  // field so App.render()'s handlers map stays a thin reference.
+  handleRetryLoad = () => {
+    this.setState({ loadError: false, isLoading: true });
+    runMain(this, this._bootstrapDeps);
+  };
 
 
   render() {
@@ -948,6 +867,7 @@ class App extends Component {
       onPeriodChange: this.onPeriodChange,
       // <main> inline handler (was inline in renderMain)
       onOpenList: () => this.setState({ listOpen: true }),
+      onRetryLoad: this.handleRetryLoad, // UX-M26 (method: keeps render lean)
       // overlay callbacks
       handleCloseTour: this.handleCloseTour,
       handleOpenReportSheet: this.handleOpenReportSheet,

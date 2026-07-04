@@ -1,0 +1,38 @@
+/* UX-M26: load-failure banner. Calm, not alarming — a soft warning surface
+   with a clear single action, never a red full-screen error. */
+.mdf-loaderror {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mdf-space-3);
+  margin: 0 0 var(--mdf-space-3);
+  padding: var(--mdf-space-3) var(--mdf-space-4);
+  background: var(--mdf-risk-low-bg);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+  color: var(--mdf-risk-low-ink);
+}
+
+.mdf-loaderror__text {
+  margin: 0;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+}
+
+.mdf-loaderror__retry {
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-5);
+  background: var(--mdf-surface-1);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mdf-loaderror__retry:hover {
+  background: var(--mdf-surface-2);
+}

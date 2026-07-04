@@ -47,6 +47,7 @@ export function filterRowsByCountry(rows, activeCountry) {
 export function runMain(self, deps) {
   const { doc, envVariables, aes } = deps;
   (async function main(self) {
+   try {
     // Use service account creds
     await doc.useServiceAccountAuth({
       client_email: process.env.NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -209,8 +210,18 @@ export function runMain(self, deps) {
     // }
 
     // Loading message
-    self.setState({ isLoading: false })
-
+    self.setState({ isLoading: false, loadError: false })
+   } catch (err) {
+    // UX-M26: the Sheets load (auth / loadInfo / getRows) can reject on a flaky
+    // mobile connection. Without this catch the promise died silently and
+    // isLoading stayed true forever — the map sat in a permanent "loading"
+    // limbo with no way out. Now we stop the spinner and raise a dignified,
+    // retryable error banner (App renders it; Tentar de novo re-runs runMain).
+    // envVariables.rows is cleared so the retry actually refetches instead of
+    // reusing a half-populated cache.
+    envVariables.rows = undefined;
+    self.setState({ isLoading: false, loadError: true });
+   }
   })(self);
 }
 

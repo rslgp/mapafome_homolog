@@ -17,6 +17,7 @@ import LiveAnnouncer from './components/ux/LiveAnnouncer';
 import ViewMoreCue from './components/ux/ViewMoreCue';
 import ScrollAffordance from './components/ux/ScrollAffordance';
 import ColorsHint from './components/ux/ColorsHint';
+import LoadErrorBanner from './components/ux/LoadErrorBanner';
 import TapDebugOverlay from './components/_debug/TapDebugOverlay';
 import ContextBar from './components/ux/ContextBar';
 import InfoPanel from './components/InfoPanel';
@@ -50,6 +51,10 @@ export default function AppMain({ state, handlers, refs }) {
             {/* 2b. One-shot pin-color vocabulary (UX-M13) — first time pins
                   render, above the map, dismissible, never repeats. */}
             <ColorsHint hasPins={Array.isArray(state.dataMaps) && state.dataMaps.length > 0} />
+
+            {/* 2c. Load-failure banner (UX-M26) — retryable, above the map,
+                  only when the Sheets load rejected. */}
+            <LoadErrorBanner visible={state.loadError} onRetry={handlers.onRetryLoad} />
 
             {/* 3. Map + controls — the only Grid in this layout. SRP:
                   owns the responsive 2-column map/controls row, nothing else. */}
