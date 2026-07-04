@@ -353,7 +353,8 @@ milestones:
     scope: "Include: header minimo compartilhado (marca -> /) nas rotas satelites; hoje /pets e /assinar abrem em nova aba e viram ilhas; auditar target=_blank (manter so onde preserva o estado do mapa de proposito). Exclude: SPA-navigation refactor."
     why: "Cada rota satelite sem caminho de volta vaza usuarios que o pulse e o funil trouxeram."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "AUDITORIA (2026-07-03) — o produto ja satisfaz o Include: TODAS as rotas satelites tem volta em 1 toque via Link href='/': /assinar (page.js:127 'assinar.back'), /pets (PetsApp.js:89 'pets.back'), /imprensa (page.js:45), /parceiros (page.js:96), /relatorios (page.js:93), /iniciativas/cadastrar (page.js:82). target=_blank auditado: StepsHint abre pets/solone/bluey em nova aba DE PROPOSITO (preserva o estado do mapa em uso — decisao mantida); demais navegacoes sao same-tab. SiteFooterNav (UX-M16) reforca com indice completo. Zero mudanca de codigo necessaria."
 
   - id: UX-M32
     title: "Auditoria thumb-zone mobile: acoes primarias alcancaveis com uma mao"
@@ -362,7 +363,8 @@ milestones:
     scope: "Include: mapa de calor manual dos alvos (Relatar no topo = zona ruim; Confirmar ponto, Lista, cue = zona boa?), mover/duplicar acoes primarias para o terco inferior quando barato (ex.: FAB Relatar), documentar a decisao aqui. Exclude: redesign do header."
     why: "Persona segura o telefone com uma mao no ponto de onibus; CTA fora do polegar e CTA que nao existe."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "npm run a11y"]
-    status: pending
+    status: shipped
+    evidence: "AUDITORIA thumb-zone mobile (2026-07-03), zonas de Hoober (facil=terco inferior, esticar=meio, dificil=topo): DIFICIL: Relatar/assinar (header topo) — mitigado: a acao central real do fluxo NAO e o header, e tocar o MAPA (zona facil/meio, 56vh) e o gesto primario; assinar tem pulse p/ descoberta, nao urgencia motora. ESTICAR: trilho de pills, ContextBar. FACIL: mapa (drop pin = acao nuclear), Confirmar ponto no form, ViewMoreCue, mini-bar Lista (UX-M14 poe Lista de volta ao alcance apos rolar), sheets sobem de baixo (alvos na zona facil). DECISAO: NAO duplicar Relatar como FAB agora — custo visual/atencao permanente contra tom calmo, sem telemetria (UX-M04 blocked-human) para provar demanda; re-avaliar com dados de M05. Nenhuma mudanca de codigo; auditoria e a entrega do Include."
 
   - id: UX-M33
     title: "Densidade desktop >1024px: aproveitar o espaco (lista lado a lado do mapa)"
