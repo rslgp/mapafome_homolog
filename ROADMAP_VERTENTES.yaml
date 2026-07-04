@@ -120,7 +120,9 @@ milestones:
     scope: "Include: app/sitemap.js que lista TODAS as rotas reais (/, /pets, /assinar, /parceiros, /imprensa, /relatorios, /relatorio-marketing, /iniciativas/cadastrar) com lastmod corrente; adicionar 'Sitemap:' ao robots.txt; deletar/substituir o public/sitemap.xml stale (2 URLs, lastmod 2022-01-25, aponta pro host antigo rslgp.github.io). Exclude: prioridades finas de crawl."
     why: "Analise: o sitemap atual e stale (2022, host errado, so 2 URLs) e o robots.txt nao aponta pra ele — o Google nao descobre as rotas reais. next output:'export' suporta app/sitemap.js gerado no build."
     gate: ["npm run build", "out/sitemap.xml lista todas as rotas", "npm run smoke200"]
-    status: pending
+    status: shipped
+    commit: "PENDENTE (routed pro agent_git-commit-specialist nesta sessao 2026-07-04)"
+    evidence: "Criados src/app/sitemap.js e src/app/robots.js (ambos com export const dynamic='force-static', exigido pelo output:'export' — a 1a tentativa sem isso deu build RED 'Failed to collect page data for /sitemap.xml'; fix aplicado). Deletados (git rm) os 3 estaticos stale: public/sitemap.xml (2 URLs, lastmod 2022-01-25, host antigo rslgp.github.io), public/sitemap.txt (mesmo host antigo), public/robots.txt (sem Sitemap:). VERIFICADO no out/: robots.txt agora e allow-all + 'Sitemap: https://mapafome.com.br/sitemap.xml'; sitemap.xml lista as 10 rotas primarias no host correto com lastmod 2026 fresco; grep confirma ZERO leftover de rslgp/2022. Campaign micro-landings (/bluey,/dbd,/ios,/solone,/influencers,/editalpb) omitidas de proposito (audiencia estreita, nao alvo de busca geral). GATE VERDE lido: lint 0; fitness 0; build 0 (13/13 paginas, /sitemap.xml + /robots.txt agora sao rotas); vitest 1354/1354; smoke200 16/16. Sem a11y (nenhuma pagina de render mudou)."
 
   - id: SEO-03
     title: "JSON-LD schema.org: Organization/NGO no root + Dataset nas paginas de relatorio"

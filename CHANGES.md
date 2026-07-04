@@ -9,23 +9,24 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `a9df92c fix(ux): remove scroll-progress bar` (SEO-01 aguardando commit via agent_git-commit-specialist)
+> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `ff9b40e docs(roadmap)` (SEO-02 aguardando commit via agent_git-commit-specialist)
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-04-C`](#2026-07-04-c--seo-02-shipped-sitemap--robots-dinamicos) — **SEO-02 SHIPPED**: sitemap.js + robots.js dinamicos; aposentados os 3 estaticos stale de 2022. Gate verde.
 - [`2026-07-04-B`](#2026-07-04-b--seo-01-shipped-corrige-self-canonical-em-3-rotas) — **SEO-01 SHIPPED**: 3 layout.js novos (relatorios/relatorio-marketing/iniciativas-cadastrar) — corrige self-canonical. Gate verde.
 - [`2026-07-04-A`](#2026-07-04-a--deep-analysis--roadmap-multi-vertente) — Deep-analysis do produto (11 vertentes) + criado `ROADMAP_VERTENTES.yaml` (30 milestones) + este log + licao de padrao-de-log no vault.
 
 ### STATUS_TALLY (ROADMAP_VERTENTES.yaml)
-- **30 milestones** · pending **23** · blocked-human **5** · later **1** · **shipped 1** (SEO-01).
+- **30 milestones** · pending **22** · blocked-human **5** · later **1** · **shipped 2** (SEO-01, SEO-02).
 - Por tier: **S+ 3** · S 8 · A 10 · B 9.
-- Por vertente: V1 core-fome 2 · V2 pet 5 · V3 asaas 3 · V4 i18n 2 · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (1 shipped) · V9 qa 2 · V10 seguranca 3 · V11 governanca 1.
+- Por vertente: V1 core-fome 2 · V2 pet 5 · V3 asaas 3 · V4 i18n 2 · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (2 shipped) · V9 qa 2 · V10 seguranca 3 · V11 governanca 1.
 
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
-1. **SEO-02** (S, pending, commitavel): sitemap dinamico (app/sitemap.js) + `Sitemap:` no robots.txt; aposentar o sitemap.xml stale de 2022. **Proximo "go ship" natural** (segue SEO-01 na mesma vertente, alto valor de descoberta).
+1. **SEO-03** (A) ou **PAY-01/QA-01/PET-02/I18N-01** (S): proximos pending commitaveis. QA-01 (codificar pool=forks default) e barato e mata a pegadinha de OOM de toda sessao.
 2. **SEC-01** (S+, blocked-human): tirar a chave privada Google do bundle client via proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
-3. **PET-01 / INIT-01** (S+/S, blocked-human): backend de upload de foto de pet e persistencia de iniciativas — ambos dependem de um destino server-side (relacionado a SEC-01).
+3. **PET-01 / INIT-01 / PAY-02 / SEO-04 / FOME-02** (blocked-human/later): dependem de acao humana (storage, destino, efeito de negocio, decisao de produto, ou dep de SEC-01). NAO auto-shippaveis.
 
 <!-- ============ ZONA 2: CORPO APPEND-ONLY (nunca reescreva; so APPEND no fim) ============ -->
 
@@ -92,3 +93,40 @@
 **Commit:** roteado pro `agent_git-commit-specialist` (3 layouts = 1 concern SEO; os arquivos de roadmap/log = concern de docs separado). Sem push/PR (nao pedido).
 
 **Proximo:** OPEN_THREADS #1 = SEO-02 (sitemap dinamico).
+
+---
+
+## 2026-07-04-C — SEO-02 shipped: sitemap + robots dinamicos
+
+**Comando:** "ship until there is pending" (loop de ship; pegou SEO-02, proximo maior-tier commitavel).
+
+**O que foi feito:**
+
+| Arquivo / Acao | O que | Por que |
+|---|---|---|
+| `src/app/sitemap.js` (novo) | Sitemap dinamico gerado no build (Next `output:export`); lista as 10 rotas primarias no host correto com lastmod = data do build + priority/changefreq. `export const dynamic='force-static'`. | O sitemap estatico era stale (2022, host antigo rslgp.github.io, so 2 URLs) — Google nao descobria as rotas reais. |
+| `src/app/robots.js` (novo) | robots.txt dinamico: allow-all + `Sitemap: https://mapafome.com.br/sitemap.xml`. `export const dynamic='force-static'`. | O robots.txt estatico nao tinha diretiva `Sitemap:` — crawler nao tinha ponteiro pro sitemap. |
+| `public/sitemap.xml`, `public/sitemap.txt`, `public/robots.txt` (git rm) | Removidos os 3 estaticos stale. | Conflitariam com os gerados + apontavam pro host errado. |
+| `ROADMAP_VERTENTES.yaml` (edit) | SEO-02 pending -> shipped, com evidence. | Flip so com gate verde lido. |
+
+**Bug de build encontrado e corrigido (H2):** a 1a build falhou RED — `Failed to collect page data for /sitemap.xml` + `export const dynamic="force-static" not configured ... with output: export`. Sob `output:export` os route handlers de metadata precisam de `export const dynamic='force-static'`. Adicionado nos dois; rebuild verde. (A 1a notificacao de background dizia "exit 0" mas o artefato dizia `BUILD_EXIT=1` — confiei no artefato, nao na notificacao.)
+
+**Verificado no `out/` gerado:** robots.txt = allow-all + Sitemap: correto; sitemap.xml = 10 rotas no host `mapafome.com.br` com lastmod 2026; `grep` confirma ZERO leftover de rslgp/2022.
+
+**Gate (verde, lido nesta sessao):**
+
+| Check | Resultado |
+|---|---|
+| lint | exit 0 (5 warnings pre-existentes, nao meus) |
+| fitness | exit 0 (nenhuma divida nova) |
+| build | exit 0, 13/13 paginas (/sitemap.xml + /robots.txt agora sao rotas) |
+| sitemap/robots | conteudo verificado no out/ (10 rotas, host correto, Sitemap: presente, sem stale) |
+| test | 1354/1354 passed, 94 files, exit 0 |
+| smoke200 | 16/16 rotas 200+render |
+| a11y | N/A (nenhuma pagina de render mudou) |
+
+**Escopo (honesto):** incluidas as 10 rotas primarias + legais; campaign micro-landings (/bluey,/dbd,/ios,/solone,/influencers,/editalpb) omitidas de proposito (audiencia estreita).
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+**Proximo:** proximo pending commitavel de maior tier (SEO-03 A, ou os S: QA-01/PAY-01/PET-02/I18N-01).
