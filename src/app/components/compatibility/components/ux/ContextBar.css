@@ -43,3 +43,50 @@
 .mdf-context-bar__list:hover {
   background: var(--mdf-border);
 }
+
+/* ── UX-M14: condensed pinned copy under the sticky header ──────────
+   Appears only after the in-flow bar scrolls out above the viewport;
+   keeps the live count + the Lista action one tap away deep in the page.
+   Sits under the header (900) and under the reading-progress bar (890). */
+.mdf-context-mini {
+  position: fixed;
+  top: calc(var(--mdf-header-h) + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 885;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mdf-space-3);
+  max-width: calc(100vw - var(--mdf-space-8));
+  padding: var(--mdf-space-1) var(--mdf-space-2) var(--mdf-space-1) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  box-shadow: var(--mdf-elev-2);
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-caption);
+  white-space: nowrap;
+  animation: mdf-fade-in var(--mdf-dur-base) var(--mdf-ease-out);
+}
+
+.mdf-context-mini strong {
+  color: var(--mdf-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.mdf-context-mini__list {
+  min-height: 36px;
+  padding: 0 var(--mdf-space-3);
+  background: var(--mdf-surface-2);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  color: var(--mdf-ink);
+  font-family: inherit;
+  font-size: var(--mdf-fs-caption);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mdf-context-mini__list:hover {
+  background: var(--mdf-border);
+}
