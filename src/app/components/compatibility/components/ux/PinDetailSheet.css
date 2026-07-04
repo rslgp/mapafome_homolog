@@ -235,3 +235,28 @@
 .mdf-pin-sheet__close:hover {
   background: var(--mdf-ink-muted);
 }
+
+/* UX-M35: share button — same secondary weight as directions, never competes
+   with the primary claim CTA. */
+.mdf-pin-sheet__share {
+  min-height: var(--mdf-touch-target);
+  padding: 0 var(--mdf-space-4);
+  background: var(--mdf-surface-2);
+  color: var(--mdf-ink);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-pill);
+  font-family: inherit;
+  font-size: var(--mdf-fs-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mdf-pin-sheet__share:hover {
+  background: var(--mdf-border);
+}
+
+.mdf-pin-sheet__share-note {
+  align-self: center;
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-caption);
+}

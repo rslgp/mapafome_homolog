@@ -5,6 +5,7 @@ import './PinDetailSheet.css';
 import { urgencyOf } from './mdfMarkers';
 import { resolveContact } from './contactLink';
 import { track } from './analytics';
+import { shareOrCopy } from './shareLink';
 import { t, useLocale } from './strings';
 import envVariables from '../variaveisAmbiente';
 import { coordsFromPin } from '../../domain/pinCoords';
@@ -84,6 +85,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
   const triggerRef = useRef(null);
   const closeRef = useRef(null);
   const [busy, setBusy] = useState(null); // 'claim' | 'attended' | null
+  const [shareNote, setShareNote] = useState(''); // UX-M35 "link copiado" note
   useLocale(); // re-render on locale change so t() re-reads
 
   useEffect(() => {
@@ -135,6 +137,23 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
 
   const status = STATUS_COPY[derived.status];
   const claimCount = derived.claims.length;
+
+  // UX-M35: share this pin's location. Deep-links to the map centered on the
+  // pin so the recipient lands on the same point. Native share sheet where
+  // available (WhatsApp is the real growth channel), clipboard fallback.
+  async function handleShare() {
+    const c = derived.coords;
+    const url =
+      typeof window !== 'undefined' && c
+        ? `${window.location.origin}/?lat=${c[0]}&lng=${c[1]}`
+        : (typeof window !== 'undefined' ? window.location.href : 'https://mapafome.com.br');
+    const res = await shareOrCopy(
+      { title: t('page.share.pin_title'), text: t('page.share.pin_text'), url },
+      typeof navigator !== 'undefined' ? navigator : undefined,
+    );
+    if (res.kind === 'copied') setShareNote(t('page.share.copied'));
+    track('pin_shared', { pin_id: pinId(pin), result: res.kind });
+  }
 
   async function handleClaim() {
     if (!onClaim || derived.attended) return;
@@ -254,6 +273,20 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
             >
               {t('pin.directions')}
             </a>
+          )}
+
+          {/* UX-M35: share this point (native sheet -> WhatsApp etc., or copy). */}
+          <button
+            type="button"
+            className="mdf-pin-sheet__share"
+            onClick={handleShare}
+          >
+            <span aria-hidden="true">↗</span> {t('page.share.button')}
+          </button>
+          {shareNote && (
+            <span className="mdf-pin-sheet__share-note" role="status">
+              {shareNote}
+            </span>
           )}
 
           {!derived.attended && !myClaim && (
