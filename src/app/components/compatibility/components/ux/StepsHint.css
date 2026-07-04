@@ -168,7 +168,10 @@
   border: 1px solid var(--mdf-border);
   border-radius: var(--mdf-radius-pill);
   color: var(--mdf-ink);
-  font-size: var(--mdf-fs-caption);
+  /* UX-M28: rail CTAs read at 14px, not 13px — caption-size labels on the
+     primary shortcut rail disappear on sunlit low-end screens; caption stays
+     reserved for secondary metadata. */
+  font-size: var(--mdf-fs-small);
   font-weight: 600;
   cursor: pointer;
   transition: background var(--mdf-dur-fast) var(--mdf-ease-out);
@@ -191,7 +194,8 @@
   border: 1px solid var(--mdf-border);
   border-radius: var(--mdf-radius-pill);
   color: var(--mdf-ink);
-  font-size: var(--mdf-fs-caption);
+  /* UX-M28: same 14px floor as .mdf-steps__tour (sunlit readability). */
+  font-size: var(--mdf-fs-small);
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;

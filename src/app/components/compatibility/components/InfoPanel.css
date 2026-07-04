@@ -57,6 +57,12 @@
   max-width: 70ch;
 }
 
+/* UX-M28: readable measure for every prose paragraph in the panel —
+   unbounded lines on tablet/desktop hurt scanability (65-75ch target). */
+.ip-panel p {
+  max-width: 70ch;
+}
+
 .ip-serve__list {
   display: flex;
   flex-wrap: wrap;
