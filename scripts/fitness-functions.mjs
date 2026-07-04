@@ -448,6 +448,63 @@ for (const file of walk(SRC)) {
     }
 }
 
+// FF10: no INFINITE CSS animation outside a curated allowlist (UX-M21).
+// WHY: SC 2.2.2 — auto-playing motion that lasts >5s needs a pause/stop/hide
+// mechanism, and an unbounded pulse on a humanitarian surface reads as
+// pressure (calm-tone governor). This session's real incident: the revenue-CTA
+// pulse first shipped as `infinite` and was cut to 6 cycles on review; a rule
+// that lives only in a vault note repeats the mistake — a gate does not.
+// The legitimate exception class is the LOADING indicator (spinner/skeleton):
+// its motion IS the status, and it ends when loading ends. Those homes ride
+// the allowlist below with that reason; do NOT widen it to silence a new
+// decorative infinite loop (that is exactly the drift this rule catches).
+// key = forward-slash rel-path (matches FF1/FF2/FF9 keying).
+const FF10_INFINITE_ALLOWLIST = new Set([
+    //, /pets skeleton shimmer: loading placeholder, motion = "still loading",
+    //   unmounts when data lands.
+    'src/app/pets/pets.css',
+    //, ReportSheet submit spinner (mdf-spin 720ms): in-flight request status,
+    //   unmounts on settle.
+    'src/app/components/compatibility/components/ux/ReportSheet.css',
+]);
+// Walk src/ for stylesheets (walk() above is code-files-only on purpose).
+function walkCss(dir) {
+    const out = [];
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            if (entry.name === 'node_modules' || entry.name === '.next') continue;
+            out.push(...walkCss(p));
+        } else if (/\.css$/.test(entry.name)) {
+            out.push(p);
+        }
+    }
+    return out;
+}
+// Strip /* block */ comments preserving line count (same idiom + rationale as
+// FF9's stripComments; CSS has no // line comments).
+function stripCssComments(source) {
+    return source.replace(/\/\*[\s\S]*?\*\//g, (block) =>
+        block.replace(/[^\n]/g, ' '));
+}
+// `animation: ... infinite` shorthand OR `animation-iteration-count: infinite`.
+const FF10_INFINITE_RE = /\banimation(?:-iteration-count)?\s*:[^;{}]*\binfinite\b/;
+for (const file of walkCss(SRC)) {
+    const relForward = rel(file).split(path.sep).join('/');
+    if (FF10_INFINITE_ALLOWLIST.has(relForward)) continue;
+    const lines = stripCssComments(fs.readFileSync(file, 'utf8')).split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        if (FF10_INFINITE_RE.test(lines[i])) {
+            failures.push(
+                `FF10: infinite-animation at ${relForward}:${i + 1} — unbounded ` +
+                `auto-motion violates SC 2.2.2 and the calm-tone governor. Bound ` +
+                `the loop (the revenue pulse uses 6 cycles) or, if this is a real ` +
+                `LOADING indicator, add the file to FF10_INFINITE_ALLOWLIST with ` +
+                `that reason.`);
+        }
+    }
+}
+
 // FF5: token-level WCAG contrast forcing-function.
 // WHY: the browser axe gate is render-state-flaky — it has missed real AA
 // regressions and caught them only by render-timing luck. A `--mdf-*` token
@@ -595,7 +652,7 @@ if (failures.length > 0) {
     process.exit(1);
 }
 
-console.log(`[fitness] OK, file-loc, function-loc, todo-density, bbox-SOT, Pais-stamp, queue-country-capture, raw-hex-SOT, token-contrast all within v5 hard limits.`);
+console.log(`[fitness] OK, file-loc, function-loc, todo-density, bbox-SOT, Pais-stamp, queue-country-capture, raw-hex-SOT, no-infinite-animation, token-contrast all within v5 hard limits.`);
 if (ff1BaselineHits > 0) {
     console.log(`[fitness] note: ${ff1BaselineHits} FF1 baseline-allowlisted data-table shard(s) (i18n strings, see FF1_BASELINE).`);
 }
