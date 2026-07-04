@@ -47,7 +47,7 @@
 /* ── UX-M14: condensed pinned copy under the sticky header ──────────
    Appears only after the in-flow bar scrolls out above the viewport;
    keeps the live count + the Lista action one tap away deep in the page.
-   Sits under the header (900) and under the reading-progress bar (890). */
+   Sits under the header (900). */
 .mdf-context-mini {
   position: fixed;
   top: calc(var(--mdf-header-h) + 3px);

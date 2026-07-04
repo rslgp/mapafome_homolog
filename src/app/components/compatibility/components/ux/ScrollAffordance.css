@@ -1,41 +1,7 @@
-/* Both overlays are decorative reinforcement (aria-hidden in the JSX):
-   pointer-events:none everywhere so they can never eat a tap, and z-indexes
-   sit BELOW the header (900) and every sheet/modal, so they underlay real UI
-   instead of competing with it. */
-
-/* ── Scroll progress bar ─────────────────────────────
-   Thin track pinned under the sticky header. The bar is SOLID brand red
-   (#D64545 via token ≈ 4:1 on the light surfaces — passes the 3:1 non-text
-   floor, SC 1.4.11); width = reading position via transform: scaleX, the
-   compositor-only property (no layout/paint per frame). */
-.mdf-scrollprogress {
-  position: fixed;
-  top: var(--mdf-header-h);
-  left: 0;
-  right: 0;
-  height: 3px;
-  z-index: 890;
-  pointer-events: none;
-  background: transparent;
-}
-
-.mdf-scrollprogress__bar {
-  height: 100%;
-  background: var(--mdf-brand);
-  transform: scaleX(0);
-  transform-origin: left;
-  /* No transition: the bar answers the finger 1:1. A trailing ease here
-     would read as motion the user did not make (vestibular no-no). */
-}
-
-/* RTL (UX-M17): reading progress fills from the reading start — the right. */
-[dir='rtl'] .mdf-scrollprogress__bar {
-  transform-origin: right;
-}
-
-.mdf-scrollprogress--off {
-  display: none;
-}
+/* The veil is decorative reinforcement (aria-hidden in the JSX):
+   pointer-events:none so it can never eat a tap, and its z-index sits BELOW
+   the header (900) and every sheet/modal, so it underlays real UI instead of
+   competing with it. */
 
 /* ── Bottom veil (pre-first-scroll only) ─────────────
    Gradient from transparent to the page surface — the classic "content

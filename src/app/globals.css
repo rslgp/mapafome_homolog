@@ -70,8 +70,8 @@ html {
 }
 
 /* In-page scroll landings ("Ver mais", steps shortcuts) must not bury the
- * target's top edge under the sticky header + progress bar. Applied to the
- * known landing targets rather than *, so nothing else shifts. */
+ * target's top edge under the sticky header. Applied to the known landing
+ * targets rather than *, so nothing else shifts. */
 .mdf-context-bar,
 #MoreInfo,
 #CoffeeTable,

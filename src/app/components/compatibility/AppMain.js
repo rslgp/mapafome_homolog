@@ -63,10 +63,9 @@ export default function AppMain({ state, handlers, refs }) {
             {/* 4. Scroll affordance — signals there's content below the map. */}
             <ViewMoreCue />
 
-            {/* 4b. Page-level scroll affordances — fixed decorative overlays
-                  (reading-progress bar under the header + pre-scroll bottom
-                  veil). DOM position is irrelevant (position:fixed); lives
-                  here next to its sibling cue for discoverability. */}
+            {/* 4b. Page-level scroll affordance — fixed decorative pre-scroll
+                  bottom veil. DOM position is irrelevant (position:fixed);
+                  lives here next to its sibling cue for discoverability. */}
             <ScrollAffordance />
 
             {/* 5. Diagnostic overlay — opt-in via ?debug=tap. */}

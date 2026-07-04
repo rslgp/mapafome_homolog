@@ -4,9 +4,11 @@
 // the ~80%-never-scroll finding). These are JS+CSS coupled to real scroll
 // position, so a unit test cannot prove they appear/disappear on scroll:
 //   1. The pre-scroll bottom veil is present at rest and hides after scroll.
-//   2. The reading-progress bar grows (scaleX) as the page scrolls.
-//   3. The StepsHint pill rail shows a right edge-fade when it overflows,
+//   2. The StepsHint pill rail shows a right edge-fade when it overflows,
 //      and the fade clears after scrolling the rail to its end.
+//
+// (The reading-progress bar lane was removed with the bar itself — a solid
+// red bar growing on every scroll read as noise, not a discovery cue.)
 //
 // Each assertion degrades gracefully: if the affordance is absent on this
 // build (e.g. viewport too tall to scroll), the test skips rather than
@@ -44,26 +46,6 @@ test.describe('affordances: scroll discovery @affordances', () => {
     await page.evaluate(() => window.scrollBy(0, 200));
     await page.waitForTimeout(300);
     await expect(veil).toHaveClass(/mdf-scrollveil--off/);
-  });
-
-  test('reading-progress bar grows with scroll position', async ({ page }) => {
-    await gotoHome(page);
-    const bar = page.locator('.mdf-scrollprogress__bar');
-    if ((await bar.count()) === 0) test.skip(true, 'progress bar not mounted');
-
-    const scaleOf = () =>
-      bar.evaluate((el) => {
-        const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
-        return m.a; // scaleX
-      });
-
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await page.waitForTimeout(200);
-    const atTop = await scaleOf();
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await page.waitForTimeout(300);
-    const atBottom = await scaleOf();
-    expect(atBottom, `progress did not grow (top=${atTop}, bottom=${atBottom})`).toBeGreaterThan(atTop);
   });
 
   test('pill rail shows a right edge-fade when it overflows and clears at the end', async ({ page }) => {
