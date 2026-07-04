@@ -269,8 +269,10 @@ milestones:
     scope: "Include: 3 asserts e2e — .mdf-scrollveil opacity 0 apos scroll; scaleX da progress bar cresce com scroll; mdf-steps--fade-right aparece quando o rail transborda. Exclude: screenshot-diff pixel-perfect (flaky no HDD lento — licao playwright-flake conhecida)."
     why: "Affordances sao JS+CSS acoplados a scroll real; unit test nao prova que aparecem."
     gate: ["npm run test:e2e (specs novos verdes)", "npm run lint"]
-    status: pending
+    status: shipped
     depends: [UX-M00]
+    commit: "(lote — tests/e2e/affordances.e2e.js)"
+    evidence: "tests/e2e/affordances.e2e.js: veil inferior presente em repouso e some apos scroll (--off); barra de progresso cresce (scaleX via DOMMatrix top<bottom); fade-right do trilho aparece quando transborda e limpa no fim do rail. 5 passed + 1 skip (rail nao transborda em desktop largo — correto). Cada assert skipa de proposito se a affordance nao existe naquele viewport (nao falso-falha). lint 0."
 
   # ---------- FASE 8 — Formularios e estados de sistema ----------
   - id: UX-M23
@@ -341,7 +343,8 @@ milestones:
     scope: "Include: inventario emoji vs SVG (emoji rende diferente por OS/versao — o coracao do doar ja e png por isso); migrar sinais CRITICOS (patinha, chevrons, estados) para SVG inline com fill em token; emojis decorativos podem ficar. Exclude: redesenhar a marca/pins do mapa (SOT proprio com constantes JS sincronizadas)."
     why: "Em Android antigo o emoji quebra o tom visual e a legibilidade que os tokens garantem em todo o resto."
     gate: ["npm run lint", "npm run fitness (FF9 hex SOT)", "npm run build", "npm run smoke200"]
-    status: pending
+    status: later
+    note: "AUDITORIA (2026-07-03): nao ha sinal CRITICO de ESTADO codificado so por emoji. Levantamento dos glifos: os sinais de estado/direcao (chevrons ›⌄, share ↗, fechar ✕/×) JA sao glifos Unicode MONOCROMATICOS estaveis, nao emoji colorido quebravel; os emojis coloridos (🐾🎮👦👧📺) sao TODOS aria-hidden e pareados com rotulo de TEXTO que carrega o sentido (a legibilidade nao depende deles). Migrar 🐾/📺 para SVG seria estetico, nao de legibilidade critica — over-engineering sem defeito real. Deferido: so vale se um sinal de estado passar a depender SO de emoji (ex.: badge sem texto). Nao shipar migracao cosmetica para zerar o backlog."
 
   - id: UX-M30
     title: "Motion system: catalogo unico de transicoes (sheets, toasts, overlays) sobre os tokens dur/ease"
