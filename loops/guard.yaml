@@ -9,8 +9,19 @@ budget:
   max_items_per_run: 8            # raised by human OK to finish the 5 remaining eligible items
   max_agent_calls_per_run: 30     # maker plus verifier dispatches combined
   max_wallclock_minutes: 180      # 3 hours; raised with the item/call caps
+  # UX-M38: per-TICK token cap. The %-of-session/%-of-week snapshot (agent_goal_loop
+  # RULE BLOCK 1) is the SOFT stop; this is the HARD absolute cap so a single runaway
+  # tick cannot burn the whole window before the % stop is re-read. A tick that reaches
+  # this halts at the top of the NEXT iteration and reports, same as the item/call caps.
+  max_tokens_per_tick: 400000     # ~one full context window of spend per iteration
   kill_switch_file: "loops/STOP"  # existence halts at the top of every iteration
   runlog_file: "loops/runlog.jsonl"   # append-only, one JSON line per iteration
+  # UX-M38: every tick appends one runlog line carrying a `spend` object so ticks are
+  # auditable. Minimum spend schema (extend, never shrink):
+  #   "spend": { "items_done": N, "agent_calls": N, "wallclock_min": N, "tokens": N }
+  # plus the three budget numbers read that tick:
+  #   "budget_read": { "context_pct": N, "session_pct": N, "week_pct": N }
+  spend_log_required: true        # a tick with no spend line is a governance defect
   unattended_optin: true          # human said "start autonomous loop" this session
   supervision: "attended"         # report each iteration; human is watching, may interrupt
   builds_serial: true             # never two `npm run build` at once (OOM)
