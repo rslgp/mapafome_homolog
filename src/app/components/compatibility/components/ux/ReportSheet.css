@@ -388,7 +388,10 @@
 
 /* Drop-in animation applied to the tap-placed placeholder marker. */
 .mdf-dropped-pin {
-  animation: mdf-drop 240ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  /* UX-M30: was a hardcoded 240ms + inline bezier — now the motion-system
+     tokens (base duration + the reserved playful overshoot easing). Same
+     visual, on the SOT, so reduced-motion zeroes it with everything else. */
+  animation: mdf-drop var(--mdf-dur-base) var(--mdf-ease-out-back) both;
   transform-origin: 50% 100%;
 }
 

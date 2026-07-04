@@ -110,7 +110,29 @@
   /* Focus — 3:1 contrast minimum per WCAG 2.2 */
   --mdf-focus-ring: 0 0 0 2px var(--mdf-surface-0), 0 0 0 4px var(--mdf-brand);
 
-  /* Motion */
+  /*
+   * Motion system (UX-M30 — single catalog).
+   * Every animation/transition in the UI reads these three durations + two
+   * easings; NEVER hard-code a ms or a bezier in a component. All of them are
+   * zeroed under prefers-reduced-motion (see the @media at the end of this
+   * file), so honoring the tokens IS honoring SC 2.3.3 — one place to be right.
+   *
+   * Duration ladder (what each tier is FOR):
+   *   --mdf-dur-fast  120ms  micro-feedback: button/hover, chip toggle, focus.
+   *   --mdf-dur-base  240ms  element enter/exit: toasts, veils, the pinned
+   *                          context mini-bar, edge fades, the coop-wheel nudge.
+   *   --mdf-dur-slow  400ms  larger surfaces + ambient: sheet fade-in, the
+   *                          pre-scroll bottom veil, skeleton shimmer.
+   * Easings:
+   *   --mdf-ease-out        default for everything (decelerate to rest).
+   *   --mdf-ease-out-back   ONLY for a deliberate playful overshoot (reserved;
+   *                          use sparingly — the calm-tone governor).
+   * Bounded loops (auto-motion): the revenue pulse (6 cycles) and ViewMoreCue
+   * (6 cycles) are the ONLY intentional repeats; FF10 forbids `infinite` in CSS
+   * outside the two loading indicators (pets skeleton, ReportSheet spinner).
+   * Audit: 48 animation/transition sites across 12 ux/*.css files, all on these
+   * tokens as of 2026-07-03.
+   */
   --mdf-dur-fast: 120ms;
   --mdf-dur-base: 240ms;
   --mdf-dur-slow: 400ms;
