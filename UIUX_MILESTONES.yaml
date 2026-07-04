@@ -185,7 +185,8 @@ milestones:
     scope: "Include: versao condensada da ContextBar que gruda sob o header quando a original sai do viewport (IntersectionObserver); Lista a 1 toque de qualquer ponto da pagina. Exclude: mudar o conteudo da barra."
     why: "Depois que a pessoa rola, o caminho de volta para a acao (Lista/contagem) nao pode se perder."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200", "npm run a11y"]
-    status: pending
+    status: shipped
+    evidence: "Mini-bar condensada fixa sob o header (IntersectionObserver, so quando a original sai POR CIMA; boundingClientRect.top<0 evita ruido pre-fold); textos aria-hidden (nao duplica live region), botao Lista acessivel; z 885 abaixo do header/progress. Gate do lote: lint 0, vitest 1346/1346, fitness, build 0, smoke200 16/16, axe 0."
 
   - id: UX-M15
     title: "Hierarquia do InfoPanel por frequencia de uso (sem tocar no framing Art.135)"
@@ -242,7 +243,8 @@ milestones:
     scope: "Include: segundo skip-link (apos o existente) direto para o conteudo pos-mapa; tab-order audit documentado (header -> rail -> mapa -> controles -> cue -> contexto -> painel); armadilhas de foco do Leaflet anotadas. Exclude: refazer o skip-link existente."
     why: "Usuario de teclado atravessa o mapa inteiro (dezenas de tab stops do Leaflet) para chegar ao conteudo — o scroll-trap tem um irmao de teclado."
     gate: ["npm run a11y", "npm run test", "npm run lint", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "Segundo skip-link 'Pular o mapa e ir ao conteudo' (#MoreInfo, que ja tem scroll-margin-top), chave page.header.skip_past_map x12; auditoria de tab-order documentada em docs/a11y-tab-order.md (ordem completa + armadilhas Leaflet + regra para novos elementos). Gate do lote: axe 0, vitest 1346/1346, lint 0, smoke200 16/16."
 
   # ---------- FASE 7 — Guardioes (a licao vira forcing function) ----------
   - id: UX-M21
