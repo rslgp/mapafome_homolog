@@ -176,7 +176,8 @@ milestones:
     scope: "Include: tooltip/chip dispensavel (localStorage one-shot) explicando amarelo/azul/vermelho no primeiro render com pins; calmo, dispensavel, i18n. Exclude: repetir a legenda inteira do InfoPanel."
     why: "A cor e o vocabulario central do mapa e hoje so e explicada abaixo do fold — exatamente onde 80% nao chegam."
     gate: ["npm run test", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "ColorsHint (one-shot localStorage mdf_colors_hint_seen) renderiza ACIMA do mapa na 1a vez que ha pins; 4 dots (tokens tour-swatch) + linha calma amarelo/azul/vermelho/verde (chave page.map.colors_hint x12) + fechar >=44px; role=note, storage try/catch (private mode nunca trava). VERIFICADO no build servido via Playwright: com 858 markers renderiza (count 1), fechar -> count 0 + flag='1', reload -> count 0 (nao repete). Gate: lint 0, vitest 1346/1346, fitness, build 0, smoke200 16/16, axe 0."
 
   # ---------- FASE 5 — Conteudo below-fold rende mais ----------
   - id: UX-M14
@@ -324,7 +325,8 @@ milestones:
     scope: "Include: revisar --mdf-fs-caption 13px nos rotulos criticos (rail, ContextBar) contra a persona tela-ao-sol; max-width de linha no InfoPanel (65-75ch); pesos e escala consistentes via tokens; qualquer texto sobre o mapa ganha fundo/contraste reforcado. Exclude: trocar a font stack."
     why: "Tipografia e o affordance mais barato que existe; 13px cinza sob sol simplesmente desaparece."
     gate: ["npm run a11y", "npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "Rotulos do trilho de atalhos (.mdf-steps__tour e .mdf-steps__pets) subiram de fs-caption 13px para fs-small 14px (legibilidade ao sol; caption fica reservado a metadado secundario). Medida de linha 70ch em todo <p> do InfoPanel (.ip-panel p). Tokens ja fixam o piso 16px de input (globals) e o contraste vive no FF5/axe. Gate do lote: lint 0, vitest 1346/1346, fitness, build 0, smoke200 16/16, axe 0."
 
   - id: UX-M29
     title: "Iconografia consistente: CTAs e sinais criticos de emoji para SVG tokenizado"
