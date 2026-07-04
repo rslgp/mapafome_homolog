@@ -24,6 +24,18 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
+        // QA-01 — OOM-safe defaults. On this memory-constrained machine the default
+        // threads pool crashes the run (worker teardown / STACK_BUFFER_OVERRUN
+        // -1073740791) and the parallel file scheduling also triggers the flaky
+        // vitest-axe "Axe is already running" false failure. Force the forks pool
+        // with a single fork and no file parallelism so `vitest run` (and every
+        // caller, incl. CI and commit-gate agents) is serial-and-safe WITHOUT needing
+        // the --pool=forks --no-file-parallelism CLI flags every time. Trade-off:
+        // slower wall-clock, but a green gate beats a fast crash. Pair with
+        // NODE_OPTIONS=--max-old-space-size=6144 for the heap headroom.
+        pool: 'forks',
+        poolOptions: { forks: { singleFork: true } },
+        fileParallelism: false,
         setupFiles: ['./test/setup.js'],
         include: ['test/**/*.test.{js,jsx,mjs}', 'src/**/*.test.{js,jsx,mjs}'],
         exclude: ['node_modules', '.next', 'out'],
