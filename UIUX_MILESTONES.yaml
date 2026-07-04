@@ -427,3 +427,43 @@ milestones:
     why: "Foi um teste com usuarios que revelou os 80%; institucionalizar o teste e o que impede o roadmap de virar opiniao."
     gate: ["documento revisado pelo humano", "npm run lint"]
     status: blocked-human
+
+  # ---------- FASE 6 — Governanca do goal-loop autonomo (ampliacao 2026-07-04) ----------
+  # Fonte: auditoria do loop-flow-architect (@loop) sobre agent_goal_loop.md.
+  # O elo mais fraco e o Judge (maker==checker) e o budget-guard sem cap/kill/spend-log
+  # proprios; estes itens fecham as lacunas antes de qualquer tick nao-supervisionado.
+  - id: UX-M37
+    title: "Judge distinto no goal-loop: um checker report-only grada o item antes do flip para shipped (maker != checker)"
+    tier: S+
+    owner: ict6-uiux-session
+    scope: "Include: separar o papel de quem constroi de quem aprova no agent_goal_loop — um verifier report-only (reusar loops/agents/verifier.md ou um reviewer dedicado) le o gate verde ANTES de o item virar shipped; o maker nunca assina o proprio trabalho. Exclude: autonomia nao-supervisionada (continua human-gated ate M38 fechar)."
+    why: "loop-flow-architect (@loop): LBR-C — o maker nao pode auto-aprovar; com a semana a 85% um auto-grade otimista embarca regressao que nao ha orcamento para re-consertar."
+    gate: ["revisao do prompt pelo prompt-engineer", "1 tick de exemplo com o checker no caminho, log lido"]
+    status: pending
+
+  - id: UX-M38
+    title: "Budget-guard completo do goal-loop: cap por-run + kill-switch (arquivo STOP) + spend-log proprio"
+    tier: S+
+    owner: ict6-uiux-session
+    scope: "Include: o goal-loop passa a ler um guard proprio (cap de tokens por tick, checagem de um arquivo STOP como kill-switch, e uma linha de spend-log por tick) alem do stop suave por % do snapshot; apontar para loops/guard.yaml + loops/STOP se existirem, senao criar o minimo. Exclude: telemetria remota (human_gate)."
+    why: "loop-flow-architect (@loop): budget-guard incompleto — hoje so ha stop suave por %, sem cap/kill/spend-log ligados ao proprio goal-loop; pre-requisito de qualquer tick nao-supervisionado."
+    gate: ["npm run lint", "1 tick que atinge o cap e para, log lido"]
+    status: pending
+
+  - id: UX-M39
+    title: "Isolation do goal-loop: cada tick de build roda em worktree/branch proprio, nunca sujando loop/mapafome"
+    tier: S
+    owner: ict6-uiux-session
+    scope: "Include: quando um tick faz build/edita src/, roda num worktree/branch efemero (o padrao ja existe no repo — 8+ worktrees irmaos) e so promove com gate verde; um build vermelho nunca suja a branch viva. Exclude: merge automatico (continua via agent_git-commit-specialist + humano)."
+    why: "loop-flow-architect (@loop): Isolation ausente — o loop roda direto na branch viva; um build vermelho num tick deixa a arvore suja para a proxima sessao."
+    gate: ["npm run build", "npm run smoke200", "worktree efemero criado e limpo verificado"]
+    status: pending
+
+  - id: UX-M40
+    title: "Observability do goal-loop: cada tick anexa id + resultado do gate + os 3 numeros de budget lidos a um runlog proprio"
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: cada tick do goal-loop anexa uma linha (append-only) a um runlog proprio: id do item, resultado do gate, e context/session/week % lidos naquele tick; torna os ticks auditaveis. Exclude: dashboard visual (fora de escopo do loop)."
+    why: "loop-flow-architect (@loop): Observability parcial — loops/runlog.jsonl registra o motor ANTIGO (parado no tick 21); o goal-loop nao anexa nada, entao os ticks sao inauditaveis."
+    gate: ["npm run lint", "runlog com >=1 linha valida lida"]
+    status: pending
