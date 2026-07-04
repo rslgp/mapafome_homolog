@@ -78,6 +78,26 @@ const InfoPanel = ({ rowCount }) => {
           <p className="ip-serve__impact">{t('page.info.serve_impact')}</p>
         </section>
 
+        {/* UX-M15: color legend hoisted directly under the audience section so
+            the map's core vocabulary (what the pin colors mean) is the FIRST
+            thing a scroller meets in the panel, ahead of install badges and
+            secondary links. The Art.135 acknowledgement framing below is
+            INTENTIONAL and untouched. */}
+        <ul className="ip-legend" aria-label={t('page.info.legend_aria')}>
+          {LEGEND.map((item) => (
+            <li
+              key={item.key}
+              className={`ip-legend__item ip-legend__item--${item.span}`}
+            >
+              <span className={`ip-legend__chip ${item.chipClass}`}>
+                <img src={item.icon} alt="" width="22" height="22" />
+                {t(item.labelKey)}
+              </span>
+              <p className="ip-legend__text">{t(item.descKey)}</p>
+            </li>
+          ))}
+        </ul>
+
         <div className="ip-apps">
           {!isInstalled && (
             <div className="ip-apps__install-badges" role="group" aria-label={t('page.info.install_group')}>
@@ -226,21 +246,6 @@ const InfoPanel = ({ rowCount }) => {
           
           </div>
         </section>
-
-        <ul className="ip-legend" aria-label={t('page.info.legend_aria')}>
-          {LEGEND.map((item) => (
-            <li
-              key={item.key}
-              className={`ip-legend__item ip-legend__item--${item.span}`}
-            >
-              <span className={`ip-legend__chip ${item.chipClass}`}>
-                <img src={item.icon} alt="" width="22" height="22" />
-                {t(item.labelKey)}
-              </span>
-              <p className="ip-legend__text">{t(item.descKey)}</p>
-            </li>
-          ))}
-        </ul>
 
         <div className="ip-actions">
           <button
