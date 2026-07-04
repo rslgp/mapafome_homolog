@@ -1,3 +1,8 @@
+# MILESTONES.yaml — roadmap da P-series (refactor de codigo + pagamento Asaas).
+# Roadmap MULTI-VERTENTE amplo: ROADMAP_VERTENTES.yaml. UI/UX: UIUX_MILESTONES.yaml.
+# Log de execucao: CHANGES.md (cabecalho de acesso rapido no topo).
+# NOTA: P14 (leak da chave Google no bundle) e rastreado tambem como SEC-01 em
+# ROADMAP_VERTENTES.yaml (mesmo risco, um ponteiro so — ver GOV-01).
 milestones:
   # ---------- Phase 1-3: SHIPPED ----------
   - id: P1

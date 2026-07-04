@@ -2,6 +2,10 @@
 # Dono: sessao ICT6 / Principal Staff UI/UX (mandato permanente,
 # vault 10-DECISOES/2026-07-03-mapafome-mandato-ict6-uiux).
 #
+# ESTE ARQUIVO cobre SO a vertente UI/UX. O roadmap MULTI-VERTENTE (core-fome,
+# MapaPet, Asaas, i18n, PWA, relatorios, parceiros, SEO, testes, seguranca, loop)
+# vive em ROADMAP_VERTENTES.yaml. Log de execucao: CHANGES.md (cabecalho no topo).
+#
 # Formato da casa (mesmo idioma do MILESTONES.yaml): cada item carrega
 # id, title, tier, owner, scope (Include/Exclude), why, gate, status.
 # Regras de operacao (append-only, nunca reescrever historico):

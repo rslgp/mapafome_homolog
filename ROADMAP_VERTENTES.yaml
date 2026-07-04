@@ -1,0 +1,401 @@
+# ROADMAP_VERTENTES.yaml — roadmap MULTI-VERTENTE do MAPA FOME.
+#
+# POR QUE ESTE ARQUIVO EXISTE
+#   UIUX_MILESTONES.yaml cobre SO a vertente UI/UX (43 itens). MILESTONES.yaml
+#   cobre a P-series (refactor/pagamento). Este arquivo e o roadmap AMPLO: um
+#   backlog tiered por VERTENTE do produto, derivado de uma analise profunda do
+#   que o MAPA FOME faz (2026-07-04). Cada vertente e um eixo independente de
+#   valor; itens de UI/UX continuam morando em UIUX_MILESTONES.yaml (nao duplicar).
+#
+# O QUE E O MAPA FOME (resumo da analise)
+#   PWA Next.js 16 output:'export' (estatico, GitHub Pages + mapafome.com.br).
+#   Tres superficies de produto:
+#     - Mapa de doacao de alimento (raiz): reportar pin de necessidade, cor = urgencia
+#       por idade (anel fresh/waiting/stale/done), filtro por categoria + recencia,
+#       publicacao geofenced por pais, fila offline com quarentena de poison-pin.
+#     - MapaPet (achados-e-perdidos de pets): reportar perdido/encontrado/avistado,
+#       match etico (mesma especie, <=5km, <=30d), ciclo resolve/encerrar, foto
+#       redimensionada+EXIF-strip client-side, contato reveal-on-tap, dedup (built,
+#       nao ligado). PRE-LANCAMENTO: 0 linhas em producao.
+#     - Assinatura de doacao recorrente (Asaas): rails pix|cartao|boleto, backend
+#       serverless separado guarda a chave, webhook fail-closed timing-safe, idempotencia.
+#   Suporte: 12 locales i18n (shards por dominio, paridade testada), relatorios
+#   k-anonimizados (k=5) p/ MP/saude, press kit + parceiros + sponsors, SW/PWA com
+#   janela de rollback, fitness-functions (11 invariantes), smoke200, geofence.
+#
+# FORMATO DA CASA (igual MILESTONES.yaml / UIUX_MILESTONES.yaml)
+#   Cada item: id, title, vertente, tier, owner, scope (Include/Exclude), why, gate, status.
+#   tier: S+ (move KPI/desbloqueia risco direto) > S > A > B. Trabalhar do maior pro menor.
+#   status: pending -> in-progress -> shipped (SO com gate verde LIDO na sessao) | later | blocked-human.
+#   "continue" = proximo pending de maior tier sem depends abertos.
+#   Todo shipped ganha commit (hash + subject) + evidence. Append-only, nunca reescrever historico.
+#   human_gate: true = acao/decisao do humano (deploy, endpoint, consentimento, chave). Claude PROPOE.
+#   Gate minimo de item que toca src/: lint + test + fitness + build + smoke200 (+ a11y quando UI).
+#   Log de execucao vive em CHANGES.md (cabecalho de acesso rapido no topo + corpo append-only).
+#
+# GOVERNADORES FIXOS (nao negociaveis por item, herdados do produto)
+#   - Tom calmo / dignidade: nenhum padrao de pressao (pulse infinito, urgencia falsa).
+#   - WCAG 2.2 AA e bloqueador de ship.
+#   - Nunca versionar .claude/ (gitignored). Nunca push/PR/version-bump sem pedido explicito.
+#   - A chave privada Google no bundle client (SEC-01) e a raiz de quase todo risco de abuso:
+#     ate ela cair, todo write e spoofavel. E report-only / human-gated (era P14).
+
+vertentes:
+  - id: V1
+    nome: "Mapa de doacao de alimento (core)"
+  - id: V2
+    nome: "MapaPet (achados-e-perdidos)"
+  - id: V3
+    nome: "Monetizacao / assinatura Asaas"
+  - id: V4
+    nome: "i18n / localizacao"
+  - id: V5
+    nome: "PWA / offline / service worker"
+  - id: V6
+    nome: "Relatorios / dados abertos"
+  - id: V7
+    nome: "Parceiros / imprensa / iniciativas"
+  - id: V8
+    nome: "SEO / descoberta"
+  - id: V9
+    nome: "Testes / arquitetura de qualidade"
+  - id: V10
+    nome: "Seguranca / privacidade"
+  - id: V11
+    nome: "Governanca / loop autonomo"
+
+milestones:
+
+  # ==================== V10 — SEGURANCA / PRIVACIDADE ====================
+  - id: SEC-01
+    title: "Proxy de escrita server-side: tirar a chave privada Google do bundle client"
+    vertente: V10
+    tier: S+
+    owner: human-gated (arquitetura de segredo; era P14/MF-P14)
+    scope: "Include: mover TODO write path (publicar pin fome + pet, resolve, flag, cleanold, relatorio-marketing) para um proxy serverless que guarde NEXT_PUBLIC_GOOGLE_PRIVATE_KEY como segredo de servidor (padrao ja provado no asaas-backend); o client passa a falar so com o proxy. Exclude: reescrever o formato da planilha; auth de usuario (item separado)."
+    why: "Analise: a chave da service-account Google esta inline no bundle estatico (sheetsClient.js:43-44, appMainBootstrap.js:53-54, form.js, cleanold.js, relatorio-marketing/page.js:39). Qualquer visitante le e escreve na planilha. E a RAIZ que torna todo write (fome+pet publish/resolve/flag, rate-limit) spoofavel."
+    gate: ["proxy: npm test verde", "client sem NEXT_PUBLIC_GOOGLE_PRIVATE_KEY (grep 0)", "npm run build", "npm run smoke200"]
+    status: blocked-human
+    human_gate: true
+    note: "Report-only por decisao do produto (era P14, later). Groundwork P13 feito. NAO e escopo de softwareengineer autonomo: exige o humano escolher a arquitetura (Vercel function nova? reusar asaas-backend? Cloud Function?) e provisionar o segredo. Claude PROPOE o desenho, humano dirige."
+
+  - id: SEC-02
+    title: "Fitness function que falha o build se um segredo de servidor vazar para o bundle"
+    vertente: V10
+    tier: S
+    owner: softwareengineer
+    scope: "Include: nova FF (FF11) que varre out/ pos-build por padroes de chave privada (-----BEGIN PRIVATE KEY-----, PEM, JWT de service-account) e por NEXT_PUBLIC_ que casem uma allowlist de nomes-de-segredo; falha o gate se achar. Baseline: hoje ACHA a chave Google (SEC-01) — entao entra allowlisted-com-divida ate SEC-01 cair, mas pega VAZAMENTOS NOVOS. Exclude: remover a chave (isso e SEC-01)."
+    why: "Analise: o vazamento da chave so foi pego por auditoria manual. Sem gate mecanico, o proximo NEXT_PUBLIC_ de segredo entra silencioso. Uma FF transforma 'auditoria de vez em quando' em 'bloqueador de todo build' (mesma logica do FF6 one-bbox-SOT)."
+    gate: ["npm run fitness", "npm run build", "FF11 pega uma chave-isca injetada e falha"]
+    status: pending
+
+  - id: SEC-03
+    title: "Endurecer a hygiene de pet.contact (control-char strip antes de gravar em Dados)"
+    vertente: V10
+    tier: A
+    owner: softwareengineer
+    scope: "Include: rodar pet.contact pelo mesmo strip de control-char/cap-length que os outros campos (petHygiene) ANTES de gravar em petBlob (petBlob.js:73-76 hoje pula de proposito). Preserva reveal-on-tap; so limpa o que persiste. Exclude: mudar o contrato de reveal."
+    why: "Analise: pet.contact e deliberadamente NAO higienizado (tratado como acao de reveal), mas ele PERSISTE em Dados.contact — uma string forjada com control-chars/injection entra na planilha. Reveal-on-tap e sobre EXIBIR; gravar sujo e um vetor separado."
+    gate: ["npm run test", "npm run lint", "teste novo: contact com control-char e limpo na gravacao"]
+    status: pending
+
+  # ==================== V8 — SEO / DESCOBERTA ====================
+  - id: SEO-01
+    title: "Corrigir self-canonical em /relatorios, /relatorio-marketing, /iniciativas/cadastrar (layout.js por rota)"
+    vertente: V8
+    tier: S+
+    owner: softwareengineer
+    scope: "Include: criar layout.js server-component para as 3 rotas sem um (relatorios, relatorio-marketing, iniciativas/cadastrar) com title proprio + alternates.canonical proprio + OG proprio (padrao dos layouts pets/assinar/parceiros/imprensa ja existentes). Exclude: mudar o conteudo das paginas."
+    why: "Analise (bug real): essas 3 rotas herdam do root o title 'MAPA FOME' E canonical:https://mapafome.com.br/ — cada uma se auto-canonicaliza para a HOME. Google desindexa/funde as paginas de relatorio (que sao o ativo de dados-abertos para MP/saude). Barato, alto impacto."
+    gate: ["npm run build", "npm run smoke200", "1 canonical correto por pagina no HTML gerado"]
+    status: shipped
+    commit: "PENDENTE (routed pro agent_git-commit-specialist nesta sessao 2026-07-04)"
+    evidence: "Criados 3 server-component layout.js (relatorios, relatorio-marketing, iniciativas/cadastrar), cada um com title proprio + alternates.canonical proprio + OG/Twitter proprio (banner /presskit/MapaFome_banner.png), espelhando o precedente parceiros/imprensa. VERIFICADO no out/ gerado: cada pagina emite EXATAMENTE 1 canonical = a propria URL (antes herdava canonical=https://mapafome.com.br/ do root, self-canonicalizando pra home) + title proprio. GATE VERDE lido nesta sessao: lint 0 (5 warnings pre-existentes em .claude/worktrees+e2e, nao meus); vitest 1354/1354 (94 files, forks serial, sem OOM/flake); fitness 0 (nenhuma divida nova); build 0 (11/11 paginas, as 3 rotas presentes); smoke200 16/16 rotas 200+render; axe 0 violacoes nas 3 rotas novas. Teardown do serve :3000 limpo (0 node orfaos meus)."
+
+  - id: SEO-02
+    title: "Sitemap dinamico (app/sitemap.js) + Sitemap: no robots.txt; aposentar o sitemap.xml stale de 2022"
+    vertente: V8
+    tier: S
+    owner: softwareengineer
+    scope: "Include: app/sitemap.js que lista TODAS as rotas reais (/, /pets, /assinar, /parceiros, /imprensa, /relatorios, /relatorio-marketing, /iniciativas/cadastrar) com lastmod corrente; adicionar 'Sitemap:' ao robots.txt; deletar/substituir o public/sitemap.xml stale (2 URLs, lastmod 2022-01-25, aponta pro host antigo rslgp.github.io). Exclude: prioridades finas de crawl."
+    why: "Analise: o sitemap atual e stale (2022, host errado, so 2 URLs) e o robots.txt nao aponta pra ele — o Google nao descobre as rotas reais. next output:'export' suporta app/sitemap.js gerado no build."
+    gate: ["npm run build", "out/sitemap.xml lista todas as rotas", "npm run smoke200"]
+    status: pending
+
+  - id: SEO-03
+    title: "JSON-LD schema.org: Organization/NGO no root + Dataset nas paginas de relatorio"
+    vertente: V8
+    tier: A
+    owner: softwareengineer
+    scope: "Include: <script type=application/ld+json> com Organization/NGO (nome, url, logo, sameAs, contactPoint) no root layout; Dataset schema nas duas paginas de relatorio (dados k-anonimizados de inseguranca alimentar sao um Dataset ideal). SOT dos literais em um modulo unico (sem hard-code duplicado, respeita FF9). Exclude: BreadcrumbList/FAQ (fase 2)."
+    why: "Analise: ZERO structured data no site inteiro. NGO + Dataset dao rich results e tornam os relatorios descobriveis como dados abertos (o publico-alvo e MP/secretaria de saude/seguranca-alimentar) — casa com a missao."
+    gate: ["npm run build", "npm run smoke200", "JSON-LD valido (parse) presente no HTML das rotas alvo"]
+    status: pending
+
+  - id: SEO-04
+    title: "Resolver o sinal misto do ads.txt vs postura 'nao vende dados nem atencao'"
+    vertente: V8
+    tier: B
+    owner: human-gated (decisao de produto)
+    scope: "Include: decidir e alinhar — ou remover public/ads.txt (nao ha codigo de ad e o press kit afirma 'nao vende dados nem atencao'), ou documentar por que o publisher AdSense existe. Exclude: adicionar ads (fora da missao)."
+    why: "Analise: ads.txt declara um publisher AdSense enquanto o press kit vende a postura anti-vigilancia. E um sinal misto pra imprensa/parceiros que auditam o dominio. Decisao do humano (pode haver contrato)."
+    gate: ["decisao registrada", "se remover: npm run build + smoke200"]
+    status: blocked-human
+    human_gate: true
+
+  # ==================== V2 — MAPAPET (pre-lancamento) ====================
+  - id: PET-01
+    title: "Backend de upload de foto de pet (hoje a foto redimensionada morre em preview local)"
+    vertente: V2
+    tier: S+
+    owner: human-gated (provisionar storage) + softwareengineer (wiring)
+    scope: "Include: destino de upload (Blob/Storage) para a foto ja redimensionada+EXIF-stripped client-side, retornando uma URL https persistida em vez de exigir colar URL. Reusa o pipeline petPhoto (resize<=1600px/1.5MB, EXIF/GPS strip por canvas re-encode ja existe). Exclude: moderacao de imagem (item futuro)."
+    why: "Analise: MapaPet e pre-lancamento (0 linhas em prod) e ESTE e o maior bloqueador. petPhoto.js:6-8,114-116 so persiste uma URL https colada — a foto processada e um beco sem saida. Sem upload, ninguem reporta pet com foto (o sinal #1 de match)."
+    gate: ["proxy/storage: teste verde", "npm run test", "npm run build", "npm run smoke200"]
+    status: blocked-human
+    human_gate: true
+    note: "Provisionar o storage e acao do humano (Vercel Blob? bucket?). Wiring client->URL persistida e softwareengineer. Depende de SEC-01 na filosofia (nao expor segredo de storage no client)."
+
+  - id: PET-02
+    title: "Ligar o dedup de pets ja construido (groupNearDuplicates) no PetMarkers"
+    vertente: V2
+    tier: S
+    owner: softwareengineer
+    scope: "Include: chamar groupNearDuplicates/isNearDuplicate (PET-M12b, ja construido, testado e re-exportado em petDomain.js:84-89) de dentro do PetMarkers/UI para agrupar reportes quase-duplicados. Exclude: reescrever a heuristica (ja existe e tem teste)."
+    why: "Analise: DEAD CODE — o dedup esta 100% pronto e re-exportado mas NENHUM caller (PetMarkers, UI) o usa. Ligar e barato e evita o mapa de pets encher de duplicatas do mesmo bicho no lancamento."
+    gate: ["npm run test", "npm run lint", "teste: dois reportes quase-duplicados agrupam no marker layer"]
+    status: pending
+
+  - id: PET-03
+    title: "Escrever freshnessAt na renovacao 'ainda procurando' (idade hoje sempre mede da 1a publicacao)"
+    vertente: V2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: um modulo-fonte que ESCREVE petTaxonomy.freshnessAt quando o dono renova a busca ('ainda procurando'), para a idade/archive medir da renovacao e nao so da 1a publicacao (petTaxonomy.js:360-362 le freshnessAt mas ninguem escreve). Exclude: mudar a janela de archive (90d)."
+    why: "Analise: freshnessAt e LIDO mas nunca ESCRITO — a feature M13 de renovacao esta pela metade. Um pet ainda perdido apos 90d some do mapa mesmo com o dono renovando, porque a idade mede sempre da 1a publicacao."
+    gate: ["npm run test", "npm run lint", "teste: renovar reseta a idade efetiva via freshnessAt"]
+    status: pending
+
+  - id: PET-04
+    title: "Quarentena de poison-pin na fila offline de pets (paridade com a fila fome)"
+    vertente: V2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: portar a classificacao permanente-vs-transiente + quarentena do publishQueue.js da fome para o petPublishQueue.js (hoje petPublishQueue.js:99-108 nao classifica — um payload de pet envenenado congela a fila). Exclude: unificar as duas filas (contratos diferentes)."
+    why: "Analise: a fila offline de pets NAO tem a quarentena de poison-pin que a fila de fome tem. Um pet com erro permanente (ex.: geofence) congela o drain e trava reportes offline seguintes — o mesmo bug que a fome ja resolveu."
+    gate: ["npm run test", "npm run lint", "teste: pet de erro-permanente vai pra quarentena, drain continua"]
+    status: pending
+
+  - id: PET-05
+    title: "PETS_BASE_URL sensivel ao ambiente (homolog nao deve gerar deep-link de prod)"
+    vertente: V2
+    tier: B
+    owner: softwareengineer
+    scope: "Include: derivar PETS_BASE_URL do ambiente (window.location.origin no client, ou NEXT_PUBLIC) em vez do hardcode de prod em petShare.js:37. Exclude: mudar o formato do deep-link (?pet=<coordsKey>)."
+    why: "Analise: petShare.js:37 fixa PETS_BASE_URL em producao — um share gerado no homolog aponta pro prod, confundindo teste e podendo vazar dado de homolog num link publico de prod."
+    gate: ["npm run test", "npm run lint", "teste: base-url segue o origin"]
+    status: pending
+
+  # ==================== V3 — MONETIZACAO / ASAAS ====================
+  - id: PAY-01
+    title: "Falhar o boot se prod estiver sem idempotencia duravel (KV) ou com CORS wildcard"
+    vertente: V3
+    tier: S
+    owner: softwareengineer
+    scope: "Include: no asaas-backend, um check de boot que RECUSA subir em producao (ASAAS_ENV=production) se as env de KV/Upstash nao estiverem setadas (idempotencia cairia pra in-memory) OU se o CORS estiver wildcard. Exclude: mudar o provedor de KV."
+    why: "Analise: hoje e checklist-only. idempotencyStore.js:100-116 cai silencioso pra in-memory sem KV — um webhook re-entregue apos cold-start reprocessa o pagamento. Nada falha o boot. Transformar em fail-closed no boot e o padrao do webhookAuth (que ja e fail-closed)."
+    gate: ["cd asaas-backend && npm test", "teste: boot em prod sem KV recusa; com KV sobe"]
+    status: pending
+
+  - id: PAY-02
+    title: "processEvent real no webhook (hoje pagamento confirmado e um console.log no-op)"
+    vertente: V3
+    tier: S
+    owner: human-gated (efeito de negocio) + softwareengineer (seam)
+    scope: "Include: definir o processEvent que roda quando um pagamento confirma (webhook.js:27-34 e um no-op). O SEAM/contrato e softwareengineer; O QUE fazer (registrar apoiador? enviar recibo? atualizar contador?) e decisao do humano. Exclude: enviar e-mail sem o humano definir a copy/consentimento."
+    why: "Analise: defaultProcessEvent e um console.log — um pagamento confirmado nao tem efeito nenhum. O apoiador paga e nada acontece do lado do produto. Precisa do humano definir o efeito de negocio."
+    gate: ["cd asaas-backend && npm test", "teste: processEvent injetado roda uma vez por evento (idempotente)"]
+    status: blocked-human
+    human_gate: true
+
+  - id: PAY-03
+    title: "SOT unico de MIN_SUBSCRIPTION_VALUE + bound maximo + alinhar porta dev"
+    vertente: V3
+    tier: B
+    owner: softwareengineer
+    scope: "Include: colapsar MIN_SUBSCRIPTION_VALUE (hoje duplicado por comentario em 3 arquivos) num SOT unico importado; adicionar um bound maximo de valor; alinhar a porta dev (README diz 3001, client diz 3005). Exclude: mudar o floor de 5."
+    why: "Analise: o floor de valor esta triplicado (risco de drift), nao ha teto (um valor absurdo passa), e a porta dev diverge entre README e client — friccao de onboarding."
+    gate: ["npm run test", "cd asaas-backend && npm test", "1 so definicao do floor (grep)"]
+    status: pending
+
+  # ==================== V4 — i18n / LOCALIZACAO ====================
+  - id: I18N-01
+    title: "Intl sensivel ao locale: relative-time, numero e data pararem de ser fixos em pt-BR"
+    vertente: V4
+    tier: S
+    owner: agent_translation-localization + softwareengineer
+    scope: "Include: relativeTime.js:17 construir Intl.RelativeTimeFormat com o locale ATIVO (nao fixo 'pt-BR'); introduzir Intl.NumberFormat/DateTimeFormat por locale onde numeros/datas aparecem. Exclude: moeda (nao ha preco localizado hoje)."
+    why: "Analise: um usuario de/ru/zh ainda ve 'ha N dias' porque relativeTime.js fixa 'pt-BR' independente do locale ativo. Sao 12 locales com paridade de STRING mas nao de FORMATO — a metade invisivel da localizacao."
+    gate: ["npm run test", "npm run lint", "teste: relative-time em de/zh sai no formato do locale"]
+    status: pending
+
+  - id: I18N-02
+    title: "Fitness function de tom/dignidade: falhar se copy sensivel enviar sem revisao humana"
+    vertente: V4
+    tier: A
+    owner: softwareengineer
+    scope: "Include: FF que garante que toda string marcada [REVISAR-HUMANO] OU foi revisada OU nao esta numa rota shippavel; opcionalmente varrer copy sensivel (fome/pobreza/saude) por termos de pena/pressao. Exclude: reintroduzir gate de em-dash (DESABILITADO por decisao do usuario 2026-07-02)."
+    why: "Analise: o governador de dignidade e so convencao+teste ([REVISAR-HUMANO] em comentario), nao um lint mecanico. Copy sensivel nao-revisada pode escapar. Uma FF fecha o buraco sem tocar a regra de em-dash (que fica morta de proposito)."
+    gate: ["npm run fitness", "FF pega uma string [REVISAR-HUMANO] numa rota e falha"]
+    status: pending
+
+  # ==================== V7 — PARCEIROS / IMPRENSA / INICIATIVAS ====================
+  - id: INIT-01
+    title: "Persistir iniciativas/cadastrar (hoje e um stub localStorage com TODO — submissoes nunca saem do browser)"
+    vertente: V7
+    tier: S
+    owner: human-gated (destino) + softwareengineer (wiring)
+    scope: "Include: gravar a iniciativa cadastrada num destino real (a mesma planilha via proxy SEC-01, ou um endpoint) em vez do stub localStorage (page.js:63-70 tem TODO explicito). Exclude: painel de moderacao (fase 2)."
+    why: "Analise: iniciativas/cadastrar so grava em localStorage — a submissao NUNCA sai do browser. Cozinhas comunitarias que se cadastram acham que enviaram e nada chega. Depende do proxy de escrita (SEC-01) pra nao vazar segredo."
+    gate: ["npm run test", "npm run build", "npm run smoke200", "teste: submissao chega ao destino"]
+    status: blocked-human
+    human_gate: true
+    note: "Depende de SEC-01 (proxy de escrita) pra ter um destino sem expor segredo no client."
+
+  - id: INIT-02
+    title: "Pagina indice /iniciativas (hoje press kit + sponsors linkam pra um 404)"
+    vertente: V7
+    tier: A
+    owner: softwareengineer + ict6-uiux-session
+    scope: "Include: uma pagina /iniciativas que LISTA as iniciativas (mesmo que so as cadastradas via INIT-01), com layout.js proprio (canonical/OG). Exclude: mapa de iniciativas (fase 2)."
+    why: "Analise: press kit e sponsors linkam pra /iniciativas mas a rota nao existe — e um 404 vivo em material publico. Precisa de INIT-01 pra ter o que listar."
+    gate: ["npm run build", "npm run smoke200", "/iniciativas retorna 200+render"]
+    status: pending
+    depends: [INIT-01]
+
+  - id: PART-01
+    title: "Montar os placements de sponsor declarados-mas-mortos + redirector /go/{id}"
+    vertente: V7
+    tier: B
+    owner: softwareengineer
+    scope: "Include: montar APOIAR_GRID / INITIATIVES_FOOTER / INFO_PANEL_PARCEIROS (declarados em sponsors.js mas so INFO_PANEL_FOOTER esta montado) e um redirector /go/{id}/ pra tracking de clique. Exclude: nova logica de targeting (ja existe: region/geo/time weighted)."
+    why: "Analise: 3 de 4 placements de sponsor sao codigo declarado mas nao renderizado, e nao ha /go/{id} pra medir clique pago — a monetizacao por patrocinio esta pela metade."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  # ==================== V6 — RELATORIOS / DADOS ABERTOS ====================
+  - id: REP-01
+    title: "Rotear /relatorio-marketing pelo sheetsClient (hoje re-implementa a auth Google inline)"
+    vertente: V6
+    tier: A
+    owner: softwareengineer
+    scope: "Include: fazer relatorio-marketing/page.js:35-43 usar o sheetsClient.js compartilhado em vez de re-implementar o boilerplate de auth inline (o exato DRY-leak que o client foi feito pra remover). Exclude: mudar o conteudo do relatorio."
+    why: "Analise: /relatorio-marketing contorna o sheetsClient e re-implementa a auth Google inline (relatorio-marketing/page.js:35-43) — duplica o vazamento da chave E o padrao que ja tem SOT. Consolidar reduz a superficie de vazamento (relevante pra SEC-01)."
+    gate: ["npm run test", "npm run lint", "npm run build"]
+    status: pending
+
+  - id: REP-02
+    title: "Limpar env keys CRA mortos (REACT_APP_GOOGLESHEETID -> undefined sob Next)"
+    vertente: V6
+    tier: B
+    owner: softwareengineer
+    scope: "Include: sugestao.js/endereco.js/mylocation.js ainda leem REACT_APP_GOOGLESHEETID (leftover CRA que vira undefined sob Next); apontar pra env correta ou remover o caminho morto. Remover table.js/tableCount.js (scaffolding MUI de coffee-roaster, nao sao tabelas de relatorio). Exclude: reescrever os relatorios."
+    why: "Analise: REACT_APP_* e undefined no runtime Next — funcoes que dependem dele falham silenciosas. E ha dead code (table.js coffee-roaster) poluindo a busca. Higiene."
+    gate: ["npm run test", "npm run lint", "npm run build", "npm run fitness"]
+    status: pending
+
+  # ==================== V5 — PWA / OFFLINE ====================
+  - id: PWA-01
+    title: "Kill-switch de runtime pro intl (hoje so build-time; um intl ruim exige rebuild+redeploy)"
+    vertente: V5
+    tier: A
+    owner: softwareengineer
+    scope: "Include: um kill-switch de RUNTIME pro caminho intl (flag lida em runtime, nao so NEXT_PUBLIC_INTL resolvido uma vez no build) pra mitigar um intl ruim sem rebuild. Exclude: mudar o default de locales."
+    why: "Analise: INTL_ENABLED resolve uma vez do build (rollback-drill.mjs:5-11) — mitigar um intl quebrado exige rebuild+redeploy. Um kill de runtime encurta o tempo-de-recuperacao (casa com a filosofia de janela de rollback do SW)."
+    gate: ["npm run test", "npm run build", "npm run smoke200", "npm run drill:rollback"]
+    status: pending
+
+  - id: PWA-02
+    title: "Cache offline dos tiles Waze/Esri (hoje so OSM-HOT e cacheado offline)"
+    vertente: V5
+    tier: B
+    owner: softwareengineer
+    scope: "Include: estender a estrategia SWR de tiles (sw.js:43-46, hoje so OSM-HOT) para Waze e Esri satellite dentro do mesmo bound MAX_TILES=250. Exclude: aumentar o bound de tiles (memoria)."
+    why: "Analise: so OSM-HOT tem cache offline; quem usa Waze ou satelite fica sem mapa offline. Estender e barato e respeita o bound existente."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: PWA-03
+    title: "Enriquecer manifest.json (shortcuts para /pets e /assinar, screenshots)"
+    vertente: V5
+    tier: B
+    owner: ict6-uiux-session + softwareengineer
+    scope: "Include: adicionar shortcuts (atalho A2HS para /pets 'Reportar pet' e /assinar 'Apoiar'), screenshots e display_override ao manifest.json. Exclude: mudar icones/tema (ja OK)."
+    why: "Analise: o manifest nao tem shortcuts/screenshots/display_override — perde os atalhos de long-press no icone A2HS e o rich install UI. Ganho de engajamento barato pras 2 superficies de acao."
+    gate: ["npm run build", "npm run smoke200", "manifest valido com shortcuts"]
+    status: pending
+
+  # ==================== V9 — TESTES / ARQUITETURA DE QUALIDADE ====================
+  - id: QA-01
+    title: "Estabilizar o gate: pool=forks --no-file-parallelism como default de teste (mata OOM + flake do axe)"
+    vertente: V9
+    tier: S
+    owner: softwareengineer
+    scope: "Include: tornar --pool=forks --no-file-parallelism o default do npm run test (hoje o pool paralelo faz OOM nesta maquina e dispara o flake 'Axe is already running' do vitest-axe). Documentar NODE_OPTIONS max-old-space-size. Exclude: reescrever os testes de a11y."
+    why: "Analise + memoria: o gate cheio faz OOM no pool paralelo (crash -1073740791) e o assinar-a11y falha intermitente por paralelismo do vitest-axe. Forcar forks+serial e a correcao ja conhecida — codifica-la no script tira a pegadinha de toda sessao futura."
+    gate: ["npm run test (verde, sem OOM, sem flake axe)", "npm run lint"]
+    status: pending
+
+  - id: QA-02
+    title: "Pay-down da divida baselined do FF2 (funcoes >100 LOC allowlisted) — 1-2 por vez"
+    vertente: V9
+    tier: A
+    owner: softwareengineer
+    scope: "Include: decompor 1-2 das ~14 funcoes FF2-allowlisted por sessao (ex.: App.js constructor, mapComponents.js:119 click handler) e remover a entrada do baseline. Exclude: tocar em codigo alem da funcao alvo (respeitar o anchor line-based do FF2)."
+    why: "Analise: fitness carrega ~14 entradas FF2 de divida + drift FF9/FF10. Pagar aos poucos evita o baseline virar permanente. CUIDADO: o baseline FF2 e line-anchored — editar acima de um anchor desloca a linha e falha (licao [[ff2-line-anchored-baseline]])."
+    gate: ["npm run fitness", "npm run test", "npm run lint", "baseline FF2 com 1-2 entradas a menos"]
+    status: pending
+
+  # ==================== V1 — MAPA DE FOME (core) ====================
+  - id: FOME-01
+    title: "Cachear offline os tiles do provedor ATIVO do usuario, nao so o OSM-HOT default"
+    vertente: V1
+    tier: A
+    owner: softwareengineer
+    scope: "Include: (par de PWA-02, do lado do core) garantir que o provedor de tile que o usuario ESCOLHEU (Waze/Esri/OSM) e o que fica offline, nao um default fixo. Exclude: mudar os provedores."
+    why: "Analise: o mapa de fome e a superficie principal e o offline e a promessa central (tela ao sol, Android low-end, area sem sinal). Cachear so o default deixa quem trocou de provedor sem mapa offline exatamente na hora que precisa."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: FOME-02
+    title: "Decompor o construtor de App.js (divida FF2 baselined, raiz da complexidade do core)"
+    vertente: V1
+    tier: B
+    owner: softwareengineer
+    scope: "Include: extrair a seed do construtor de App.js (AES + Google Sheets clients, App.js:116,121) para um bootstrap testavel, tirando a entrada do baseline FF2. Exclude: mudar comportamento (refactor puro)."
+    why: "Analise: o construtor de App.js e >100 LOC allowlisted e concentra a fiacao do core (e onde a chave AES/Google entra — toca SEC-01). Decompor melhora testabilidade e prepara a cirurgia do SEC-01. Instancia concreta do QA-02 no core."
+    gate: ["npm run test", "npm run lint", "npm run fitness", "npm run build"]
+    status: later
+    depends: [SEC-01]
+    note: "Melhor fazer JUNTO/DEPOIS do SEC-01, ja que ambos mexem na seed do construtor — evita conflito e retrabalho."
+
+  # ==================== V11 — GOVERNANCA / LOOP AUTONOMO ====================
+  # (Os itens de loop UX-M37..M40 vivem em UIUX_MILESTONES.yaml e estao pending por
+  #  limite estrutural — essencia em .claude/ gitignored + gate = 'rodar 1 tick real'.
+  #  Ver licao [[2026-07-04-milestone-nao-commitavel-em-dot-claude-nao-e-shippavel-por-gate]].
+  #  Nao duplicar aqui. O item COMMITAVEL de governanca abaixo e novo.)
+  - id: GOV-01
+    title: "Mover MF-P14 (leak da chave) pra este roadmap como SEC-01 e marcar o espelho no loops/backlog.yaml"
+    vertente: V11
+    tier: B
+    owner: softwareengineer
+    scope: "Include: registrar em loops/backlog.yaml que o item de seguranca S+ agora e rastreado como SEC-01 aqui (o espelho MF-P14 aponta pra ca), pra nao ter dois ids vivos pro mesmo risco. Exclude: mudar o status (continua human-gated)."
+    why: "Analise: o leak da chave e rastreado como P14 (MILESTONES), MF-P14 (loops/backlog) e agora SEC-01. Tres ids pro mesmo risco confundem. Um ponteiro unico evita a proxima sessao 're-descobrir' o item ja conhecido."
+    gate: ["loops/backlog.yaml aponta MF-P14 -> SEC-01", "yaml valida"]
+    status: pending
+
+# ============================ FIM DO ROADMAP ============================
+# Total: 26 itens novos multi-vertente. Nenhum shipped ainda (roadmap recem-criado).
+# Proximo a pegar (maior tier, sem depends aberto, COMMITAVEL nesta sessao):
+#   SEO-01 (S+, corrige self-canonical — puro src/, gate npm, alto impacto).
+# S+ human-gated (Claude PROPOE, humano dirige): SEC-01, e por dependencia PET-01/INIT-01.
