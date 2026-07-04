@@ -146,7 +146,8 @@ milestones:
     scope: "Include: cross-link calmo do /bluey de volta ao /assinar; consistencia visual com o resto (tokens). Exclude: redesign do /bluey."
     why: "Bluey gera trafego de criancas/familias; hoje e beco sem saida no funil."
     gate: ["npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: later
+    note: "Re-escopado 2026-07-03: /bluey neste repo e so um redirect imediato para o site EXTERNO rslgp.github.io/bluey (outro repositorio). O cross-link pertence aquele repo; uma pagina interstitial local atrasaria a crianca a caminho do jogo (anti-proposito). Humano decide levar o link ao repo externo."
 
   # ---------- FASE 4 — Compreensao first-run ----------
   - id: UX-M11
@@ -204,7 +205,8 @@ milestones:
     scope: "Include: bloco de links no fim do main (pets, assinar, imprensa, parceiros, relatorios, iniciativas, privacy, terms); acessivel pre-hidratacao. Exclude: SEO tecnico alem dos links (sitemap.xml ja e outro assunto)."
     why: "Ultimo recurso de descoberta + fim de pagina claro (a pagina 'termina' num lugar util)."
     gate: ["npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "SiteFooterNav (nav aria-label i18n x12 'page.footer.nav_aria') com 9 rotas no fim do main, antes do VersionFooter; links reais pre-hidratacao, alvo >=44px. Labels em pt (nomes proprios das paginas, que sao superficies pt) — decisao registrada. Gate do lote: lint 0, vitest 1346/1346, fitness, build 0, smoke200 16/16, axe 0."
 
   # ---------- FASE 6 — Internacional e plataforma ----------
   - id: UX-M17
@@ -254,7 +256,8 @@ milestones:
     scope: "Include: fitness function nova no fitness-functions.mjs — grep de 'animation:' com 'infinite' em src/**/*.css fora de FF10_BASELINE (spinner de loading e o unico candidato legitimo hoje); mesma forma do FF9. Exclude: animacoes JS."
     why: "SC 2.2.2 ja pegou defeito real nesta sessao (pulse infinito); regra que so vive em nota de vault repete o erro — gate nao esquece."
     gate: ["npm run fitness (FF10 verde + falha em fixture de teste)", "npm run test"]
-    status: pending
+    status: shipped
+    evidence: "FF10 no fitness-functions.mjs: varre src/**/*.css (comentarios stripped preservando linha), falha em 'animation ... infinite' / 'animation-iteration-count: infinite' fora do FF10_INFINITE_ALLOWLIST (pets.css skeleton + ReportSheet.css spinner — loading indicators, a excecao canonica, com razao). PROVADO: fixture src/app/_ff10_fixture.css fez o gate falhar (exit 1, mensagem FF10 com file:line) e o tree limpo voltou verde (exit 0)."
 
   - id: UX-M22
     title: "Smoke visual Playwright dos affordances (veil some ao rolar, progress cresce, fades reagem)"
@@ -310,7 +313,8 @@ milestones:
     scope: "Include: pagina not-found com navegacao real (o smoke200 ja a exclui como error shell intencional — manter exclusao). Exclude: redirects automaticos."
     why: "Link quebrado compartilhado em grupo de WhatsApp nao pode ser beco sem saida."
     gate: ["npm run lint", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "src/app/not-found.js (server component, zero JS cliente): mensagem digna + 3 links de volta (mapa, /pets, /assinar). smoke200 mantem a exclusao intencional do error shell. Gate do lote: lint 0, build 0, smoke200 16/16."
 
   # ---------- FASE 9 — Linguagem visual, tipografia e motion ----------
   - id: UX-M28
