@@ -417,6 +417,7 @@ milestones:
     why: "O share (UX-M35) leva o link; um preview bonito e o que faz o grupo clicar. Separado por tocar no build de metadata (export)."
     gate: ["npm run build", "npm run smoke200", "validar og tags no HTML gerado"]
     status: shipped
+    commit: "385e896 feat(seo): add per-route OpenGraph cards for WhatsApp"
     evidence: "Cobertura por rota: / (root layout.js — og url corrigido de github.com/rslgp/mapafome para https://mapafome.com.br/ + og type=website + twitter summary_large_image), /assinar e /parceiros (novos server-component layout.js, o page e client component e nao pode exportar metadata; TITLE/DESCRIPTION calmos + og+twitter com /presskit/MapaFome_banner.png, alternates.canonical proprio). /pets (PET-M17) e /imprensa ja tinham og por rota. metadataBase (https://mapafome.com.br) herdado do root resolve as imagens/canonicais relativos para absolutos. ACHADO+FIX: o root layout cravava <link rel=canonical href=.../> hardcoded no <head>, que vazava para TODA rota -> /assinar e /parceiros emitiam DOIS canonicals concorrentes; movido para alternates.canonical no metadata do root (home carrega '/', cada rota sobrescreve) -> 1 canonical por pagina, validado no HTML gerado. GATE: lint 0, vitest 1354/1354, fitness 0, build 11/11, smoke200 16/16 (/assinar+/parceiros PASS), axe 0 violacoes em / + /assinar + /parceiros. OG tags conferidas no out/*.html (og:title/description/url/image absolutos + twitter card)."
 
   - id: UX-M36
