@@ -240,6 +240,7 @@ milestones:
     why: "Personas low-end: cada segundo de mapa branco e um usuario que fecha antes de qualquer affordance existir."
     gate: ["lighthouse CLI antes/depois lido", "npm run build", "npm run smoke200"]
     status: shipped
+    commit: "aad8d02 perf(map): preconnect the map tile hosts to cut LCP"
     evidence: "Resource hints no <head> do root layout.js (server component, first paint): preconnect ao host de tiles DEFAULT (worldtiles1.waze.com, o base checked:true em mapConstants; crossOrigin=anonymous pois tiles sao imagens cross-origin) + dns-prefetch aos 2 hosts de fallback (tile.openstreetmap.fr, server.arcgisonline.com, so buscados se o usuario troca de layer). O mapa e o elemento LCP e suas tiles vem de terceiro; o preconnect sobrepoe o handshake DNS+TCP+TLS ao parse do HTML em vez de comeca-lo so apos a hidratacao. VALIDADO no out/index.html: 1 preconnect + 2 dns-prefetch presentes. GATE: lint 0, vitest 1354/1354, fitness 0, build 11/11, smoke200 16/16, axe 0. DEBITO HONESTO (nao fabricado, H2): a medicao Lighthouse CLI antes/depois (LCP<2.5s Moto-G) do gate NAO foi rodada — Lighthouse CLI nao instalado + exige runtime servido e device-class profiling; e a metade owner=vercel:performance-optimizer. O code delta (hints) esta shipado e verificado; a MEDICAO fica como follow-up de perf com a ferramenta. Exclude respeitado: provedor de tiles intocado."
 
   - id: UX-M20
