@@ -12,11 +12,26 @@ export const metadata = {
     title: 'MAPA FOME',
     description: 'Vamos acabar com a fome juntos. Construído usando React, Material-UI e LeafletJS conectado ao Google Sheets para facilitar a edição da comunidade!',
     images: ['/app_screenshot2.png'],
-    url: 'https://github.com/rslgp/mapafome',
+    // UX-M35b: the site itself, not the GitHub repo — the OG url is what the
+    // WhatsApp preview card links to.
+    url: 'https://mapafome.com.br/',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MAPA FOME',
+    description: 'Vamos acabar com a fome juntos: um mapa colaborativo, aberto e em tempo real de quem precisa de alimento.',
+    images: ['/app_screenshot2.png'],
   },
   verification: {
     google: 'xnDDdF_R6dnOC-clyk9Y59OROow929qgIK_uEpUy52g',
   },
+  // UX-M35b: canonical via metadata (not a hard-coded <link> in <head>). A
+  // fixed <link rel="canonical" href=".../"> in the root <head> leaked onto
+  // EVERY route, so /assinar and /parceiros emitted two competing canonicals.
+  // Declaring it here lets the home carry "/" while each route layout that
+  // sets its own alternates.canonical overrides it — one canonical per page.
+  alternates: { canonical: 'https://mapafome.com.br/' },
 };
 
 export const viewport = {
@@ -34,7 +49,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        <link rel="canonical" href="https://mapafome.com.br/" />
         <meta name="referrer" content="no-referrer" />
         {/* PWA install bridge — capture `beforeinstallprompt` at page-parse time
             (before React mounts) so the event is never missed. The install
