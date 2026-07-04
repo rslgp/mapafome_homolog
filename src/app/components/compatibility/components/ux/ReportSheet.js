@@ -254,6 +254,12 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
             disabled={status === 'publishing' || status === 'success'}
+            /* UX-M23: this describes a THIRD PERSON's need, not the reporter's
+               own data — autocomplete off so the browser never offers to fill
+               the reporter's saved details here. enterKeyHint moves the
+               on-screen keyboard's action key to the next field. */
+            autoComplete="off"
+            enterKeyHint="next"
           />
         </details>
 
@@ -276,6 +282,11 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
             value={contact}
             onChange={(e) => setContact(e.target.value)}
             disabled={status === 'publishing' || status === 'success'}
+            /* UX-M23: a phone/@user/link for the REPORTED person, never the
+               reporter's own — autocomplete off. enterKeyHint 'done' because
+               contact is the last field before publish. */
+            autoComplete="off"
+            enterKeyHint="done"
           />
           <p className="mdf-sheet__consent">
             {t('page.report.consent_lead')}{' '}
