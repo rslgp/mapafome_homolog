@@ -23,6 +23,40 @@ import { t, useLocale } from './strings';
 const DISMISS_KEY = 'mdf_install_dismissed_until';
 const DISMISS_MS = 14 * 24 * 60 * 60 * 1000; // 14 days — don't nag
 const SHOW_DELAY_MS = 1500;                  // let the map settle before inviting
+const VISIT_KEY = 'mdf_visit_count';         // UX-M34: earn the invite
+
+// UX-M34 — value-timed invite. A native install prompt on the FIRST paint of a
+// stranger's FIRST visit is pure noise that trains the dismiss reflex; the
+// invitation should arrive AFTER the app has proved useful. Gate the reveal on
+// EITHER of two earned signals:
+//   • the visitor has been here before (2nd+ visit — this load bumps the count),
+//   • the visitor has acted on a pin this session (mdf_acted_on_pin, set by the
+//     report/act flow — a first-visit power user still gets invited).
+// Storage-blocked (private mode) returns false for both, so the toast simply
+// stays quiet rather than nagging.
+function actedOnPin() {
+  try {
+    return window.localStorage.getItem('mdf_acted_on_pin') === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+// Bump the per-load visit count ONCE and report whether the invite is earned
+// (returning visitor OR acted on a pin). Guarded by a module-load-scoped ref in
+// the caller so the two install effects (native + iOS) share ONE bump, never
+// double-count a single page load.
+function computeInviteEarned() {
+  let returning = false;
+  try {
+    const n = Number(window.localStorage.getItem(VISIT_KEY) || 0) + 1;
+    window.localStorage.setItem(VISIT_KEY, String(n));
+    returning = n >= 2;
+  } catch (e) {
+    returning = false;
+  }
+  return returning || actedOnPin();
+}
 
 // Single switch to turn swipe-to-dismiss off. When false, the toast is only
 // dismissed via the "Agora não" button (the native install flow is unaffected).
@@ -58,6 +92,18 @@ const InstallToast = () => {
   const toastRef = useRef(null);
   const dragRef = useRef({ x: 0, y: 0, dragging: false });
 
+  // UX-M34: resolve the "invite earned?" gate exactly once per mount (the bump
+  // must not run twice across the native + iOS effects). Lazy-init the ref so
+  // window is only touched post-mount; both effects read the same value.
+  const earnedRef = useRef(null);
+  const isInviteEarned = () => {
+    if (earnedRef.current === null) {
+      earnedRef.current =
+        typeof window === 'undefined' ? false : computeInviteEarned();
+    }
+    return earnedRef.current;
+  };
+
   // Single source of platform truth (LBR-D). The native-prompt branch below is
   // unchanged (LBR-A); these flags only gate the NEW iOS branch.
   const { isIOS, isStandalone, isInAppBrowser } = useInstallPrompt();
@@ -71,6 +117,7 @@ const InstallToast = () => {
     if (typeof window === 'undefined') return undefined;
     if (!isIOS || isStandalone) return undefined;
     if (dismissedRecently()) return undefined;
+    if (!isInviteEarned()) return undefined; // UX-M34: earn the invite
 
     const mode = isInAppBrowser ? 'safari' : 'add';
     clearTimeout(iosTimerRef.current);
@@ -93,6 +140,12 @@ const InstallToast = () => {
       window.__mdf_app_installed === true;
     if (standalone) return undefined;
     if (dismissedRecently()) return undefined;
+
+    // UX-M34: only invite once the app has earned it (returning visitor OR
+    // acted on a pin). isInviteEarned() records THIS visit once, so a
+    // first-timer crosses the threshold on their next load. The prompt event
+    // is still captured either way — we just hold the reveal.
+    if (!isInviteEarned()) return undefined;
 
     const reveal = (e) => {
       setPromptEvent(e);

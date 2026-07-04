@@ -54,6 +54,11 @@ beforeEach(() => {
   setLocale('pt-BR');
   vi.useFakeTimers();
   try { window.localStorage.clear(); } catch (_e) { /* ignore */ }
+  // UX-M34: the invite is now gated on an EARNED signal (2nd+ visit OR acted
+  // on a pin). These visibility tests exercise the settle/back-off/action
+  // logic, not the earn gate, so seed the "acted on a pin" signal to keep them
+  // focused. The earn gate itself has its own describe block below.
+  try { window.localStorage.setItem('mdf_acted_on_pin', '1'); } catch (_e) { /* ignore */ }
   delete window.__mdf_install_prompt;
   delete window.__mdf_app_installed;
 });
@@ -96,6 +101,36 @@ describe('InstallToast: settle delay + native invite', () => {
     const { container } = render(<InstallToast />);
     act(() => { vi.advanceTimersByTime(SHOW_DELAY_MS); });
     expect(container.querySelector('.mdf-install-toast')).toBeNull();
+  });
+});
+
+describe('InstallToast: UX-M34 value-timed invite gate', () => {
+  it('does NOT show on a first visit with no pin action (unearned)', () => {
+    // No mdf_acted_on_pin, no prior visit count -> first visit -> not earned.
+    window.localStorage.removeItem('mdf_acted_on_pin');
+    window.__mdf_install_prompt = makePromptEvent();
+    const { container } = render(<InstallToast />);
+    act(() => { vi.advanceTimersByTime(SHOW_DELAY_MS); });
+    expect(container.querySelector('.mdf-install-toast')).toBeNull();
+    // The visit was recorded, so a returning visitor crosses the threshold.
+    expect(Number(window.localStorage.getItem('mdf_visit_count'))).toBe(1);
+  });
+
+  it('shows on the second visit even without a pin action', () => {
+    window.localStorage.removeItem('mdf_acted_on_pin');
+    window.localStorage.setItem('mdf_visit_count', '1'); // already visited once
+    window.__mdf_install_prompt = makePromptEvent();
+    const { container } = render(<InstallToast />);
+    act(() => { vi.advanceTimersByTime(SHOW_DELAY_MS); });
+    expect(container.querySelector('.mdf-install-toast')).toBeTruthy();
+  });
+
+  it('shows on a first visit once a pin has been acted on', () => {
+    window.localStorage.setItem('mdf_acted_on_pin', '1'); // value delivered
+    window.__mdf_install_prompt = makePromptEvent();
+    const { container } = render(<InstallToast />);
+    act(() => { vi.advanceTimersByTime(SHOW_DELAY_MS); });
+    expect(container.querySelector('.mdf-install-toast')).toBeTruthy();
   });
 });
 
