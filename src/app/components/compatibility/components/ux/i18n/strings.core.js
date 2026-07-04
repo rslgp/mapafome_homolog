@@ -37,6 +37,7 @@ export const pt = {
   'pin.after_attended': 'Obrigado. O ponto foi arquivado.',
   'empty.no_pins_in_view':  'Ninguém foi mapeado nesta área ainda. Se você viu alguém precisando, toque em Relatar.',
   'empty.close': 'Fechar o aviso',
+  'empty.region': 'Nenhum ponto por perto',
   'cta.report': 'Relatar',
   'cta.list':   'Lista',
   'cta.help':   'Como funciona',
@@ -146,6 +147,7 @@ export const es = {
   'pin.after_attended': 'Gracias. El punto fue archivado.',
   'empty.no_pins_in_view':  'Nadie ha sido mapeado en esta área aún. Si viste a alguien en necesidad, toca Reportar.',
   'empty.close': 'Cerrar el aviso',
+  'empty.region': 'Ningún punto cerca',
   'cta.report': 'Reportar',
   'cta.list':   'Lista',
   'cta.help':   'Cómo funciona',
@@ -249,6 +251,7 @@ export const enUS = {
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '[REVISAR-HUMANO] No one has been mapped in this area yet. If you saw someone in need, tap Report.',
   'empty.close': 'Close the notice',
+  'empty.region': 'No pins nearby',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Report',
   'cta.list':   'List',
@@ -354,6 +357,7 @@ export const de = {
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '[REVISAR-HUMANO] In diesem Bereich wurde noch niemand kartiert. Wenn du jemanden in Not gesehen hast, tippe auf Melden.',
   'empty.close': 'Hinweis schließen',
+  'empty.region': 'Keine Punkte in der Nähe',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Melden',
   'cta.list':   'Liste',
@@ -450,6 +454,7 @@ export const fr = {
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '[REVISAR-HUMANO] Personne n\'a encore été cartographié dans cette zone. Si tu as vu quelqu\'un dans le besoin, touche Signaler.',
   'empty.close': 'Fermer l\'avis',
+  'empty.region': 'Aucun point à proximité',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Signaler',
   'cta.list':   'Liste',
@@ -548,6 +553,7 @@ export const ru = {
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '[REVISAR-HUMANO] В этой области пока никого не отметили. Если вы видели человека в нужде, нажмите Сообщить.',
   'empty.close': 'Закрыть уведомление',
+  'empty.region': 'Рядом нет точек',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Сообщить',
   'cta.list':   'Список',
@@ -648,6 +654,7 @@ export const zh = {
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '[REVISAR-HUMANO] 这片区域还没有人被标记。如果你看到有人需要帮助，请点击举报。',
   'empty.close': '关闭提示',
+  'empty.region': '附近没有标记点',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': '举报',
   'cta.list':   '列表',
@@ -758,6 +765,7 @@ export const ar = {
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '[REVISAR-HUMANO] لم يُسجَّل أحد في هذه المنطقة بعد. إذا رأيت شخصًا محتاجًا، انقر على إبلاغ.',
   'empty.close': 'إغلاق الإشعار',
+  'empty.region': 'لا نقاط قريبة',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'إبلاغ',
   'cta.list':   'قائمة',
@@ -854,6 +862,7 @@ export const bn = {
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '[REVISAR-HUMANO] এই এলাকায় এখনও কাউকে মানচিত্রে যুক্ত করা হয়নি. যদি কাউকে প্রয়োজনে দেখে থাকেন, রিপোর্ট-এ আলতো চাপুন.',
   'empty.close': 'বিজ্ঞপ্তি বন্ধ করুন',
+  'empty.region': 'কাছাকাছি কোনো পয়েন্ট নেই',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'রিপোর্ট',
   'cta.list':   'তালিকা',
@@ -950,6 +959,7 @@ export const uk = {
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '[REVISAR-HUMANO] У цій області поки нікого не позначено. Якщо ви бачили людину в потребі, натисніть Повідомити.',
   'empty.close': 'Закрити сповіщення',
+  'empty.region': 'Поблизу немає точок',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Повідомити',
   'cta.list':   'Список',
@@ -1059,6 +1069,7 @@ export const hi = {
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '[REVISAR-HUMANO] इस क्षेत्र में अभी तक किसी को मानचित्र पर नहीं डाला गया है. अगर आपने किसी को ज़रूरत में देखा है, तो रिपोर्ट करें पर टैप करें.',
   'empty.close': 'सूचना बंद करें',
+  'empty.region': 'आस-पास कोई बिंदु नहीं',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'रिपोर्ट करें',
   'cta.list':   'सूची',
@@ -1155,6 +1166,7 @@ export const tr = {
   // empty.* — hunger-need empty state. DIGNITY-SENSITIVE: human-reviewed.
   'empty.no_pins_in_view':  '[REVISAR-HUMANO] Bu alanda henüz kimse haritaya eklenmedi. İhtiyaç içinde birini gördüysen, Bildir\'e dokun.',
   'empty.close': 'Bildirimi kapat',
+  'empty.region': 'Yakında nokta yok',
   // cta.* — navigation/action labels. Mechanical, finalized.
   'cta.report': 'Bildir',
   'cta.list':   'Liste',

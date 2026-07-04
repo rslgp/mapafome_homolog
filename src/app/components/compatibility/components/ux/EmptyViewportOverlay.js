@@ -55,7 +55,7 @@ export default function EmptyViewportOverlay({ visible, onStartReport }) {
   if (!visible || dismissed) return null;
 
   return (
-    <div className="mdf-empty" role="region" aria-label="Nenhum ponto por perto">
+    <div className="mdf-empty" role="region" aria-label={t('empty.region')}>
       <div
         className="mdf-empty__card"
         onTouchStart={onTouchStart}
