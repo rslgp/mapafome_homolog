@@ -19,6 +19,7 @@ import ScrollAffordance from './components/ux/ScrollAffordance';
 import TapDebugOverlay from './components/_debug/TapDebugOverlay';
 import ContextBar from './components/ux/ContextBar';
 import InfoPanel from './components/InfoPanel';
+import SiteFooterNav from './components/ux/SiteFooterNav';
 import VersionFooter from './components/VersionFooter';
 import AppMapGrid from './AppMapGrid';
 
@@ -72,7 +73,11 @@ export default function AppMain({ state, handlers, refs }) {
             {/* 7. Legend / info surface (#MoreInfo). */}
             <InfoPanel rowCount={state.rowCount} />
 
-            {/* 8. Version footer — last child of <main>. Renders nothing
+            {/* 8. Site map nav (UX-M16) — the page ENDS somewhere useful:
+                  every route one tap away, crawlable, pre-hydration links. */}
+            <SiteFooterNav />
+
+            {/* 9. Version footer — last child of <main>. Renders nothing
                   until /version.json resolves. SRP: shows ONLY the build
                   identifier (no other footer concerns). */}
             <VersionFooter />

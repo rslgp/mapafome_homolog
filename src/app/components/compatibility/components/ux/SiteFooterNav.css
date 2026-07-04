@@ -1,0 +1,31 @@
+/* UX-M16: end-of-page site map. Quiet by design — it marks "the page ends
+   HERE, and here is everywhere else you can go". */
+.mdf-sitenav {
+  margin-top: var(--mdf-space-6);
+  padding: var(--mdf-space-4) 0;
+  border-top: 1px solid var(--mdf-border);
+}
+
+.mdf-sitenav__list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--mdf-space-2) var(--mdf-space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mdf-sitenav__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mdf-touch-target);
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-caption);
+  text-decoration: none;
+}
+
+.mdf-sitenav__link:hover {
+  color: var(--mdf-ink);
+  text-decoration: underline;
+}
