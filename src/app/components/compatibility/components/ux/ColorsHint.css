@@ -1,0 +1,57 @@
+/* UX-M13: one-shot pin-color vocabulary chip. Calm note above the map —
+   information, not interruption. Dots use the existing tour-swatch tokens
+   (illustrative preview hues, the same SOT the tutorial uses). */
+.mdf-colorshint {
+  display: flex;
+  align-items: center;
+  gap: var(--mdf-space-3);
+  margin: 0 0 var(--mdf-space-3);
+  padding: var(--mdf-space-2) var(--mdf-space-2) var(--mdf-space-2) var(--mdf-space-4);
+  background: var(--mdf-surface-1);
+  border: 1px solid var(--mdf-border);
+  border-radius: var(--mdf-radius-card);
+  box-shadow: var(--mdf-elev-1);
+}
+
+.mdf-colorshint__dots {
+  display: inline-flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.mdf-colorshint__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--mdf-radius-pill);
+  border: 1px solid var(--mdf-border);
+}
+
+.mdf-colorshint__dot--yellow { background: var(--mdf-tour-swatch-yellow); }
+.mdf-colorshint__dot--blue   { background: var(--mdf-tour-swatch-blue); }
+.mdf-colorshint__dot--red    { background: var(--mdf-tour-swatch-red); }
+.mdf-colorshint__dot--green  { background: var(--mdf-urgency-fresh); }
+
+.mdf-colorshint__text {
+  flex: 1 1 auto;
+  color: var(--mdf-ink-muted);
+  font-size: var(--mdf-fs-small);
+  line-height: 1.4;
+}
+
+.mdf-colorshint__close {
+  flex-shrink: 0;
+  min-width: var(--mdf-touch-target);
+  min-height: var(--mdf-touch-target);
+  background: transparent;
+  border: 0;
+  border-radius: var(--mdf-radius-card);
+  color: var(--mdf-ink-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mdf-colorshint__close:hover {
+  color: var(--mdf-ink);
+  background: var(--mdf-surface-2);
+}
