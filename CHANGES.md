@@ -9,22 +9,23 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `ff9b40e docs(roadmap)` (SEO-02 aguardando commit via agent_git-commit-specialist)
+> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `5cab413 docs(roadmap)` (QA-01 aguardando commit via agent_git-commit-specialist)
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-04-D`](#2026-07-04-d--qa-01-shipped-gate-de-teste-oom-safe-por-default) — **QA-01 SHIPPED**: vitest.config forca forks+singleFork+no-file-parallelism; `npm run test` plano agora e OOM-safe. Gate verde.
 - [`2026-07-04-C`](#2026-07-04-c--seo-02-shipped-sitemap--robots-dinamicos) — **SEO-02 SHIPPED**: sitemap.js + robots.js dinamicos; aposentados os 3 estaticos stale de 2022. Gate verde.
 - [`2026-07-04-B`](#2026-07-04-b--seo-01-shipped-corrige-self-canonical-em-3-rotas) — **SEO-01 SHIPPED**: 3 layout.js novos (relatorios/relatorio-marketing/iniciativas-cadastrar) — corrige self-canonical. Gate verde.
 - [`2026-07-04-A`](#2026-07-04-a--deep-analysis--roadmap-multi-vertente) — Deep-analysis do produto (11 vertentes) + criado `ROADMAP_VERTENTES.yaml` (30 milestones) + este log + licao de padrao-de-log no vault.
 
 ### STATUS_TALLY (ROADMAP_VERTENTES.yaml)
-- **30 milestones** · pending **22** · blocked-human **5** · later **1** · **shipped 2** (SEO-01, SEO-02).
+- **30 milestones** · pending **21** · blocked-human **5** · later **1** · **shipped 3** (SEO-01, SEO-02, QA-01).
 - Por tier: **S+ 3** · S 8 · A 10 · B 9.
-- Por vertente: V1 core-fome 2 · V2 pet 5 · V3 asaas 3 · V4 i18n 2 · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (2 shipped) · V9 qa 2 · V10 seguranca 3 · V11 governanca 1.
+- Por vertente: V1 core-fome 2 · V2 pet 5 · V3 asaas 3 · V4 i18n 2 · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (2 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 · V11 governanca 1.
 
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
-1. **SEO-03** (A) ou **PAY-01/QA-01/PET-02/I18N-01** (S): proximos pending commitaveis. QA-01 (codificar pool=forks default) e barato e mata a pegadinha de OOM de toda sessao.
+1. **PET-02 / PAY-01 / I18N-01** (S, pending, commitaveis): proximos maior-tier. PET-02 (ligar o dedup de pets ja construido) e o mais barato (dead code -> caller). Depois SEO-03 (A, JSON-LD).
 2. **SEC-01** (S+, blocked-human): tirar a chave privada Google do bundle client via proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
 3. **PET-01 / INIT-01 / PAY-02 / SEO-04 / FOME-02** (blocked-human/later): dependem de acao humana (storage, destino, efeito de negocio, decisao de produto, ou dep de SEC-01). NAO auto-shippaveis.
 
@@ -130,3 +131,32 @@
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
 
 **Proximo:** proximo pending commitavel de maior tier (SEO-03 A, ou os S: QA-01/PAY-01/PET-02/I18N-01).
+
+---
+
+## 2026-07-04-D — QA-01 shipped: gate de teste OOM-safe por default
+
+**Comando:** "ship until there is pending" (loop; pegou QA-01 — barato e mata a pegadinha de OOM de toda sessao).
+
+**O que foi feito:**
+
+| Arquivo / Acao | O que | Por que |
+|---|---|---|
+| `vitest.config.mjs` (edit) | Adicionado ao bloco `test`: `pool: 'forks'` + `poolOptions: { forks: { singleFork: true } }` + `fileParallelism: false`, com comentario explicando o crash e o flake. | O pool default (threads) faz OOM nesta maquina (crash -1073740791 / worker teardown) e o paralelismo dispara o flake vitest-axe "Axe is already running". |
+| `ROADMAP_VERTENTES.yaml` (edit) | QA-01 pending -> shipped. | Flip so com gate verde lido. |
+
+**Efeito:** `npm run test` PLANO (sem `--pool=forks --no-file-parallelism` na CLI) agora e serial-e-OOM-safe por default. Todo caller (CI, agentes de commit-gate, sessao futura) herda a correcao sem precisar lembrar das flags — tira a pegadinha que reaparecia a cada sessao (memoria [[vitest-oom-forks-pool]]).
+
+**Gate (verde, lido nesta sessao):**
+
+| Check | Resultado |
+|---|---|
+| config parse | pool=forks · singleFork=true · fileParallelism=false |
+| test (PLANO, sem flags) | 1354/1354 passed, 94 files, exit 0, sem OOM, sem flake axe |
+| lint | exit 0 |
+| fitness | exit 0 |
+| build/smoke200/a11y | N/A (mudanca so de infra de teste; nenhuma pagina de render tocada) |
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+**Proximo:** PET-02 (ligar o dedup de pets ja construido — dead code -> caller).

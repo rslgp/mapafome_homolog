@@ -346,7 +346,9 @@ milestones:
     scope: "Include: tornar --pool=forks --no-file-parallelism o default do npm run test (hoje o pool paralelo faz OOM nesta maquina e dispara o flake 'Axe is already running' do vitest-axe). Documentar NODE_OPTIONS max-old-space-size. Exclude: reescrever os testes de a11y."
     why: "Analise + memoria: o gate cheio faz OOM no pool paralelo (crash -1073740791) e o assinar-a11y falha intermitente por paralelismo do vitest-axe. Forcar forks+serial e a correcao ja conhecida — codifica-la no script tira a pegadinha de toda sessao futura."
     gate: ["npm run test (verde, sem OOM, sem flake axe)", "npm run lint"]
-    status: pending
+    status: shipped
+    commit: "PENDENTE (routed pro agent_git-commit-specialist nesta sessao 2026-07-04)"
+    evidence: "vitest.config.mjs: adicionado pool:'forks' + poolOptions.forks.singleFork:true + fileParallelism:false ao bloco test (com comentario explicando o crash -1073740791 e o flake 'Axe is already running'). Agora `npm run test` PLANO (sem flags de CLI) e serial-e-OOM-safe por default — todo caller (CI, agentes de commit-gate) herda sem precisar lembrar de --pool=forks --no-file-parallelism. VERIFICADO: config parseia (pool=forks singleFork=true fileParallelism=false); `npm run test` plano = 1354/1354 (94 files) exit 0, sem OOM, sem flake axe (NODE_OPTIONS=--max-old-space-size=6144). GATE VERDE: lint 0; fitness 0; test plano 1354/1354. Sem build/smoke200/a11y (mudanca so de infra de teste, nenhuma pagina de render tocada)."
 
   - id: QA-02
     title: "Pay-down da divida baselined do FF2 (funcoes >100 LOC allowlisted) — 1-2 por vez"
