@@ -50,6 +50,17 @@ export default function RootLayout({ children }) {
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <meta name="referrer" content="no-referrer" />
+        {/* UX-M19 (CWV/LCP): the map is the LCP element and its tiles come from a
+            third-party host, so the browser must DNS-resolve + TCP + TLS that host
+            before Leaflet can even request the first tile. Warm the DEFAULT layer's
+            host (Waze, the checked:true base in mapConstants) with preconnect so the
+            handshake overlaps HTML parse instead of starting after hydration; the two
+            fallback hosts (only fetched if the user switches layer) get the cheaper
+            dns-prefetch. crossOrigin because tiles are cross-origin image requests.
+            SOT note: hosts mirror src/.../mapConstants.js TILE_LAYERS — keep in sync. */}
+        <link rel="preconnect" href="https://worldtiles1.waze.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://tile.openstreetmap.fr" />
+        <link rel="dns-prefetch" href="https://server.arcgisonline.com" />
         {/* PWA install bridge — capture `beforeinstallprompt` at page-parse time
             (before React mounts) so the event is never missed. The install
             button reads window.__mdf_install_prompt and calls .prompt() on it.
