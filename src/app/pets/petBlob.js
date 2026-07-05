@@ -70,10 +70,15 @@ export function buildPetDados({ coords, status, species, size, color, name, cont
   }
   // PET-M3 — texto livre passa pela barricada de higiene (cap + strip de
   // controle), nunca mais cru. `species`/`size` são ids validados contra um Set
-  // (não texto livre), então só caem para ''. `contact` NÃO é higienizado aqui
-  // de propósito: o resolveContact já o trata como ação (nunca como texto cru
-  // renderizado) e o cap dele vive no input; aplicar strip de controle a um
-  // identificador/telefone poderia mexer em formatação legítima.
+  // (não texto livre), então só caem para ''.
+  // SEC-03 — `contact` AGORA também passa por sanitizeFreeText. Antes era `||''`
+  // cru sob a justificativa de que resolveContact o trata como AÇÃO (nunca texto
+  // renderizado). Mas `contact` PERSISTE em Dados.contact — uma string forjada
+  // com caracteres de controle entrava intacta na planilha. sanitizeFreeText
+  // remove SÓ controle (C0/DEL/C1); os caracteres imprimíveis de um telefone/
+  // e-mail (+, (), -, @, dígitos, letras) sobrevivem, então a formatação legítima
+  // não é mexida — só o vetor de injeção de controle é fechado, com cap de 60
+  // (espelha o maxLength do input).
   const dados = {
     kind: PET_KIND,
     status,
@@ -81,7 +86,7 @@ export function buildPetDados({ coords, status, species, size, color, name, cont
     size: size || '',
     color: sanitizeFreeText(color, PET_FREETEXT_MAXLEN.color),
     name: sanitizeFreeText(name, PET_FREETEXT_MAXLEN.name),
-    contact: contact || '',
+    contact: sanitizeFreeText(contact, PET_FREETEXT_MAXLEN.contact),
     Detalhe: sanitizeFreeText(detail, PET_FREETEXT_MAXLEN.detail),
     photos: sanitizePhotosUrl(photos),
     Coordinates: JSON.stringify(coords),

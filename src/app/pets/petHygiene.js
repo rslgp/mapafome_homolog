@@ -35,6 +35,12 @@ export const PET_FREETEXT_MAXLEN = {
   name: 40,
   color: 40,
   detail: 140,
+  // SEC-03: contact mirrors the PetReportSheet input maxLength (60). It goes
+  // through sanitizeFreeText too — the strip removes ONLY control chars, so a
+  // phone/email's printable characters (+, (), -, @, digits, letters) all
+  // survive; formatting is never mangled. The point is that contact PERSISTS
+  // into Dados.contact, so a crafted control-char string must not land there.
+  contact: 60,
 };
 
 // Sanitiza UM campo de texto livre. PURA + DETERMINÍSTICA (sem Date.now()):

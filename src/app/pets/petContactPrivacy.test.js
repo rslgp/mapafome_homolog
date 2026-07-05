@@ -126,6 +126,34 @@ describe('(c) relato CONTACTLESS publica e parseia limpo de ponta a ponta', () =
   });
 });
 
+describe('(SEC-03) contact é higienizado ANTES de persistir em Dados.contact', () => {
+  it('um telefone/e-mail legítimo sobrevive byte-a-byte (formatação não é mexida)', () => {
+    // Todos imprimíveis (+, (), -, espaço, @, dígitos, letras) — nada de controle.
+    for (const legit of ['5581999990000', '+55 (81) 99999-0000', 'ajuda@exemplo.com']) {
+      const dados = buildPetDados({ coords: COORDS, status: 'perdido', contact: legit, dateIso: ISO });
+      expect(dados.contact).toBe(legit);
+    }
+  });
+
+  it('caracteres de CONTROLE forjados são removidos do contato persistido', () => {
+    // \x00 NUL, \x1b ESC, \x07 BEL, \x7f DEL — um payload que antes entrava cru.
+    const malicioso = '55\x0081\x1b99999\x070000\x7f';
+    const dados = buildPetDados({ coords: COORDS, status: 'perdido', contact: malicioso, dateIso: ISO });
+    // Nenhum char de controle no que persiste; os DÍGITOS legítimos sobrevivem.
+    expect(dados.contact).not.toMatch(/[\x00-\x1f\x7f-\x9f]/);
+    expect(dados.contact.replace(/\D/g, '')).toBe('5581999990000');
+    // Round-trip: parsePetRow lê o contato já limpo.
+    const pet = parsePetRow(asRow(dados));
+    expect(pet.contact).not.toMatch(/[\x00-\x1f\x7f-\x9f]/);
+  });
+
+  it('contato é limitado a 60 chars (espelha o maxLength do input)', () => {
+    const longo = '9'.repeat(200);
+    const dados = buildPetDados({ coords: COORDS, status: 'perdido', contact: longo, dateIso: ISO });
+    expect(dados.contact.length).toBe(60);
+  });
+});
+
 describe('(f) trackError não vaza contato/texto-livre', () => {
   let track;
   let trackError;
