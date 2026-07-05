@@ -182,6 +182,22 @@ areas:
     nome: "Anti-abuso no path de escrita (honeypot/min-time) (pass 9)"
   - id: SWDATA
     nome: "Evicao do cache de DADOS no update do SW (pass 9)"
+  - id: IOSPWA
+    nome: "iOS PWA — icone/meta de home-screen (pass 10)"
+  - id: SWNAV
+    nome: "Fallback offline de NAVEGACAO no SW (pass 10)"
+  - id: IPA
+    nome: "Artefato IPA/OTA sideload no public/ (pass 10)"
+  - id: SHARELOC
+    nome: "Localizacao do texto de share WhatsApp (pass 10)"
+  - id: ROBOTS2
+    nome: "robots.txt vs stubs de redirect de jogos (pass 10)"
+  - id: RTL
+    nome: "Layout RTL pro locale ar (pass 10)"
+  - id: SECTXT
+    nome: "security.txt / canal de disclosure (pass 10)"
+  - id: GOV2
+    nome: "Governanca de repo / README onboarding (pass 10)"
 
 milestones:
 
@@ -1672,6 +1688,101 @@ milestones:
     gate: ["npm run build", "npm run smoke200", "npm run a11y"]
     status: pending
 
+  # ---- PASS 10 ----
+
+  - id: EXT-IOSPWA-01
+    title: "ZERO apple-touch-icon / apple-mobile-web-app meta — Add to Home Screen no iOS da icone borrado e abre com chrome do Safari"
+    area: IOSPWA
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: icons.apple no metadata do layout.js raiz (PNG 180x180 dedicado) + apple-mobile-web-app-capable + status-bar-style. Exclude: splash screens por device (apple-touch-startup-image, matriz grande — item futuro se pedirem)."
+    why: "Scan pass 10: layout.js:38-46 tem viewport+themeColor mas nenhum icons.apple; grep por apple-touch-icon|apple-mobile em src/ e out/index.html = ZERO. O caminho de instalacao mais compartilhavel (WhatsApp -> iOS) produz icone screenshot borrado e app fora de standalone — mina o posicionamento 'tres toques pra instalar'. safe-area/viewport-fit/maskable JA corretos (escaneado: 20+ call sites de env(safe-area-inset), manifest.json:30-35)."
+    gate: ["npm run build", "npm run smoke200", "verificacao manual: meta tags no out/index.html"]
+    status: pending
+
+  - id: EXT-SWNAV-01
+    title: "SW sem fallback de NAVEGACAO offline — navegar offline pra rota nao-cacheada = erro nativo do browser, nao shell da marca"
+    area: SWNAV
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: branch request.mode==='navigate' no fetch handler do sw.js com fallback pra um offline.html (ou o shell do index) pre-cacheado no install. Exclude: mudar as estrategias de tiles/data existentes; a evicao do -data ja e EXT-SWDATA-01."
+    why: "Scan pass 10: sw.js:108-129 trata tiles/data/shell mas nao tem branch de navigate nem offline.html (out/offline.html NAO existe); cacheFirst (:99) so devolve cache de GET ja visitado — navegacao fria offline pra rota nao visitada cai no fetch() e estoura. O publico de baixa conectividade (exatamente doador/beneficiario do produto) ve erro morto do browser. 404 chain por sinal esta OK (not-found.js + out/404.html de 13KB gerado — escaneado e aprovado)."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-SHARELOC-01
+    title: "Share do WhatsApp no InfoPanel e pt-BR HARDCODED (e sem encodeURIComponent) — usuario ar/zh/de compartilha em portugues"
+    area: SHARELOC
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: InfoPanel.js:37-41 — mover o corpo da mensagem pra t() nos 12 locales (via agent_translation-localization pros 7 core; copiar padrao dos shards pros demais) + encodeURIComponent no texto (petShare.js:123 ja faz certo — referencia interna). Exclude: mudar o formato do link wa.me."
+    why: "Scan pass 10: o title/label usam t('page.info.share_whatsapp') mas o texto da mensagem no href e literal pt-BR cru — a superficie de crescimento VIRAL derrota o trabalho de 12 locales; e sem encoding, chars arabes/chineses podem quebrar o link. E o mesmo tipo de gap do EXT-HREFLANG-01: o alcance internacional morre no ultimo metro."
+    gate: ["npm run test (parity de chave nos 12 locales)", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-RTL-01
+    title: "dir=rtl flipa o TEXTO mas o layout usa CSS fisico (left/right) — arabe renderiza num shell LTR meio-espelhado"
+    area: RTL
+    tier: S-
+    owner: softwareengineer + human-gated (auditoria RTL completa e escopo grande; decidir profundidade)
+    scope: "Include: auditoria dos physicals mais visiveis (FAB right: em ReportSheet.css:331, CountryFlagControl.css, paddings do header) -> logical properties (inset-inline-end etc) OU escopo minimo documentado. Exclude: espelhar o mapa Leaflet em si (nao se espelha mapa)."
+    why: "Scan pass 10: engine.js:86-95 seta dir=rtl pro ar corretamente e o COMENTARIO :93-94 ja declara 'full CSS logical-property audit intentionally out of scope' — divida conhecida e nao trackeada em lugar nenhum ate agora. Resultado atual: controles ancorados fisicamente + texto espelhado = experiencia visualmente incoerente pro publico arabe que a expansao humanitaria declaradamente mira."
+    gate: ["npm run build", "npm run smoke200", "npm run a11y", "screenshot manual em ar"]
+    status: blocked-human
+    human_gate: true
+
+  - id: EXT-RTL-02
+    title: "html hardcoda lang=pt-BR sem dir — pre-hidratacao e sempre LTR/pt pros 12 locales (flash de reflow no ar)"
+    area: RTL
+    tier: A
+    owner: softwareengineer
+    scope: "Include: documentar o trade-off no layout.js (export estatico = 1 HTML pra todos os locales; o fix real seria rota por locale = decisao do EXT-HREFLANG-01) + avaliar dir=auto ou script inline minimo pre-hydration. Exclude: rotas por locale (decisao humana no HREFLANG-01)."
+    why: "Scan pass 10: layout.js:51 <html lang=pt-BR> sem dir; applyDocumentLang (engine.js:86) so roda pos-mount — leitor de tela/crawler ve pt-BR no documento pre-hidratado em todos os locales, e o ar tem flash LTR->RTL. E a RAIZ que habilita o EXT-RTL-01 e conecta com o EXT-HREFLANG-01."
+    gate: ["npm run build", "npm run smoke200"]
+    status: pending
+    depends: [EXT-HREFLANG-01]
+
+  - id: EXT-IPA-01
+    title: "IPA de 2.4MB nao-assinado + pagina OTA itms-services com bundle-version fossilizado em 1 — sideload quebrado shipando a cada deploy"
+    area: IPA
+    tier: A+
+    owner: "human-gated (decisao de produto: manter, assinar ou remover o canal iOS sideload)"
+    scope: "Include: decidir o destino do public/MapaFome.ipa + public/ios/ (remover do deploy? assinar de verdade? apontar pra TestFlight?); se mantiver, versionar o plist junto do build. Exclude: build/assinatura iOS em si (fora do repo web)."
+    why: "Scan pass 10: MapaFome.ipa (2.455.432 bytes, git-tracked) redeploya em todo publish; ios/index.html:6 oferece itms-services e ios/mapafome.plist:13,29-30 aponta pro IPA com bundle-version hardcoded 1 enquanto o web esta em 1.0.0-1783238456014 (version.json:2). Sem assinatura ad-hoc/enterprise evidente, o install falha no iOS moderno — peso morto + caminho quebrado apresentado a quem clicar. Pagina /ios nao e linkada da UI (so acesso direto), o que reduz mas nao zera a exposicao."
+    gate: ["decisao humana registrada + build/smoke200 apos remocao ou fix"]
+    status: blocked-human
+    human_gate: true
+
+  - id: EXT-SECTXT-01
+    title: "Sem .well-known/security.txt nem SECURITY.md — site com doacao e PII de localizacao sem canal de disclosure"
+    area: SECTXT
+    tier: A+
+    owner: softwareengineer + human-gated (qual e-mail de contato publicar)
+    scope: "Include: public/.well-known/security.txt (RFC 9116: Contact, Expires, Preferred-Languages) + SECURITY.md apontando pro mesmo canal. Exclude: bug bounty/policy formal."
+    why: "Scan pass 10: public/.well-known/ nao existe, sem security.txt/SECURITY.md — pesquisador que achar falha no backend de pagamento ou nos pins do Sheets nao tem canal documentado; pra um produto com doacoes + PII de localizacao, disclosure coordenada e o barato que evita o caro."
+    gate: ["npm run build", "npm run smoke200 (rota /.well-known/security.txt 200)"]
+    status: pending
+
+  - id: EXT-ROBOTS2-01
+    title: "robots.txt permite crawl dos stubs de redirect de jogos (/solone /dbd /bluey) — paginas thin 200 passando autoridade pra host de terceiro"
+    area: ROBOTS2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: Disallow /solone /dbd /bluey (+ /ios) no robots.js (sitemap ja exclui — sitemap.js:7-9, so falta o robots acompanhar). Exclude: remover os stubs (sao redirects intencionais)."
+    why: "Scan pass 10: robots.js:12-19 emite Allow:/ sem nenhum Disallow; out/solone|dbd|bluey/index.html sao shells meta-refresh pra rslgp.github.io/games — indexaveis como thin content no dominio principal, diluindo SEO num site que acabou de investir em sitemap/canonical/JSON-LD."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-GOV2-01
+    title: "README e boilerplate intocado do create-next-app — o contrato real de deploy vive so em public/_WARN e no workflow"
+    area: GOV2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: README real (o que e o produto, gate de verificacao do CLAUDE.md, export estatico + branch gh-pages, asaas-backend separado, aviso do _WARN) + SECURITY.md ja coberto no EXT-SECTXT-01. Exclude: CODEOWNERS/templates de PR (repo de mantenedor unico — adicionar so se o time crescer)."
+    why: "Scan pass 10: README.md:1-37 e o template stock do Next (nao mente, mas nao descreve NADA do real); contribuidor novo nao descobre o gate, o export estatico nem que public/_WARN avisa 'use a branch gh-pages'. Onboarding zero num repo que ja tem convencoes fortes."
+    gate: ["revisao de conteudo + npm run build (sanidade)"]
+    status: pending
+
 # ============================ FIM DO DOCUMENTO ============================
 # Total real (validado via parser YAML): 123 milestones em 50 areas, 0 ids
 # duplicados. 3 sao cross-ref intencional (EXT-EH-02 -> PET-04, EXT-SETSTATE-02
@@ -1804,3 +1915,26 @@ milestones:
 # TOTAIS POS-PASS-9 (validar via parser antes de commitar): 138 milestones em
 # 63 areas. Tiers: S+1 | S 9 | S- 47 | A+ 41 | A 40.
 # Status: pending 121 | blocked-human 14 | later 3.
+#
+# PASS 10 (loop de 10min; quota pre-pass: sessao 53% | semana 51%).
+# 8 areas novas (IOSPWA, SWNAV, IPA, SHARELOC, ROBOTS2, RTL, SECTXT, GOV2);
+# 9 itens (RTL com 2). Achados que doem:
+#   EXT-IOSPWA-01 (S-) — zero apple-touch-icon/apple-mobile meta: Add to Home
+#     Screen no iOS = icone borrado + abre no chrome do Safari; o caminho de
+#     install mais compartilhavel (WhatsApp -> iOS) mina o 'tres toques'.
+#   EXT-SWNAV-01 (S-) — SW sem fallback de navegacao offline: o publico de
+#     baixa conectividade ve o erro nativo do browser, contra o proprio
+#     contrato declarado no header do sw.js.
+#   EXT-SHARELOC-01 (S-) — texto do share WhatsApp hardcoded pt-BR (e sem
+#     encoding): a superficie VIRAL derrota os 12 locales no ultimo metro.
+#   EXT-RTL-01 (S-, human_gate) — dir=rtl sem CSS logico: arabe num shell
+#     meio-espelhado; a divida ja era declarada em comentario (engine.js:93-94)
+#     mas nao trackeada em lugar nenhum.
+# 5 angulos honestamente vazios: log PII do asaas-backend (limpo — so type/id/
+# err.message), overflow de string longa (StepsHint e scroller por design,
+# header tem ellipsis), safe-area iOS (20+ call sites corretos + maskable OK),
+# cadeia 404 (not-found.js + out/404.html de 13KB — so falta o offline do SW),
+# render dos stubs de jogos (validos; so o robots e gap).
+# TOTAIS POS-PASS-10 (validar via parser antes de commitar): 147 milestones em
+# 71 areas. Tiers: S+1 | S 9 | S- 51 | A+ 43 | A 43.
+# Status: pending 128 | blocked-human 16 | later 3.

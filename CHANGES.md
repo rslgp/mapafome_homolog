@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimos commits: `ba6a9c6` (fechamento T — commitado pela SESSAO CONCORRENTE com meu conteudo dirty; ver 2026-07-05-V), `b1e219c` (pass 8). **Pass 9 rodado no loop de 10min** (cron `c7ade9ba`, session-only): 138 itens/63 areas. Quota pre-pass9: sessao 35%/semana 49%. Proximo alvo: EXT-REP2-01 (S, sem human_gate).
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit: `ef3a5bd` (pass 9). **Pass 10 rodado no loop de 10min** (cron `c7ade9ba`): 147 itens/71 areas. Quota pre-pass10: sessao 53%/semana 51% (zona amarela). Proximo alvo: EXT-REP2-01 (S, sem human_gate).
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
-> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan ativo no loop, 138 itens/63 areas/9 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
+> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan ativo no loop, 147 itens/71 areas/10 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-05-W`](#2026-07-05-w--pass-10-no-loop-147-itens-71-areas) — **Pass 10 (loop)**: +9 itens em 8 areas novas. Achados: EXT-IOSPWA-01 (zero apple-touch-icon — install iOS da icone borrado fora de standalone), EXT-SWNAV-01 (SW sem fallback de navegacao offline — erro nativo pro publico de baixa conectividade), EXT-SHARELOC-01 (share WhatsApp hardcoded pt-BR na superficie viral), EXT-RTL-01 (dir=rtl sem CSS logico — arabe meio-espelhado). 5 angulos honestamente vazios (log PII do backend LIMPO, safe-area correta, 404 chain OK).
 - [`2026-07-05-V`](#2026-07-05-v--pass-9-no-loop-de-10min-138-itens-63-areas) — **Pass 9 (loop de 10min)**: +6 itens (5 areas novas + EXT-ASSET-03). Achados: EXT-HREFLANG-01 (12 locales, zero hreflang — publico internacional nao acha o site na propria lingua), EXT-FOCUSTRAP-01 (aria-modal sem trap — Tab escapa pro mapa escondido), EXT-ANTIABUSE-01 (time_from_start_ms medido e descartado; sem honeypot/min-time). 7 angulos honestamente vazios (SW lifecycle exemplar, reduced-motion honrado, hidratacao coberta por ssr:false, bundle bem dividido).
 - [`2026-07-05-U`](#2026-07-05-u--quota-resetada-scan-reaberto-pass-8-132-itens-58-areas) — **Quota resetada (re-login) — scan REABERTO, pass 8**: +9 itens em 8 areas novas. Achados que doem: EXT-URLSTATE-01 (back do Android fecha o SITE com report no meio), EXT-OWNERSHIP-01 (token de posse spec'ado mas nunca escrito — posse de pin 100% nocional), EXT-EMBED3P-01 (iframe Creators http:// = bloqueado como mixed content em producao HOJE). 4 angulos honestamente vazios.
 - [`2026-07-05-T`](#2026-07-05-t--quota-limit-atingido-scan-encerrado-em-123-itens50-areas7-passes) — **QUOTA LIMIT ATINGIDO — scan encerrado**: leitura real pre-pass8 = sessao 86% (zona vermelha >=80% do monitor-tokens). Footer do MILESTONES_EXTENDED.yaml fecha com trajetoria completa + criterio de parada + proximo alvo (EXT-REP2-01). Nenhum item novo; pass 8 nao rodado de proposito.
@@ -42,9 +43,9 @@
 - Por vertente: V1 core-fome 2 · V2 pet 5 (2 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (2 shipped) · V11 governanca 1.
 - **Todos os S+/S commitaveis shippados.** Restam: 7 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
-### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 9 passes, scan ativo no loop, tiers S+/S/S-/A+/A)
-- **138 milestones** em **63 areas** · pending **121** · blocked-human **14** · later **3** (cross-refs intencionais). Validado via parser YAML: 0 ids duplicados.
-- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · **S 9** · S- 47 · A+ 41 · A 40.
+### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 10 passes, scan ativo no loop, tiers S+/S/S-/A+/A)
+- **147 milestones** em **71 areas** · pending **128** · blocked-human **16** · later **3** (cross-refs intencionais). Validado via parser YAML: 0 ids duplicados.
+- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · **S 9** · S- 51 · A+ 43 · A 43.
 - 1 achado ja shipped fora do arquivo: SEC-02/FF11 (gate mecanico de secret-leak no bundle, allowlist por hash).
 - Achados mais criticos: **EXT-RACE-01** (S) — 2 usuarios diferentes escrevendo a mesma linha perdem uma escrita (row.save() = PUT cego sem CAS) · **EXT-URLSTATE-01** (S, pass 8) — back do Android fecha o site com report no meio · **EXT-OWNERSHIP-01** (S, pass 8) — posse de pin 100% nocional. Corretude: **EXT-LEGEND-01** — o hint de cores descreve o sistema de marcadores ANTIGO · **EXT-EMBED3P-01** — secao Creators renderiza VAZIA em producao (iframe http bloqueado).
 - **Proximo a pegar (commitavel, sem human_gate, sem deps):** EXT-REP2-01 (k-anonimizacao faltando em 2 tabelas do relatorio publico, S tier) ou EXT-SEC-03 (upgrade da cadeia axios/google-spreadsheet).
@@ -720,5 +721,30 @@ Trajetoria ~5-6pp de sessao por pass. Sessao ainda com margem (67%, nao critico)
 **7 angulos honestamente vazios:** SW update lifecycle (exemplar: sem skipWaiting prematuro, toast+controllerchange, updateViaCache none), prefers-reduced-motion (4 arquivos honram), prefers-color-scheme (starter morto nao importado), hidratacao (ssr:false cobre; R12 invariant), bundle (Leaflet/MUI fora do first-load; google-spreadsheet lazy), peso do repo (stubs 1KB; IPA 2.4MB domina), next/image (unoptimized deliberado, <img> com rationale).
 
 **Gate:** planning/docs-only. Parser real: **138 milestones, 63 areas, 0 dups**; tiers S+1/S9/S-47/A+41/A40; status 121/14/3 — footer confere.
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+---
+
+## 2026-07-05-W — Pass 10 no loop (147 itens, 71 areas)
+
+**Contexto:** loop de 10min segue (Stop hook: quota 35%/49% pre-pass9 nao era limite). Quota pre-pass10 via `-Once`: sessao **53%** · semana **51%** (zona amarela do monitor).
+
+**Pass 10 (Explore read-only):**
+
+| Area | Itens | Achado central |
+|---|---|---|
+| IOSPWA | 1 | **EXT-IOSPWA-01 (S-)**: zero apple-touch-icon/apple-mobile meta (grep em src/ + out/ = nada) — Add to Home Screen no iOS da icone screenshot borrado fora de standalone; mina o caminho WhatsApp->iOS. |
+| SWNAV | 1 | **EXT-SWNAV-01 (S-)**: sw.js:108-129 sem branch de navigate nem offline.html — navegacao offline fria = erro nativo do browser pro publico de baixa conectividade. |
+| SHARELOC | 1 | **EXT-SHARELOC-01 (S-)**: InfoPanel.js:37-41 — texto do share WhatsApp e literal pt-BR sem t() e sem encodeURIComponent (petShare.js:123 faz certo). |
+| RTL | 2 | **EXT-RTL-01 (S-, human_gate)**: engine.js:86-95 seta dir=rtl mas CSS e fisico (FAB right:, header) — arabe meio-espelhado; divida declarada em comentario, nunca trackeada. EXT-RTL-02 (A): html lang=pt-BR sem dir pre-hidratacao. |
+| IPA | 1 | EXT-IPA-01 (A+, human_gate): IPA 2.4MB nao-assinado + plist bundle-version=1 fossilizado — sideload quebrado shipando a cada deploy. |
+| SECTXT | 1 | EXT-SECTXT-01 (A+): sem .well-known/security.txt num site com doacao + PII de localizacao. |
+| ROBOTS2 | 1 | EXT-ROBOTS2-01 (A): robots Allow:/ sem Disallow dos stubs /solone /dbd /bluey (sitemap ja exclui). |
+| GOV2 | 1 | EXT-GOV2-01 (A): README e boilerplate stock do create-next-app; contrato real de deploy so em public/_WARN. |
+
+**5 angulos honestamente vazios:** log PII do asaas-backend (LIMPO — so type/id/err.message), overflow de string longa (StepsHint e scroller por design; header com ellipsis), safe-area iOS (20+ call sites + maskable OK), cadeia 404 (not-found.js + out/404.html gerado), stubs de jogos (render valido).
+
+**Gate:** planning/docs-only. Parser real (apos corrigir 1 colon nao-quotado no owner do EXT-IPA-01): **147 milestones, 71 areas, 0 dups**; tiers S+1/S9/S-51/A+43/A43; status 128/16/3 — footer confere.
 
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
