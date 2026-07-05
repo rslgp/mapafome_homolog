@@ -19,6 +19,16 @@
 const { sendJson, readJsonBody } = require('../../lib/http');
 const { isAuthentic } = require('../../lib/webhookAuth');
 const { selectIdempotencyStore } = require('../../lib/idempotencyStore');
+const { assertProductionConfig } = require('../../lib/assertProductionConfig');
+
+// PAY-01 — fail closed at cold-start module init. In production (ASAAS_ENV=
+// production) this THROWS if idempotency is not durable (no KV env) or the CORS
+// allowlist is missing — the two config hazards that silently degrade payment
+// safety. Throwing here crashes the serverless instance before it serves a single
+// event, so a misconfigured deploy is caught by the platform (a 500 on cold start)
+// instead of quietly reprocessing payments on the in-memory fallback. In sandbox/
+// dev it is a no-op, so local boot and `node --test` need zero external services.
+assertProductionConfig();
 
 // One store per module instance (per serverless instance). Chosen at module load
 // from the env: durable adapter if configured, else in-memory fallback.
