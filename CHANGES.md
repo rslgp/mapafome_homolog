@@ -9,23 +9,24 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `5cab413 docs(roadmap)` (QA-01 aguardando commit via agent_git-commit-specialist)
+> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `8576026 docs(roadmap)` (PET-02 + fixup do QA-01 aguardando commit via agent_git-commit-specialist)
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
-- [`2026-07-04-D`](#2026-07-04-d--qa-01-shipped-gate-de-teste-oom-safe-por-default) — **QA-01 SHIPPED**: vitest.config forca forks+singleFork+no-file-parallelism; `npm run test` plano agora e OOM-safe. Gate verde.
+- [`2026-07-04-E`](#2026-07-04-e--pet-02-shipped-dedup-visual-de-pets--fixup-do-qa-01) — **PET-02 SHIPPED**: liga o dedup de pets (dead code) no PetMarkers — 1 pino por grupo. + FIXUP do QA-01 (poolOptions removido no Vitest 4). Gate verde.
+- [`2026-07-04-D`](#2026-07-04-d--qa-01-shipped-gate-de-teste-oom-safe-por-default) — **QA-01 SHIPPED**: vitest.config forca forks+singleFork+no-file-parallelism; `npm run test` plano agora e OOM-safe. Gate verde. (config corrigida em 2026-07-04-E)
 - [`2026-07-04-C`](#2026-07-04-c--seo-02-shipped-sitemap--robots-dinamicos) — **SEO-02 SHIPPED**: sitemap.js + robots.js dinamicos; aposentados os 3 estaticos stale de 2022. Gate verde.
 - [`2026-07-04-B`](#2026-07-04-b--seo-01-shipped-corrige-self-canonical-em-3-rotas) — **SEO-01 SHIPPED**: 3 layout.js novos (relatorios/relatorio-marketing/iniciativas-cadastrar) — corrige self-canonical. Gate verde.
 - [`2026-07-04-A`](#2026-07-04-a--deep-analysis--roadmap-multi-vertente) — Deep-analysis do produto (11 vertentes) + criado `ROADMAP_VERTENTES.yaml` (30 milestones) + este log + licao de padrao-de-log no vault.
 
 ### STATUS_TALLY (ROADMAP_VERTENTES.yaml)
-- **30 milestones** · pending **21** · blocked-human **5** · later **1** · **shipped 3** (SEO-01, SEO-02, QA-01).
+- **30 milestones** · pending **20** · blocked-human **5** · later **1** · **shipped 4** (SEO-01, SEO-02, QA-01, PET-02).
 - Por tier: **S+ 3** · S 8 · A 10 · B 9.
-- Por vertente: V1 core-fome 2 · V2 pet 5 · V3 asaas 3 · V4 i18n 2 · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (2 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 · V11 governanca 1.
+- Por vertente: V1 core-fome 2 · V2 pet 5 (1 shipped) · V3 asaas 3 · V4 i18n 2 · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (2 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 · V11 governanca 1.
 
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
-1. **PET-02 / PAY-01 / I18N-01** (S, pending, commitaveis): proximos maior-tier. PET-02 (ligar o dedup de pets ja construido) e o mais barato (dead code -> caller). Depois SEO-03 (A, JSON-LD).
+1. **PAY-01 / I18N-01** (S, pending, commitaveis): proximos maior-tier. PAY-01 (fail-closed no boot do asaas-backend sem KV/CORS) toca o backend (cd asaas-backend && npm test). Depois SEO-03 (A, JSON-LD) e os demais A.
 2. **SEC-01** (S+, blocked-human): tirar a chave privada Google do bundle client via proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
 3. **PET-01 / INIT-01 / PAY-02 / SEO-04 / FOME-02** (blocked-human/later): dependem de acao humana (storage, destino, efeito de negocio, decisao de produto, ou dep de SEC-01). NAO auto-shippaveis.
 
@@ -160,3 +161,37 @@
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
 
 **Proximo:** PET-02 (ligar o dedup de pets ja construido — dead code -> caller).
+
+---
+
+## 2026-07-04-E — PET-02 shipped: dedup visual de pets + fixup do QA-01
+
+**Comando:** "ship until there is pending" (loop; pegou PET-02, o S mais barato — dead code -> caller).
+
+**O que foi feito:**
+
+| Arquivo / Acao | O que | Por que |
+|---|---|---|
+| `src/app/pets/PetMarkers.js` (edit) | Importa `groupNearDuplicates` (barrel petDomain) e renderiza 1 `<Marker>` por GRUPO (`group.representative`) em vez de 1 por pet. `nowMs=0` constante. | O dedup estava 100% pronto e testado mas NENHUM caller o usava (dead code). O mesmo relato re-postado virava uma pilha de pinos. |
+| `vitest.config.mjs` (edit) | **FIXUP do QA-01**: removido `poolOptions:{forks:{singleFork:true}}` (shape REMOVIDO no Vitest 4). `pool:'forks'` + `fileParallelism:false` ja da serial completo. | Rodando o test apareceu `DEPRECATED poolOptions was removed in Vitest 4` — meu QA-01 (d59da16) tinha o shape errado; singleFork era ignorado. Confirmado via context7. |
+| `ROADMAP_VERTENTES.yaml` (edit) | PET-02 pending -> shipped (com nota do fixup QA-01). | Flip so com gate verde lido. |
+
+**Bug corrigido durante o trabalho (H2):** a 1a versao usava `Date.now()` no render -> lint error do React Compiler `Cannot call impure function during render`. O contrato do dedup exige `nowMs` INJETADO pelo caller (nunca Date.now() interno); e `isNearDuplicate` marca nowMs como reservado (`void nowMs`, nao consultado — a janela mede Δ entre publicacoes). Fix: passar a constante `0`, mantendo o render puro sem afetar o agrupamento.
+
+**Cobertura:** a wiring reusa `groupNearDuplicates`, ja coberto por 20 testes em petDedup.test.js (incl. o colapso 2->1 com representative/members). PetMarkers e Leaflet (excluido de coverage por design). Sem logica nova a testar.
+
+**Gate (verde, lido nesta sessao):**
+
+| Check | Resultado |
+|---|---|
+| lint | exit 0 (apos corrigir o Date.now() impure) |
+| fitness | exit 0 |
+| test | 1354/1354 passed, 94 files, exit 0, **0 warnings de deprecation** (fixup QA-01) |
+| build | exit 0, compilado |
+| smoke200 | 16/16 rotas 200+render (/pets 200) |
+| a11y (axe) | /pets 0 violacoes |
+| teardown | serve :3000 morto, porta liberada, 0 orfaos |
+
+**Commit:** roteado pro `agent_git-commit-specialist` — 2 concerns: (1) fix(pets) o dedup wiring; (2) fix(test) o fixup da config QA-01; + docs(roadmap). Sem push/PR.
+
+**Proximo:** PAY-01 (fail-closed no boot do asaas-backend) ou I18N-01 (Intl por locale).
