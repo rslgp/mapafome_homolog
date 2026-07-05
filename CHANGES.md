@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `22edbf6 docs(roadmap)` (pass 7). Arco de quota: zona vermelha 86% -> semana 100% (encerramento registrado em 2026-07-05-T) -> **re-login RESETOU a quota (sessao 9%/semana 46%) -> scan REABERTO, pass 8 rodado** (132 itens/58 areas). Loop de 10min armado via cron `c7ade9ba` (session-only). Proximo alvo: EXT-REP2-01 (S, sem human_gate).
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimos commits: `ba6a9c6` (fechamento T — commitado pela SESSAO CONCORRENTE com meu conteudo dirty; ver 2026-07-05-V), `b1e219c` (pass 8). **Pass 9 rodado no loop de 10min** (cron `c7ade9ba`, session-only): 138 itens/63 areas. Quota pre-pass9: sessao 35%/semana 49%. Proximo alvo: EXT-REP2-01 (S, sem human_gate).
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
-> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan REABERTO, 132 itens/58 areas/8 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
+> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan ativo no loop, 138 itens/63 areas/9 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-05-V`](#2026-07-05-v--pass-9-no-loop-de-10min-138-itens-63-areas) — **Pass 9 (loop de 10min)**: +6 itens (5 areas novas + EXT-ASSET-03). Achados: EXT-HREFLANG-01 (12 locales, zero hreflang — publico internacional nao acha o site na propria lingua), EXT-FOCUSTRAP-01 (aria-modal sem trap — Tab escapa pro mapa escondido), EXT-ANTIABUSE-01 (time_from_start_ms medido e descartado; sem honeypot/min-time). 7 angulos honestamente vazios (SW lifecycle exemplar, reduced-motion honrado, hidratacao coberta por ssr:false, bundle bem dividido).
 - [`2026-07-05-U`](#2026-07-05-u--quota-resetada-scan-reaberto-pass-8-132-itens-58-areas) — **Quota resetada (re-login) — scan REABERTO, pass 8**: +9 itens em 8 areas novas. Achados que doem: EXT-URLSTATE-01 (back do Android fecha o SITE com report no meio), EXT-OWNERSHIP-01 (token de posse spec'ado mas nunca escrito — posse de pin 100% nocional), EXT-EMBED3P-01 (iframe Creators http:// = bloqueado como mixed content em producao HOJE). 4 angulos honestamente vazios.
 - [`2026-07-05-T`](#2026-07-05-t--quota-limit-atingido-scan-encerrado-em-123-itens50-areas7-passes) — **QUOTA LIMIT ATINGIDO — scan encerrado**: leitura real pre-pass8 = sessao 86% (zona vermelha >=80% do monitor-tokens). Footer do MILESTONES_EXTENDED.yaml fecha com trajetoria completa + criterio de parada + proximo alvo (EXT-REP2-01). Nenhum item novo; pass 8 nao rodado de proposito.
 - [`2026-07-05-S`](#2026-07-05-s--milestones-extended-expandido-pass-7-123-itens-50-areas--quota-78) — **MILESTONES_EXTENDED.yaml expandido (pass 7)**: +9 itens em 6 areas novas. Achado de CORRETUDE: EXT-LEGEND-01 (o hint de cores ativo MENTE — descreve o sistema de marcadores antigo, substituido e nunca atualizado). Quota sessao 78%, proximo do limiar vermelho (80%) do monitor-tokens.
@@ -41,9 +42,9 @@
 - Por vertente: V1 core-fome 2 · V2 pet 5 (2 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (2 shipped) · V11 governanca 1.
 - **Todos os S+/S commitaveis shippados.** Restam: 7 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
-### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 8 passes, scan REABERTO, tiers S+/S/S-/A+/A)
-- **132 milestones** em **58 areas** · pending **115** · blocked-human **14** · later **3** (cross-refs intencionais). Validado via parser YAML: 0 ids duplicados.
-- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · **S 9** · S- 44 · A+ 39 · A 39.
+### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 9 passes, scan ativo no loop, tiers S+/S/S-/A+/A)
+- **138 milestones** em **63 areas** · pending **121** · blocked-human **14** · later **3** (cross-refs intencionais). Validado via parser YAML: 0 ids duplicados.
+- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · **S 9** · S- 47 · A+ 41 · A 40.
 - 1 achado ja shipped fora do arquivo: SEC-02/FF11 (gate mecanico de secret-leak no bundle, allowlist por hash).
 - Achados mais criticos: **EXT-RACE-01** (S) — 2 usuarios diferentes escrevendo a mesma linha perdem uma escrita (row.save() = PUT cego sem CAS) · **EXT-URLSTATE-01** (S, pass 8) — back do Android fecha o site com report no meio · **EXT-OWNERSHIP-01** (S, pass 8) — posse de pin 100% nocional. Corretude: **EXT-LEGEND-01** — o hint de cores descreve o sistema de marcadores ANTIGO · **EXT-EMBED3P-01** — secao Creators renderiza VAZIA em producao (iframe http bloqueado).
 - **Proximo a pegar (commitavel, sem human_gate, sem deps):** EXT-REP2-01 (k-anonimizacao faltando em 2 tabelas do relatorio publico, S tier) ou EXT-SEC-03 (upgrade da cadeia axios/google-spreadsheet).
@@ -698,3 +699,26 @@ Trajetoria ~5-6pp de sessao por pass. Sessao ainda com margem (67%, nao critico)
 **Gate:** planning/docs-only. YAML validado via parser real: **132 milestones, 58 areas, 0 ids duplicados**; tiers S+1/S9/S-44/A+39/A39; status pending 115/blocked-human 14/later 3 — footer confere com o parser.
 
 **Commit:** roteado pro `agent_git-commit-specialist` (inclui tambem o fechamento T que ficou sem commit quando a sessao anterior estourou o limite no meio do agente). Sem push/PR.
+
+---
+
+## 2026-07-05-V — Pass 9 no loop de 10min (138 itens, 63 areas)
+
+**Contexto:** Stop hook confirmou que o goal continua (quota resetada nao e limite). Loop `/loop 10min` (cron `c7ade9ba`). Quota pre-pass via `-Once`: sessao **35%** · semana **49%**. Nota de processo: o fechamento T acabou commitado como `ba6a9c6` pela SESSAO CONCORRENTE (que pegou meus edits dirty entre meu check de HEAD e o run do agente de commit) — o especialista re-baselineou e evitou commit duplicado; licao gravada na memoria (`concurrent-committer-on-branch`): nunca afirmar HEAD num brief de subagente.
+
+**Pass 9 (Explore read-only):**
+
+| Area | Itens | Achado central |
+|---|---|---|
+| HREFLANG | 1 | **EXT-HREFLANG-01 (S-)**: 12 locales (engine.js:34), ZERO alternates.languages (sitemap.js:37-42, todos os layouts) — swap de locale e 100% client-side, Google so indexa a casca pt-BR; o publico das cartas de outreach nao acha o site na propria lingua. |
+| FOCUSTRAP | 1 | **EXT-FOCUSTRAP-01 (S-)**: aria-modal=true sem trap de Tab (ReportSheet.js:181,:64-74; PetDetailSheet.js:69-70) — teclado/AT escapa pro mapa escondido; focus-restore existente esta correto, falta o trap. |
+| ANTIABUSE | 1 | **EXT-ANTIABUSE-01 (S-)**: timeFromStartMs medido (ReportSheet.js:135) e usado SO como analytics (:157) — nenhum honeypot/min-time; flood scriptado com dwell zero polui o mapa publico. |
+| RUM | 1 | EXT-RUM-01 (A+): zero LCP/CLS/INP de campo; otimizacoes de CWV do layout.js:62-64 sao voo cego. |
+| SWDATA | 1 | EXT-SWDATA-01 (A+): activate do SW (sw.js:31-41) apaga tambem o cache -data da versao velha — usuario offline que atualiza ve mapa vazio, contra o contrato do proprio header do SW. |
+| ASSET (existente) | 1 | EXT-ASSET-03 (A): logo do header sem width/height (header.js:66-71) — CLS acima da dobra em toda rota. |
+
+**7 angulos honestamente vazios:** SW update lifecycle (exemplar: sem skipWaiting prematuro, toast+controllerchange, updateViaCache none), prefers-reduced-motion (4 arquivos honram), prefers-color-scheme (starter morto nao importado), hidratacao (ssr:false cobre; R12 invariant), bundle (Leaflet/MUI fora do first-load; google-spreadsheet lazy), peso do repo (stubs 1KB; IPA 2.4MB domina), next/image (unoptimized deliberado, <img> com rationale).
+
+**Gate:** planning/docs-only. Parser real: **138 milestones, 63 areas, 0 dups**; tiers S+1/S9/S-47/A+41/A40; status 121/14/3 — footer confere.
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.

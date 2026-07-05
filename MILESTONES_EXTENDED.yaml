@@ -172,6 +172,16 @@ areas:
     nome: "Versionamento de schema do storage persistido (pass 8)"
   - id: INPUT2
     nome: "Atributos de input mobile (inputmode/autocomplete) (pass 8)"
+  - id: HREFLANG
+    nome: "SEO multi-idioma — hreflang/visibilidade dos 12 locales (pass 9)"
+  - id: FOCUSTRAP
+    nome: "Focus trap em sheets/modais (pass 9)"
+  - id: RUM
+    nome: "Web Vitals / RUM de campo (pass 9)"
+  - id: ANTIABUSE
+    nome: "Anti-abuso no path de escrita (honeypot/min-time) (pass 9)"
+  - id: SWDATA
+    nome: "Evicao do cache de DADOS no update do SW (pass 9)"
 
 milestones:
 
@@ -1599,6 +1609,69 @@ milestones:
     gate: ["npm run test", "npm run build", "npm run smoke200"]
     status: pending
 
+  # ---- PASS 9 ----
+
+  - id: EXT-HREFLANG-01
+    title: "ZERO hreflang/alternates.languages apesar de 12 locales suportados — o publico internacional nao acha o site no Google"
+    area: HREFLANG
+    tier: S-
+    owner: softwareengineer + human-gated (decisao de arquitetura se envolver rotas por locale)
+    scope: "Include: avaliar as opcoes dentro da arquitetura single-URL client-swap — (a) alternates.languages apontando pra ?lang= ou #lang, (b) og:locale:alternate, (c) documentar por que hreflang real exige rotas por locale (mudanca grande, decisao humana). Minimo commitavel: og:locale + metadata por rota existente. Exclude: reescrever o roteamento pra /es /ar etc sem decisao humana."
+    why: "Scan pass 9: sitemap.js:37-42 emite 1 URL por rota sem alternates.languages; todos os layouts so tem alternates.canonical (layout.js:35 etc); SUPPORTED_LOCALES tem 12 (engine.js:34) mas o swap e 100% client-side — o Google indexa so a casca pt-BR e ar/zh/hi/ru/... nao tem entrada localizada na SERP. Maior gap de ALCANCE da missao internacional (as cartas de outreach apontam pra um site que o publico-alvo nao acha na propria lingua)."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-FOCUSTRAP-01
+    title: "aria-modal=true sem focus trap — Tab escapa da sheet de report pro mapa ESCONDIDO atras (WCAG, teclado/leitor de tela)"
+    area: FOCUSTRAP
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: trap de Tab/Shift-Tab nas sheets com role=dialog (ReportSheet, PetReportSheet, PetDetailSheet, InfoPanel, NotificationPrefs) OU inert/aria-hidden no app de fundo enquanto aberta; manter o focus-restore existente (ja correto). Exclude: trocar pra <dialog> nativo (refactor maior, avaliar depois)."
+    why: "Scan pass 9: ReportSheet.js:181 declara role=dialog aria-modal=true mas o effect so faz first-focus (:64), Escape (:67) e restore (:73-74) — sem wrap de Tab e sem inert no fundo; PetDetailSheet.js:69-70 igual. aria-modal=true MENTE pro AT: usuario de teclado/leitor tabula pro Leaflet/toggles/FAB escondidos e pode interagir com controle invisivel no meio do publish."
+    gate: ["npm run test (trap testado)", "npm run a11y", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-ANTIABUSE-01
+    title: "Publish sem piso de tempo-minimo nem honeypot — time_from_start_ms e MEDIDO e descartado; script spamma pins com dwell zero"
+    area: ANTIABUSE
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: gate client-side de min-time-to-submit (ex: <1.5s desde abrir a sheet => segunda confirmacao ou rejeicao suave) usando o timeFromStartMs JA medido + campo honeypot invisivel nos forms de report. Exclude: captcha (fricao contra a missao — usuarios em vulnerabilidade); enforcement server-side real depende de SEC-01/proxy (anotar no codigo, como em EXT-OWNERSHIP-01)."
+    why: "Scan pass 9: ReportSheet.js:135 computa timeFromStartMs e :157 manda SO como analytics; handlePublish (:126-167) gateia apenas selected.size===0; grep confirma zero honeypot/MIN_SUBMIT no repo. Passes anteriores cobriram rate-limit de leitura e idempotencia (mesmo request repetido) — aqui e o flood SCRIPTADO de requests distintos poluindo o mapa publico; o unico sinal que pegaria (submit sub-segundo) ja e coletado e jogado fora."
+    gate: ["npm run test (gate min-time + honeypot testados)", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-RUM-01
+    title: "Zero Web Vitals de campo (LCP/CLS/INP) — as otimizacoes de CWV do layout sao voo cego"
+    area: RUM
+    tier: A+
+    owner: softwareengineer + human-gated (escolha de destino dos dados, junto com EXT-OBS-01/03)
+    scope: "Include: capturar LCP/CLS/INP via PerformanceObserver (ou pacote web-vitals) e rotear pro buffer do analytics.js existente (mesmo consentimento/mesma privacidade). Exclude: dashboard/backend novo (decisao EXT-OBS); nao adicionar SDK de terceiro sem gate humano."
+    why: "Scan pass 9: analytics.js captura taps/sponsors/erros/publishes mas nunca LCP/CLS/INP; grep por web-vitals|onLCP|onCLS|onINP|PerformanceObserver em src/ => nada. layout.js:62-64 investe em preconnect/dns-prefetch pro LCP do mapa SEM dado de campo pra confirmar — regressao de tile-host, shift do header ou pico de INP no tap do mapa shipparia sem deteccao."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+    depends: [EXT-OBS-01]
+
+  - id: EXT-SWDATA-01
+    title: "activate do SW apaga TAMBEM o cache de DADOS da versao anterior — usuario offline que atualiza fica com mapa vazio"
+    area: SWDATA
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: separar o namespace do cache de dados (-data) da varredura de evicao por versao em public/sw.js:31-41 (manter evicao de shell/tiles), OU migrar as entries -data da versao velha pra nova no activate. Exclude: mudar a estrategia network-first do data cache (correta)."
+    why: "Scan pass 9: sw.js:31-41 deleta todo cache sem o prefixo do SW_VERSION novo, e a versao embute timestamp+sha por build (:16) — cada deploy apaga ${old}-data (o fallback offline dos pins do Sheets, :19,119). Com o reload forcado apos 30s (swRegister.js:116-117), quem adota o update offline perde o fallback e ve mapa vazio — quebra o contrato 'keeps donor views usable offline' declarado no proprio header do SW (:9-10). Resto do lifecycle do SW e exemplar (escaneado e aprovado: sem skipWaiting prematuro, updateViaCache none, toast+controllerchange)."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-ASSET-03
+    title: "Logo do header sem width/height nem fetchpriority — contribuidor de CLS acima da dobra em TODA pagina"
+    area: ASSET
+    tier: A
+    owner: softwareengineer
+    scope: "Include: header.js:66-71 — width/height intrinsecos no <img> do wordmark (+ fetchpriority=high se for de fato parte do LCP). Exclude: os outros casos de imagem sem dimensao (ja cobertos genericamente em EXT-ASSET-01/02 no pass 4 — este e o caso ESPECIFICO sempre-renderizado que ficou de fora)."
+    why: "Scan pass 9: header.js:66-71 renderiza o mark do wordmark sem width/height — sem caixa reservada, shift pequeno mas presente no header sticky de toda rota; angulos de imagem restantes do pass 9 (next/image, repo weight) escaneados e honestamente vazios."
+    gate: ["npm run build", "npm run smoke200", "npm run a11y"]
+    status: pending
+
 # ============================ FIM DO DOCUMENTO ============================
 # Total real (validado via parser YAML): 123 milestones em 50 areas, 0 ids
 # duplicados. 3 sao cross-ref intencional (EXT-EH-02 -> PET-04, EXT-SETSTATE-02
@@ -1711,3 +1784,23 @@ milestones:
 # TOTAIS POS-PASS-8 (validar via parser antes de commitar): 132 milestones em
 # 58 areas. Tiers: S+1 | S 9 | S- 44 | A+ 39 | A 39.
 # Status: pending 115 | blocked-human 14 | later 3.
+#
+# PASS 9 (loop de 10min, mesma janela; quota pre-pass: sessao 35% | semana 49%).
+# 5 areas novas (HREFLANG, FOCUSTRAP, RUM, ANTIABUSE, SWDATA) + 1 item na area
+# ASSET existente; 6 itens. Achados que doem:
+#   EXT-HREFLANG-01 (S-) — 12 locales suportados, ZERO hreflang/alternates:
+#     o publico internacional que as cartas de outreach convidam nao ACHA o
+#     site na propria lingua no Google (swap de locale e 100% client-side).
+#   EXT-FOCUSTRAP-01 (S-) — aria-modal=true sem trap de Tab: teclado/leitor
+#     de tela escapa da sheet pro mapa escondido atras (o aria MENTE pro AT).
+#   EXT-ANTIABUSE-01 (S-) — time_from_start_ms e medido e DESCARTADO; nenhum
+#     honeypot/min-time no publish — flood scriptado polui o mapa publico.
+# 7 angulos honestamente vazios (e documentados como tal): lifecycle de update
+# do SW (exemplar, so a evicao do -data e gap => EXT-SWDATA-01), reduced-motion
+# (honrado em 4 arquivos), color-scheme (starter morto, nao renderiza), risco de
+# hidratacao (ssr:false cobre tudo), composicao de bundle (Leaflet/MUI fora do
+# first-load, google-spreadsheet lazy), peso do repo (stubs de 1KB, nao bundles),
+# next/image (unoptimized deliberado + <img> com rationale documentado).
+# TOTAIS POS-PASS-9 (validar via parser antes de commitar): 138 milestones em
+# 63 areas. Tiers: S+1 | S 9 | S- 47 | A+ 41 | A 40.
+# Status: pending 121 | blocked-human 14 | later 3.
