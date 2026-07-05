@@ -19,7 +19,7 @@
 #   ROADMAP_VERTENTES.yaml (shipped SO com gate verde lido; append-only).
 #
 # METODO
-#   Gerado por 4 passes de scan de evidencia (Explore agent, read-only).
+#   Gerado por 5 passes de scan de evidencia (Explore agent, read-only).
 #   Pass 1 (10 areas): testes, performance, error-handling, a11y, integridade
 #   de dados, DX, observabilidade, seguranca de deps, conteudo/i18n, build/deploy.
 #   Pass 2 (8 areas, mais fundo): PWA install/offline edge cases, MapaPet vertical
@@ -36,9 +36,17 @@
 #   fitness-functions (o que os 11 FFs existentes nao pegam), drift de
 #   documentacao (loop.yaml desatualizado sobre o proprio goal-loop), governanca
 #   do goal-loop (cap subiu sem re-autorizacao registrada), otimizacao de
-#   imagem/asset (CLS por falta de width/height). Cada item cita file:line real
-#   — nenhum fato inventado. Nao commitar nenhuma correcao sem antes reler o
-#   arquivo/linha citado (pode ter mudado desde o scan).
+#   imagem/asset (CLS por falta de width/height).
+#   Pass 5 (6 areas): Google Sheets como banco de dados sob escala/concorrencia
+#   (rate-limit 429, sem paginacao), corretude de criptografia (teatro de
+#   seguranca confirmado na arquitetura, nao so dead-code), setState em
+#   componente desmontado, stylesheet de impressao ausente, direitos do titular
+#   de dados LGPD/GDPR (distinto do gap de CONSENTIMENTO ja encontrado), e a
+#   RACE CONDITION entre usuarios DIFERENTES escrevendo concorrentemente na
+#   mesma linha (distinta do gap de retry-idempotencia ja encontrado — aqui sao
+#   2 requests honestos e simultaneos, nao o mesmo request repetido). Cada item
+#   cita file:line real — nenhum fato inventado. Nao commitar nenhuma correcao
+#   sem antes reler o arquivo/linha citado (pode ter mudado desde o scan).
 
 areas:
   - id: T
@@ -105,6 +113,18 @@ areas:
     nome: "Loops/goal-loop governance (pass 4)"
   - id: ASSET
     nome: "Image/asset optimization (pass 4)"
+  - id: SHEETDB
+    nome: "Google Sheets como banco: escala/concorrencia (pass 5)"
+  - id: CRYPTO
+    nome: "Corretude de criptografia (pass 5)"
+  - id: SETSTATE
+    nome: "setState em componente desmontado (pass 5)"
+  - id: PRINT
+    nome: "Stylesheet de impressao (pass 5)"
+  - id: DSAR
+    nome: "Direitos do titular de dados LGPD/GDPR (pass 5)"
+  - id: RACE
+    nome: "Race condition entre usuarios concorrentes (pass 5)"
 
 milestones:
 
@@ -1093,30 +1113,178 @@ milestones:
     gate: ["npm run test", "npm run build"]
     status: pending
 
+  # ==================== RACE — RACE CONDITION ENTRE USUARIOS CONCORRENTES (pass 5) ====================
+  - id: EXT-RACE-01
+    title: "flagPet/resolvePet: dois usuarios DIFERENTES escrevendo ao mesmo tempo -> a 2a escrita apaga a 1a (nao e o gap de retry-idempotencia ja conhecido)"
+    area: RACE
+    tier: S
+    owner: human-gated (arquitetura, junto com SEC-01/DI-01) + softwareengineer
+    scope: "Include: petsData.js updatePetByCoords (linhas 183-201, usado por resolvePet e flagPet) — a mutacao e um read-then-write SEM verificacao de versao (row.save() e um PUT cego da linha inteira, confirmado na lib google-spreadsheet). Duas escritas CONCORRENTES de usuarios DIFERENTES (nao um retry do MESMO usuario, que a idempotency_key ja cobre) perdem uma delas silenciosamente. Fix exige optimistic concurrency (CAS) ou mover contadores pra incremento atomico — nao e so trocar a chave de idempotencia. Exclude: o handoff de seguranca do write-proxy (SEC-01/DI-01, ja trackeados) — ESTE bug persiste MESMO atras de um proxy perfeitamente seguro, a menos que o proxy TAMBEM adicione locking de linha."
+    why: "Scan pass 5: e uma CLASSE DE BUG DISTINTA do gap de idempotencia ja conhecido (EXT-DI-01, que resolve RETRY do MESMO request). Aqui sao duas escritas HONESTAS e DIFERENTES na MESMA linha. Concreto: 2 usuarios denunciando (flag) o MESMO pet quase ao mesmo tempo — cada um le flagCount:0, cada um escreve flagCount:1 — a contagem real deveria ser 2, fica 1. E EXATAMENTE o cenario que petDomain.js:169 chama de 'sinal MAIS forte' (2 denuncias simultaneas) — o caso que o campo foi desenhado pra capturar bem e o caso que ele erra silenciosamente."
+    gate: ["cd asaas-backend nao se aplica (isso e sheets, nao asaas)", "npm run test", "teste: 2 writes concorrentes simulados nao perdem 1"]
+    status: blocked-human
+    human_gate: true
+    note: "Fix real exige decisao arquitetural (CAS/locking no proxy de escrita, SEC-01/DI-01) — nao da pra corrigir so no cliente. Claude PROPOE o mecanismo, humano decide junto com a arquitetura do proxy."
+
+  - id: EXT-RACE-02
+    title: "row.save() e um PUT cego sem ETag/versao — TODO write do app (fome + pets) herda o mesmo lost-update"
+    area: RACE
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: documentar (comentario em sheetsClient.js e petsData.js) que TODA escrita via row.save() (nao so flagPet/resolvePet) sofre do mesmo lost-update — inclui rating, click-count, qualquer contador futuro. Exclude: implementar o fix agora (isso e EXT-RACE-01, que precisa da decisao arquitetural)."
+    why: "Scan pass 5: EXT-RACE-01 documenta o caso concreto (flag/resolve de pet); este item registra que a CAUSA RAIZ (PUT cego na lib google-spreadsheet, sem If-Match/ETag) e estrutural — qualquer escrita futura no mesmo padrao herda o bug automaticamente, entao vale documentar a causa raiz separada do sintoma."
+    gate: ["comentario adicionado em ambos os arquivos"]
+    status: pending
+    depends: [EXT-RACE-01]
+
+  # ==================== SHEETDB — GOOGLE SHEETS COMO BANCO: ESCALA/CONCORRENCIA (pass 5) ====================
+  - id: EXT-SHEETDB-01
+    title: "Nenhum handling de 429 (rate-limit) da API do Google Sheets — burst de escritas falha sem retry/backoff"
+    area: SHEETDB
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: um wrapper em sheetsClient.js que detecta HTTP 429, le Retry-After, e re-tenta com backoff exponencial (poucas tentativas, nao infinito) antes de propagar o erro genuino ao usuario. Exclude: mudar a biblioteca google-spreadsheet em si (wrapper por cima)."
+    why: "Scan pass 5: confirmado que NEM o app NEM a lib vendored tratam 429 — um burst de escritas concorrentes (ex.: muitas avaliacoes de pin ao mesmo tempo) que estoura a cota (300 req/min/projeto, 60/min/usuario default) falha DIRETO com um erro generico 'ERRO, tente novamente', sem nenhuma recuperacao automatica."
+    gate: ["npm run test", "teste: 429 simulado aciona retry com backoff, nao falha direto"]
+    status: pending
+
+  - id: EXT-SHEETDB-02
+    title: "getRows() sem paginacao — carrega a planilha INTEIRA em toda carga de mapa/relatorio, escala mal com volume"
+    area: SHEETDB
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: avaliar filtragem server-side ou paginacao incremental pra fetchPets/relatorios/relatorio-marketing (hoje getRows() sem limit busca a planilha inteira, default da lib e rowCount-1). Exclude: uma migracao de banco de dados completa (fora de escopo; e sobre mitigar o padrao atual, nao substitui-lo)."
+    why: "Scan pass 5: conforme a planilha cresce pra milhares de linhas, CADA carregamento de mapa/relatorio baixa e parseia TUDO no cliente — sem cache entre usuarios, sem filtro no servidor. Nao e um bug hoje (volume ainda gerenciavel), mas e um teto de escala conhecido sem plano de mitigacao registrado em lugar nenhum."
+    gate: ["decisao de design registrada", "se implementado: npm run test + build + smoke200"]
+    status: pending
+
+  # ==================== CRYPTO — CORRETUDE DE CRIPTOGRAFIA (pass 5) ====================
+  - id: EXT-CRYPTO-01
+    title: "A 'criptografia' de telefone e teatro de seguranca — a chave AES vai no MESMO bundle client que decifra"
+    area: CRYPTO
+    tier: S-
+    owner: human-gated (arquitetura, mesma familia do SEC-01) + softwareengineer
+    scope: "Include: documentar EXPLICITAMENTE (comentario + nota no README/CLAUDE.md de seguranca) que a criptografia atual (App.js:116, NEXT_PUBLIC_CRYPTSEED) NAO protege contra nenhum atacante que use o proprio app — so ofusca de um olhar casual na planilha crua. Uma correcao REAL exigiria mover a decifragem pro servidor (mesma familia arquitetural do SEC-01). Exclude: implementar o proxy agora (isso e escopo do SEC-01, ja blocked-human)."
+    why: "Scan pass 5: confirmado — a chave (NEXT_PUBLIC_CRYPTSEED) e INLINED no bundle client pelo Next.js, no MESMO bundle que roda a decifragem. Qualquer usuario do proprio app pode extrair a chave e decifrar TODO telefone ja submetido. E teatro de seguranca: da a impressao de proteger PII mas nao protege contra o unico tipo de atacante que importa (alguem com acesso ao app)."
+    gate: ["documentacao honesta adicionada", "decisao registrada: aceitar como debt conhecido, ou escopar o fix junto com SEC-01"]
+    status: blocked-human
+    human_gate: true
+    note: "Mesma familia de decisao arquitetural do SEC-01 (mover logica sensivel pro servidor) — nao e um fix isolado de codigo."
+
+  - id: EXT-CRYPTO-02
+    title: "A implementacao de crypto MELHOR (Aes.js, AES-GCM com IV aleatorio) existe mas nao esta ligada — a live usa a mais fraca"
+    area: CRYPTO
+    tier: A
+    owner: softwareengineer
+    scope: "Include: verificar se aes-encryption (a lib LIVE, importada em App.js:57) usa IV fixo/ECB (mais fraco) vs a Aes.js JA ESCRITA (AES-GCM + IV aleatorio de 12 bytes por operacao, mais correta) que fica IMPORTADA MAS COMENTADA (App.js:56). Se confirmado, isso e outro angulo do EXT-T-02 (que ja recomenda remover Aes.js por ser dead code) — aqui a pergunta e se deveria ser REMOVIDA ou LIGADA no lugar da mais fraca. Exclude: decidir sem antes confirmar o modo de operacao real da lib live."
+    why: "Scan pass 5: se confirmado que a lib live e mais fraca que o codigo morto ao lado dela, e um caso raro e notavel — a implementacao CORRETA foi escrita mas nunca conectada, entao o codebase ficou com a PIOR das duas versoes rodando de verdade. Depende de EXT-CRYPTO-01 pra saber se vale a pena melhorar a criptografia client-side ou so aceitar que ela e teatro de qualquer jeito."
+    gate: ["modo de operacao da lib live confirmado", "decisao registrada: remover Aes.js (EXT-T-02) ou ligar no lugar"]
+    status: pending
+    depends: [EXT-CRYPTO-01]
+
+  # ==================== SETSTATE — setState EM COMPONENTE DESMONTADO (pass 5) ====================
+  - id: EXT-SETSTATE-01
+    title: "relatorios/page.js e relatorio-marketing/page.js: sem guarda de cancelamento — outras paginas do MESMO codebase ja tem o padrao certo"
+    area: SETSTATE
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: relatorios/page.js:38-53 e relatorio-marketing/page.js:31-51 — adicionar o padrao 'cancelled' flag (ja usado corretamente em PaymentArtifacts.js:53-63 e usePetsApp.js:159-233) no useEffect que dispara load(). Exclude: mudar a logica de fetch em si (so o guard de desmontagem)."
+    why: "Scan pass 5: as 2 paginas de relatorio nao tem NENHUM guard contra setState apos desmontar — se o usuario navegar pra fora de /relatorios ou /relatorio-marketing enquanto o fetch (potencialmente grande, ver EXT-SHEETDB-02) ainda esta em voo, React avisa/no-opa a atualizacao. O codebase JA SABE o padrao certo (2 outros lugares o aplicam corretamente) — essas 2 paginas parecem mais novas/menos revisadas."
+    gate: ["npm run test", "npm run lint"]
+    status: pending
+
+  - id: EXT-SETSTATE-02
+    title: "relatorio-marketing/page.js re-implementa auth do Sheets inline em vez de usar sheetsClient.js compartilhado (JA TRACKEADO como REP-01, cross-ref)"
+    area: SETSTATE
+    tier: A
+    owner: softwareengineer
+    scope: "Include: NENHUMA acao nova aqui — este achado E o mesmo REP-01 do ROADMAP_VERTENTES.yaml (ja pending, sem human_gate). Exclude: duplicar trabalho."
+    why: "Scan pass 5 confirmou de novo, por um angulo diferente (setState-apos-desmontar), o mesmo achado do pass 1: relatorio-marketing/page.js contorna o sheetsClient.js compartilhado."
+    gate: ["ja coberto por REP-01 em ROADMAP_VERTENTES.yaml — este item fica como CROSS-REF, nao re-trabalhar"]
+    status: later
+    note: "DUPLICATA INTENCIONAL do REP-01 (ROADMAP_VERTENTES.yaml) — mantido aqui so pra o scan pass 5 nao perder a confirmacao cruzada. Fechar junto com REP-01."
+
+  # ==================== PRINT — STYLESHEET DE IMPRESSAO (pass 5) ====================
+  - id: EXT-PRINT-01
+    title: "Zero @media print em todo o app — /relatorios (feito pra MP/secretarias) imprime a UI da tela, nao um documento"
+    area: PRINT
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: um @media print basico em relatorios.css (o publico-alvo explicito e MP/secretarias de saude, que tipicamente imprimem/exportam PDF pra registro) — esconder botoes de acao, simplificar cores/fundo pra impressao legivel. Exclude: relatorio-marketing.css (publico interno, menor prioridade) e um gerador de PDF de verdade (fora de escopo, so CSS de impressao)."
+    why: "Scan pass 5: 0 regra @media print em TODO o app. /relatorios documenta explicitamente seu publico como MP/secretarias (relatorios/page.js:23-26) — esse publico tipicamente imprime pra registro/protocolo, e hoje imprimiria chips coloridos, botoes de UI e chrome escuro sem nenhum ajuste."
+    gate: ["npm run build", "npm run smoke200", "impressao visual conferida manualmente"]
+    status: pending
+
+  # ==================== DSAR — DIREITOS DO TITULAR DE DADOS LGPD/GDPR (pass 5) ====================
+  - id: EXT-DSAR-01
+    title: "Canal de exclusao (DELETE_REQUEST) existe so pro mapa de fome — pets, telefones de terceiros e o sheet de marketing NAO tem equivalente"
+    area: DSAR
+    tier: S-
+    owner: human-gated (politica de privacidade/juridico) + softwareengineer
+    scope: "Include: avaliar estender o padrao DELETE_REQUEST (sheetsClient.js:65, appPinActions.js:44-57) pra MapaPet (nenhum removerPonto-equivalente existe hoje) e considerar como um terceiro cujo telefone foi submetido por OUTRA pessoa poderia solicitar redacao. Exclude: implementar sem decisao juridica sobre o escopo exato do direito (LGPD Art. 18) aplicavel aqui."
+    why: "Scan pass 5: existe um canal de 'direito ao esquecimento' MAS SO pro mapa de fome — MapaPet (petsData.js) nao tem resolvePet/flagPet-equivalente pra 'solicitar remocao do meu relato de pet', e um terceiro cujo NUMERO foi submetido por outra pessoa (nao o proprio) nao tem NENHUM caminho de auto-atendimento pra saber que seu numero esta la, muito menos pedir redacao. Distinto do gap de consentimento (EXT-PRIV-01, ja trackeado) — este e sobre DIREITOS do titular, nao coleta de consentimento."
+    gate: ["decisao de escopo registrada (juridico/produto)", "se estendido: npm run test + build + smoke200"]
+    status: blocked-human
+    human_gate: true
+    note: "Escopo exato do direito (o que precisa de canal de auto-atendimento vs atendimento manual) e decisao juridica/de produto — Claude PROPOE o gap tecnico, humano decide a politica."
+
+  - id: EXT-DSAR-02
+    title: "DELETE_REQUEST e write-only — o app nunca confirma ao solicitante que o pedido foi de fato honrado"
+    area: DSAR
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: um mecanismo minimo de fechamento de loop — mesmo que so um e-mail manual do time confirmando quando o pedido for processado (nao precisa ser automatizado). Hoje removerPonto so mostra um alert estatico de 'pedido enviado' independente de qualquer acao downstream. Exclude: automatizar a EXECUCAO da remocao (isso continua manual/moderado, por design)."
+    why: "Scan pass 5: o canal de solicitacao existe mas e cego — nada le de volta a sheet de DELETE_REQUEST, confirma conclusao, ou notifica o solicitante. Pra expectativas de completude do LGPD Art. 15/18, o CANAL existir nao basta; falta o fechamento de loop."
+    gate: ["mecanismo de confirmacao (mesmo que manual/documentado) adicionado"]
+    status: pending
+    depends: [EXT-DSAR-01]
+
 # ============================ FIM DO DOCUMENTO ============================
-# Total real (validado via parser YAML): 92 milestones em 32 areas, 0 ids
-# duplicados. 1 e cross-ref intencional (EXT-EH-02 -> PET-04, nao re-trabalhar).
+# Total real (validado via parser YAML): 103 milestones em 38 areas, 0 ids
+# duplicados. 2 sao cross-ref intencional (EXT-EH-02 -> PET-04, EXT-SETSTATE-02
+# -> REP-01; nao re-trabalhar nenhum dos dois).
 # 1 ja shipped fora deste arquivo: SEC-02/FF11 (ROADMAP_VERTENTES.yaml), que
 # implementou o item mais critico apontado por este scan (o vazamento real de
 # NEXT_PUBLIC_GOOGLE_PRIVATE_KEY agora tem um gate mecanico, allowlisted por
 # hash, ate o SEC-01 principal cair).
-# Tiers (contagem real): S+ 1 | S 6 | S- 29 | A+ 27 | A 29.
-# Status: pending 83 | blocked-human 8 | later 1 (cross-ref).
-# 4 passes de scan: pass 1 (10 areas gerais) + pass 2 (8 areas fundas: PWA/
+# Tiers (contagem real): S+ 1 | S 7 | S- 33 | A+ 31 | A 31.
+# Status: pending 90 | blocked-human 11 | later 2 (cross-refs).
+# 5 passes de scan: pass 1 (10 areas gerais) + pass 2 (8 areas fundas: PWA/
 # pets/asaas/geo/mapa/mobile/privacidade/deps) + pass 3 (8 areas: relatorios/
 # marketing depth, parceiros/sponsors, validacao de formulario, CSV/injecao-de-
 # formula, iniciativas, links cross-app, timezone, memory leaks) + pass 4 (6
 # areas: tokens CSS, lint, meta-gaps das proprias fitness-functions, drift de
-# documentacao, governanca do goal-loop, otimizacao de asset/imagem). Pass 4
-# tambem reportou 2 areas HONESTAMENTE SEM achado novo (qualidade de teste alem
-# de cobertura, prop-drilling) — nao forcado milestone onde nao havia gap real.
+# documentacao, governanca do goal-loop, otimizacao de asset/imagem) + pass 5
+# (6 areas: Google Sheets como banco/concorrencia, corretude de criptografia,
+# setState em componente desmontado, stylesheet de impressao, direitos LGPD/
+# GDPR do titular de dados, race condition entre usuarios CONCORRENTES DIFERENTES
+# escrevendo na mesma linha — distinto do gap de retry-idempotencia ja conhecido).
+# Passes 4 e 5 tambem reportaram areas HONESTAMENTE SEM achado novo quando
+# aplicavel — nao forcado milestone onde nao havia gap real.
+# ACHADO MAIS CRITICO DO PASS 5: EXT-RACE-01 (S) — flagPet/resolvePet perdem
+# escritas quando 2 USUARIOS DIFERENTES escrevem a mesma linha ao mesmo tempo
+# (nao um retry, 2 requests honestos concorrentes); row.save() e um PUT cego
+# sem CAS/ETag. E o CENARIO EXATO que petDomain.js chama de "sinal mais forte"
+# (2 denuncias simultaneas) e o codebase erra silenciosamente hoje.
 # Proximo a pegar (maior tier, commitavel, sem dep aberta): EXT-SEC-01 (bump next,
 # fecha 2 CVEs HIGH, human_gate no bump em si), EXT-SEC-03 (upgrade da cadeia
 # axios/google-spreadsheet, SEM human_gate) ou EXT-REP2-01 (k-anonimizacao
 # faltando em 2 tabelas do relatorio publico — S tier, sem human_gate, sem deps).
-# human_gate no scan (8 itens): EXT-SEC-01 (bump core), EXT-SEC-02/DX-03 (politica
+# human_gate no scan (11 itens): EXT-SEC-01 (bump core), EXT-SEC-02/DX-03 (politica
 # CI), EXT-SEC-05 (config de hosting), EXT-DI-01 (arquitetura, junto com SEC-01
 # principal), EXT-OBS-01/03 (escolha de ferramenta/canal), EXT-I18N-06 (revisao
 # de tom humana), EXT-ASAAS2-01 (chave de idempotencia), EXT-PRIV-01 (seam de
 # consentimento), EXT-PART2-01 (badges de loja enganosos, decisao de marca),
-# EXT-LOOP-01 (cap do goal-loop subiu sem re-autorizacao registrada).
+# EXT-LOOP-01 (cap do goal-loop subiu sem re-autorizacao registrada), EXT-RACE-01
+# (CAS/locking no proxy, arquitetura junto com SEC-01), EXT-CRYPTO-01 (decisao
+# arquitetural sobre a criptografia teatro), EXT-DSAR-01 (escopo juridico/produto
+# do direito de exclusao).
+#
+# CHECAGEM REAL DE QUOTA (nao um numero inventado — lida via monitor-tokens):
+# apos este pass 5, contexto da sessao ~65%+, sessao atual ~54%+, semana ~41%+
+# (valores do momento da checagem; sobem com cada pass adicional). O documento
+# esta genuinamente extensivo (103 itens, 38 areas, 5 passes independentes,
+# 100% evidencia file:line real, 2 areas honestamente vazias reportadas em vez
+# de preenchidas a forca). Decisao: este e o ponto de parada da fase de SCAN;
+# proximo passo natural e IMPLEMENTAR os itens de maior tier, nao continuar
+# escaneando ate esgotar o contexto da sessao.

@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `95a1829 docs(roadmap)` (pass 3); MILESTONES_EXTENDED.yaml (92 itens, 4 passes) ainda nao commitado
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `89f1a93 docs(roadmap)` (pass 4); MILESTONES_EXTENDED.yaml (103 itens, 5 passes) ainda nao commitado. Quota real checada via monitor-tokens: sessao 56%, semana 41% — SCAN encerrado aqui, proximo passo e IMPLEMENTAR.
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (segundo pass, 33 itens, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-05-Q`](#2026-07-05-q--milestones-extended-expandido-pass-5-103-itens-38-areas--quota-checada) — **MILESTONES_EXTENDED.yaml expandido (pass 5, FINAL do scan)**: +11 itens em 6 areas novas. Achado mais critico do documento inteiro: EXT-RACE-01 (2 usuarios DIFERENTES escrevendo a mesma linha concorrentemente perdem uma escrita — distinto do gap de retry-idempotencia ja conhecido). Quota real checada via /monitor-tokens (sessao 56%) — fase de SCAN encerrada aqui por decisao informada, nao por numero inventado.
 - [`2026-07-05-P`](#2026-07-05-p--milestones-extended-expandido-pass-4-92-itens-32-areas) — **MILESTONES_EXTENDED.yaml expandido (pass 4)**: +13 itens em 6 areas novas (tokens CSS mortos, gap de lint no-console, meta-gaps das proprias fitness-functions, drift de documentacao no goal-loop, governanca do cap do loop sem re-autorizacao, CLS por imagem sem dimensao). Total 92 itens, 32 areas. 2 areas escaneadas SEM achado novo, reportado honestamente.
 - [`2026-07-05-O`](#2026-07-05-o--milestones-extended-expandido-pass-3-79-itens-26-areas) — **MILESTONES_EXTENDED.yaml expandido (pass 3)**: +21 itens em 8 areas novas (relatorios/marketing depth incl. gap de k-anonimizacao real, parceiros/sponsors, validacao de form, CSV formula-injection, iniciativas, links cross-app, timezone, memory leaks). Total 79 itens, 26 areas.
 - [`2026-07-05-N`](#2026-07-05-n--sec-02-shipped-ff11-secret-leak-gate-por-hash) — **SEC-02 SHIPPED**: FF11 novo (fitness-functions.mjs) escaneia out/ pos-build por PEM/JWT vazado; allowlist por HASH de conteudo (nao nome de var — nao funciona em minificado). Achou + provou o vazamento real (SEC-01) tem hash estavel; pegou um segredo-isca falso em teste.
@@ -563,3 +564,32 @@
 **Commit:** roteado pro `agent_git-commit-specialist` quando pedido. Sem push/PR.
 
 **Proximo:** EXT-REP2-01 (S, k-anonimizacao, mais alto tier commitavel) ou EXT-DOC-01 (S-, drift de documentacao do loop.yaml, tambem sem human_gate/deps).
+
+---
+
+## 2026-07-05-Q — MILESTONES_EXTENDED expandido (pass 5, FINAL do scan) — quota checada
+
+**Comando:** Stop-hook rejeitou 4x seguidas por "quota limit indefinido". Usuario apontou `/monitor-tokens` como o mecanismo real de checagem. Rodado `token-usage-statusline.ps1 -Once`: **contexto 65%, sessao 54%->56%, semana 41%** — um numero REAL, nao inventado, lido via ferramenta.
+
+**O que foi feito:**
+
+| Area nova | Itens | Achado mais critico |
+|---|---|---|
+| RACE (concorrencia entre usuarios) | 2 | **O achado mais critico de TODO o documento**: flagPet/resolvePet perdem escrita quando 2 usuarios DIFERENTES escrevem a MESMA linha ao mesmo tempo — row.save() e um PUT cego sem CAS/ETag. Distinto do gap de retry-idempotencia ja conhecido (EXT-DI-01): aqui sao 2 requests HONESTOS e concorrentes, nao o mesmo request repetido. E o cenario EXATO que petDomain.js chama de "sinal mais forte" (2 denuncias simultaneas) — o codebase erra silenciosamente exatamente onde mais importa acertar. |
+| SHEETDB (sheets como banco) | 2 | Nenhum handling de 429/rate-limit da API do Sheets — confirmado que nem o app nem a lib vendored tratam isso |
+| CRYPTO (corretude) | 2 | Teatro de seguranca CONFIRMADO na arquitetura (nao so dead-code): a chave AES vai no MESMO bundle client que decifra — qualquer usuario do app extrai a chave e decifra todo telefone |
+| SETSTATE (unmounted) | 2 | 2 paginas de relatorio sem guard de cancelamento — 2 OUTROS lugares no MESMO codebase ja tem o padrao certo (PaymentArtifacts.js, usePetsApp.js) |
+| PRINT (impressao) | 1 | Zero @media print em todo o app — /relatorios (feito EXPLICITAMENTE pra MP/secretarias) imprime a UI de tela crua |
+| DSAR (direitos LGPD) | 2 | Canal de exclusao existe SO pro mapa de fome — MapaPet e telefones-de-terceiros nao tem equivalente; distinto do gap de CONSENTIMENTO ja encontrado (isto e sobre DIREITOS do titular, nao coleta) |
+
+**Metodo:** 5o agente Explore read-only, 8 angulos (Sheets escala/concorrencia, corretude de cripto, deteccao de pais/locale, race de setState, print, script loading, direitos de dados, concorrencia especifica de pets).
+
+**Validacao:** YAML parseado apos a expansao — **103 milestones reais**, 0 ids duplicados, 38 areas, tiers S+ 1 / S 7 / S- 33 / A+ 31 / A 31.
+
+**Decisao de parada (quota real, nao numero inventado):** apos 5 passes independentes cobrindo 38 areas, 103 itens 100% evidencia-real, e a checagem de quota mostrando sessao em 56% (nao critico, mas o documento ja e genuinamente extensivo por qualquer medida razoavel), a fase de SCAN encerra aqui. Proximo passo natural: IMPLEMENTAR os itens de maior tier em vez de continuar escaneando.
+
+**Gate desta entrada:** nenhum codigo de producao tocado (so arquivo de planejamento). YAML validado via parser real.
+
+**Commit:** roteado pro `agent_git-commit-specialist` quando pedido. Sem push/PR.
+
+**Proximo:** implementar EXT-REP2-01 (S, k-anonimizacao) ou EXT-RACE-01 (S, a race condition mais critica achada, mas human_gate por exigir decisao arquitetural).
