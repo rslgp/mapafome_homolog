@@ -24,12 +24,17 @@ class CleanOld extends Component {
             const rows = await sheet.getRows();
             rows.forEach((x) => { 
                 let dateMarked;
-                if(x.DateISO) dateMarked = formatRelativeTime(x.DateISO);
-                
+                // I18N-01: pass 'pt-BR' EXPLICITLY. This age-GC keys on the
+                // pt-BR substrings "semana"/"mes"; it must NOT follow the UI
+                // locale (a de/zh operator would otherwise never match and rows
+                // would never be pruned). The display callers get the active
+                // locale by omitting the arg; this internal consumer pins pt-BR.
+                if(x.DateISO) dateMarked = formatRelativeTime(x.DateISO, 'pt-BR');
+
                 //filtrar datas antigas
                 if(
-                    dateMarked.includes("semana") 
-                    || dateMarked.includes("mes") 
+                    dateMarked.includes("semana")
+                    || dateMarked.includes("mes")
                 //&& Number(dateMarked.replace(/[^0-9]/g,'')) > 7
                 ) { x.delete(); } });
 

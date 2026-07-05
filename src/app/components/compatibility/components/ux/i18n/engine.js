@@ -21,7 +21,9 @@ import { DICT } from './dictionary.js';
 // Dictionary structure: DICT[locale][key] = string. Components read via t(key).
 
 const LOCALE_KEY = 'mdf_locale';
-const DEFAULT_LOCALE = 'pt-BR';
+// Exported as the SOT default locale so consumers (e.g. relativeTime's fallback
+// on a bad tag) reference the ONE canonical default instead of re-hardcoding it.
+export const DEFAULT_LOCALE = 'pt-BR';
 // Twelve UI locales. The first seven mirror the SOLONE game's language set (ptbr,
 // en, es, de, fr, ru, cn->zh); INTL HUMANITARIAN EXPANSION adds ar/bn/uk (per
 // INTERNATIONAL_EXPANSION.md, ordered by humanitarian return: Arabic, Bengali,
