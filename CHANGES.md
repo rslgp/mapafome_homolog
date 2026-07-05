@@ -9,12 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `55748d4 fix(ux)` (radios alinhados + touch targets); MILESTONES_EXTENDED.yaml (58 itens, 2 passes) ainda nao commitado
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `67f2cf9 docs(roadmap)` (SEC-02/FF11 aguardando commit via agent_git-commit-specialist)
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (segundo pass, 33 itens, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
-- [`2026-07-05-M`](#2026-07-05-m--milestones-extended-expandido-pass-2-58-itens-18-areas) — **MILESTONES_EXTENDED.yaml expandido (pass 2)**: +25 itens em 8 areas novas (PWA offline edge cases, MapaPet vertical, Asaas edge cases, geofence bbox, Leaflet perf, teclado mobile, privacidade/LGPD, staleness de deps). Total 58 itens, 18 areas.
+- [`2026-07-05-N`](#2026-07-05-n--sec-02-shipped-ff11-secret-leak-gate-por-hash) — **SEC-02 SHIPPED**: FF11 novo (fitness-functions.mjs) escaneia out/ pos-build por PEM/JWT vazado; allowlist por HASH de conteudo (nao nome de var — nao funciona em minificado). Achou + provou o vazamento real (SEC-01) tem hash estavel; pegou um segredo-isca falso em teste.
 - [`2026-07-05-L`](#2026-07-05-l--milestones-extended-criado-33-itens-5-tiers) — **MILESTONES_EXTENDED.yaml criado**: 1o pass de gap-scan (10 areas: testes/perf/error-handling/a11y/integridade/DX/observabilidade/deps-CVE/i18n/build), 33 itens, tiers S+/S/S-/A+/A. Nenhum shipped ainda.
 - [`2026-07-05-K`](#2026-07-05-k--ui-ux-review-p0-dignidade--touch-targets-shipped) — **UI/UX review (ICT6 advisory) + 2 P0 shipped**: reframe "pts/points"->"pessoas/people" (5 locales, dignidade) + radios alinhados + zoom/search >=44px (AA touch). Gate verde.
 - [`2026-07-04-J`](#2026-07-04-j--pet-03-shipped-writer-renewpet-freshnessat) — **PET-03 SHIPPED**: novo writer renewPet carimba freshnessAt ('ainda procurando') — antes era lido mas nunca escrito. +5 testes. Gate verde.
@@ -29,9 +29,9 @@
 - [`2026-07-04-A`](#2026-07-04-a--deep-analysis--roadmap-multi-vertente) — Deep-analysis do produto (11 vertentes) + criado `ROADMAP_VERTENTES.yaml` (30 milestones) + este log + licao de padrao-de-log no vault.
 
 ### STATUS_TALLY (ROADMAP_VERTENTES.yaml)
-- **30 milestones** · pending **15** · blocked-human **5** · later **1** · **shipped 9** (SEO-01/02/03, QA-01, PET-02, PAY-01, I18N-01, SEC-03, PET-03).
+- **30 milestones** · pending **14** · blocked-human **5** · later **1** · **shipped 10** (SEO-01/02/03, QA-01, PET-02/03, PAY-01, I18N-01, SEC-02/03).
 - Por tier: **S+ 3** · S 8 · A 10 · B 9.
-- Por vertente: V1 core-fome 2 · V2 pet 5 (2 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (1 shipped) · V11 governanca 1.
+- Por vertente: V1 core-fome 2 · V2 pet 5 (2 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (2 shipped) · V11 governanca 1.
 - **Todos os S+/S commitaveis shippados.** Restam: 7 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
 ### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 2 passes de scan, tiers S+/S/S-/A+/A)
@@ -461,3 +461,45 @@
 **Commit:** roteado pro `agent_git-commit-specialist` quando pedido. Sem push/PR.
 
 **Proximo:** o goal /goal continua ativo ("until reach quota limit") — proxima acao e ou continuar expandindo com mais angulos de scan, ou comecar a IMPLEMENTAR o item de maior tier (EXT-SEC-01/03), dependendo do que o usuario redirecionar.
+
+---
+
+## 2026-07-05-N — SEC-02 shipped: FF11 secret-leak gate por hash
+
+**Comando:** "go ship pending status" — pegou SEC-02 (S, ROADMAP_VERTENTES.yaml), maior tier commitavel sem human_gate/deps.
+
+**O que foi feito:**
+
+| Arquivo / Acao | O que | Por que |
+|---|---|---|
+| `scripts/fitness-functions.mjs` (edit) | Novo FF11: varre `out/**/*.js` (pos-build) por padrao PEM (`-----BEGIN PRIVATE KEY-----`) e JWT-shaped (`eyJ...`). Falha o gate numa string desconhecida; passa numa allowlisted como debt rastreado. | O vazamento da chave Google (SEC-01) so era pego por auditoria manual. Uma FF transforma isso em bloqueador mecanico de todo build. |
+| `ROADMAP_VERTENTES.yaml` (edit) | SEC-02 pending -> shipped, com nota do desvio de design. | Flip so com gate verde lido. |
+
+**DESVIO DE DESIGN descoberto na implementacao (nao no scope original):** o scope pedia allowlist por NOME de variavel (`NEXT_PUBLIC_...`). Isso NAO FUNCIONA em bundle minificado — provado empiricamente: a MESMA chave real apareceu com nomes DIFERENTES de identificador proximo em cada chunk (as vezes nenhum, as vezes um `REACT_APP_GOOGLE_PRIVATE_KEY` MORTO que so calha de estar perto textualmente em alguns chunks). Fix: allowlist por **HASH SHA-256 do conteudo do PEM** — um digest one-way (commitar o hash NAO expoe a chave, mesmo principio de hash de senha), casa exato independente de minificacao/chunk/rebuild.
+
+**Provas reais rodadas nesta sessao (nao so leitura de codigo):**
+1. As 4 ocorrencias reais da chave vazada em `out/` (SEC-01, ja conhecido) tem o **MESMO hash** — confirma 1 segredo, nao 2.
+2. Um segredo **FAKE injetado** (hash diferente) **FALHOU** o gate — prova que FF11 pega vazamento novo.
+3. Removido o fake — gate volta a passar.
+4. Rebuild completo (`out/` novo) — hash ainda casa (estavel entre builds, nao um artefato de 1 build especifico).
+
+**Comportamento de skip:** fitness roda ANTES do build no gate documentado (lint->test->fitness->build->smoke200); FF11 pula com nota clara quando `out/` esta ausente (nao quebra o fluxo normal) e ativa quando presente (re-rodar fitness apos build pra pegar o check real).
+
+**Gate (verde, lido nesta sessao):**
+
+| Check | Resultado |
+|---|---|
+| lint | exit 0 |
+| test | 1376/1376 passed, exit 0 |
+| build | exit 0, compiled clean |
+| fitness (pre-build) | exit 0, FF11 skip gracioso (out/ ausente) |
+| fitness (pos-build) | exit 0, FF11 scan ativo, PASS (hash do vazamento conhecido reconhecido) |
+| FF11 prova-positiva | segredo fake injetado -> FALHOU (hash diferente pego) |
+| smoke200 | 16/16 rotas 200+render |
+| a11y | N/A (script-only, nenhum render mudou) |
+
+**Escopo (honesto):** o MECANISMO mudou (nome -> hash) mas o RESULTADO pedido pelo scope (bloquear vazamento novo, permitir o debt rastreado) e o mesmo.
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+**Proximo:** goal /goal ainda ativo. Proximo maior tier commitavel: EXT-SEC-03 (upgrade axios/google-spreadsheet, MILESTONES_EXTENDED) ou EXT-PWA2-01 (fila offline sem tratamento de IndexedDB indisponivel).
