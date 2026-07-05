@@ -54,6 +54,34 @@
 #   marcadores (sem aria-label). Cada item cita file:line real — nenhum fato
 #   inventado. Nao commitar nenhuma correcao sem antes reler o arquivo/linha
 #   citado (pode ter mudado desde o scan).
+#
+# ======================= COMECE AQUI (indice de ataque) =======================
+# Top itens COMMITAVEIS (sem human_gate, sem dep aberta), do maior tier pro
+# menor — a proxima sessao de implementacao pega de cima pra baixo:
+#   S  : EXT-REP2-01 (k-anonimizacao k=5 faltando em 2 tabelas do relatorio
+#        publico — viola a propria politica declarada da pagina)
+#   S  : EXT-URLSTATE-01 (popstate fecha a sheet, nao o site — perda de report
+#        no back do Android)
+#   S  : EXT-SEC-03 (upgrade da cadeia axios/google-spreadsheet)
+#   S  : EXT-OWNERSHIP-01 parte client (mint do token petReport: no publish;
+#        enforcement real fica pro SEC-01)
+#   S- : EXT-EMBED3P-01 (DEFEITO VIVO: secao Creators renderiza VAZIA em
+#        producao — iframe http:// bloqueado como mixed content)
+#   S- : EXT-FOCUSTRAP-01 (trap de Tab nas sheets aria-modal)
+#   S- : EXT-SHARELOC-01 (share WhatsApp localizado + encodeURIComponent)
+#   S- : EXT-IOSPWA-01 (apple-touch-icon + meta standalone)
+#   S- : EXT-SWNAV-01 (fallback de navegacao offline no SW)
+#   S- : EXT-ANTIABUSE-01 (min-time + honeypot no publish)
+#   S- : EXT-REPRO-01 (matar bun.lock, engines/.nvmrc, reabilitar npm ci)
+#   A+ : EXT-SECTXT-01 (security.txt), EXT-SWDATA-01 (nao apagar cache -data
+#        no update), EXT-CSP-01 (CSP via meta ou trade-off documentado)
+# Human-gated mais urgentes (levar pro humano JUNTOS, mesma conversa de
+# arquitetura): SEC-01 (chave no bundle -> proxy) + EXT-RACE-01 (CAS/locking)
+# + EXT-DI-01 + EXT-OWNERSHIP-01 enforcement. Decisoes de produto: EXT-IPA-01
+# (canal iOS sideload), EXT-TILES2-01 (provedor de tiles), EXT-NOTIF-01
+# (entregar ou desligar notificacoes), EXT-CRYPTO-01, EXT-LEGEND-01 (curto:
+# corrigir o texto do hint e commitavel; decidir a mensagem e de produto).
+# ==============================================================================
 
 areas:
   - id: T
@@ -1938,3 +1966,21 @@ milestones:
 # TOTAIS POS-PASS-10 (validar via parser antes de commitar): 147 milestones em
 # 71 areas. Tiers: S+1 | S 9 | S- 51 | A+ 43 | A 43.
 # Status: pending 128 | blocked-human 16 | later 3.
+#
+# ================= QUOTA LIMIT ATINGIDO (2a vez, janela pos-reset) =================
+# 2026-07-05, pre-pass-11: leitura real via monitor-tokens -Once = sessao 74%
+# (depois 77% ao preparar o fechamento) | semana 53%. Um pass custa 10-21pp
+# medidos (pass 10 sozinho: 53%->74%). Partir de 74-77% GARANTE cruzar a zona
+# vermelha (>=80%, o unico limiar objetivo que o monitor publica) NO MEIO do
+# scan — o overrun que o criterio de parada existe pra evitar. Em vez de pass
+# 11, o fechamento gastou o resto util em valor barato: o indice "COMECE AQUI"
+# no topo do arquivo (top commitaveis por tier + human-gated agrupados pra UMA
+# conversa de arquitetura).
+# ESTADO FINAL DESTA JANELA: 147 milestones | 71 areas | 10 passes read-only
+# independentes | 0 ids duplicados | tiers S+1/S9/S-51/A+43/A43 | status
+# pending 128 / blocked-human 16 / later 3 | 100% evidencia file:line |
+# 1 fix ja shipped (SEC-02/FF11). Trajetoria da janela: 9%(pre-p8) -> 35%
+# (pre-p9) -> 53%(pre-p10) -> 74%(pre-p11, parada).
+# PROXIMA SESSAO: nao rodar pass 11 por default — 10 passes cobriram ~71 areas
+# e a taxa de angulo-vazio esta subindo; o valor agora esta em IMPLEMENTAR.
+# Comecar pelo indice COMECE AQUI (EXT-REP2-01 primeiro).

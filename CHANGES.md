@@ -9,7 +9,7 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit: `ef3a5bd` (pass 9). **Pass 10 rodado no loop de 10min** (cron `c7ade9ba`): 147 itens/71 areas. Quota pre-pass10: sessao 53%/semana 51% (zona amarela). Proximo alvo: EXT-REP2-01 (S, sem human_gate).
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit: `1e52269` (pass 10). **QUOTA LIMIT ATINGIDO (2a vez): sessao 74-77% pre-pass-11; um pass custa 10-21pp, cruzaria a zona vermelha (>=80%) no meio** — pass 11 NAO rodado; fechamento gastou o resto em valor barato (indice COMECE AQUI no topo do MILESTONES_EXTENDED.yaml). Estado final: 147 itens/71 areas/10 passes. Proxima sessao: IMPLEMENTAR, comecando por EXT-REP2-01.
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan ativo no loop, 147 itens/71 areas/10 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
@@ -746,5 +746,24 @@ Trajetoria ~5-6pp de sessao por pass. Sessao ainda com margem (67%, nao critico)
 **5 angulos honestamente vazios:** log PII do asaas-backend (LIMPO — so type/id/err.message), overflow de string longa (StepsHint e scroller por design; header com ellipsis), safe-area iOS (20+ call sites + maskable OK), cadeia 404 (not-found.js + out/404.html gerado), stubs de jogos (render valido).
 
 **Gate:** planning/docs-only. Parser real (apos corrigir 1 colon nao-quotado no owner do EXT-IPA-01): **147 milestones, 71 areas, 0 dups**; tiers S+1/S9/S-51/A+43/A43; status 128/16/3 — footer confere.
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+---
+
+## 2026-07-05-X — Quota limit atingido (2a vez): fechamento com indice COMECE AQUI
+
+**Contexto:** pre-pass-11, leitura real via `-Once`: sessao **74%** (77% ao preparar o fechamento) · semana 53%. Custo medido por pass: 10-21pp (pass 10 sozinho: 53%->74%). Partir de 74-77% garante cruzar a zona vermelha (>=80%, unico limiar objetivo do monitor) NO MEIO do scan — o overrun que o criterio de parada evita. **Pass 11 nao rodado de proposito.**
+
+**O que foi feito no fechamento:**
+
+| Arquivo | O que | Por que |
+|---|---|---|
+| `MILESTONES_EXTENDED.yaml` (header) | Indice **COMECE AQUI**: top commitaveis por tier (EXT-REP2-01 primeiro, depois URLSTATE-01/SEC-03/OWNERSHIP-01-client, os 7 S-, os 3 A+ baratos) + human-gated agrupados pra UMA conversa de arquitetura (SEC-01+RACE-01+DI-01+OWNERSHIP-enforcement) e decisoes de produto (IPA, TILES2, NOTIF, CRYPTO, LEGEND) | Valor barato que cabia na margem: a proxima sessao ataca de cima pra baixo sem re-ler 147 itens |
+| `MILESTONES_EXTENDED.yaml` (footer) | Bloco "QUOTA LIMIT ATINGIDO (2a vez)": criterio, trajetoria da janela (9%->35%->53%->74%), estado final, recomendacao de IMPLEMENTAR em vez de pass 11 | O documento registra a evidencia do proprio encerramento, como na 1a vez (entry T) |
+
+**Estado final da janela:** 147 milestones · 71 areas · 10 passes read-only · 0 dups (parser) · tiers S+1/S9/S-51/A+43/A43 · 1 fix shipped (SEC-02/FF11). Taxa de angulo-vazio subindo (pass 9: 7 de 10; pass 10: 5 de 10) — o valor marginal agora esta em IMPLEMENTAR, nao escanear.
+
+**Gate:** planning/docs-only; parser real 147/71/0.
 
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
