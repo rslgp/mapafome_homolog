@@ -19,16 +19,20 @@
 #   ROADMAP_VERTENTES.yaml (shipped SO com gate verde lido; append-only).
 #
 # METODO
-#   Gerado por 2 passes de scan de evidencia (Explore agent, read-only).
+#   Gerado por 3 passes de scan de evidencia (Explore agent, read-only).
 #   Pass 1 (10 areas): testes, performance, error-handling, a11y, integridade
 #   de dados, DX, observabilidade, seguranca de deps, conteudo/i18n, build/deploy.
 #   Pass 2 (8 areas, mais fundo): PWA install/offline edge cases, MapaPet vertical
 #   (match/taxonomy/share), Asaas backend edge cases (validacao/CORS/replay),
 #   geofence/bbox de paises, Leaflet map (cluster/tiles/perf), teclado mobile/
-#   viewport, analytics/privacidade (LGPD), staleness de dependencias alem dos
-#   CVEs do pass 1. Cada item cita file:line real — nenhum fato inventado. Nao
-#   commitar nenhuma correcao sem antes reler o arquivo/linha citado (pode ter
-#   mudado desde o scan).
+#   viewport, analytics/privacidade (LGPD), staleness de dependencias.
+#   Pass 3 (8 areas novas): relatorios/marketing vertical depth (k-anonimizacao,
+#   timezone), parceiros/sponsors/imprensa (badges enganosos, weight inerte),
+#   validacao de formulario/UX, export CSV/injecao-de-formula, iniciativas/
+#   cadastrar, links cross-app/integracao externa, timezone/data global, memory
+#   leaks (timers/listeners sem cleanup). Cada item cita file:line real — nenhum
+#   fato inventado. Nao commitar nenhuma correcao sem antes reler o arquivo/linha
+#   citado (pode ter mudado desde o scan).
 
 areas:
   - id: T
@@ -67,6 +71,22 @@ areas:
     nome: "Analytics / privacidade (LGPD)"
   - id: DEP
     nome: "Staleness de dependencias"
+  - id: REP2
+    nome: "Relatorios/marketing vertical depth (pass 3)"
+  - id: PART2
+    nome: "Parceiros/sponsors/imprensa (pass 3)"
+  - id: FORM
+    nome: "Validacao de formulario / UX"
+  - id: CSV
+    nome: "Export CSV / injecao de formula"
+  - id: INIT3
+    nome: "Iniciativas/cadastrar (pass 3)"
+  - id: LINK
+    nome: "Links cross-app / integracao externa"
+  - id: TZ
+    nome: "Timezone / data global"
+  - id: LEAK
+    nome: "Memory leaks (timers/listeners)"
 
 milestones:
 
@@ -696,17 +716,246 @@ milestones:
     gate: ["risco documentado no README ou neste arquivo"]
     status: pending
 
+  # ==================== REP2 — RELATORIOS/MARKETING VERTICAL DEPTH (pass 3) ====================
+  - id: EXT-REP2-01
+    title: "reports.js: atendimento_por_regiao e vulnerabilidade_por_regiao NAO passam por k-anonimizacao"
+    area: REP2
+    tier: S
+    owner: softwareengineer
+    scope: "Include: reports.js:214-222 (atendimento_por_regiao) e :374-385 (vulnerabilidade_alimentar_por_regiao) — aplicar o MESMO kAnonymize() que byCategory/byRegion ja usam (linhas 211-212), suprimindo/consolidando grupos < k=5. Exclude: mudar o k=5 em si (SOT ja definido)."
+    why: "Scan pass 3: o proprio relatorio AFIRMA 'Grupos < 5 foram consolidados em outros' (nota_dignidade), mas essas 2 tabelas especificas publicam a contagem EXATA de uma regiao com so 1-2 pontos reportados — quebra a promessa de anonimizacao do proprio relatorio, e a tabela de vulnerabilidade e AINDA mais re-identificante (cruza categoria+regiao)."
+    gate: ["npm run test", "teste: regiao com <5 pontos e suprimida/consolidada nas 2 tabelas"]
+    status: pending
+
+  - id: EXT-REP2-02
+    title: "marketingReports.js: totais do resumo somados DEPOIS da k-anonimizacao por campanha (sub-contam o alcance real)"
+    area: REP2
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: marketingReports.js:150-152 — computar os totais (totalPotencial/totalAteAgora/totalEngajada) a partir dos dados BRUTOS antes da supressao k-anon, suprimindo so o TOTAL final se ele proprio cair abaixo do limiar. Exclude: mudar o k-anon por-campanha em si."
+    why: "Scan pass 3: hoje o 'resumo' de alcance total PERDE as campanhas suprimidas-a-0, sub-contando o alcance real pro patrocinador — nao e um bug de privacidade, e um bug de PRECISAO que nada documenta."
+    gate: ["npm run test", "teste: total bate com a soma bruta, so o total final e suprimido se necessario"]
+    status: pending
+
+  - id: EXT-REP2-03
+    title: "reports.js: bucketing de sazonalidade (hora/dia) e timezone-naive — quebra com report gerado fora do fuso BR"
+    area: REP2
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: reports.js:170-171 (getDay/getHours) — usar um timezone FIXO (America/Sao_Paulo, ou o fuso do pais de origem do pin) em vez do fuso da maquina que roda o relatorio. Exclude: mudar a granularidade do bucket (hora/dia continuam)."
+    why: "Scan pass 3: se o relatorio for gerado numa maquina fora do fuso BR (ou quando existirem pins internacionais), os buckets de 'hora do dia'/'dia da semana' usados pra 'planejamento de turno' mudam silenciosamente, corrompendo o dado sem nenhum erro visivel."
+    gate: ["npm run test", "teste: bucketing estavel independente do fuso da maquina"]
+    status: pending
+
+  - id: EXT-REP2-04
+    title: "marketingReports.js sponsorStatus: branch morto 'ativo' — logica duplicada com isActiveNow pode divergir"
+    area: REP2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: marketingReports.js:115-123 — unificar sponsorStatus e isActiveNow numa UNICA fonte de verdade de status (evitar 2 implementacoes que podem discordar). Exclude: mudar os 3 estados existentes (ativo/aguardando-inicio/expirado)."
+    why: "Scan pass 3: o fallback 'ativo' no final da funcao e INALCANCAVEL na pratica (isActiveNow ja cobre os 3 casos) — sinal de logica duplicada que pode divergir silenciosamente se um dos dois for editado sem o outro."
+    gate: ["npm run test", "npm run lint"]
+    status: pending
+
+  # ==================== PART2 — PARCEIROS/SPONSORS/IMPRENSA (pass 3) ====================
+  - id: EXT-PART2-01
+    title: "App-store badges linkam pra install de PWA, nao pra loja real — nenhum app nativo existe (visual enganoso)"
+    area: PART2
+    tier: S-
+    owner: human-gated (decisao de produto/marca) + softwareengineer
+    scope: "Include: decidir — trocar os badges por um CTA claro de 'instalar como app' (sem o visual de loja oficial), ou remover os badges de loja se nao houver planos de app nativo. O badge da App Store hoje vem de uma URL do governo BR (gov.br/cnpq), nao da Apple. Exclude: publicar um app nativo de verdade (fora de escopo tecnico)."
+    why: "Scan pass 3: InfoPanel.js:110/118 mostra selos visuais de Google Play/App Store que na verdade disparam um install de PWA (useInfoPanel.js) — nenhum app nativo existe em nenhuma loja. Visualmente implica uma listagem que nao existe; o selo da App Store nem vem de asset oficial da Apple."
+    gate: ["decisao registrada", "se mudar: npm run test + build + smoke200 + a11y"]
+    status: blocked-human
+    human_gate: true
+    note: "E uma decisao de marca/produto (como comunicar 'instale como app' sem implicar loja oficial) — Claude PROPOE, humano decide o texto/visual."
+
+  - id: EXT-PART2-02
+    title: "sponsors.js pickSponsor: sem guarda contra weight negativo — pode inverter a distribuicao proporcional"
+    area: PART2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: sponsors.js:222-233 — validar que todo weight e >= 0 (rejeitar/normalizar um sponsor com weight negativo) antes do loop de pick proporcional. Exclude: mudar o algoritmo de pick em si."
+    why: "Scan pass 3: um weight negativo faz `pick -= weight` AUMENTAR em vez de diminuir, quebrando a distribuicao proporcional pretendida — hoje so um risco de erro de digitacao, mas sem guarda nenhum dado ruim e pego."
+    gate: ["npm run test", "teste: weight negativo e rejeitado ou normalizado, nao quebra a distribuicao"]
+    status: pending
+
+  - id: EXT-PART2-03
+    title: "SponsorSlot: pickSponsor() (com peso) existe mas NUNCA e chamado pelo carrossel real — weight nao tem efeito visivel"
+    area: PART2
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: confirmar se pickSponsor() deveria dirigir a ORDEM/frequencia do carrossel visivel (SponsorSlot.js) e, se sim, ligar; se pickSponsor() e pra outro consumidor (server-side?), documentar isso explicitamente pra nao parecer dead code. Exclude: mudar o algoritmo de peso em si."
+    why: "Scan pass 3: SponsorSlot.js so rotaciona eligibleSponsors() em ordem, ignorando weight por completo — se a intencao era 'patrocinador paga mais, aparece mais', isso NAO acontece pro usuario real hoje, sem nenhum aviso de que o campo weight e inerte no caminho visivel."
+    gate: ["decisao/fix documentado", "npm run test"]
+    status: pending
+
+  - id: EXT-PART2-04
+    title: "Link-check automatizado pros ~15 hrefs externos (Globo, gov.br, app stores, SOLONE) — hoje 0 CI cobre isso"
+    area: PART2
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: um script simples (ou job de CI agendado, nao a cada PR) que faz HEAD request nos ~15 links externos (InfoPanel.js, header.js, MainControls.js, mapConstants.js, Agradecimentos.js, StepsHint.js) e reporta 404/redirect quebrado. Exclude: bloquear o build a cada PR nisso (links externos podem falhar por instabilidade transitoria; roda agendado, nao no gate critico)."
+    why: "Scan pass 3: nenhum link externo (incl. o logo corporativo da Globo com URL de hash aleatorio, o selo nao-oficial da App Store, o link hardcoded /solone/) tem verificacao automatizada — qualquer um pode quebrar silenciosamente."
+    gate: ["script criado", "1 execucao manual reporta o status real dos ~15 links"]
+    status: pending
+
+  # ==================== FORM — VALIDACAO DE FORMULARIO / UX ====================
+  - id: EXT-FORM-01
+    title: "assinar/page.js: telefone do doador e ZERO validado (sem digito minimo, undefined passa)"
+    area: FORM
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: validateBeforeSubmit (asaasSubscriptionClient.js:293-302) ganha um floor de digitos minimos pro mobilePhone/telefone (hoje so valida rail/valor/nome/email/CPF-CNPJ). Exclude: exigir formato BR especifico (o app e multi-pais)."
+    why: "Scan pass 3: um telefone vazio (undefined apos strip) ou um numero de 1 digito passa pela validacao do CLIENTE sem nenhum aviso — na UNICA pagina que lida com dinheiro real do doador."
+    gate: ["npm run test", "teste: telefone vazio/curto e rejeitado antes do submit"]
+    status: pending
+
+  - id: EXT-FORM-02
+    title: "ReportSheet: chips de categoria sem aria-required, apesar de handlePublish bloquear com 0 categorias"
+    area: FORM
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: ReportSheet.js:219-239 — adicionar aria-required=true (ou aria-describedby apontando pro aviso) nos chips de categoria, ja que handlePublish (linha 127) EXIGE >=1 selecionado. Exclude: mudar a logica de bloqueio (ja correta)."
+    why: "Scan pass 3: um usuario de leitor de tela so descobre que categoria e obrigatoria DEPOIS de tentar publicar e bater no erro inline — nenhum aviso antecipado."
+    gate: ["npm run test", "npm run a11y"]
+    status: pending
+
+  - id: EXT-FORM-03
+    title: "PetReportSheet: campo photos (URL) sem validacao client-side antes do publish assincrono"
+    area: FORM
+    tier: A
+    owner: softwareengineer
+    scope: "Include: usePetReportSheet.js — validar o formato da URL (new URL() + protocolo http/https) ANTES de disparar o publish assincrono, dando feedback inline imediato em vez de esperar o round-trip pra sanitizePhotosUrl rejeitar do lado do dominio. Exclude: mudar a barreira sanitizePhotosUrl em si (fica como defesa de segunda linha)."
+    why: "Scan pass 3: hoje uma URL malformada so e pega DEPOIS do round-trip assincrono de publish (via sanitizePhotosUrl no dominio) — sem feedback imediato, o usuario espera pra descobrir que a foto nao vai aparecer."
+    gate: ["npm run test", "teste: URL malformada da feedback inline sem round-trip"]
+    status: pending
+
+  - id: EXT-FORM-04
+    title: "iniciativas/cadastrar: campos required nao disparam validacao nativa (form tem noValidate) — falha silenciosa"
+    area: FORM
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: page.js — com noValidate ativo, adicionar validacao MANUAL com aria-invalid + foco no primeiro campo invalido + mensagem inline quando nome/endereco/contato estao vazios no submit. Exclude: remover o noValidate (pode ser intencional pro estilo visual custom)."
+    why: "Scan pass 3: hoje o botao de submit so 'nao faz nada' quando um campo obrigatorio esta vazio — sem NENHUM feedback visivel (nem nativo, ja que noValidate esta ligado, nem manual)."
+    gate: ["npm run test", "npm run a11y", "teste: campo vazio no submit foca + anuncia o erro"]
+    status: pending
+
+  # ==================== CSV — EXPORT CSV / INJECAO DE FORMULA ====================
+  - id: EXT-CSV-01
+    title: "csvEsc() nao escapa formula-injection (=, +, -, @ no inicio de celula) — CWE-1236"
+    area: CSV
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: csv.js csvEsc() — prefixar um apostrofo (') ou aspas simples quando o valor comeca com =, +, -, ou @ (o guard padrao contra formula-injection ao abrir em Excel/Sheets). Exclude: mudar o escaping de aspas/virgula/quebra-de-linha existente (ja correto)."
+    why: "Scan pass 3: verificado diretamente — csvEsc('=SUM(A1:A9)') passa sem escape. Hoje as colunas populadas sao controladas internamente (baixo risco real), mas e o UNICO serializer compartilhado (reports.js, marketingReports.js) e zero teste cobre isso — uma coluna futura de texto livre (detail/contact) herdaria o gap silenciosamente."
+    gate: ["npm run test", "teste novo: valor iniciando com =/+/-/@ e escapado no CSV"]
+    status: pending
+
+  # ==================== INIT3 — INICIATIVAS/CADASTRAR (pass 3) ====================
+  - id: EXT-INIT3-01
+    title: "iniciativas/cadastrar: 'sucesso' falso quando localStorage falha (Safari private mode)"
+    area: INIT3
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: page.js:62-74 — o try/catch INTERNO do localStorage.setItem hoje e engolido mas o try EXTERNO ainda seta status:'success' incondicionalmente; propagar a falha do write pra fora e mostrar erro real (nao sucesso falso) quando o storage falhar. Exclude: mudar o destino de persistencia (isso e o INIT-01 do ROADMAP_VERTENTES, ja trackeado e blocked-human)."
+    why: "Scan pass 3: em Safari private mode (onde localStorage.setItem lanca), o usuario ve uma tela de SUCESSO falsa — pior que so 'nao persiste' (INIT-01 ja documenta isso), porque aqui ativamente MENTE que funcionou."
+    gate: ["npm run test", "teste: localStorage falho mostra erro, nao sucesso"]
+    status: pending
+
+  - id: EXT-INIT3-02
+    title: "iniciativas/cadastrar: dias/horario opcionais permitem uma iniciativa sem NENHUM horario de funcionamento"
+    area: INIT3
+    tier: A
+    owner: softwareengineer
+    scope: "Include: page.js:49 — exigir pelo menos 1 dia OU um horario preenchido antes de permitir submit (hoje so nome/cats/endereco/contato sao obrigatorios). Exclude: exigir os 2 juntos (pode ser 'todo dia, sem horario fixo')."
+    why: "Scan pass 3: uma iniciativa pode ser cadastrada sem NENHUMA indicacao de quando funciona — inutil pra quem procura ajuda no mapa."
+    gate: ["npm run test"]
+    status: pending
+
+  - id: EXT-INIT3-03
+    title: "iniciativas/cadastrar: sem dedupe/idempotencia — double-tap ou volta-e-reenvia duplica a entrada no localStorage"
+    area: INIT3
+    tier: A
+    owner: softwareengineer
+    scope: "Include: page.js — uma idempotency_key (mesmo padrao ja usado em publishPet/resolvePet) pra prevenir duplicata no array mdf_initiatives do localStorage. Exclude: mudar o destino de persistencia (INIT-01, blocked-human)."
+    why: "Scan pass 3: sem chave de idempotencia, um duplo-toque ou um voltar-e-reenviar duplica a iniciativa indefinidamente no localStorage."
+    gate: ["npm run test", "teste: double-submit nao duplica"]
+    status: pending
+
+  # ==================== LINK — LINKS CROSS-APP / INTEGRACAO EXTERNA ====================
+  - id: EXT-LINK-01
+    title: "Link /solone/ hardcoded absoluto (nao next/link) — forca full-reload e nao pega restructuring silencioso"
+    area: LINK
+    tier: A
+    owner: softwareengineer
+    scope: "Include: InfoPanel.js:127/207 — se /solone/ e servido pelo MESMO dominio/export, trocar pra next/link (navegacao SPA, sem reload); se e um export ESTATICO separado, documentar isso explicitamente. Exclude: mudar a estrutura do export /solone/ em si."
+    why: "Scan pass 3: hoje forca uma navegacao full-page desnecessaria (se for mesmo-dominio) e, sem teste, um restructuring do path /solone/ quebraria silenciosamente (nenhum link-check cobre — ver EXT-PART2-04)."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+    depends: [EXT-PART2-04]
+
+  # ==================== TZ — TIMEZONE / DATA GLOBAL ====================
+  - id: EXT-TZ-01
+    title: "sponsors.js parseDate: expiry de sponsor calculado no fuso do VISITANTE, nao um fuso fixo (BR)"
+    area: TZ
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: sponsors.js:148 parseDate — fixar o boundary de expiry (23:59:59.999) num fuso EXPLICITO (America/Sao_Paulo, ou configuravel por campanha) em vez do fuso local do browser do visitante. Exclude: mudar o formato de data de entrada da campanha (YYYY-MM-DD continua)."
+    why: "Scan pass 3: uma campanha com expiresAt:'2026-02-17' pretendendo 'ate o fim do dia no Brasil' expira em horarios DIFERENTES pra visitantes em fusos diferentes — inconsistente com a meta de expansao internacional do proprio press kit."
+    gate: ["npm run test", "teste: expiry consistente independente do fuso do visitante"]
+    status: pending
+
+  - id: EXT-TZ-02
+    title: "reports.js monthKey/getDay/getHours vs marketingReports.js fmtDate: 1 e TZ-safe (UTC), o outro nao — inconsistencia no mesmo pipeline"
+    area: TZ
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: alinhar reports.js (monthKey, sazonalidade) pra usar UTC ou um fuso fixo, igual marketingReports.js:fmtDate ja faz (toISOString().slice(0,10)) — hoje as 2 funcoes IRMAS na mesma area de sponsor/relatorio divergem em disciplina de fuso. Exclude: mudar o formato de EXIBICAO (toLocaleDateString com locale continua correto pra isso)."
+    why: "Scan pass 3: dentro do MESMO pipeline de relatorio/sponsor, uma funcao e TZ-safe e a irma nao e — sinal de que a disciplina de fuso nao foi aplicada uniformemente, nao uma decisao deliberada."
+    gate: ["npm run test"]
+    status: pending
+
+  # ==================== LEAK — MEMORY LEAKS (timers/listeners) ====================
+  - id: EXT-LEAK-01
+    title: "3 componentes com setTimeout de feedback de copy sem cleanup no unmount (CopyControls, PaymentArtifacts, parceiros)"
+    area: LEAK
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: CopyControls.js:20/23, PaymentArtifacts.js:23-29, parceiros/page.js:88 — trocar o setTimeout fire-and-forget por um padrao com useRef + clearTimeout no cleanup do useEffect (mesmo padrao ja correto em InstallToast.js:124/153). Exclude: mudar a duracao do feedback visual (2-4s conforme cada um ja tem)."
+    why: "Scan pass 3: os 3 tem o MESMO padrao (setState apos unmount se o usuario navegar rapido) — InstallToast.js JA faz certo no mesmo codebase, entao e inconsistencia de convencao, nao um blind spot sistemico. parceiros/page.js e o mais notavel: limpa listeners de blur/visibilitychange corretamente mas nao o timer, no MESMO arquivo."
+    gate: ["npm run test", "npm run lint"]
+    status: pending
+
+  - id: EXT-LEAK-02
+    title: "App.js (classe raiz): 2 setTimeout sem tracked id / sem clear no componentWillUnmount"
+    area: LEAK
+    tier: A
+    owner: softwareengineer
+    scope: "Include: App.js:678-684 e :770 — guardar o id do setTimeout e limpar em teardownLifecycle (linha 800), espelhando a disciplina que appLifecycle.js JA aplica pro _urgencyTicker/_onLocaleChange no MESMO arquivo. Exclude: mudar o delay de 500ms/700ms."
+    why: "Scan pass 3: baixo risco HOJE (App e o shell raiz, nunca desmonta em uso normal), mas e uma bomba-relogio latente se uma troca de rota SPA-style desmontar o shell raiz no futuro — e inconsistente com o teardown cuidadoso que o MESMO arquivo ja faz em outro lugar."
+    gate: ["npm run test", "npm run lint"]
+    status: pending
+
 # ============================ FIM DO DOCUMENTO ============================
-# Total real (validado via parser YAML): 58 milestones em 18 areas, 0 ids
+# Total real (validado via parser YAML): 79 milestones em 26 areas, 0 ids
 # duplicados. 1 e cross-ref intencional (EXT-EH-02 -> PET-04, nao re-trabalhar).
-# Nenhum shipped ainda.
-# Tiers (contagem real): S+ 1 | S 5 | S- 21 | A+ 18 | A 13.
-# Status: pending 51 | blocked-human 6 | later 1 (cross-ref).
+# 1 ja shipped fora deste arquivo: SEC-02/FF11 (ROADMAP_VERTENTES.yaml), que
+# implementou o item mais critico apontado por este scan (o vazamento real de
+# NEXT_PUBLIC_GOOGLE_PRIVATE_KEY agora tem um gate mecanico, allowlisted por
+# hash, ate o SEC-01 principal cair).
+# Tiers (contagem real): S+ 1 | S 6 | S- 28 | A+ 24 | A 20.
+# Status: pending 71 | blocked-human 7 | later 1 (cross-ref).
+# 3 passes de scan: pass 1 (10 areas gerais) + pass 2 (8 areas fundas: PWA/
+# pets/asaas/geo/mapa/mobile/privacidade/deps) + pass 3 (8 areas novas:
+# relatorios/marketing depth, parceiros/sponsors, validacao de formulario,
+# CSV/injecao-de-formula, iniciativas, links cross-app, timezone, memory leaks).
 # Proximo a pegar (maior tier, commitavel, sem dep aberta): EXT-SEC-01 (bump next,
-# fecha 2 CVEs HIGH, human_gate no bump em si) ou EXT-SEC-03 (upgrade da cadeia
-# axios/google-spreadsheet, SEM human_gate, pode comecar ja).
-# human_gate no scan (6 itens): EXT-SEC-01 (bump core), EXT-SEC-02/DX-03 (politica
+# fecha 2 CVEs HIGH, human_gate no bump em si), EXT-SEC-03 (upgrade da cadeia
+# axios/google-spreadsheet, SEM human_gate) ou EXT-REP2-01 (k-anonimizacao
+# faltando em 2 tabelas do relatorio publico — S tier, sem human_gate, sem deps).
+# human_gate no scan (7 itens): EXT-SEC-01 (bump core), EXT-SEC-02/DX-03 (politica
 # CI), EXT-SEC-05 (config de hosting), EXT-DI-01 (arquitetura, junto com SEC-01
 # principal), EXT-OBS-01/03 (escolha de ferramenta/canal), EXT-I18N-06 (revisao
 # de tom humana), EXT-ASAAS2-01 (chave de idempotencia), EXT-PRIV-01 (seam de
-# consentimento).
+# consentimento), EXT-PART2-01 (badges de loja enganosos, decisao de marca).

@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `67f2cf9 docs(roadmap)` (SEC-02/FF11 aguardando commit via agent_git-commit-specialist)
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `2dfc813 docs(roadmap)` (SEC-02 shipped); MILESTONES_EXTENDED.yaml (79 itens, 3 passes) ainda nao commitado
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (segundo pass, 33 itens, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-05-O`](#2026-07-05-o--milestones-extended-expandido-pass-3-79-itens-26-areas) — **MILESTONES_EXTENDED.yaml expandido (pass 3)**: +21 itens em 8 areas novas (relatorios/marketing depth incl. gap de k-anonimizacao real, parceiros/sponsors, validacao de form, CSV formula-injection, iniciativas, links cross-app, timezone, memory leaks). Total 79 itens, 26 areas.
 - [`2026-07-05-N`](#2026-07-05-n--sec-02-shipped-ff11-secret-leak-gate-por-hash) — **SEC-02 SHIPPED**: FF11 novo (fitness-functions.mjs) escaneia out/ pos-build por PEM/JWT vazado; allowlist por HASH de conteudo (nao nome de var — nao funciona em minificado). Achou + provou o vazamento real (SEC-01) tem hash estavel; pegou um segredo-isca falso em teste.
 - [`2026-07-05-L`](#2026-07-05-l--milestones-extended-criado-33-itens-5-tiers) — **MILESTONES_EXTENDED.yaml criado**: 1o pass de gap-scan (10 areas: testes/perf/error-handling/a11y/integridade/DX/observabilidade/deps-CVE/i18n/build), 33 itens, tiers S+/S/S-/A+/A. Nenhum shipped ainda.
 - [`2026-07-05-K`](#2026-07-05-k--ui-ux-review-p0-dignidade--touch-targets-shipped) — **UI/UX review (ICT6 advisory) + 2 P0 shipped**: reframe "pts/points"->"pessoas/people" (5 locales, dignidade) + radios alinhados + zoom/search >=44px (AA touch). Gate verde.
@@ -503,3 +504,32 @@
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
 
 **Proximo:** goal /goal ainda ativo. Proximo maior tier commitavel: EXT-SEC-03 (upgrade axios/google-spreadsheet, MILESTONES_EXTENDED) ou EXT-PWA2-01 (fila offline sem tratamento de IndexedDB indisponivel).
+
+---
+
+## 2026-07-05-O — MILESTONES_EXTENDED expandido (pass 3): 79 itens, 26 areas
+
+**Comando:** `/goal` re-armado com a mesma condicao — 3o pass de scan mais fundo.
+
+**O que foi feito:**
+
+| Area nova | Itens | Achado mais critico |
+|---|---|---|
+| REP2 (relatorios/marketing depth) | 4 | **atendimento_por_regiao e vulnerabilidade_por_regiao NAO passam por k-anonimizacao** — o proprio relatorio AFIRMA suprimir grupos <5, mas essas 2 tabelas especificas publicam contagem exata de regioes com 1-2 pontos (tier S, o mais alto deste pass) |
+| PART2 (parceiros/sponsors) | 4 | Badges de Google Play/App Store disparam install de PWA, NAO uma listagem de loja real — visualmente enganoso, selo da App Store nem e asset oficial da Apple |
+| FORM (validacao) | 4 | Telefone do doador em /assinar (dinheiro real) e ZERO validado no cliente — undefined ou 1-digito passa |
+| CSV (formula-injection) | 1 | csvEsc() nao escapa =/+/-/@ no inicio de celula — CWE-1236 classico, verificado diretamente com `csvEsc('=SUM(A1:A9)')` passando sem escape |
+| INIT3 (iniciativas) | 3 | localStorage falha (Safari private) mas a tela mostra SUCESSO FALSO — pior que so 'nao persiste' |
+| LINK (cross-app) | 1 | Zero link-check automatizado pros ~15 hrefs externos (Globo, gov.br, app stores) |
+| TZ (timezone) | 2 | sponsors.js expiry calculado no fuso do VISITANTE, nao um fuso fixo — inconsistente com a meta de expansao internacional |
+| LEAK (memory) | 2 | 3 componentes com o MESMO padrao de setTimeout sem cleanup — InstallToast.js JA faz certo no mesmo codebase, confirma que e inconsistencia de convencao, nao blind spot sistemico |
+
+**Metodo:** 3o agente Explore read-only, 8 angulos novos (relatorios/marketing depth, parceiros/sponsors/imprensa, validacao de formulario, CSV/injecao, iniciativas, links cross-app, timezone global, memory leaks). Cada item com evidencia file:line real, incl. 1 verificacao DIRETA (`csvEsc('=SUM(...)')` rodado de verdade, nao so lido).
+
+**Validacao:** YAML parseado apos a expansao — **79 milestones reais**, 0 ids duplicados, 26 areas, tiers S+ 1 / S 6 / S- 28 / A+ 24 / A 20.
+
+**Gate desta entrada:** nenhum codigo de producao tocado (so arquivo de planejamento). YAML validado via parser real.
+
+**Commit:** roteado pro `agent_git-commit-specialist` quando pedido. Sem push/PR.
+
+**Proximo:** EXT-REP2-01 (S, k-anonimizacao faltando, sem human_gate/deps — o mais alto tier commitavel do documento inteiro agora) ou continuar expandindo se o goal nao liberar.
