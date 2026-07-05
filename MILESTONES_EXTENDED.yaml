@@ -1562,3 +1562,18 @@ milestones:
 # critico), entao mais passes SAO possiveis se o usuario/hook exigir — mas o
 # valor marginal de cada pass adicional cai (areas cada vez mais nichadas) e o
 # custo de contexto sobe. Este e um checkpoint de decisao, nao um limite rigido.
+#
+# ============================ QUOTA LIMIT ATINGIDO ============================
+# 2026-07-05, antes do pass 8: leitura real via monitor-tokens (-Once):
+#   sessao 86% used (resets 10:00am America/Sao_Paulo) | semana 44% | contexto 9%
+# 86% esta DENTRO da zona VERMELHA que o proprio monitor define (>=80%).
+# Trajetoria completa de sessao: 56% (pos-pass5) -> 67% (pos-pass6) -> 78%
+# (pos-pass7) -> 86% (pre-pass8). Um pass custa ~8-11pp; rodar o pass 8 partindo
+# de 86% arriscaria estourar 100% NO MEIO do scan/commit, deixando trabalho nao
+# commitado — pior resultado que parar limpo. Criterio de parada: o /goal definiu
+# "quota limit" via /monitor-tokens; o unico limiar objetivo que a ferramenta
+# publica e a zona vermelha 80%+, e ela foi cruzada. Documento fecha em:
+# 123 milestones | 50 areas | 7 passes independentes read-only | 0 ids duplicados
+# | tiers S+1/S7/S-40/A+38/A37 | 100% evidencia file:line | 1 fix real ja shipped
+# (SEC-02/FF11). Proxima sessao: retomar pelos itens listados em "Proximo a
+# pegar" acima (EXT-REP2-01 e o melhor primeiro alvo: S tier, sem human_gate).

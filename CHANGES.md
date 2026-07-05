@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `5eb014e docs(roadmap)` (pass 6); MILESTONES_EXTENDED.yaml (123 itens, 7 passes) ainda nao commitado. Quota: sessao 56%(p5)->67%(p6)->**78%(p7)** — proximo do limiar vermelho (80%) do proprio monitor-tokens.
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `22edbf6 docs(roadmap)` (pass 7). **QUOTA LIMIT ATINGIDO**: sessao 56%(p5)->67%(p6)->78%(p7)->**86% (pre-pass8, ZONA VERMELHA >=80% do monitor-tokens)**. Scan encerrado limpo em 123 itens/50 areas/7 passes; pass 8 NAO rodado (risco de estourar 100% no meio de scan/commit). Retomar por EXT-REP2-01 (S, sem human_gate).
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
-> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (segundo pass, 33 itens, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
+> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan ENCERRADO, 123 itens/50 areas/7 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-05-T`](#2026-07-05-t--quota-limit-atingido-scan-encerrado-em-123-itens50-areas7-passes) — **QUOTA LIMIT ATINGIDO — scan encerrado**: leitura real pre-pass8 = sessao 86% (zona vermelha >=80% do monitor-tokens). Footer do MILESTONES_EXTENDED.yaml fecha com trajetoria completa + criterio de parada + proximo alvo (EXT-REP2-01). Nenhum item novo; pass 8 nao rodado de proposito.
 - [`2026-07-05-S`](#2026-07-05-s--milestones-extended-expandido-pass-7-123-itens-50-areas--quota-78) — **MILESTONES_EXTENDED.yaml expandido (pass 7)**: +9 itens em 6 areas novas. Achado de CORRETUDE: EXT-LEGEND-01 (o hint de cores ativo MENTE — descreve o sistema de marcadores antigo, substituido e nunca atualizado). Quota sessao 78%, proximo do limiar vermelho (80%) do monitor-tokens.
 - [`2026-07-05-R`](#2026-07-05-r--milestones-extended-expandido-pass-6-114-itens-44-areas--quota-por-pass) — **MILESTONES_EXTENDED.yaml expandido (pass 6)**: +11 itens em 6 areas novas. Achado notavel: EXT-NOTIF-01 (feature de notificacao 100% inerte — pede permissao, nunca entrega). `/goal` re-armado explicitando usar /monitor-tokens como fonte de quota; checado por pass (pass5 sessao 56% -> pass6 sessao 67%).
 - [`2026-07-05-Q`](#2026-07-05-q--milestones-extended-expandido-pass-5-103-itens-38-areas--quota-checada) — **MILESTONES_EXTENDED.yaml expandido (pass 5)**: +11 itens em 6 areas novas. Achado mais critico do documento inteiro: EXT-RACE-01 (2 usuarios DIFERENTES escrevendo a mesma linha concorrentemente perdem uma escrita — distinto do gap de retry-idempotencia ja conhecido).
@@ -39,21 +40,20 @@
 - Por vertente: V1 core-fome 2 · V2 pet 5 (2 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (2 shipped) · V11 governanca 1.
 - **Todos os S+/S commitaveis shippados.** Restam: 7 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
-### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 2 passes de scan, tiers S+/S/S-/A+/A)
-- **58 milestones** em **18 areas** · pending **51** · blocked-human **6** · later **1** (cross-ref intencional do PET-04). Nenhum shipped ainda.
-- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · S 5 · S- 21 · A+ 18 · A 13.
-- Pass 1 (10 areas): SEC 6 · T(estes) 4 · EH(error-handling) 5 · A11Y 3 · DI(integridade) 1 · DX 3 · OBS 3 · PF(perf) 2 · I18N 4 · BUILD 2.
-- Pass 2 (8 areas, mais fundo): PWA2 4 · PET2 4 · ASAAS2 3 · GEO 3 · MAP 4 · MOBILE 2 · PRIV 2 · DEP 3.
-- **Proximo a pegar:** EXT-SEC-01 (bump next, fecha 2 CVEs HIGH — human_gate no bump em si) ou EXT-SEC-03 (upgrade da cadeia axios/google-spreadsheet, comitavel sem human_gate).
+### STATUS_TALLY (MILESTONES_EXTENDED.yaml — SCAN ENCERRADO em 7 passes, tiers S+/S/S-/A+/A)
+- **123 milestones** em **50 areas** · pending **107** · blocked-human **13** · later **3** (cross-refs intencionais). Validado via parser YAML: 0 ids duplicados.
+- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · **S 7** · S- 40 · A+ 38 · A 37.
+- 1 achado ja shipped fora do arquivo: SEC-02/FF11 (gate mecanico de secret-leak no bundle, allowlist por hash).
+- Achado mais critico: **EXT-RACE-01** (S) — 2 usuarios diferentes escrevendo a mesma linha perdem uma escrita (row.save() = PUT cego sem CAS). Achado de corretude: **EXT-LEGEND-01** — o hint de cores ativo descreve o sistema de marcadores ANTIGO.
+- **Proximo a pegar (commitavel, sem human_gate, sem deps):** EXT-REP2-01 (k-anonimizacao faltando em 2 tabelas do relatorio publico, S tier) ou EXT-SEC-03 (upgrade da cadeia axios/google-spreadsheet).
 
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
-1. **A-tier commitaveis (ROADMAP_VERTENTES)**: PET-04 (quarentena fila pets), REP-01 (rotear /relatorio-marketing pelo sheetsClient), PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
-2. **S-tier commitaveis (MILESTONES_EXTENDED, novo)**: EXT-SEC-03 (upgrade axios/google-spreadsheet, sem human_gate), EXT-EH-01/02/03 (poison-pin pets [=PET-04], error.js, unhandledrejection), EXT-T-01/03 (testes diretos petsData/asaasClient).
-3. **SEC-01** (S+, blocked-human, ROADMAP_VERTENTES): chave Google no bundle -> proxy. RAIZ do risco. Claude PROPOE, humano provisiona.
-4. **EXT-SEC-01** (S+, MILESTONES_EXTENDED, human_gate no bump): next 16.2.4 tem 2 CVEs HIGH ativos. Bump de patch, humano confirma antes.
-3. **PET-01/INIT-01/PAY-02/SEO-04/FOME-02** (blocked-human/later): acao humana (storage/destino/efeito/decisao) ou dep de SEC-01.
-2. **SEC-01** (S+, blocked-human): tirar a chave privada Google do bundle client via proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
-3. **PET-01 / INIT-01 / PAY-02 / SEO-04 / FOME-02** (blocked-human/later): dependem de acao humana (storage, destino, efeito de negocio, decisao de produto, ou dep de SEC-01). NAO auto-shippaveis.
+1. **EXT-REP2-01** (S, MILESTONES_EXTENDED, sem human_gate, sem deps): k-anonimizacao (k=5) faltando em 2 tabelas do relatorio publico — melhor primeiro alvo pos-scan.
+2. **S-tier commitaveis (MILESTONES_EXTENDED)**: EXT-SEC-03 (upgrade axios/google-spreadsheet), EXT-EH-01/02/03 (poison-pin pets [=PET-04], error.js, unhandledrejection), EXT-T-01/03 (testes diretos petsData/asaasClient).
+3. **A-tier commitaveis (ROADMAP_VERTENTES)**: PET-04 (quarentena fila pets), REP-01 (rotear /relatorio-marketing pelo sheetsClient), PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
+4. **SEC-01** (S+, blocked-human, ROADMAP_VERTENTES): chave Google no bundle -> proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
+5. **EXT-SEC-01** (S+, MILESTONES_EXTENDED, human_gate no bump): next 16.2.4 tem 2 CVEs HIGH ativos. Bump de patch, humano confirma antes.
+6. **PET-01 / INIT-01 / PAY-02 / SEO-04 / FOME-02** (blocked-human/later): dependem de acao humana (storage, destino, efeito de negocio, decisao de produto, ou dep de SEC-01). NAO auto-shippaveis.
 
 <!-- ============ ZONA 2: CORPO APPEND-ONLY (nunca reescreva; so APPEND no fim) ============ -->
 
@@ -645,5 +645,30 @@ Trajetoria ~5-6pp de sessao por pass. Sessao ainda com margem (67%, nao critico)
 **Quota (real, via /monitor-tokens apos este pass):** sessao **78%** — proximo do limiar vermelho (80%) que o proprio monitor define. Trajetoria: 56%(p5) -> 67%(p6) -> 78%(p7), ~11pp neste pass (mais caro — sub-agente retornou saida mais densa). 123 itens/50 areas/7 passes e um corpo solido; a margem pra continuar esta ficando apertada.
 
 **Gate:** planning-only, YAML validado via parser real.
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+---
+
+## 2026-07-05-T — QUOTA LIMIT ATINGIDO: scan encerrado em 123 itens/50 areas/7 passes
+
+**Contexto:** `/goal` re-armado ("create or continue extensive milestones document until reach quota limit ... use /monitor-tokens to have the quota"). Leitura real pre-pass8 via `token-usage-statusline.ps1 -Once`: **sessao 86% used** (resets 10:00am America/Sao_Paulo) · semana 44% · contexto 9%.
+
+**Decisao de parada (criterio objetivo, nao arbitrario):**
+
+| Fato | Evidencia |
+|---|---|
+| Zona vermelha cruzada | 86% >= 80%, o unico limiar que o proprio monitor-tokens publica (verde <50, amarelo 50-79, vermelho 80+) |
+| Trajetoria de custo/pass | 56%(p5) -> 67%(p6) -> 78%(p7) -> 86%(pre-p8); um pass custa ~8-11pp |
+| Risco de rodar pass 8 | partir de 86% arrisca estourar 100% NO MEIO de scan/commit — trabalho nao commitado, pior que parar limpo |
+
+**O que foi feito neste fechamento:**
+
+| Arquivo | O que | Por que |
+|---|---|---|
+| `MILESTONES_EXTENDED.yaml` | Bloco final "QUOTA LIMIT ATINGIDO" apendado ao footer: leitura real, trajetoria completa, criterio de parada, estado final (123/50/7, tiers S+1/S7/S-40/A+38/A37), proximo alvo (EXT-REP2-01) | O /goal definiu quota via /monitor-tokens; o documento registra a evidencia do proprio encerramento |
+| `CHANGES.md` Zona 1 | LAST_UPDATED/ROADMAPS/STATUS_TALLY/OPEN_THREADS atualizados (tally estava stale em 58 itens/18 areas; OPEN_THREADS tinha numeracao duplicada de sessoes anteriores) | Zona 1 e reescrevivel por design; proxima sessao se orienta so por ela |
+
+**Gate:** planning/docs-only. YAML revalidado via parser real: 123 milestones, 50 areas, 0 ids duplicados.
 
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
