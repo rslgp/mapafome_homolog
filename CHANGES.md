@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `22edbf6 docs(roadmap)` (pass 7). **QUOTA LIMIT ATINGIDO**: sessao 56%(p5)->67%(p6)->78%(p7)->**86% (pre-pass8, ZONA VERMELHA >=80% do monitor-tokens)**. Scan encerrado limpo em 123 itens/50 areas/7 passes; pass 8 NAO rodado (risco de estourar 100% no meio de scan/commit). Retomar por EXT-REP2-01 (S, sem human_gate).
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `22edbf6 docs(roadmap)` (pass 7). Arco de quota: zona vermelha 86% -> semana 100% (encerramento registrado em 2026-07-05-T) -> **re-login RESETOU a quota (sessao 9%/semana 46%) -> scan REABERTO, pass 8 rodado** (132 itens/58 areas). Loop de 10min armado via cron `c7ade9ba` (session-only). Proximo alvo: EXT-REP2-01 (S, sem human_gate).
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
-> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan ENCERRADO, 123 itens/50 areas/7 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
+> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan REABERTO, 132 itens/58 areas/8 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-05-U`](#2026-07-05-u--quota-resetada-scan-reaberto-pass-8-132-itens-58-areas) — **Quota resetada (re-login) — scan REABERTO, pass 8**: +9 itens em 8 areas novas. Achados que doem: EXT-URLSTATE-01 (back do Android fecha o SITE com report no meio), EXT-OWNERSHIP-01 (token de posse spec'ado mas nunca escrito — posse de pin 100% nocional), EXT-EMBED3P-01 (iframe Creators http:// = bloqueado como mixed content em producao HOJE). 4 angulos honestamente vazios.
 - [`2026-07-05-T`](#2026-07-05-t--quota-limit-atingido-scan-encerrado-em-123-itens50-areas7-passes) — **QUOTA LIMIT ATINGIDO — scan encerrado**: leitura real pre-pass8 = sessao 86% (zona vermelha >=80% do monitor-tokens). Footer do MILESTONES_EXTENDED.yaml fecha com trajetoria completa + criterio de parada + proximo alvo (EXT-REP2-01). Nenhum item novo; pass 8 nao rodado de proposito.
 - [`2026-07-05-S`](#2026-07-05-s--milestones-extended-expandido-pass-7-123-itens-50-areas--quota-78) — **MILESTONES_EXTENDED.yaml expandido (pass 7)**: +9 itens em 6 areas novas. Achado de CORRETUDE: EXT-LEGEND-01 (o hint de cores ativo MENTE — descreve o sistema de marcadores antigo, substituido e nunca atualizado). Quota sessao 78%, proximo do limiar vermelho (80%) do monitor-tokens.
 - [`2026-07-05-R`](#2026-07-05-r--milestones-extended-expandido-pass-6-114-itens-44-areas--quota-por-pass) — **MILESTONES_EXTENDED.yaml expandido (pass 6)**: +11 itens em 6 areas novas. Achado notavel: EXT-NOTIF-01 (feature de notificacao 100% inerte — pede permissao, nunca entrega). `/goal` re-armado explicitando usar /monitor-tokens como fonte de quota; checado por pass (pass5 sessao 56% -> pass6 sessao 67%).
@@ -40,16 +41,16 @@
 - Por vertente: V1 core-fome 2 · V2 pet 5 (2 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (2 shipped) · V11 governanca 1.
 - **Todos os S+/S commitaveis shippados.** Restam: 7 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
-### STATUS_TALLY (MILESTONES_EXTENDED.yaml — SCAN ENCERRADO em 7 passes, tiers S+/S/S-/A+/A)
-- **123 milestones** em **50 areas** · pending **107** · blocked-human **13** · later **3** (cross-refs intencionais). Validado via parser YAML: 0 ids duplicados.
-- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · **S 7** · S- 40 · A+ 38 · A 37.
+### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 8 passes, scan REABERTO, tiers S+/S/S-/A+/A)
+- **132 milestones** em **58 areas** · pending **115** · blocked-human **14** · later **3** (cross-refs intencionais). Validado via parser YAML: 0 ids duplicados.
+- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · **S 9** · S- 44 · A+ 39 · A 39.
 - 1 achado ja shipped fora do arquivo: SEC-02/FF11 (gate mecanico de secret-leak no bundle, allowlist por hash).
-- Achado mais critico: **EXT-RACE-01** (S) — 2 usuarios diferentes escrevendo a mesma linha perdem uma escrita (row.save() = PUT cego sem CAS). Achado de corretude: **EXT-LEGEND-01** — o hint de cores ativo descreve o sistema de marcadores ANTIGO.
+- Achados mais criticos: **EXT-RACE-01** (S) — 2 usuarios diferentes escrevendo a mesma linha perdem uma escrita (row.save() = PUT cego sem CAS) · **EXT-URLSTATE-01** (S, pass 8) — back do Android fecha o site com report no meio · **EXT-OWNERSHIP-01** (S, pass 8) — posse de pin 100% nocional. Corretude: **EXT-LEGEND-01** — o hint de cores descreve o sistema de marcadores ANTIGO · **EXT-EMBED3P-01** — secao Creators renderiza VAZIA em producao (iframe http bloqueado).
 - **Proximo a pegar (commitavel, sem human_gate, sem deps):** EXT-REP2-01 (k-anonimizacao faltando em 2 tabelas do relatorio publico, S tier) ou EXT-SEC-03 (upgrade da cadeia axios/google-spreadsheet).
 
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
 1. **EXT-REP2-01** (S, MILESTONES_EXTENDED, sem human_gate, sem deps): k-anonimizacao (k=5) faltando em 2 tabelas do relatorio publico — melhor primeiro alvo pos-scan.
-2. **S-tier commitaveis (MILESTONES_EXTENDED)**: EXT-SEC-03 (upgrade axios/google-spreadsheet), EXT-EH-01/02/03 (poison-pin pets [=PET-04], error.js, unhandledrejection), EXT-T-01/03 (testes diretos petsData/asaasClient).
+2. **S-tier commitaveis (MILESTONES_EXTENDED)**: EXT-URLSTATE-01 (popstate fecha sheet, nao o site — pass 8), EXT-OWNERSHIP-01 parte client (mint do token petReport: — pass 8), EXT-SEC-03 (upgrade axios/google-spreadsheet), EXT-EH-01/02/03 (poison-pin pets [=PET-04], error.js, unhandledrejection), EXT-T-01/03 (testes diretos petsData/asaasClient). S- vivo AGORA: EXT-EMBED3P-01 (Creators vazio em producao).
 3. **A-tier commitaveis (ROADMAP_VERTENTES)**: PET-04 (quarentena fila pets), REP-01 (rotear /relatorio-marketing pelo sheetsClient), PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
 4. **SEC-01** (S+, blocked-human, ROADMAP_VERTENTES): chave Google no bundle -> proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
 5. **EXT-SEC-01** (S+, MILESTONES_EXTENDED, human_gate no bump): next 16.2.4 tem 2 CVEs HIGH ativos. Bump de patch, humano confirma antes.
@@ -672,3 +673,28 @@ Trajetoria ~5-6pp de sessao por pass. Sessao ainda com margem (67%, nao critico)
 **Gate:** planning/docs-only. YAML revalidado via parser real: 123 milestones, 50 areas, 0 ids duplicados.
 
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+---
+
+## 2026-07-05-U — Quota resetada, scan REABERTO: pass 8 (132 itens, 58 areas)
+
+**Contexto:** apos o encerramento registrado em `2026-07-05-T` (semana 100%), o re-login do usuario RESETOU a quota. Leitura real via `token-usage-statusline.ps1 -Once`: sessao **9%** · semana **46%** · contexto 12%. O `/goal` diz "create or CONTINUE ... until reach quota limit" — com quota fresca o limite nao vale mais; scan reaberto. Usuario tambem armou `/loop 10min` com o mesmo `/goal` (cron `c7ade9ba`, session-only). A entrada T fica como historico valido da janela anterior (zona 2 nunca se reescreve).
+
+**Pass 8 (Explore read-only, territorio genuinamente novo):**
+
+| Area nova | Itens | Achado central |
+|---|---|---|
+| URLSTATE | 2 | **EXT-URLSTATE-01 (S)**: nenhuma sheet faz pushState/popstate — back do Android navega pra FORA com report no meio (perda de dados). EXT-URLSTATE-02 (S-): mapa principal sem estado em URL, link compartilhado sempre cai na visao default. |
+| OWNERSHIP | 1 | **EXT-OWNERSHIP-01 (S)**: token `petReport:<id>` esta na spec (PET_FRESHNESS_SPEC.md:272,333) mas handlePublish nunca escreve — posse de pin 100% nocional; qualquer client computa a chave de qualquer pin (petIdentity.js:60 deriva de coords publicas). |
+| REPRO | 1 | EXT-REPRO-01 (S-): bun.lock + package-lock divergem 15 dias; npm ci quebrado (ci.yml:24-29); sem engines/.nvmrc — 3 arvores de deps possiveis. |
+| EMBED3P | 1 | **EXT-EMBED3P-01 (S-)**: iframe Creators e `http://` — mixed content BLOQUEADO em producao https; secao renderiza vazia HOJE. |
+| TILES2 | 1 | EXT-TILES2-01 (S-, human_gate): basemap default e endpoint interno do Waze (worldtiles1, sem ToS, sem failover de tileerror). |
+| CSP | 1 | EXT-CSP-01 (A+): zero CSP; output export sem path de header; trade-off nao documentado. |
+| STORAGE2 | 1 | EXT-STORAGE2-01 (A): 7 chaves localStorage sem versao (parse ja e defensivo, migracao futura nao existe). |
+| INPUT2 | 1 | EXT-INPUT2-01 (A): contato do pet sem inputMode/autoComplete (assinar ja faz certo — referencia interna). |
+
+**4 angulos honestamente vazios:** font loading (sem webfont), clipboard/share (robusto), geosearch (debounce+cache+catch corretos), JSON.parse de storage (todos guardados).
+
+**Gate:** planning/docs-only. YAML validado via parser real: **132 milestones, 58 areas, 0 ids duplicados**; tiers S+1/S9/S-44/A+39/A39; status pending 115/blocked-human 14/later 3 — footer confere com o parser.
+
+**Commit:** roteado pro `agent_git-commit-specialist` (inclui tambem o fechamento T que ficou sem commit quando a sessao anterior estourou o limite no meio do agente). Sem push/PR.

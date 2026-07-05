@@ -156,6 +156,22 @@ areas:
     nome: "PWA manifest — capacidades faltando (pass 7)"
   - id: E2EDEPTH
     nome: "Profundidade da suite e2e (pass 7)"
+  - id: URLSTATE
+    nome: "Estado compartilhavel via URL + botao voltar (pass 8)"
+  - id: OWNERSHIP
+    nome: "Modelo de posse anonima de pin (pass 8)"
+  - id: REPRO
+    nome: "Reprodutibilidade de build / lockfiles (pass 8)"
+  - id: EMBED3P
+    nome: "Governanca de iframe/embed de terceiros (pass 8)"
+  - id: TILES2
+    nome: "Provedor de tiles — ToS e failover (pass 8)"
+  - id: CSP
+    nome: "Content-Security-Policy no export estatico (pass 8)"
+  - id: STORAGE2
+    nome: "Versionamento de schema do storage persistido (pass 8)"
+  - id: INPUT2
+    nome: "Atributos de input mobile (inputmode/autocomplete) (pass 8)"
 
 milestones:
 
@@ -1488,6 +1504,101 @@ milestones:
     gate: ["npm run test:e2e (gestures.e2e.js verde, sem waitForTimeout)"]
     status: pending
 
+  # ---- PASS 8 ----
+
+  - id: EXT-URLSTATE-01
+    title: "Botao/gesto VOLTAR do Android fecha o SITE, nao a sheet aberta — perda de report em andamento"
+    area: URLSTATE
+    tier: S
+    owner: softwareengineer
+    scope: "Include: pushState de uma entrada de historico ao abrir cada sheet/modal (PetReportSheet, PetDetailSheet, ReportSheet, InfoPanel, NotificationPrefs) + handler de popstate que fecha a sheet em vez de navegar. Exclude: URL state de mapa (EXT-URLSTATE-02, separado)."
+    why: "Scan pass 8: NENHUMA sheet chama history.pushState/popstate (grep em src/ acha so o deep-link read de petIdentity.js); Escape-to-close existe (usePetReportSheet.js:116-119) mas o back de hardware nao — no Android (a classe de device alvo do PWA) o gesto de voltar com um report no meio navega pra fora e PERDE o que o usuario digitou."
+    gate: ["npm run test (handler popstate testado)", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-URLSTATE-02
+    title: "Mapa principal tem ZERO estado em URL — impossivel compartilhar posicao/zoom/pin de doacao (so ?pet= existe, no MapaPet)"
+    area: URLSTATE
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: refletir posicao/zoom (e opcionalmente pin aberto) do mapa da fome na URL via replaceState (padrao #map=z/lat/lng do OSM) + ler no load. Exclude: filtros/estado de UI alem de posicao+pin; nao mexer no ?pet= existente."
+    why: "Scan pass 8: usePetsApp.js:143-145 le ?pet= no mount, mas o mapa PRINCIPAL (App.js) nao tem nenhum codigo de history/URL — 'manda o link dessa pessoa perto de voce' sempre cai na visao nacional default, derrotando o compartilhamento que e o mecanismo central de mobilizacao do produto."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-OWNERSHIP-01
+    title: "Token de posse petReport:<id> esta ESPECIFICADO mas nunca escrito — nenhum modelo de autorizacao pra editar/fechar/renovar pin"
+    area: OWNERSHIP
+    tier: S
+    owner: softwareengineer (parte client) + human-gated (enforcement real depende de SEC-01/proxy)
+    scope: "Include (commitavel ja): mintar o token em localStorage no publishPet como o PET_FRESHNESS_SPEC.md:272,333 especifica + gatear os botoes de editar/fechar/renovar no client pela presenca do token. Exclude: enforcement server-side (impossivel sem o proxy do SEC-01 — o client-side e so UX honesta, nao seguranca; dizer isso no codigo)."
+    why: "Scan pass 8: petIdentity.js:14 e a spec descrevem o token, mas handlePublish (usePetReportSheet.js:224-275) nao escreve NADA em localStorage e grep por petReport: so acha spec/comentarios; petCoordsKey (petIdentity.js:60) deriva identidade de coordenadas PUBLICAS — qualquer client computa a 'chave do dono' de qualquer pin. Posse e 100% nocional hoje."
+    gate: ["npm run test (mint+gate testados)", "npm run build", "npm run smoke200"]
+    status: pending
+    depends: [SEC-01]
+    note: "depends parcial: a parte client (mint + gate de UI) NAO depende de SEC-01 e e commitavel ja; so o enforcement real depende."
+
+  - id: EXT-REPRO-01
+    title: "2 lockfiles divergentes (bun.lock 15 dias mais velho que package-lock) + sem engines/.nvmrc + npm ci impossivel = build nao-reproduzivel"
+    area: REPRO
+    tier: S-
+    owner: softwareengineer (remocao do bun.lock/engines) + human-gated (politica de CI ja marcada em EXT-SEC-02/DX-03)
+    scope: "Include: deletar bun.lock (CI usa npm, ci.yml:21,29), adicionar engines.node + .nvmrc casando com o Node do ci.yml:20, e regenerar package-lock limpo pra reabilitar npm ci. Exclude: trocar de package manager; a politica npm-install-no-CI ja e EXT-DX-03."
+    why: "Scan pass 8: bun.lock (13/jun) e package-lock.json (28/jun) coexistem; ci.yml:24-29 documenta que npm ci falha EUSAGE e cai pra npm install — local, CI e um contribuidor com bun resolvem 3 arvores de deps DIFERENTES; uma dep transitiva pode mudar silenciosamente entre CI verde e deploy."
+    gate: ["npm ci (volta a funcionar)", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-EMBED3P-01
+    title: "Iframe do Creators aponta pra http:// plano — BLOQUEADO como mixed content no site https de producao (secao renderiza vazia)"
+    area: EMBED3P
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: CreatorsMapaFome.js:9-15 — trocar src pra https:// (verificar que o host serve https antes), adicionar sandbox minimo, referrerpolicy e loading=lazy. Exclude: redesenhar a secao Creators."
+    why: "Scan pass 8: <iframe src=\"http://creators.mapafome.com.br/\"> sem sandbox/referrerpolicy/lazy — em https://mapafome.com.br o browser bloqueia o frame de mixed content e a secao aparece VAZIA pra todo visitante hoje; defeito vivo, nao teorico."
+    gate: ["npm run build", "npm run smoke200", "verificacao manual: frame carrega em https"]
+    status: pending
+
+  - id: EXT-TILES2-01
+    title: "Basemap default e endpoint INTERNO do Waze (worldtiles1, sem ToS, sem failover) — risco legal + tela cinza silenciosa se bloquear"
+    area: TILES2
+    tier: S-
+    owner: softwareengineer + human-gated (decisao de provedor e de produto/legal)
+    scope: "Include: decidir provedor default licenciado (OSM policy-compliant ou Esri ja presente) OU documentar aceite do risco; adicionar handler de tileerror com fallback automatico pra camada alternativa. Exclude: trocar a lib de mapa."
+    why: "Scan pass 8: mapConstants.js:96-98 pina checked:true em https://worldtiles1.waze.com/tiles/... (host interno nao documentado, 1 subdominio fixo, sem {s}) e layout.js:62 preconecta so ele; sem failover, se o Waze bloquear/mover, o LCP de TODO visitante vira tiles cinza sem aviso."
+    gate: ["npm run test (fallback de tileerror testado)", "npm run build", "npm run smoke200"]
+    status: blocked-human
+    human_gate: true
+
+  - id: EXT-CSP-01
+    title: "Zero Content-Security-Policy no app (so meta referrer) e output:'export' nao tem path de header — trade-off nem documentado"
+    area: CSP
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: avaliar CSP via <meta http-equiv> (limitacoes: sem frame-ancestors/report-uri) cobrindo script-src/frame-src pros 2 inline scripts de layout.js:69-82 e os embeds; no minimo, documentar em next.config.mjs POR QUE nao ha headers (GitHub Pages estatico). Exclude: mover de hosting."
+    why: "Scan pass 8: unico controle e <meta name=referrer no-referrer> (layout.js:53); o app injeta 2 <script dangerouslySetInnerHTML> + tiles/iframe de terceiros sem nenhuma defesa em profundidade, e a limitacao do hosting estatico nao esta escrita em lugar nenhum."
+    gate: ["npm run build", "npm run smoke200", "npm run a11y"]
+    status: pending
+
+  - id: EXT-STORAGE2-01
+    title: "7 chaves de localStorage sem campo de versao — mudanca futura de shape mistura registros velhos/novos sem deteccao"
+    area: STORAGE2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: envelope {v:1, data:...} (ou campo v inline) nas chaves JSON (mapapet:view, mdf_analytics_events, mdf_initiatives, notification prefs) + drop-if-version-mismatch como migracao minima. Exclude: as chaves string simples (mdf_country, mdf_locale) — nao precisam."
+    why: "Scan pass 8: inventario completo (petMapLoadState.js:111, countryStore.js:16, engine.js:23, analytics.js:10, iniciativas/cadastrar/page.js:66, NotificationPrefs.js:32) — os JSON.parse JA sao try/catch com default seguro (degrada calmo), mas um rename de campo futuro carrega linhas com shape velho silenciosamente, sem path de migracao/limpeza."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-INPUT2-01
+    title: "Campo de contato do pet e text puro (sem inputmode/autocomplete) — teclado alfabetico pra digitar telefone no mobile"
+    area: INPUT2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: PetReportSheet.js:384-393 — inputMode=tel + autoComplete=tel no contato do pet; parceiros/page.js:165 — autoComplete=email. Exclude: refazer validacao (ja coberta no pass 3); /assinar ja esta correto (referencia: assinar/page.js:215-237)."
+    why: "Scan pass 8: o form de /assinar ja faz certo (autoComplete name/email/tel + inputMode) — o campo de contato do pet reporter e o email de /parceiros ficaram pra tras; fricao real de teclado num fluxo mobile de entrada de dados."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
 # ============================ FIM DO DOCUMENTO ============================
 # Total real (validado via parser YAML): 123 milestones em 50 areas, 0 ids
 # duplicados. 3 sao cross-ref intencional (EXT-EH-02 -> PET-04, EXT-SETSTATE-02
@@ -1577,3 +1688,26 @@ milestones:
 # | tiers S+1/S7/S-40/A+38/A37 | 100% evidencia file:line | 1 fix real ja shipped
 # (SEC-02/FF11). Proxima sessao: retomar pelos itens listados em "Proximo a
 # pegar" acima (EXT-REP2-01 e o melhor primeiro alvo: S tier, sem human_gate).
+#
+# ===================== QUOTA RESETADA — SCAN REABERTO (PASS 8) =====================
+# 2026-07-05, mais tarde: re-login do usuario RESETOU a quota (leitura real via
+# monitor-tokens -Once: sessao 9% | semana 46% | contexto 12%). O /goal diz
+# "create or CONTINUE ... until reach quota limit" — com quota fresca, o limite
+# nao vale mais e o scan reabriu. O bloco de encerramento acima fica como
+# HISTORICO da janela anterior (era verdade quando escrito).
+# PASS 8 (8 areas novas: URLSTATE, OWNERSHIP, REPRO, EMBED3P, TILES2, CSP,
+# STORAGE2, INPUT2; 9 itens). Achados que doem:
+#   EXT-URLSTATE-01 (S) — botao VOLTAR do Android fecha o SITE com report no
+#     meio (nenhuma sheet faz pushState/popstate) — perda de dados na classe de
+#     device alvo do PWA.
+#   EXT-OWNERSHIP-01 (S) — o token de posse petReport:<id> esta na spec mas
+#     NUNCA e escrito; posse de pin e 100% nocional (qualquer client computa a
+#     chave de qualquer pin a partir das coordenadas publicas).
+#   EXT-EMBED3P-01 (S-) — iframe do Creators e http:// plano: BLOQUEADO como
+#     mixed content no site https de producao — a secao renderiza VAZIA hoje.
+# 4 angulos honestamente vazios: font loading (sem webfont), clipboard/share
+# (robusto), geosearch (bem feito: debounce+cache+catch), JSON.parse de storage
+# (todos guardados com default seguro).
+# TOTAIS POS-PASS-8 (validar via parser antes de commitar): 132 milestones em
+# 58 areas. Tiers: S+1 | S 9 | S- 44 | A+ 39 | A 39.
+# Status: pending 115 | blocked-human 14 | later 3.
