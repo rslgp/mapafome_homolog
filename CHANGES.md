@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `93c7cdd docs(roadmap)` (pass 5); MILESTONES_EXTENDED.yaml (114 itens, 6 passes) ainda nao commitado. Quota real via /monitor-tokens por pass: pass5 sessao 56% -> pass6 sessao 67% (~5-6pp/pass). Goal `/goal` explicitou usar monitor-tokens como fonte de quota.
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `5eb014e docs(roadmap)` (pass 6); MILESTONES_EXTENDED.yaml (123 itens, 7 passes) ainda nao commitado. Quota: sessao 56%(p5)->67%(p6)->**78%(p7)** — proximo do limiar vermelho (80%) do proprio monitor-tokens.
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (segundo pass, 33 itens, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-05-S`](#2026-07-05-s--milestones-extended-expandido-pass-7-123-itens-50-areas--quota-78) — **MILESTONES_EXTENDED.yaml expandido (pass 7)**: +9 itens em 6 areas novas. Achado de CORRETUDE: EXT-LEGEND-01 (o hint de cores ativo MENTE — descreve o sistema de marcadores antigo, substituido e nunca atualizado). Quota sessao 78%, proximo do limiar vermelho (80%) do monitor-tokens.
 - [`2026-07-05-R`](#2026-07-05-r--milestones-extended-expandido-pass-6-114-itens-44-areas--quota-por-pass) — **MILESTONES_EXTENDED.yaml expandido (pass 6)**: +11 itens em 6 areas novas. Achado notavel: EXT-NOTIF-01 (feature de notificacao 100% inerte — pede permissao, nunca entrega). `/goal` re-armado explicitando usar /monitor-tokens como fonte de quota; checado por pass (pass5 sessao 56% -> pass6 sessao 67%).
 - [`2026-07-05-Q`](#2026-07-05-q--milestones-extended-expandido-pass-5-103-itens-38-areas--quota-checada) — **MILESTONES_EXTENDED.yaml expandido (pass 5)**: +11 itens em 6 areas novas. Achado mais critico do documento inteiro: EXT-RACE-01 (2 usuarios DIFERENTES escrevendo a mesma linha concorrentemente perdem uma escrita — distinto do gap de retry-idempotencia ja conhecido).
 - [`2026-07-05-P`](#2026-07-05-p--milestones-extended-expandido-pass-4-92-itens-32-areas) — **MILESTONES_EXTENDED.yaml expandido (pass 4)**: +13 itens em 6 areas novas (tokens CSS mortos, gap de lint no-console, meta-gaps das proprias fitness-functions, drift de documentacao no goal-loop, governanca do cap do loop sem re-autorizacao, CLS por imagem sem dimensao). Total 92 itens, 32 areas. 2 areas escaneadas SEM achado novo, reportado honestamente.
@@ -630,3 +631,19 @@ Trajetoria ~5-6pp de sessao por pass. Sessao ainda com margem (67%, nao critico)
 **Commit:** roteado pro `agent_git-commit-specialist` quando pedido. Sem push/PR.
 
 **Proximo:** implementar (EXT-REP2-01 ou EXT-RACE-01) ou continuar escaneando se o /goal/hook exigir mais uma pass.
+
+---
+
+## 2026-07-05-S — MILESTONES_EXTENDED expandido (pass 7): 123 itens, 50 areas — quota 78%
+
+**Comando:** Stop-hook rejeitou o encerramento (67% "ainda tem margem") — pass 7.
+
+**Novas areas (6):** CURRENCY (BRL hardcoded em /assinar pra doador de qualquer pais + CPF/CNPJ obrigatorio sem alternativa), COUNTRYSCOPE (/pets nao re-filtra por pais ao trocar, mapa de fome ja faz certo — leitura/escrita inconsistentes na mesma vertente), LEGEND (**achado de corretude**: ColorsHint descreve o sistema de 4-cores ANTIGO, substituido pelo redesign M2 de urgencia/anel — o hint ativamente confunde quem le), READLIMIT (path de LEITURA da API sem throttle nem advisory, ao contrario do path de escrita que ja tem um), MANIFEST2 (sem shortcuts nem share_target no manifest.json), E2EDEPTH (nenhum e2e cobre o fluxo completo de doacao; 1 padrao de hard-wait numa suite disciplinada).
+
+**Validacao:** 123 milestones, 0 ids duplicados, 50 areas, tiers S+1/S7/S-40/A+38/A37.
+
+**Quota (real, via /monitor-tokens apos este pass):** sessao **78%** — proximo do limiar vermelho (80%) que o proprio monitor define. Trajetoria: 56%(p5) -> 67%(p6) -> 78%(p7), ~11pp neste pass (mais caro — sub-agente retornou saida mais densa). 123 itens/50 areas/7 passes e um corpo solido; a margem pra continuar esta ficando apertada.
+
+**Gate:** planning-only, YAML validado via parser real.
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.

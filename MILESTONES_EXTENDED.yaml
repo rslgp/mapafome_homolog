@@ -144,6 +144,18 @@ areas:
     nome: "Paridade de env dev vs CI vs prod (pass 6)"
   - id: CLUSTER
     nome: "Acessibilidade de cluster de marcadores (pass 6)"
+  - id: CURRENCY
+    nome: "Moeda/pagamento multi-pais (pass 7)"
+  - id: COUNTRYSCOPE
+    nome: "Escopo de pais consistente leitura/escrita (pass 7)"
+  - id: LEGEND
+    nome: "Drift do conteudo da legenda de cores (pass 7)"
+  - id: READLIMIT
+    nome: "Rate-limit do path de LEITURA (pass 7)"
+  - id: MANIFEST2
+    nome: "PWA manifest — capacidades faltando (pass 7)"
+  - id: E2EDEPTH
+    nome: "Profundidade da suite e2e (pass 7)"
 
 milestones:
 
@@ -1377,16 +1389,129 @@ milestones:
     gate: ["npm run test", "npm run a11y"]
     status: pending
 
+  # ==================== CURRENCY — MOEDA/PAGAMENTO MULTI-PAIS (pass 7) ====================
+  - id: EXT-CURRENCY-01
+    title: "'R$' hardcoded em /assinar (page.js + strings.assinar.js) mesmo pra doadores de outros paises via CountryFlagControl"
+    area: CURRENCY
+    tier: S-
+    owner: agent_translation-localization + softwareengineer
+    scope: "Include: assinar/page.js:111/169 (toFixed(2) formatado com 'R$' literal) e as chaves assinar.value.other/assinar.cta.support em strings.assinar.js (12 locales, TODAS bakeiam 'R$' mesmo em zh/ar/bn/tr) — documentar EXPLICITAMENTE (comentario) que Asaas e BRL-only por design (ja documentado em page.js:28-32), entao o rotulo de moeda e intencional, nao um bug de i18n esquecido. Exclude: adicionar suporte multi-moeda (fora de escopo tecnico — depende da Asaas)."
+    why: "Scan pass 7: o CountryFlagControl implicitamente promete 'doe de qualquer pais' mas o rail de pagamento assume BRL/Pix/boleto silenciosamente pra todo mundo — nao e um bug de tradução esquecida (ja ha um comentario explicando a limitacao da Asaas), mas o comentario existe SO em page.js, nao nas strings de locale — um revisor de i18n futuro pode achar que e um esquecimento e 'consertar' incorretamente."
+    gate: ["comentario adicionado nas strings.assinar.js apontando pra page.js:28-32"]
+    status: pending
+
+  - id: EXT-CURRENCY-02
+    title: "validateBeforeSubmit exige CPF/CNPJ incondicional + mensagens de erro hardcoded pt-BR — dead-end funcional pra doador nao-brasileiro"
+    area: CURRENCY
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: asaasSubscriptionClient.js:296/300 — as mensagens de erro de validacao ('Escolha uma forma de pagamento.', 'Informe seu nome.', etc.) ganham chaves t() (strings.assinar.js ja existe). Avaliar tambem se o CPF/CNPJ deveria ser condicional ao pais selecionado (fora de escopo se a Asaas exige CPF/CNPJ sempre, independente de nacionalidade do doador — verificar antes de mudar a validacao em si). Exclude: mudar a exigencia de CPF/CNPJ sem confirmar a regra real da Asaas."
+    why: "Scan pass 7: um doador que escolheu outro pais no CountryFlagControl nao tem CPF/CNPJ valido pra digitar — bate num dead-end funcional, e a mensagem de erro que ve esta em portugues, independente do locale ativo, mesmo com strings.assinar.js ja tendo 12 locales pra tudo mais na mesma pagina."
+    gate: ["npm run test", "npm run lint", "teste: mensagens de erro seguem o locale ativo"]
+    status: pending
+
+  # ==================== COUNTRYSCOPE — ESCOPO DE PAIS CONSISTENTE LEITURA/ESCRITA (pass 7) ====================
+  - id: EXT-COUNTRYSCOPE-01
+    title: "/pets nao re-filtra por pais ao trocar (mapa de fome ja faz certo) — leitura e escrita divergem no escopo de pais"
+    area: COUNTRYSCOPE
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: usePetsApp.js/petsData.js — adicionar um countryStore.subscribe (mesmo padrao ja usado por App.js:782-793 _refilterForCountry no mapa de fome) pra re-escopar fetchPets() quando o pais ativo mudar. Exclude: mudar o geofence de PUBLICACAO de pets (ja usa activeCountryFor corretamente, petsData.js:110-116 — so a LEITURA/exibicao esta inconsistente)."
+    why: "Scan pass 7: o mapa de fome trata pais como uma dimensao de filtro de PRIMEIRA CLASSE (re-filtra ao trocar, sem pin obsoleto). MapaPet NUNCA filtrou por pais na leitura — mostra pets do MUNDO INTEIRO independente do pais selecionado, mesmo a ESCRITA (publicar) ja resolvendo o pais corretamente. E uma inconsistencia de design entre leitura e escrita na MESMA vertente."
+    gate: ["npm run test", "teste: trocar de pais re-escopa os pets visiveis"]
+    status: pending
+
+  # ==================== LEGEND — DRIFT DO CONTEUDO DA LEGENDA DE CORES (pass 7) ====================
+  - id: EXT-LEGEND-01
+    title: "ColorsHint descreve o SISTEMA DE CORES ANTIGO (4 categorias) — o mapa real usa urgencia/espessura-de-anel (M2), 2 legendas contam historias diferentes"
+    area: LEGEND
+    tier: S-
+    owner: ict6-uiux-session
+    scope: "Include: page.map.colors_hint (todos os 12 locales) — reescrever pra descrever o sistema REAL de urgencia/anel (fresh/waiting/stale/done + espessura do anel) que mdfMarkers.js/ReporterMarkers.js de fato renderizam, em vez do sistema de 4-cores legado (amarelo/azul/vermelho/verde) que nao corresponde mais ao codigo. Exclude: mudar o PetLegendControl (esse ja renderiza o SVG real do marcador, nunca diverge por construcao — usar o MESMO padrao aqui se possivel)."
+    why: "Scan pass 7: achado de CORRETUDE DE CONTEUDO, nao so gap — o hint de cores que o usuario le ATIVAMENTE MENTE sobre o que os pins significam hoje, porque o sistema de marcadores foi redesenhado (M2) e o ColorsHint nunca foi atualizado junto. Um usuario que le a dica e tenta interpretar os pins pelo sistema errado fica CONFUSO, nao so desinformado."
+    gate: ["npm run test", "npm run a11y", "conteudo do hint bate com o que mdfMarkers.js realmente renderiza"]
+    status: pending
+
+  # ==================== READLIMIT — RATE-LIMIT DO PATH DE LEITURA (pass 7) ====================
+  - id: EXT-READLIMIT-01
+    title: "fetchPets()/getRows() de LEITURA sem NENHUM throttle (nem client-side advisory) — um loop buggy esgota a cota da API pra TODO usuario"
+    area: READLIMIT
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: um throttle client-side simples (mesmo padrao advisory ja usado pro path de ESCRITA em petPublishGuards.js) no fetchPets()/getRows() do path de LEITURA — nao previne um atacante deliberado (mesma limitacao ja documentada pro write path), mas previne um BUG ACIDENTAL (loop de retry sem backoff, efeito colateral de re-render) de esgotar a cota compartilhada da service-account key pra TODOS os usuarios simultaneos. Exclude: rate-limit server-side de verdade (isso e arquitetural, junto com SEC-01/proxy)."
+    why: "Scan pass 7: o path de ESCRITA ja tem um throttle ADVISORY documentado (petPublishGuards.js, mesmo sabendo que e burlavel). O path de LEITURA nao tem NENHUM — nem advisory. Um bug de retry-sem-backoff (ex.: handleRetryLoad clicado repetidamente, App.js:830-835) ou um loop acidental esgotaria a cota de leitura da API pra TODO usuario simultaneo, ja que todos compartilham a MESMA service-account key."
+    gate: ["npm run test", "teste: retry repetido em janela curta e throttled"]
+    status: pending
+
+  # ==================== MANIFEST2 — PWA MANIFEST: CAPACIDADES FALTANDO (pass 7) ====================
+  - id: EXT-MANIFEST2-01
+    title: "manifest.json sem shortcuts (a acao central do app e 'reportar em 3 toques' mas nao ha atalho direto do icone)"
+    area: MANIFEST2
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: adicionar shortcuts ao manifest.json apontando pra reportar direto, /pets, e /assinar. Exclude: mudar o icone/tema do manifest (ja OK)."
+    why: "Scan pass 7: o proprio app se descreve como '3 toques pra reportar' mas o long-press no icone A2HS nao oferece NENHUM atalho — reduz de 3 toques desde a HOME pra ainda mais rapido custaria so a entrada no manifest."
+    gate: ["npm run build", "npm run smoke200", "manifest valido com shortcuts"]
+    status: pending
+
+  - id: EXT-MANIFEST2-02
+    title: "Sem share_target — usuario nao pode compartilhar um link/foto/localizacao PRA DENTRO do app pra pre-preencher um relato"
+    area: MANIFEST2
+    tier: A+
+    owner: human-gated (decisao de escopo de feature) + softwareengineer
+    scope: "Include: avaliar adicionar share_target ao manifest.json pra receber uma URL/foto compartilhada de outro app (ex.: um link do Google Maps, uma foto) e pre-preencher o formulario de relato. Exclude: implementar o parsing completo sem decisao de escopo (e uma feature nova, nao um bugfix pequeno)."
+    why: "Scan pass 7: a missao do app e mapear quem precisa de ajuda — hoje um usuario que VE uma foto ou um link de localizacao em OUTRO app nao tem como compartilhar ISSO pra dentro do MAPA FOME pra iniciar um relato. E uma capacidade de alto valor pro caso de uso descrito que nenhuma linha de codigo cobre hoje."
+    gate: ["decisao de escopo registrada", "se implementado: npm run build + smoke200 + teste manual do fluxo de share"]
+    status: blocked-human
+    human_gate: true
+    note: "E uma FEATURE NOVA de escopo nao-trivial (parsing de conteudo compartilhado, pre-preenchimento de formulario) — Claude PROPOE a capacidade, humano decide se entra no roadmap."
+
+  # ==================== E2EDEPTH — PROFUNDIDADE DA SUITE E2E (pass 7) ====================
+  - id: EXT-E2EDEPTH-01
+    title: "Nenhum e2e cobre o fluxo COMPLETO de doacao (/assinar: preencher -> submeter -> ver Pix/boleto/cartao) — so testes de rota+axe"
+    area: E2EDEPTH
+    tier: A+
+    owner: agent_test-playwright-e2e-engineer
+    scope: "Include: 1 spec e2e que preenche o formulario de /assinar, submete (mock do backend), e verifica que o artifact certo (Pix QR/boleto/link Asaas) renderiza. Exclude: pagamento real (sempre mockado) — ja nomeado como EXT-T-04 no pass 1, mas aquele item era mais generico; este e mais especifico sobre COBRIR OS 3 RAILS (pix/cartao/boleto), nao so 1 fluxo minimo. Considerar unificar com EXT-T-04 na implementacao."
+    why: "Scan pass 7: routes.e2e.js/a11y.e2e.js so confirmam 200+axe em /assinar — os estados de loading/erro/pendente/retry do PaymentArtifacts.js e o fallback de URL interna->publica do asaasSubscriptionClient.js tem ZERO cobertura de browser real, so mocks unitarios."
+    gate: ["npm run test:e2e (specs novos verdes, cobrindo os 3 rails)"]
+    status: pending
+    depends: [EXT-T-04]
+
+  - id: EXT-E2EDEPTH-02
+    title: "gestures.e2e.js usa waitForTimeout (hard wait) 2x em vez de poll web-first — padrao propenso a flake sob carga de CI"
+    area: E2EDEPTH
+    tier: A
+    owner: agent_test-playwright-e2e-engineer
+    scope: "Include: gestures.e2e.js:52-55/76-82 — trocar os 2 waitForTimeout(300) por um poll web-first (expect.poll ou similar) antes de ler window.scrollY. Exclude: mudar o resto do arquivo (ja disciplinado sobre waits web-first em outros pontos)."
+    why: "Scan pass 7: e o UNICO padrao de hard-wait notavel numa suite QUE JA SABE fazer certo (o resto do arquivo e disciplinado) — sob pressao de CPU do CI, 300ms fixos podem nao ser suficientes, causando flake exatamente no seam mais sensivel do produto (gestures.e2e.js cobre wheel/touch)."
+    gate: ["npm run test:e2e (gestures.e2e.js verde, sem waitForTimeout)"]
+    status: pending
+
 # ============================ FIM DO DOCUMENTO ============================
-# Total real (validado via parser YAML): 114 milestones em 44 areas, 0 ids
+# Total real (validado via parser YAML): 123 milestones em 50 areas, 0 ids
 # duplicados. 3 sao cross-ref intencional (EXT-EH-02 -> PET-04, EXT-SETSTATE-02
 # -> REP-01, EXT-DEPLOY2-02 -> PAY-01/EXT-ASAAS2-02; nao re-trabalhar nenhum).
 # 1 ja shipped fora deste arquivo: SEC-02/FF11 (ROADMAP_VERTENTES.yaml), que
 # implementou o item mais critico apontado pelo pass 1 (o vazamento real de
 # NEXT_PUBLIC_GOOGLE_PRIVATE_KEY agora tem um gate mecanico, allowlisted por
 # hash, ate o SEC-01 principal cair).
-# Tiers (contagem real): S+ 1 | S 7 | S- 36 | A+ 34 | A 36.
-# Status: pending 99 | blocked-human 12 | later 3 (cross-refs).
+# Tiers (contagem real): S+ 1 | S 7 | S- 40 | A+ 38 | A 37.
+# Status: pending 107 | blocked-human 13 | later 3 (cross-refs).
+# PASS 7 (7 passes totais agora, 6 areas novas: moeda/pagamento multi-pais BRL
+# hardcoded, escopo de pais inconsistente entre leitura(pets)/escrita, drift de
+# conteudo da legenda de cores ColorsHint vs sistema real de marcadores M2,
+# rate-limit ausente no path de LEITURA da API, manifest PWA sem shortcuts/
+# share_target, profundidade da suite e2e). Achado de CORRETUDE notavel:
+# EXT-LEGEND-01 — o hint de cores que o usuario le ATIVAMENTE MENTE sobre o
+# que os pins significam (descreve um sistema de 4 cores que foi substituido
+# por urgencia/espessura-de-anel e nunca atualizado).
+# QUOTA (via /monitor-tokens, checada apos este pass): sessao 78% — proximo do
+# limiar "vermelho" (80%) que o proprio monitor define. Trajetoria: 56% (pos-
+# pass5) -> 67% (pos-pass6) -> 78% (pos-pass7), ~11pp neste pass (mais caro que
+# os anteriores, sub-agente retornou saida mais densa). Documento com 123 itens/
+# 50 areas/7 passes independentes e um checkpoint solido; proxima pass, se
+# pedida, roda com margem cada vez mais apertada.
 # 6 passes de scan: pass 1 (10 areas gerais) + pass 2 (8 areas fundas: PWA/
 # pets/asaas/geo/mapa/mobile/privacidade/deps) + pass 3 (8 areas: relatorios/
 # marketing depth, parceiros/sponsors, validacao de formulario, CSV/injecao-de-
