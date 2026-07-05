@@ -253,10 +253,8 @@ const MainControls = ({
                     checked={alimento === "PrecisandoBuscar"}
                     onChange={onTipoAlimentoChange}
                   />
-                  <span className='greenHub'> {t('page.form.radio_waste')} 
-                    <Link target='_blank' rel="noreferrer" href="https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2025/lei/l15224.htm">lei-2025</Link> 
-                    
-                    <img width="30px" height="30px" src={green} alt="green"></img></span>
+                  <span className='greenHub'> {t('page.form.radio_waste')} <img width="30px" height="30px" src={green} alt="green"></img></span>
+                  <Link className='hubAside' target='_blank' rel="noreferrer" href="https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2025/lei/l15224.htm">lei-2025</Link>
                   <br></br>
                   <select ref={dropDownMenuSemanaPrecisandoBuscar} style={{ "display": "none" }} id="dia2" onChange={onDiaSemanaChange}>
                     <option value="Hoje">{t('page.form.day_today')}</option>

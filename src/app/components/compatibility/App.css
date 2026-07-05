@@ -129,72 +129,60 @@
   background: var(--mdf-surface-2);
 }
 
-/* ── Red + Green options: 2-row × 2-col grid ─────────
- * Row 1 (merged across both columns, centered): the colored label span.
- * Row 2 (two columns): the day/time selects side by side.
- * A third select (frequency) wraps onto a half-row spanning both columns.
- * The radio input is visually hidden but remains keyboard-focusable;
- * `.uxLi:has(input:checked)` (above) supplies the visible selection cue
- * via the parent label's border + background. */
+/* ── Red + Green options: same LEFT-ALIGNED row as the blue/yellow options ──
+ * Every option row is `[radio] [colored label chip] [icon]`, left-aligned, so
+ * the radio dots line up in one column and the colored boxes all start at the
+ * same x. The red (delivery) and green (waste) options additionally carry
+ * day/time/frequency <select>s; those drop onto a full-width row BELOW the
+ * label via `flex-wrap`, instead of the old centered 2-col grid that made these
+ * two rows look different from the rest.
+ * `.uxLi:has(input:checked)` (above) also supplies a selection cue via the
+ * parent label's border + background. */
 
 .uxLi:has(.redHub),
 .uxLi:has(.greenHub) {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: var(--mdf-space-2);
-  row-gap: var(--mdf-space-3);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  text-align: center;
-  padding: var(--mdf-space-3);
+  gap: var(--mdf-space-2);
 }
 
+/* Radio dot: VISIBLE and at the row start, exactly like the blue (donor) option.
+ * Previously it was visually-hidden (1px clip), which is why the delivery/waste
+ * radios looked like they had no radio button while the donor one did. */
 .uxLi:has(.redHub) > input[type="radio"],
 .uxLi:has(.greenHub) > input[type="radio"] {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-  transform: none;
+  flex: 0 0 auto;
+  margin: 0;
 }
 
+/* The label chip follows the radio on the same line (left-aligned), not centered. */
 .uxLi:has(.redHub) > .redHub,
 .uxLi:has(.greenHub) > .greenHub {
-  grid-column: 1 / -1;
-  grid-row: 1;
-  justify-self: center;
   display: inline-flex;
   align-items: center;
   gap: var(--mdf-space-2);
-  text-align: center;
 }
 
-/* Drop the legacy <br> separator — row 2 is laid out by the grid. */
+/* Force the day/time/frequency selects onto the row below the label: the <br>
+ * (kept for non-flex fallback) becomes a full-width flex break. */
 .uxLi:has(.redHub) > br,
 .uxLi:has(.greenHub) > br {
-  display: none;
+  flex-basis: 100%;
+  height: 0;
+  margin: 0;
+  border: 0;
 }
 
+/* Selects sit side by side on the row(s) below, sharing the width. */
 .uxLi:has(.redHub) > select,
 .uxLi:has(.greenHub) > select {
-  width: 100%;
+  flex: 1 1 8rem;
   min-width: 0;
 }
 
-/* If a third select is present (frequency), let it span both columns
- * so the side-by-side pair on row 2 stays balanced. */
-.uxLi:has(.redHub) > select:nth-of-type(3),
-.uxLi:has(.greenHub) > select:nth-of-type(3) {
-  grid-column: 1 / -1;
-}
-
-/* Keyboard focus: the hidden radio still receives focus — relay the ring
- * to the visible colored span so keyboard users see what's selected. */
+/* Keyboard focus: relay the ring to the visible colored chip when the radio has
+ * focus, so keyboard users see the selection cue on the chip too. */
 .uxLi:has(.redHub) > input[type="radio"]:focus-visible ~ .redHub,
 .uxLi:has(.greenHub) > input[type="radio"]:focus-visible ~ .greenHub {
   /* WCAG 2.2 SC 1.4.11: the keyboard focus ring must clear 3:1 against the
@@ -226,6 +214,17 @@
 .blueHub   { background: #cfd7fa; border-left: 3px solid var(--mdf-pin-blue); }
 .yellowHub { background: #ffe7b3; border-left: 3px solid #8a5a00; }
 .redHub    { background: #fbcdc6; border-left: 3px solid #8a2a1f; }
+
+/* Supplementary legal-reference link (e.g. lei-2025) that sits BESIDE the waste
+ * chip, not inside it — so the colored box keeps the same shape as every other
+ * option. Small + muted so it reads as an aside, and it wraps below on the flex
+ * row without disturbing the radio/chip alignment. */
+.hubAside {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: var(--mdf-fs-caption, 0.8rem);
+  color: var(--mdf-ink-muted);
+}
 
 /* ── Form fields ────────────────────────────────────── */
 
@@ -520,6 +519,23 @@ a.tgme_widget_share_btn {
 
 .leaflet-control-zoom {
   opacity: 0.85;
+}
+
+/* WCAG 2.2 AA (SC 2.5.8 Target Size): Leaflet ships its zoom +/- and the
+ * geosearch control at ~30px, below the 44px minimum. On a low-end Android with
+ * an imprecise touch and no hover, sub-44 controls stacked tight are hard to hit.
+ * Enforce >=44px on the zoom buttons and the search button, keeping the icon
+ * centered. Applies to the actual tappable <a>/<button>, not just the bar. */
+.leaflet-control-zoom a.leaflet-control-zoom-in,
+.leaflet-control-zoom a.leaflet-control-zoom-out,
+.leaflet-control-geosearch a.leaflet-bar-part,
+.leaflet-control-geosearch button {
+  width: var(--mdf-touch-target);
+  height: var(--mdf-touch-target);
+  line-height: var(--mdf-touch-target);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .leaflet-bottom.leaflet-left {
