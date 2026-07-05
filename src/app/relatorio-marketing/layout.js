@@ -7,10 +7,19 @@
 // one is destined for sponsor/advertiser companies. metadataBase inherited from
 // the root. Mirrors the parceiros/imprensa/assinar layout precedent.
 
+import { reportDatasetLd } from '../structuredData';
+
 const TITLE = 'Relatório para patrocinadores — MAPA FOME';
 
 const DESCRIPTION =
   'Relatório de alcance e status de campanhas do MAPA FOME para empresas patrocinadoras e anunciantes: audiência estimada, raio de alcance e desempenho, com exportação em CSV.';
+
+// SEO-03: aggregated campaign-reach data — a schema.org/Dataset.
+const DATASET_LD = reportDatasetLd({
+  name: 'Relatório de alcance de campanhas — MAPA FOME',
+  description: DESCRIPTION,
+  path: '/relatorio-marketing',
+});
 
 export const metadata = {
   title: TITLE,
@@ -32,5 +41,13 @@ export const metadata = {
 };
 
 export default function RelatorioMarketingLayout({ children }) {
-  return children;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(DATASET_LD) }}
+      />
+      {children}
+    </>
+  );
 }

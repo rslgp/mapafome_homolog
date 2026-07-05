@@ -7,10 +7,20 @@
 // (https://mapafome.com.br) is inherited from the root. Mirrors the
 // parceiros/imprensa/assinar layout precedent.
 
+import { reportDatasetLd } from '../structuredData';
+
 const TITLE = 'Relatórios de interesse público — MAPA FOME';
 
 const DESCRIPTION =
   'Relatórios agregados e anonimizados (k-anônimo) de insegurança alimentar do MAPA FOME, para Ministério Público, secretarias de saúde e organizações de segurança alimentar. Sem dados pessoais, com exportação em CSV.';
+
+// SEO-03: this page is aggregated open data — a schema.org/Dataset — so it is
+// discoverable as data by the public-interest audience it is built for.
+const DATASET_LD = reportDatasetLd({
+  name: 'Relatórios de insegurança alimentar — MAPA FOME',
+  description: DESCRIPTION,
+  path: '/relatorios',
+});
 
 export const metadata = {
   title: TITLE,
@@ -32,5 +42,13 @@ export const metadata = {
 };
 
 export default function RelatoriosLayout({ children }) {
-  return children;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(DATASET_LD) }}
+      />
+      {children}
+    </>
+  );
 }

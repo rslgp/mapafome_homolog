@@ -2,6 +2,7 @@
 import './globals.css';
 import LocaleAutoDetect from './components/LocaleAutoDetect';
 import LocationLocaleDetect from './components/LocationLocaleDetect';
+import { organizationLd } from './structuredData';
 
 export const metadata = {
   metadataBase: new URL('https://mapafome.com.br'),
@@ -61,6 +62,14 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://worldtiles1.waze.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://tile.openstreetmap.fr" />
         <link rel="dns-prefetch" href="https://server.arcgisonline.com" />
+        {/* SEO-03: Organization/NGO structured data so search engines resolve
+            MAPA FOME as an entity (rich results). SOT in ./structuredData.js.
+            JSON.stringify is safe here — the object holds only our own static
+            literals (no user input), so there is no injection surface. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd()) }}
+        />
         {/* PWA install bridge — capture `beforeinstallprompt` at page-parse time
             (before React mounts) so the event is never missed. The install
             button reads window.__mdf_install_prompt and calls .prompt() on it.
