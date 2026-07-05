@@ -27,6 +27,24 @@
 //      flag-control switch could freeze the whole queue (STATE-1). Structural
 //      grep; the freeze-prevention + payload-keyed validation behavior is covered
 //      by test/publishQueue.test.js.
+// FF11: no server-secret pattern (PEM private key, JWT-shaped service-account
+//      token) in the BUILT out/ bundle (SEC-02). Runs post-build (skips gracefully
+//      if out/ doesn't exist yet, since fitness runs before build in the gate
+//      order lint->test->fitness->build->smoke200 — re-run `npm run fitness`
+//      after `npm run build` to get the real check). Baseline: the app currently
+//      DOES leak NEXT_PUBLIC_GOOGLE_PRIVATE_KEY into the client bundle (tracked,
+//      human-gated fix = SEC-01, a server write-proxy) — that ONE known secret is
+//      allowlisted-as-debt BY CONTENT HASH (see FF11_KNOWN_LEAK_HASHES) so this
+//      FF doesn't block every build today, but ANY OTHER PEM/JWT-shaped secret
+//      is a hard failure. Content-hash, not nearby-identifier-name: Next.js
+//      inlines NEXT_PUBLIC_ values at build time and minification strips or
+//      relocates the original identifier, so "find the var name near the PEM"
+//      is unreliable (verified empirically: the SAME PEM shows a DIFFERENT
+//      nearby identifier per chunk, incl. none at all, incl. a stale
+//      REACT_APP_GOOGLE_PRIVATE_KEY read that's dead code under Next but still
+//      sits textually near the real secret in some chunks). Hashing the actual
+//      leaked bytes is exact regardless of minification. Converts "caught by
+//      manual audit" into "caught by every build" for every NEW secret value.
 // FF9: no raw hex color literal (#RGB / #RRGGBB / #RRGGBBAA) in CODE under src/
 //      outside a CURATED allowlist of legitimate homes (the color SOT tokens.css
 //      and the documented synced-const inline-SVG pins). The color SOT is
@@ -46,6 +64,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -646,6 +665,77 @@ if (!fs.existsSync(TOKENS_CSS)) {
     }
 }
 
+// FF11: server-secret leak into the built client bundle (SEC-02). See header
+// comment for the full rationale. Scans out/**/*.js (the compiled chunks a
+// browser actually downloads) for PEM/JWT-shaped secrets. Skips entirely if
+// out/ is absent (pre-build fitness runs, or a repo that never built) — this
+// is a POST-build check, not a pre-build one; it activates whenever out/ exists.
+const FF11_OUT_DIR = path.join(ROOT, 'out');
+// ONE known, tracked leak is allowlisted-as-debt BY CONTENT HASH (SEC-01 is the
+// fix, human-gated on choosing the write-proxy architecture) so this FF doesn't
+// block every build TODAY — but it must not silently grow. Any PEM whose SHA-256
+// is NOT in this set is a hard failure. Populate by running this script once
+// against a real build and copying the hash it reports for the known leak (see
+// the failure message) — never add a hash without confirming by hand which
+// secret it is.
+const FF11_KNOWN_LEAK_HASHES = new Set([
+    // NEXT_PUBLIC_GOOGLE_PRIVATE_KEY (SEC-01 tracked debt) — this exact key's
+    // SHA-256, computed from the PEM bytes as they appear in the built chunk
+    // (escaped \n included, matching FF11_PEM_CAPTURE_RE below). A SHA-256 is a
+    // ONE-WAY digest: committing it does not expose the key (same principle as
+    // a stored password hash) and lets a local build with the real secret still
+    // pass this gate while any DIFFERENT secret value fails loud.
+    'ff05f08a94d94be05dc4915907be71e6b750f6595fa4c052ba623e3381876ec5',
+]);
+// PEM private-key header — the single most damaging shape (a full key, not just
+// a token). Matches PKCS#8 and legacy RSA/EC PEM headers.
+const FF11_PEM_RE = /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/;
+// Captures the header through a bounded run of key-body characters (base64 +
+// the literal `\n` escape sequence Next.js's JSON-stringify-then-inline leaves
+// in the minified chunk) so two occurrences of the SAME secret hash identically
+// regardless of which chunk/whitespace surrounds them.
+const FF11_PEM_CAPTURE_RE = /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----(?:[A-Za-z0-9+/=]|\\n){0,2000}/;
+// A JWT-shaped triple (header.payload.signature, base64url segments) is the
+// other common service-account secret shape (a signed credential, not a raw key).
+const FF11_JWT_RE = /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/;
+if (fs.existsSync(FF11_OUT_DIR)) {
+    function walkOutJs(dir) {
+        const out = [];
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const p = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                out.push(...walkOutJs(p));
+            } else if (/\.js$/.test(entry.name)) {
+                out.push(p);
+            }
+        }
+        return out;
+    }
+    for (const file of walkOutJs(FF11_OUT_DIR)) {
+        const relForward = rel(file).split(path.sep).join('/');
+        const content = fs.readFileSync(file, 'utf8');
+        if (FF11_PEM_RE.test(content)) {
+            const capture = content.match(FF11_PEM_CAPTURE_RE);
+            const hash = crypto.createHash('sha256').update(capture[0]).digest('hex');
+            if (!FF11_KNOWN_LEAK_HASHES.has(hash)) {
+                failures.push(
+                    `FF11: PEM private-key pattern found in built bundle at ${relForward} ` +
+                    `(SHA-256 of the leaked bytes: ${hash}) — a server secret is shipping to ` +
+                    `every browser. If this is a NEW leak, remove it from the client bundle ` +
+                    `(server-side only). If it is the ALREADY-tracked SEC-01 debt (a rebuild ` +
+                    `producing a different hash for the SAME key is unexpected — verify by ` +
+                    `hand first), add this exact hash to FF11_KNOWN_LEAK_HASHES.`);
+            }
+        }
+        if (FF11_JWT_RE.test(content)) {
+            failures.push(
+                `FF11: JWT-shaped token found in built bundle at ${relForward} — a ` +
+                `signed credential (e.g. a service-account token) may be shipping to ` +
+                `every browser. Verify it is not a secret; if it is, move it server-side.`);
+        }
+    }
+}
+
 if (failures.length > 0) {
     console.error('\n[fitness] FAILED:');
     for (const f of failures) console.error('  ' + f);
@@ -653,7 +743,12 @@ if (failures.length > 0) {
     process.exit(1);
 }
 
-console.log(`[fitness] OK, file-loc, function-loc, todo-density, bbox-SOT, Pais-stamp, queue-country-capture, raw-hex-SOT, no-infinite-animation, token-contrast all within v5 hard limits.`);
+console.log(`[fitness] OK, file-loc, function-loc, todo-density, bbox-SOT, Pais-stamp, queue-country-capture, raw-hex-SOT, no-infinite-animation, token-contrast, secret-leak all within v5 hard limits.`);
+if (fs.existsSync(FF11_OUT_DIR)) {
+    console.log(`[fitness] note: FF11 scanned out/ for secret leaks (post-build check active).`);
+} else {
+    console.log(`[fitness] note: FF11 skipped (out/ absent — pre-build run; re-run after 'npm run build' for the real check).`);
+}
 if (ff1BaselineHits > 0) {
     console.log(`[fitness] note: ${ff1BaselineHits} FF1 baseline-allowlisted data-table shard(s) (i18n strings, see FF1_BASELINE).`);
 }
