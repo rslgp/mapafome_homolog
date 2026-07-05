@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `693f735 docs(roadmap)` (PAY-01 aguardando commit via agent_git-commit-specialist)
+> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `cf14f45 docs(roadmap)` (I18N-01 aguardando commit via agent_git-commit-specialist)
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-04-G`](#2026-07-04-g--i18n-01-shipped-relative-time-sensivel-ao-locale) — **I18N-01 SHIPPED** (parcial: core relative-time): formatRelativeTime segue o locale ativo (era pt-BR fixo); cleanold pinado em pt-BR. +7 testes. Corrigido export de DEFAULT_LOCALE. Gate verde.
 - [`2026-07-04-F`](#2026-07-04-f--pay-01-shipped-fail-closed-na-config-de-producao-do-asaas-backend) — **PAY-01 SHIPPED**: assertProductionConfig — o asaas-backend RECUSA subir em prod sem KV duravel ou sem allowlist de CORS. 98/98 backend.
 - [`2026-07-04-E`](#2026-07-04-e--pet-02-shipped-dedup-visual-de-pets--fixup-do-qa-01) — **PET-02 SHIPPED**: liga o dedup de pets (dead code) no PetMarkers — 1 pino por grupo. + FIXUP do QA-01 (poolOptions removido no Vitest 4). Gate verde.
 - [`2026-07-04-D`](#2026-07-04-d--qa-01-shipped-gate-de-teste-oom-safe-por-default) — **QA-01 SHIPPED**: vitest.config forca forks+singleFork+no-file-parallelism; `npm run test` plano agora e OOM-safe. Gate verde. (config corrigida em 2026-07-04-E)
@@ -22,12 +23,15 @@
 - [`2026-07-04-A`](#2026-07-04-a--deep-analysis--roadmap-multi-vertente) — Deep-analysis do produto (11 vertentes) + criado `ROADMAP_VERTENTES.yaml` (30 milestones) + este log + licao de padrao-de-log no vault.
 
 ### STATUS_TALLY (ROADMAP_VERTENTES.yaml)
-- **30 milestones** · pending **19** · blocked-human **5** · later **1** · **shipped 5** (SEO-01, SEO-02, QA-01, PET-02, PAY-01).
+- **30 milestones** · pending **18** · blocked-human **5** · later **1** · **shipped 6** (SEO-01, SEO-02, QA-01, PET-02, PAY-01, I18N-01).
 - Por tier: **S+ 3** · S 8 · A 10 · B 9.
-- Por vertente: V1 core-fome 2 · V2 pet 5 (1 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (2 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 · V11 governanca 1.
+- Por vertente: V1 core-fome 2 · V2 pet 5 (1 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (2 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 · V11 governanca 1.
+- **Todos os S+/S commitaveis shippados.** Restam: 10 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
-1. **I18N-01** (S, ultimo S pending commitavel): Intl relative-time/numero/data por locale (hoje fixo pt-BR). Depois os A: SEO-03 (JSON-LD), SEC-03, PET-03/04, REP-01, PWA-01, QA-02, FOME-01.
+1. **A-tier commitaveis** (proximos): SEO-03 (JSON-LD Organization/Dataset), SEC-03 (hygiene pet.contact), PET-03/PET-04, REP-01, PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
+2. **SEC-01** (S+, blocked-human): chave Google no bundle -> proxy. RAIZ do risco. Claude PROPOE, humano provisiona.
+3. **PET-01/INIT-01/PAY-02/SEO-04/FOME-02** (blocked-human/later): acao humana (storage/destino/efeito/decisao) ou dep de SEC-01.
 2. **SEC-01** (S+, blocked-human): tirar a chave privada Google do bundle client via proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
 3. **PET-01 / INIT-01 / PAY-02 / SEO-04 / FOME-02** (blocked-human/later): dependem de acao humana (storage, destino, efeito de negocio, decisao de produto, ou dep de SEC-01). NAO auto-shippaveis.
 
@@ -227,3 +231,39 @@
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
 
 **Proximo:** I18N-01 (Intl relative-time/numero/data por locale).
+
+---
+
+## 2026-07-04-G — I18N-01 shipped: relative-time sensivel ao locale
+
+**Comando:** "ship until there is pending" (loop; pegou I18N-01, ultimo S commitavel).
+
+**O que foi feito:**
+
+| Arquivo / Acao | O que | Por que |
+|---|---|---|
+| `src/app/components/compatibility/components/relativeTime.js` (edit) | `formatRelativeTime(dateISO, locale=getLocale())` formata no locale ATIVO (era `Intl.RelativeTimeFormat('pt-BR')` congelado). Cache de formatter por locale, fallback a DEFAULT_LOCALE em tag ruim. | Um usuario de/ru/zh via "há N dias" fixo — 12 locales com paridade de string, nao de formato. |
+| `src/app/.../googlesheets/cleanold.js` (edit) | `formatRelativeTime(x.DateISO, 'pt-BR')` EXPLICITO. | cleanold e o UNICO consumidor de substring (keia em "semana"/"mes" pt-BR pra GC de idade); deve ficar pt-BR, nao seguir a UI (um operador de/zh nunca casaria e as linhas nunca seriam podadas). |
+| `src/app/.../ux/i18n/engine.js` (edit) | `export` no `DEFAULT_LOCALE` (era const local). | **Fix de defeito** (ver abaixo) + SOT: o default vira um ponto so. |
+| `src/app/.../relativeTime.test.js` (novo, 7 casos) | pt-BR/de/ru diferem no mesmo instante; fallback nao lanca; '' preservado; substrings pt-BR intactos. | Prova a localizacao E o contrato do cleanold. |
+| `ROADMAP_VERTENTES.yaml` (edit) | I18N-01 pending -> shipped (parcial, com nota). | Flip so com gate verde lido. |
+
+**Defeito pego e corrigido (H2 — li o artefato, nao so o exit):** a 1a build "compiled with warnings" com `DEFAULT_LOCALE is not exported from engine` (4x) — eu importei um const que nao era `export`. Build saia 0 mas o valor seria `undefined` em runtime (o fallback quebraria; os testes passaram so porque passam locale explicito, nunca batem no fallback). Fix: `export` no DEFAULT_LOCALE. Rebuild compilou SEM warnings.
+
+**Parcial (honesto):** shippado o CORE relative-time (o gap concreto que a analise nomeou). O resto do scope (Intl.NumberFormat/DateTimeFormat por locale) fica como debito — varredura ampla por muitos call-sites, fora deste commit pra ele ficar atomico. PinDetailSheet ja usava keys t() (ago_*), entao aquela superficie ja era localizada.
+
+**Gate (verde, lido nesta sessao):**
+
+| Check | Resultado |
+|---|---|
+| lint | exit 0 |
+| fitness | exit 0 |
+| test | 1361/1361 passed (95 files, +7 relativeTime), exit 0 |
+| build | exit 0, **compiled successfully, 0 import-error warnings** (apos o fix do export) |
+| smoke200 | 16/16 rotas 200+render |
+| a11y (axe) | / + /pets 0 violacoes |
+| teardown | serve :3000 morto, porta liberada, 0 orfaos |
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+**Proximo:** todos os S+/S commitaveis feitos. Proximo tier = A (SEO-03 JSON-LD, SEC-03, PET-03/04, REP-01, PWA-01, QA-02, FOME-01).
