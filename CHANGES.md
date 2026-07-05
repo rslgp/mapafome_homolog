@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `7227ebc docs(roadmap)` (SEC-03 aguardando commit via agent_git-commit-specialist)
+> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `f27f188 docs(roadmap)` (PET-03 aguardando commit via agent_git-commit-specialist)
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-04-J`](#2026-07-04-j--pet-03-shipped-writer-renewpet-freshnessat) — **PET-03 SHIPPED**: novo writer renewPet carimba freshnessAt ('ainda procurando') — antes era lido mas nunca escrito. +5 testes. Gate verde.
 - [`2026-07-04-I`](#2026-07-04-i--sec-03-shipped-higiene-de-petcontact-antes-de-persistir) — **SEC-03 SHIPPED**: pet.contact passa por sanitizeFreeText antes de gravar (strip de control-char, cap 60); telefone/e-mail legitimo intacto. +3 testes. Gate verde.
 - [`2026-07-04-H`](#2026-07-04-h--seo-03-shipped-json-ld-schemaorg-ngo--dataset) — **SEO-03 SHIPPED**: JSON-LD schema.org — NGO no root + Dataset nas 2 paginas de relatorio (SOT em structuredData.js). +7 testes. Gate verde.
 - [`2026-07-04-G`](#2026-07-04-g--i18n-01-shipped-relative-time-sensivel-ao-locale) — **I18N-01 SHIPPED** (parcial: core relative-time): formatRelativeTime segue o locale ativo (era pt-BR fixo); cleanold pinado em pt-BR. +7 testes. Corrigido export de DEFAULT_LOCALE. Gate verde.
@@ -25,13 +26,13 @@
 - [`2026-07-04-A`](#2026-07-04-a--deep-analysis--roadmap-multi-vertente) — Deep-analysis do produto (11 vertentes) + criado `ROADMAP_VERTENTES.yaml` (30 milestones) + este log + licao de padrao-de-log no vault.
 
 ### STATUS_TALLY (ROADMAP_VERTENTES.yaml)
-- **30 milestones** · pending **16** · blocked-human **5** · later **1** · **shipped 8** (SEO-01/02/03, QA-01, PET-02, PAY-01, I18N-01, SEC-03).
+- **30 milestones** · pending **15** · blocked-human **5** · later **1** · **shipped 9** (SEO-01/02/03, QA-01, PET-02, PAY-01, I18N-01, SEC-03, PET-03).
 - Por tier: **S+ 3** · S 8 · A 10 · B 9.
-- Por vertente: V1 core-fome 2 · V2 pet 5 (1 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (1 shipped) · V11 governanca 1.
-- **Todos os S+/S commitaveis shippados.** Restam: 8 A + 8 B commitaveis + 5 blocked-human + 1 later.
+- Por vertente: V1 core-fome 2 · V2 pet 5 (2 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (1 shipped) · V11 governanca 1.
+- **Todos os S+/S commitaveis shippados.** Restam: 7 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
-1. **A-tier commitaveis** (proximos): PET-03/PET-04, REP-01, PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
+1. **A-tier commitaveis** (proximos): PET-04 (quarentena fila pets), REP-01 (rotear /relatorio-marketing pelo sheetsClient), PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
 2. **SEC-01** (S+, blocked-human): chave Google no bundle -> proxy. RAIZ do risco. Claude PROPOE, humano provisiona.
 3. **PET-01/INIT-01/PAY-02/SEO-04/FOME-02** (blocked-human/later): acao humana (storage/destino/efeito/decisao) ou dep de SEC-01.
 2. **SEC-01** (S+, blocked-human): tirar a chave privada Google do bundle client via proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
@@ -340,3 +341,36 @@
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
 
 **Proximo:** proximo A (PET-03 freshnessAt, PET-04 quarentena, REP-01, PWA-01, QA-02, FOME-01).
+
+---
+
+## 2026-07-04-J — PET-03 shipped: writer renewPet (freshnessAt)
+
+**Comando:** "ship until there is pending" (loop; A da vertente pet).
+
+**O que foi feito:**
+
+| Arquivo / Acao | O que | Por que |
+|---|---|---|
+| `src/app/pets/petsData.js` (edit) | Novo writer `renewPet({coords,freshnessAt,idempotency_key})` que carimba `PET_FRESHNESS_AT_KEY` via `updatePetByCoords`. + import de `PET_FRESHNESS_AT_KEY`. | freshnessAt era LIDO mas nenhum modulo-fonte o ESCREVIA — a idade/archive media sempre da 1a publicacao; um pet ainda perdido sumia apos 90d mesmo renovando. |
+| `src/app/pets/petRenewWriter.test.js` (novo, 5 casos) | round-trip freshnessAt, nao-resolve, idempotente, isolamento kind:pet, null-quando-nao-casa. | Prova o writer sem tocar o resto do dominio. |
+| `ROADMAP_VERTENTES.yaml` (edit) | PET-03 pending -> shipped. | Flip so com gate verde lido. |
+
+**Design:** `renewPet` espelha `resolvePet` EXATO (tempo carimbado no runtime, ISO injetavel p/ a fila offline reaplicar identico/LSP, reescreve SO freshnessAt, idempotente pelo `seenIdempotencyKeys` compartilhado, isolamento kind:pet herdado do updatePetByCoords) e difere em 1 ponto: NAO escreve resolvedAt — renovar NAO tira o pet do mapa ativo, so reseta o relogio de idade que o M12/M13 mede contra freshnessAt.
+
+**Gate (verde, lido nesta sessao):**
+
+| Check | Resultado |
+|---|---|
+| lint | exit 0 |
+| fitness | exit 0 |
+| test | 1376/1376 passed (97 files, +5), exit 0 |
+| build | exit 0, compiled clean |
+| smoke200 | 16/16 rotas 200+render |
+| a11y | N/A (write-path; nenhum render mudou) |
+
+**Escopo (honesto):** entreguei o WRITER (o que a analise nomeou: "modulo-fonte que ESCREVE freshnessAt"). Ligar um BOTAO de UI de "ainda procurando" ao writer e um gesto de UI separado — item futuro se priorizado. Janela de archive (90d) inalterada (excluida no scope).
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+**Proximo:** PET-04 (quarentena de poison-pin na fila offline de pets).

@@ -183,7 +183,9 @@ milestones:
     scope: "Include: um modulo-fonte que ESCREVE petTaxonomy.freshnessAt quando o dono renova a busca ('ainda procurando'), para a idade/archive medir da renovacao e nao so da 1a publicacao (petTaxonomy.js:360-362 le freshnessAt mas ninguem escreve). Exclude: mudar a janela de archive (90d)."
     why: "Analise: freshnessAt e LIDO mas nunca ESCRITO — a feature M13 de renovacao esta pela metade. Um pet ainda perdido apos 90d some do mapa mesmo com o dono renovando, porque a idade mede sempre da 1a publicacao."
     gate: ["npm run test", "npm run lint", "teste: renovar reseta a idade efetiva via freshnessAt"]
-    status: pending
+    status: shipped
+    commit: "PENDENTE (routed pro agent_git-commit-specialist nesta sessao 2026-07-04)"
+    evidence: "Novo writer renewPet em petsData.js: carimba PET_FRESHNESS_AT_KEY na linha que casa as coords via updatePetByCoords — o 'fato vivo' de 'ainda procurando'. Antes freshnessAt era LIDO (petTaxonomy/petBlob expunham a chave, buildPetDados ate a escrevia SE injetada) mas NENHUM modulo-fonte o escrevia, entao a idade/archive media sempre da 1a publicacao (DateISO). renewPet espelha resolvePet EXATO (tempo carimbado no runtime, ISO injetavel p/ a fila reaplicar identico/LSP, reescreve SO freshnessAt, idempotente pelo seenIdempotencyKeys compartilhado, isolamento kind:pet + so coluna Dados) e difere em 1 ponto: NAO escreve resolvedAt (renovar nao tira o pet do mapa ativo, so reseta o relogio que o M12/M13 mede). Adicionado PET_FRESHNESS_AT_KEY aos imports de petsData. Novo petRenewWriter.test.js (5 casos): freshnessAt round-trip, nao-resolve, idempotente, isolamento kind:pet, null-quando-nao-casa. GATE VERDE: lint 0; fitness 0; test 1376/1376 (+5); build 0 (compiled clean); smoke200 16/16. Sem a11y (write-path). Excluido do scope: mudar a janela de archive (90d) e ligar um BOTAO de UI de renovacao (o writer existe; o gesto de UI e item futuro se priorizado)."
 
   - id: PET-04
     title: "Quarentena de poison-pin na fila offline de pets (paridade com a fila fome)"
