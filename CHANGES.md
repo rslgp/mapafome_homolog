@@ -9,11 +9,14 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `f27f188 docs(roadmap)` (PET-03 aguardando commit via agent_git-commit-specialist)
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `55748d4 fix(ux)` (radios alinhados + touch targets); MILESTONES_EXTENDED.yaml (58 itens, 2 passes) ainda nao commitado
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
-> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
+> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (segundo pass, 33 itens, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-05-M`](#2026-07-05-m--milestones-extended-expandido-pass-2-58-itens-18-areas) — **MILESTONES_EXTENDED.yaml expandido (pass 2)**: +25 itens em 8 areas novas (PWA offline edge cases, MapaPet vertical, Asaas edge cases, geofence bbox, Leaflet perf, teclado mobile, privacidade/LGPD, staleness de deps). Total 58 itens, 18 areas.
+- [`2026-07-05-L`](#2026-07-05-l--milestones-extended-criado-33-itens-5-tiers) — **MILESTONES_EXTENDED.yaml criado**: 1o pass de gap-scan (10 areas: testes/perf/error-handling/a11y/integridade/DX/observabilidade/deps-CVE/i18n/build), 33 itens, tiers S+/S/S-/A+/A. Nenhum shipped ainda.
+- [`2026-07-05-K`](#2026-07-05-k--ui-ux-review-p0-dignidade--touch-targets-shipped) — **UI/UX review (ICT6 advisory) + 2 P0 shipped**: reframe "pts/points"->"pessoas/people" (5 locales, dignidade) + radios alinhados + zoom/search >=44px (AA touch). Gate verde.
 - [`2026-07-04-J`](#2026-07-04-j--pet-03-shipped-writer-renewpet-freshnessat) — **PET-03 SHIPPED**: novo writer renewPet carimba freshnessAt ('ainda procurando') — antes era lido mas nunca escrito. +5 testes. Gate verde.
 - [`2026-07-04-I`](#2026-07-04-i--sec-03-shipped-higiene-de-petcontact-antes-de-persistir) — **SEC-03 SHIPPED**: pet.contact passa por sanitizeFreeText antes de gravar (strip de control-char, cap 60); telefone/e-mail legitimo intacto. +3 testes. Gate verde.
 - [`2026-07-04-H`](#2026-07-04-h--seo-03-shipped-json-ld-schemaorg-ngo--dataset) — **SEO-03 SHIPPED**: JSON-LD schema.org — NGO no root + Dataset nas 2 paginas de relatorio (SOT em structuredData.js). +7 testes. Gate verde.
@@ -31,9 +34,18 @@
 - Por vertente: V1 core-fome 2 · V2 pet 5 (2 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (1 shipped) · V11 governanca 1.
 - **Todos os S+/S commitaveis shippados.** Restam: 7 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
+### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 2 passes de scan, tiers S+/S/S-/A+/A)
+- **58 milestones** em **18 areas** · pending **51** · blocked-human **6** · later **1** (cross-ref intencional do PET-04). Nenhum shipped ainda.
+- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · S 5 · S- 21 · A+ 18 · A 13.
+- Pass 1 (10 areas): SEC 6 · T(estes) 4 · EH(error-handling) 5 · A11Y 3 · DI(integridade) 1 · DX 3 · OBS 3 · PF(perf) 2 · I18N 4 · BUILD 2.
+- Pass 2 (8 areas, mais fundo): PWA2 4 · PET2 4 · ASAAS2 3 · GEO 3 · MAP 4 · MOBILE 2 · PRIV 2 · DEP 3.
+- **Proximo a pegar:** EXT-SEC-01 (bump next, fecha 2 CVEs HIGH — human_gate no bump em si) ou EXT-SEC-03 (upgrade da cadeia axios/google-spreadsheet, comitavel sem human_gate).
+
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
-1. **A-tier commitaveis** (proximos): PET-04 (quarentena fila pets), REP-01 (rotear /relatorio-marketing pelo sheetsClient), PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
-2. **SEC-01** (S+, blocked-human): chave Google no bundle -> proxy. RAIZ do risco. Claude PROPOE, humano provisiona.
+1. **A-tier commitaveis (ROADMAP_VERTENTES)**: PET-04 (quarentena fila pets), REP-01 (rotear /relatorio-marketing pelo sheetsClient), PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
+2. **S-tier commitaveis (MILESTONES_EXTENDED, novo)**: EXT-SEC-03 (upgrade axios/google-spreadsheet, sem human_gate), EXT-EH-01/02/03 (poison-pin pets [=PET-04], error.js, unhandledrejection), EXT-T-01/03 (testes diretos petsData/asaasClient).
+3. **SEC-01** (S+, blocked-human, ROADMAP_VERTENTES): chave Google no bundle -> proxy. RAIZ do risco. Claude PROPOE, humano provisiona.
+4. **EXT-SEC-01** (S+, MILESTONES_EXTENDED, human_gate no bump): next 16.2.4 tem 2 CVEs HIGH ativos. Bump de patch, humano confirma antes.
 3. **PET-01/INIT-01/PAY-02/SEO-04/FOME-02** (blocked-human/later): acao humana (storage/destino/efeito/decisao) ou dep de SEC-01.
 2. **SEC-01** (S+, blocked-human): tirar a chave privada Google do bundle client via proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
 3. **PET-01 / INIT-01 / PAY-02 / SEO-04 / FOME-02** (blocked-human/later): dependem de acao humana (storage, destino, efeito de negocio, decisao de produto, ou dep de SEC-01). NAO auto-shippaveis.
@@ -374,3 +386,78 @@
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
 
 **Proximo:** PET-04 (quarentena de poison-pin na fila offline de pets).
+
+---
+
+## 2026-07-05-K — UI/UX review (ICT6 advisory) + P0 dignidade/touch shipped
+
+**Comando:** "have agent_uiux-defold judge the landpage layout by seeing the screenshots, and suggests improvements" -> depois "implement".
+
+**O que foi feito:**
+- `.claude/agents/uiux-defold.md` NAO existe no repo — o stub do agente parou corretamente em vez de fabricar a persona. Waiver aplicado: rodou como ICT6/Principal Staff advisory generico, usando os governadores ja no prompt (tom calmo/dignidade, WCAG 2.2 AA, personas Android low-end/sol/baixa-alfabetizacao).
+- 3 screenshots reais (Playwright headless, viewport mobile 412x915): fold, pagina inteira (11.8k px), form de reporte aberto.
+- Veredito: mapa-primeiro certo; radios/chips bem construidos; MAS "4509 pts" gamifica fome (cada ponto e uma pessoa) e ha 3 pontos de entrada pra 1 acao (Report/FAB/form).
+- Lista P0/P1/P2 entregue. Implementados nesta sessao: **P0 dignidade** (rename pts/points->pessoas/people em 5 locales: pt-BR/es/en/de/fr) + **P0 touch-target** (zoom/search leaflet >=44px, SC 2.5.8).
+
+**Gate (verde, lido nesta sessao):** lint 0; test 1376/1376; fitness 0; build 0 (compiled clean); smoke200 16/16; axe / 0 violacoes; string "4509 people" verificada no bundle + screenshot.
+
+**Commits:** `503049d refactor(i18n): reframe mapped count as people, not points` + `55748d4 fix(ux): align color radios and enforce 44px map targets`.
+
+**Concorrencia respeitada (H3):** durante o trabalho, outra sessao tinha `Apoiadores.js` staged (2 nomes de apoiador novos) + `sw.js`/`version.json` staged+modified. NAO tocados, NAO commitados — ficaram exatamente como estavam.
+
+**Nao feito (P0#2 contrast, P0#4 disambiguate path, P1 x4, P2 x4):** o usuario redirecionou pra "commit organize" antes de continuar — tasks #1-#7 (ver task list) ficam pending pra uma proxima sessao.
+
+**Deferido:** P0#2 (contraste AA dos chips cinza + labels do mapa), P0#4 (desambiguar Report/FAB/form), 4x P1, 4x P2 — nao implementados, tasks pending.
+
+---
+
+## 2026-07-05-L — MILESTONES_EXTENDED.yaml criado (33 itens, 5 tiers)
+
+**Comando:** `/goal create extensive milestones document until reach quota limit seek tier S+ S S- A+ A ranks`.
+
+**O que foi feito:**
+
+| Arquivo / Acao | O que | Por que |
+|---|---|---|
+| `MILESTONES_EXTENDED.yaml` (novo) | Segundo pass de gap-scan, MAIS FUNDO que o ROADMAP_VERTENTES.yaml, escala de **5 tiers** (S+/S/S-/A+/A) em vez do S+/S/A/B do roadmap principal. 10 areas: testes (cobertura critica), performance/bundle, error-handling, a11y avancado, integridade de dados, DX, observabilidade, seguranca (deps/CVE/rate-limit/headers), conteudo/i18n, build/deploy. **33 itens**, cada um com evidencia file:line real (scan via agente Explore read-only). | O goal pediu um documento EXTENSIVO com essa escala de tier especifica. Nenhum id duplica os 30 do ROADMAP_VERTENTES nem os 43 do UIUX_MILESTONES. |
+| `ROADMAP_VERTENTES.yaml` (edit) | Cross-link no cabecalho apontando pro novo documento. | Uma sessao fria que le so o roadmap principal precisa achar o segundo pass. |
+| `CHANGES.md` (edit) | Header + tally + entrada. | Registro do novo documento. |
+
+**Achado mais critico do scan:** `next@16.2.4` (package.json:14) tem **2 CVEs HIGH ativos** (`npm audit` confirmado) — GHSA-8h8q-6873-q5fj (DoS via Server Components) e GHSA-26hh-7cqf-hhc6 (middleware/proxy bypass) — nenhum roadmap existente rastreava isso. Virou EXT-SEC-01 (S+). Tambem achado: `google-spreadsheet@3.0.10` puxa `axios@0.19.2` legado (SSRF/CSRF/ReDoS) que roda NO BROWSER (sheetsClient.js e client-side); o CI ja rebaixou o audit-gate de high pra critical pra nao bloquear nisso (EXT-SEC-02/03).
+
+**Outros achados de peso:** fila offline de pets tem o MESMO bug de poison-pin que a fila de fome ja corrigiu, mas nao portado (cross-ref intencional pro PET-04 existente, nao duplicado); nenhum error.js no App Router (excecao cai na tela crua do Next); zero SDK de error-tracking em producao; toast de update do SW hardcoded pt-BR (nenhum non-pt-BR ve sua propria lingua no prompt MANDATORIO de update); 507 marcadores `[REVISAR-HUMANO]` vivos em producao em 9 locales, incluindo telas dignity-sensitive (fome, pet perdido).
+
+**Gate desta entrada:** nenhum codigo de produto tocado (so arquivos de planejamento). YAML validado: parse OK, 33 milestones, 0 ids duplicados, 5 tiers presentes.
+
+**Commit:** roteado pro `agent_git-commit-specialist` quando pedido. Sem push/PR.
+
+**Proximo:** EXT-SEC-01 (bump next, fecha os 2 CVEs — human_gate no bump em si) ou EXT-SEC-03 (upgrade da cadeia axios, sem human_gate, pode comecar ja).
+
+---
+
+## 2026-07-05-M — MILESTONES_EXTENDED expandido (pass 2): 58 itens, 18 areas
+
+**Comando:** continuacao do `/goal create extensive milestones document until reach quota limit seek tier S+ S S- A+ A ranks` — 2o pass de scan mais fundo.
+
+**O que foi feito:**
+
+| Area nova | Itens | Achado mais critico |
+|---|---|---|
+| PWA2 (offline edge cases) | 4 | Fila offline (fome+pets) nao trata IndexedDB indisponivel (Safari private) — throw NAO CAPTURADO na chamada do caller (usePetsApp.js:445-455, App.js:735+) |
+| PET2 (MapaPet vertical) | 4 | petAgeDays nao clampa idade negativa — um timestamp futuro (clock skew) faz um pet NUNCA arquivar |
+| ASAAS2 (Asaas edge cases) | 3 | Idempotency key do webhook nao distingue replay de um 2o evento LEGITIMO do mesmo tipo+payment (ex.: reembolso+recobranca) — decisao de produto |
+| GEO (geofence/bbox) | 3 | cv/mv (arquipelagos) usam 1 bbox unico que ADMITE oceano aberto entre ilhas — inconsistente com gq (que exclui Annobon com um 2o rect) |
+| MAP (Leaflet) | 4 | MarkerClusterGroup sem chunkedLoading + a key do MarkerGroup muda a cada minuto (remonta TODA a arvore de cluster a cada 60s) — o mecanismo CONCRETO do travamento com muitos pins |
+| MOBILE (teclado/viewport) | 2 | IosKeyboardInset bail-out total sem fallback quando visualViewport ausente (WebView Instagram/Facebook Android, iOS<13) — bottom sheets ficam atras do teclado |
+| PRIV (LGPD) | 2 | ZERO seam de consentimento no analytics.js — app Brasil-first sem gate de consentimento antes de qualquer futuro gtag/dataLayer |
+| DEP (staleness) | 3 | react-leaflet-markercluster preso numa RC (5.0.0-rc.0) em `dependencies` (nao dev), nunca estabilizou |
+
+**Metodo:** 2o agente Explore read-only, focado em 8 angulos NAO cobertos pelo pass 1 (PWA install/offline, profundidade do MapaPet, edge cases do Asaas backend, geofence/bbox, Leaflet, teclado mobile, privacidade, staleness de deps). Cada item com evidencia file:line real.
+
+**Validacao:** YAML parseado apos a expansao — **58 milestones reais** (nao os 52 estimados no rascunho do footer, corrigido), 0 ids duplicados, 18 areas, tiers S+ 1 / S 5 / S- 21 / A+ 18 / A 13.
+
+**Gate desta entrada:** nenhum codigo de producao tocado (so arquivo de planejamento). YAML validado via parser real.
+
+**Commit:** roteado pro `agent_git-commit-specialist` quando pedido. Sem push/PR.
+
+**Proximo:** o goal /goal continua ativo ("until reach quota limit") — proxima acao e ou continuar expandindo com mais angulos de scan, ou comecar a IMPLEMENTAR o item de maior tier (EXT-SEC-01/03), dependendo do que o usuario redirecionar.

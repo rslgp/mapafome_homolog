@@ -6,6 +6,10 @@
 #   backlog tiered por VERTENTE do produto, derivado de uma analise profunda do
 #   que o MAPA FOME faz (2026-07-04). Cada vertente e um eixo independente de
 #   valor; itens de UI/UX continuam morando em UIUX_MILESTONES.yaml (nao duplicar).
+#   MILESTONES_EXTENDED.yaml e um SEGUNDO pass mais fundo/fino (5 tiers
+#   S+/S/S-/A+/A: testes, performance, error-handling, a11y avancado,
+#   integridade de dados, DX, observabilidade, deps/CVE, i18n, build) — nao
+#   duplica nenhum id daqui.
 #
 # O QUE E O MAPA FOME (resumo da analise)
 #   PWA Next.js 16 output:'export' (estatico, GitHub Pages + mapafome.com.br).

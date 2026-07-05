@@ -1,0 +1,712 @@
+# MILESTONES_EXTENDED.yaml — extensive gap-scan milestones document.
+#
+# POR QUE ESTE ARQUIVO EXISTE
+#   Complementa ROADMAP_VERTENTES.yaml (30 itens, tiers S+/S/A/B). Este arquivo
+#   e um segundo pass, MAIS FUNDO e MAIS FINO: escala de 5 tiers (S+/S/S-/A+/A)
+#   cobrindo areas que o primeiro pass nao tocou — testes, performance, error
+#   handling, a11y avancado, integridade de dados, DX, observabilidade,
+#   seguranca de dependencias, conteudo/i18n, build/deploy. Nenhum id duplica
+#   os 30 ja trackeados (SEC-*, SEO-*, PET-*, PAY-*, I18N-*, INIT-*, PART-01,
+#   REP-*, PWA-*, QA-*, FOME-*, GOV-01) nem os 43 de UIUX_MILESTONES.yaml.
+#
+# ESCALA DE TIER (5 niveis, mais fina que o S+/S/A/B do roadmap principal)
+#   S+ : risco de producao AGORA (CVE conhecido explorável, dinheiro real, PII).
+#   S  : alto impacto amplo (afeta toda uma vertente ou todo usuario).
+#   S- : alto impacto mas mais estreito (1 fluxo, 1 persona, 1 locale).
+#   A+ : valor solido, sem risco imediato, mas gap real e evidenciado.
+#   A  : polimento/DX/higiene — vale fazer, nao urgente.
+#   Trabalhar do maior pro menor. Mesmas regras de status/gate/commit do
+#   ROADMAP_VERTENTES.yaml (shipped SO com gate verde lido; append-only).
+#
+# METODO
+#   Gerado por 2 passes de scan de evidencia (Explore agent, read-only).
+#   Pass 1 (10 areas): testes, performance, error-handling, a11y, integridade
+#   de dados, DX, observabilidade, seguranca de deps, conteudo/i18n, build/deploy.
+#   Pass 2 (8 areas, mais fundo): PWA install/offline edge cases, MapaPet vertical
+#   (match/taxonomy/share), Asaas backend edge cases (validacao/CORS/replay),
+#   geofence/bbox de paises, Leaflet map (cluster/tiles/perf), teclado mobile/
+#   viewport, analytics/privacidade (LGPD), staleness de dependencias alem dos
+#   CVEs do pass 1. Cada item cita file:line real — nenhum fato inventado. Nao
+#   commitar nenhuma correcao sem antes reler o arquivo/linha citado (pode ter
+#   mudado desde o scan).
+
+areas:
+  - id: T
+    nome: "Testes (cobertura critica)"
+  - id: PF
+    nome: "Performance / bundle"
+  - id: EH
+    nome: "Error handling"
+  - id: A11Y
+    nome: "Acessibilidade avancada"
+  - id: DI
+    nome: "Integridade de dados"
+  - id: DX
+    nome: "Developer experience"
+  - id: OBS
+    nome: "Observabilidade"
+  - id: SEC
+    nome: "Seguranca (deps/rate-limit/headers)"
+  - id: I18N
+    nome: "Conteudo / i18n"
+  - id: BUILD
+    nome: "Build / deploy"
+  - id: PWA2
+    nome: "PWA install/offline edge cases (pass 2)"
+  - id: PET2
+    nome: "MapaPet vertical depth (pass 2)"
+  - id: ASAAS2
+    nome: "Asaas backend edge cases (pass 2)"
+  - id: GEO
+    nome: "Geofence / bbox de paises"
+  - id: MAP
+    nome: "Leaflet map edge cases"
+  - id: MOBILE
+    nome: "Teclado mobile / viewport"
+  - id: PRIV
+    nome: "Analytics / privacidade (LGPD)"
+  - id: DEP
+    nome: "Staleness de dependencias"
+
+milestones:
+
+  # ==================== SEC — SEGURANCA (deps/CVE/rate-limit/headers) ====================
+  - id: EXT-SEC-01
+    title: "Bump next 16.2.4 -> patch com fix de 2 CVEs HIGH (DoS Server Components + middleware bypass)"
+    area: SEC
+    tier: S+
+    owner: human-gated (release/CVE) + softwareengineer (bump)
+    scope: "Include: atualizar next para o patch que corrige GHSA-8h8q-6873-q5fj (DoS via Server Components, afeta >=16.0.0 <16.2.5) e GHSA-26hh-7cqf-hhc6 (middleware/proxy bypass, afeta >=16.0.0 <16.2.6); rodar full gate pos-bump. Exclude: upgrade major (16->17)."
+    why: "npm audit confirma 2 CVEs HIGH no range instalado, mais cache-poisoning e CSP-nonce XSS. Nenhum roadmap existente (MILESTONES/BACKLOG/ROADMAP_VERTENTES) rastreia isso. E o item de seguranca mais urgente do scan: risco de producao AGORA, nao hipotetico."
+    gate: ["npm audit (CVEs fechados)", "npm run lint", "npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+    human_gate: true
+    note: "human_gate por ser um bump de versao de dependencia core (pode ter breaking change no build de output:export); Claude PROPOE o bump exato, humano confirma antes."
+
+  - id: EXT-SEC-02
+    title: "Restaurar CI audit gate para --audit-level=high (hoje rebaixado pra critical)"
+    area: SEC
+    tier: S
+    owner: human-gated (politica de CI) + softwareengineer
+    scope: "Include: reverter ci.yml:49 de --audit-level=critical pra --audit-level=high SOMENTE apos EXT-SEC-03 (upgrade da cadeia google-spreadsheet/axios) fechar os findings HIGH atuais — senao o gate fica vermelho imediatamente. Exclude: mudar o audit-level antes da cadeia estar limpa."
+    why: "ci.yml:40-48 documenta que o rebaixamento foi deliberado pra nao bloquear CI nos findings HIGH existentes (axios SSRF/CSRF/ReDoS via google-spreadsheet@3.0.10, follow-redirects, node-forge, lodash, picomatch, flatted, undici). Isso significa CI NAO bloqueia mais em HIGH — um novo CVE HIGH real passa sem alarme."
+    gate: ["npm audit --audit-level=high (0 findings apos EXT-SEC-03)", "ci.yml atualizado", "1 CI run verde"]
+    status: pending
+    depends: [EXT-SEC-03]
+    human_gate: true
+    note: "E politica de CI (decisao do time), nao so codigo — Claude PROPOE a reversao, humano decide o timing."
+
+  - id: EXT-SEC-03
+    title: "Substituir/atualizar google-spreadsheet@3.0.10 (puxa axios@0.19.2 legado com SSRF/CSRF/ReDoS)"
+    area: SEC
+    tier: S
+    owner: softwareengineer
+    scope: "Include: atualizar google-spreadsheet para uma major que nao dependa do axios legado (ou trocar por um client mais magro), reduzindo a cadeia de deps vulneraveis (axios, follow-redirects, node-forge, lodash, picomatch, flatted, undici, json-bigint, gcp-metadata) que hoje entra no BUNDLE CLIENTE (sheetsClient.js roda no browser). Exclude: mudar o schema/API do sheetsClient (contrato interno preservado)."
+    why: "package.json:31 pina google-spreadsheet EXATO (sem ^), puxando axios@0.19.2 -- uma versao antiga com CVEs conhecidos, e ela roda NO BROWSER (nao so no servidor). E a raiz que bloqueia EXT-SEC-02 (restaurar o audit gate)."
+    gate: ["npm audit (cadeia limpa ou reduzida)", "npm run test", "npm run build", "npm run smoke200", "cd asaas-backend (nao afetado, so frontend)"]
+    status: pending
+
+  - id: EXT-SEC-04
+    title: "Rate-limit no create-subscription do asaas-backend (hoje so dedupe por email+rail, sem throttle)"
+    area: SEC
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: um throttle por IP/tempo (ex.: N requests/min) no endpoint create-subscription.js, alem do dedupe existente por externalRef(email,rail). Exclude: mudar o dedupe existente (fica como esta)."
+    why: "Scan: o endpoint valida input e aplica CORS mas nao tem throttle por-IP — um script pode chamar POST repetidamente pra criar clientes/assinaturas reais na Asaas (custo + quota). O dedupe por email+rail nao impede um atacante variando o email."
+    gate: ["cd asaas-backend && npm test", "teste novo: N+1 requests do mesmo IP em janela curta e throttled"]
+    status: pending
+
+  - id: EXT-SEC-05
+    title: "Configurar security headers (CSP, X-Frame-Options, HSTS, Permissions-Policy) no edge/CDN"
+    area: SEC
+    tier: A+
+    owner: human-gated (config de hosting) + softwareengineer (arquivo)
+    scope: "Include: um arquivo de headers (ex.: _headers pro Cloudflare Pages, ou vercel.json se aplicavel) definindo CSP/X-Frame-Options/HSTS/Permissions-Policy pro site estatico. Exclude: mudar o host atual (GitHub Pages + CNAME) sem decisao do humano."
+    why: "Scan: grep por CSP/X-Frame-Options/HSTS/Permissions-Policy em src/, next.config.mjs, public/ retorna ZERO. output:export nao injeta headers sozinho — precisam viver no edge, e nada no repo documenta isso."
+    gate: ["arquivo de headers criado + documentado", "headers verificados via curl -I pos-deploy (humano)"]
+    status: pending
+    human_gate: true
+    note: "Depende de qual CDN/host processa os headers (GitHub Pages tem suporte limitado) — humano decide a plataforma antes do arquivo exato."
+
+  - id: EXT-SEC-06
+    title: "Instalar git pre-commit hook real (hoje so o .sample do Git, nunca instalado)"
+    area: SEC
+    tier: A
+    owner: softwareengineer
+    scope: "Include: um pre-commit hook (via husky ou script simples em .git/hooks/pre-commit) que roda lint (rapido) antes do commit. Exclude: rodar o gate PESADO (test/build) no pre-commit — isso fica pro CI, o pre-commit e so uma rede rapida local."
+    why: "Scan: so existe .git/hooks/pre-commit.sample (o template default do Git, nunca instalado) — nada localmente pega erro basico antes do push, so o CI depois."
+    gate: ["hook instalado", "commit com erro de lint e bloqueado localmente"]
+    status: pending
+
+  # ==================== T — TESTES (cobertura critica) ====================
+  - id: EXT-T-01
+    title: "Teste direto de petsData.js (idempotencia + rate-limit vivem la, so testados indiretamente)"
+    area: T
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: petsData.test.js cobrindo o seenIdempotencyKeys Set (petsData.js:39) e o historico de rate-limit de publicacao (linhas 138-166) DIRETAMENTE, nao so via petFlagWriter/petRenewWriter/petResolveWriter.test.js que exercitam por acidente. Exclude: reescrever a logica (so cobrir)."
+    why: "Scan: o modulo que decide idempotencia e throttle (safety-critical: previne write duplicado e abuso) nao tem teste DIRETO no seu ponto de origem — so cobertura incidental via outros writers."
+    gate: ["npm run test", "coverage de petsData.js sobe (npm run test:coverage)"]
+    status: pending
+
+  - id: EXT-T-02
+    title: "Testar ou remover Aes.js (dead code de seguranca — 0 importadores, 0 testes)"
+    area: T
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: confirmar 0 importadores (grep) e REMOVER security/Aes.js (a criptografia real vem do pacote aes-encryption via App.js:57); se algum uso futuro for planejado, testar antes de manter. Exclude: mexer no aes-encryption real."
+    why: "Scan: Aes.js e um wrapper AES-GCM pra PII com JSDoc polido mas ZERO importadores em src/ — um futuro dev lendo os comentarios assumiria que e a implementacao viva. Dead code de seguranca e uma armadilha de manutencao."
+    gate: ["grep confirma 0 importadores", "npm run test", "npm run build", "arquivo removido ou testado"]
+    status: pending
+
+  - id: EXT-T-03
+    title: "Teste dedicado de asaasClient.js (o HTTP client de dinheiro real, sem test file proprio)"
+    area: T
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: asaasClient.test.js cobrindo a criacao de customer/subscription (o wrapper HTTP direto da API Asaas). Exclude: mudar o client (so testar)."
+    why: "Scan: create-subscription.test.js/webhook.test.js cobrem os HANDLERS, mas o client HTTP que fala com a Asaas de verdade (dinheiro real) nao tem test file dedicado — so exercitado indiretamente."
+    gate: ["cd asaas-backend && npm test", "asaasClient.test.js novo, verde"]
+    status: pending
+
+  - id: EXT-T-04
+    title: "E2E minimo para /assinar e /pets (routes.e2e.js so visita a rota, nao o fluxo)"
+    area: T
+    tier: S-
+    owner: agent_test-playwright-e2e-engineer
+    scope: "Include: 1 spec e2e que visita /assinar e faz o fluxo minimo ate ver o Pix QR/artifact (mock do backend), e 1 spec que visita /pets e reporta um pet ate confirmacao. Exclude: pagamento real (sempre mockado)."
+    why: "Scan: routes.e2e.js so confirma 200+render; nenhum e2e cobre o FLUXO de pagamento ou de reporte de pet — so testes unitarios com mocks. Um regressao de integracao real (ex.: um contrato de prop quebrado entre componentes) nao seria pega."
+    gate: ["npm run test:e2e (specs novos verdes)"]
+    status: pending
+
+  # ==================== EH — ERROR HANDLING ====================
+  - id: EXT-EH-01
+    title: "Portar a quarentena de poison-pin da fila FOME pra fila de pets (mesmo bug ja corrigido, nao portado)"
+    area: EH
+    tier: S
+    owner: softwareengineer
+    scope: "Include: petPublishQueue.js flush() ganha a MESMA classificacao permanente-vs-transiente que publishQueue.js (FOME) ja tem (linhas 121-188) — hoje o flush de pets faz break() no 1o erro pra sempre, congelando TODOS os reportes de pet subsequentes na fila. Exclude: unificar as duas filas (contratos diferentes, ja documentado)."
+    why: "Scan: EXATAMENTE o mesmo bug que a fila FOME ja corrigiu (INTL M4b) esta VIVO e sem correcao na fila de pets — um payload com erro permanente (ex.: geofence) trava o offline queue de pets inteiro pro usuario. Isso e o mesmo achado do PET-04 no roadmap principal (ja trackeado la) — este item aqui e o LEMBRETE cruzado; nao duplicar trabalho, so confirmar que PET-04 cobre isso."
+    gate: ["ja coberto por PET-04 em ROADMAP_VERTENTES.yaml — este item fica como CROSS-REF, nao re-trabalhar"]
+    status: later
+    note: "DUPLICATA INTENCIONAL do PET-04 (ROADMAP_VERTENTES.yaml) — mantido aqui so pra o scan nao perder o achado; nao abrir 2 PRs pro mesmo fix. Fechar junto com PET-04."
+
+  - id: EXT-EH-02
+    title: "Adicionar error.js / global-error.js (App Router) pras 3 rotas principais"
+    area: EH
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: error.js (ou global-error.js) no app router pra dar uma tela de recuperacao amigavel (dignidade/calma) em vez da tela de erro default do Next quando um render quebra em /, /pets, /assinar. Exclude: capturar/reportar o erro externamente (isso e EXT-OBS-01)."
+    why: "Scan: nenhum error.js existe em src/app — uma excecao de render em qualquer rota cai na tela de erro CRUA do Next, sem recuperacao nem tom calmo (quebra o governador de dignidade num momento de falha, que e quando mais importa)."
+    gate: ["npm run test", "npm run build", "npm run smoke200", "erro simulado mostra a tela custom"]
+    status: pending
+
+  - id: EXT-EH-03
+    title: "Adicionar window.onerror / unhandledrejection global (hoje 0 captura fora de try/catch explicito)"
+    area: EH
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: um listener global (no root layout ou bootstrap) que captura unhandledrejection/onerror e ao menos loga via analytics.js (ja existe trackError). Exclude: mudar o transporte do analytics (reusa o que ja tem)."
+    why: "Scan: grep confirma ZERO listener global — qualquer promise rejeitada fora de um catch explicito (ex.: dentro de um handler de evento React nao envolto) desaparece, visivel so no console do dev que estiver testando."
+    gate: ["npm run test", "teste: uma rejection nao-capturada dispara trackError"]
+    status: pending
+
+  - id: EXT-EH-04
+    title: "Corrigir catch vazio em mylocation.js e pinCoords.js (erro real desaparece sem log)"
+    area: EH
+    tier: A
+    owner: softwareengineer
+    scope: "Include: mylocation.js:62-64 (falha do contador de acesso) e pinCoords.js:29 (JSON.parse de pin.Coordinates) ganham ao menos um console.warn com contexto, em vez de catch(e){}/catch(_e){}. Exclude: mudar o comportamento de fallback (continua retornando null/seguindo)."
+    why: "Scan: pinCoords.js:29 especificamente faz uma linha da planilha CORROMPIDA sumir do mapa silenciosamente — sem log, ninguem percebe que uma linha real esta sendo descartada."
+    gate: ["npm run test", "npm run lint", "teste: erro simulado agora loga"]
+    status: pending
+
+  - id: EXT-EH-05
+    title: "endereco.js: nao gravar a linha quando o geocode falha (hoje grava sem Coordinates, silencioso)"
+    area: EH
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: endereco.js:141-161 — mover o addRow() pra DENTRO do try, ou bloquear o append quando geocode falhar, em vez de cair pro sheet.addRow(row) fora do try/catch com Coordinates ausente. Exclude: mudar o provedor de geocode."
+    why: "Scan: hoje, quando o geocode falha, o codigo AINDA GRAVA a linha (fora do try/catch) sem Coordinates — publica um pino \"fantasma\" sem localizacao, sem qualquer sinal visivel ao usuario de que faltou a coordenada."
+    gate: ["npm run test", "teste: geocode-fail nao grava linha incompleta"]
+    status: pending
+
+  # ==================== A11Y — ALEM DO ROADMAP EXISTENTE ====================
+  - id: EXT-A11Y-01
+    title: "Focus trap real nos sheets/dialogs (Tab escapa do modal hoje)"
+    area: A11Y
+    tier: S-
+    owner: agent_test-playwright-e2e-engineer + softwareengineer
+    scope: "Include: um util compartilhado trapFocus() (ou lib pequena) aplicado em PinDetailSheet/ReportSheet/PetDetailSheet/PetReportSheet — Tab no ultimo elemento focavel volta ao primeiro (e Shift+Tab no primeiro vai ao ultimo), em vez de escapar pro header/controles do mapa por tras. Exclude: mudar o contrato de Escape/foco-inicial (ja funcionam, so o Tab-trap falta)."
+    why: "Scan: os 4 sheets tem role=dialog aria-modal=true + foco inicial + Escape + restauracao de foco corretos, mas NENHUM trava o Tab dentro do modal — contradiz a semantica aria-modal=true (WCAG 2.4.3/2.1.2 na pratica: um leitor de tela anuncia 'dialog' mas o teclado escapa pro fundo)."
+    gate: ["npm run test", "npm run a11y", "teste e2e: Tab repetido no ultimo elemento nao sai do dialog"]
+    status: pending
+
+  - id: EXT-A11Y-02
+    title: "PetSearchField: padrao combobox real (role=listbox/aria-expanded/aria-activedescendant)"
+    area: A11Y
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: o dropdown de resultados do leaflet-geosearch (PetSearchField.js) ganha role=listbox no container + aria-expanded no input + aria-activedescendant seguindo a selecao por seta. Exclude: reescrever o plugin geosearch em si (so a camada de acessibilidade em volta)."
+    why: "Scan: o input ja ganha aria-label/type=search pos-mount (linha 214, comentario proprio confirma que o plugin nao traz isso nativo), mas o dropdown de sugestoes nao anuncia pra um leitor de tela que existem opcoes navegaveis por seta abaixo."
+    gate: ["npm run test", "npm run a11y"]
+    status: pending
+
+  - id: EXT-A11Y-03
+    title: "Toast de update do SW: permitir pausar/estender o timer de 30s (WCAG 2.2.1 Timing Adjustable)"
+    area: A11Y
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: swRegister.js:97-116 — o toast de 'Nova versao disponivel' ganha um botao/gesto pra ADIAR o auto-accept de 30s (nao so aceitar/fechar). Exclude: mudar a janela de rollback do SW em si (item PWA-01 do roadmap principal)."
+    why: "Scan: o toast auto-aceita apos 30s com ZERO forma de pausar/estender — pra um usuario de leitor de tela ou switch-access que demora mais pra interagir, a decisao e tomada por ele. E um gap real de WCAG 2.2.1, nao coberto pelos itens PWA-* do roadmap principal (que sao sobre a janela de rollback, nao o timer do toast)."
+    gate: ["npm run test", "npm run a11y", "teste: pausar o timer impede o auto-accept"]
+    status: pending
+
+  # ==================== DI — INTEGRIDADE DE DADOS ====================
+  - id: EXT-DI-01
+    title: "Idempotencia server-side para pets/fome (hoje so in-memory, reseta no reload)"
+    area: DI
+    tier: S
+    owner: human-gated (arquitetura) + softwareengineer
+    scope: "Include: um store de idempotencia DURAVEL (mesmo padrao do idempotencyStore.js do asaas-backend) pro write path de pets/fome, substituindo o seenIdempotencyKeys in-memory (petsData.js:39, reseta no reload por design hoje). Exclude: mudar o formato da planilha."
+    why: "Scan: um timeout de write que na verdade teve sucesso (server_slow), seguido de reload/crash ANTES do Set em memoria registrar, seguido de um flush da fila offline com a MESMA idempotency_key, RE-ANEXA uma linha duplicada — exatamente o cenario que a fila offline existe pra sobreviver, mas a idempotencia atual nao cobre."
+    gate: ["proxy/store: teste verde", "npm run test", "teste: reload simulado entre write e ack nao duplica"]
+    status: blocked-human
+    human_gate: true
+    note: "Depende da mesma decisao arquitetural do SEC-01 (proxy de escrita) no roadmap principal — melhor resolver JUNTO, ja que ambos tocam o write path server-side."
+
+  # ==================== DX — DEVELOPER EXPERIENCE ====================
+  - id: EXT-DX-01
+    title: "Unificar o shape de erro entre googlesheets/*, petPublishGuards e asaasSubscriptionClient (3 formatos hoje)"
+    area: DX
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: um convention/type leve (ex.: {ok:boolean, reasonCode?, message?}) e migrar os 3 formatos (alert() cru em googlesheets/*, PetPublishError com reasonCode, tupla {ok,messages} do Asaas) pra ele, comecando por 1 vertical por vez. Exclude: fazer tudo numa tacada (risco de regressao ampla) — comeca por 1 modulo, prova o padrao, depois expande."
+    why: "Scan: 3 formatos de erro diferentes pra 3 verticais do MESMO app dificultam manutencao cruzada — quem le petPublishGuards nao reconhece o padrao de asaasSubscriptionClient."
+    gate: ["npm run test", "npm run lint", "1 modulo migrado como prova de conceito"]
+    status: pending
+
+  - id: EXT-DX-02
+    title: "Adicionar engines no package.json raiz (so o asaas-backend tem hoje)"
+    area: DX
+    tier: A
+    owner: softwareengineer
+    scope: "Include: campo engines.node no package.json raiz espelhando a versao que o CI usa (ci.yml pina Node 20). Exclude: mudar a versao de Node do CI."
+    why: "Scan: nenhum enforcement de versao de Node no app principal — drift entre maquinas de contribuidor/CI pode causar build quebrado silencioso."
+    gate: ["npm run build local com a versao pinada"]
+    status: pending
+
+  - id: EXT-DX-03
+    title: "CI: trocar npm install por npm ci (lockfile sincronizado primeiro)"
+    area: DX
+    tier: A+
+    owner: human-gated (politica CI) + softwareengineer
+    scope: "Include: sincronizar package-lock.json com package.json, depois trocar ci.yml de npm install pra npm ci pra reproducibilidade real. Exclude: mudar dependencias alem do necessario pra sincronizar o lock."
+    why: "Scan: ci.yml usa npm install (nao npm ci) PORQUE o lockfile esta fora de sincronia (comentario explicito no arquivo) — 2 runs do MESMO commit podem resolver versoes transitivas diferentes, quebrando reproducibilidade de build."
+    gate: ["package-lock.json sincronizado", "npm ci funciona local", "1 CI run verde com npm ci"]
+    status: pending
+    human_gate: true
+    note: "Sincronizar o lock pode mudar versoes transitivas — humano revisa o diff do lock antes de trocar o CI."
+
+  # ==================== OBS — OBSERVABILIDADE ====================
+  - id: EXT-OBS-01
+    title: "Avaliar um SDK de error-tracking leve (hoje ZERO monitoramento de producao)"
+    area: OBS
+    tier: S-
+    owner: human-gated (escolha de ferramenta/custo) + softwareengineer (integracao)
+    scope: "Include: PROPOR (nao instalar sem aprovacao) um SDK leve e privacy-respeitoso de error-tracking (ex.: Sentry free tier, ou um self-hosted) pro frontend + asaas-backend; escopo minimo = capturar excecao nao tratada + contexto (sem PII). Exclude: instalar sem o humano escolher a ferramenta (custo/politica de dados)."
+    why: "Scan: grep por sentry/bugsnag/rollbar/datadog/logrocket retorna ZERO. Um crash em producao (mapa, pets, pagamento) hoje so e visivel se um usuario reportar manualmente — zero alerta, zero stack trace, zero metrica de impacto."
+    gate: ["proposta de ferramenta + escopo de dados capturados", "PoC no ambiente de teste"]
+    status: blocked-human
+    human_gate: true
+    note: "Escolha de ferramenta/custo/politica-de-dados e decisao do humano; Claude PROPOE opcoes e o escopo privacy-safe."
+
+  - id: EXT-OBS-02
+    title: "Correlacionar erro client-side com log server-side (nenhum id de correlacao hoje)"
+    area: OBS
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: um id de sessao/requisicao gerado no client e propagado pro backend (asaas-backend) nos headers, ecoado nos logs de ambos os lados. Exclude: um sistema completo de tracing distribuido (fora de escopo pra este tamanho de app)."
+    why: "Scan: console.error/console.log em todo o codebase logam so uma string bare, sem id de correlacao — impossivel ligar uma falha reportada no client ao log correspondente do asaas-backend pra a MESMA acao do usuario."
+    gate: ["cd asaas-backend && npm test", "npm run test", "teste: id propagado end-to-end"]
+    status: pending
+    depends: [EXT-OBS-01]
+
+  - id: EXT-OBS-03
+    title: "webhook.js: alertar (nao so console.error) numa falha sistemica de processamento de pagamento"
+    area: OBS
+    tier: S-
+    owner: human-gated (canal de alerta) + softwareengineer
+    scope: "Include: alem do console.error existente (webhook.js:86), disparar um alerta (ex.: webhook pra Slack/email) quando a taxa de falha cruzar um limiar, sinalizando algo sistemico (ex.: KV fora do ar) em vez de um erro pontual. Exclude: alertar em CADA falha individual (ruido)."
+    why: "Scan: o UNICO sinal de falha de processamento de um evento de pagamento REAL e um console.error no log da Vercel, sem alerta/pager. Uma falha sistemica (outage do KV) falharia-e-retentaria silenciosamente ate um doador reclamar."
+    gate: ["cd asaas-backend && npm test", "teste: N falhas em janela dispara o alerta"]
+    status: blocked-human
+    human_gate: true
+    note: "Canal de alerta (Slack/email/outro) e escolha do humano."
+
+  # ==================== PF — PERFORMANCE / BUNDLE ====================
+  - id: EXT-PF-01
+    title: "Lazy-load dos 6 componentes MUI usados (hoje entram eager no bundle principal)"
+    area: PF
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: next/dynamic pros componentes MUI usados so condicionalmente (ex.: Rating dentro do popup Leaflet, so renderizado quando o popup abre). Exclude: remover o MUI inteiro (dependencia grande mas usada de verdade em 6 pontos)."
+    why: "Scan: @mui/material + @emotion (dependencia completa) pra so 6 componentes distintos usados (Grid/Paper/CircularProgress/Checkbox/Typography/Rating). Rating especificamente so aparece dentro de um popup Leaflet renderizado condicionalmente, mas carrega eager."
+    gate: ["npm run build", "npm run smoke200", "bundle size medido antes/depois"]
+    status: pending
+
+  - id: EXT-PF-02
+    title: "Reavaliar reactStrictMode:false (desligado globalmente, perde a rede de regressao do double-invoke)"
+    area: PF
+    tier: A
+    owner: softwareengineer
+    scope: "Include: investigar POR QUE strict mode foi desligado (efeito colateral em algum state singleton?) e avaliar religar ao menos em dev, ou isolar o componente problematico. Exclude: religar sem entender a causa original do desligamento (risco de quebrar algo que dependia do comportamento nao-strict)."
+    why: "Scan: next.config.mjs:11 desliga reactStrictMode GLOBALMENTE — dado que o app depende MUITO de estado singleton de modulo (globalThis.__MDF_I18N__, seenIdempotencyKeys, publishHistory), o double-invoke do StrictMode seria uma rede de regressao valiosa contra efeitos impuros, mas esta desligado por completo."
+    gate: ["npm run test", "npm run build", "documentar a causa original do desligamento"]
+    status: pending
+
+  # ==================== I18N — CONTEUDO / COPY ====================
+  - id: EXT-I18N-03
+    title: "swRegister.js: toast de update do SW hardcoded pt-BR (nenhum non-pt-BR ve sua propria lingua)"
+    area: I18N
+    tier: S-
+    owner: agent_translation-localization + softwareengineer
+    scope: "Include: mover o texto do toast ('Nova versao disponivel.'/'Recarregar', swRegister.js:98-99) pra chaves t() nos 12 locales. Exclude: mudar o comportamento de auto-accept (isso e EXT-A11Y-03)."
+    why: "Scan: o toast MANDATORIO de update do SW e HTML hardcoded pt-BR sem NENHUMA chave em strings.*.js — todo usuario en/es/de/fr/ru/zh/ar/bn/uk/hi/tr ve texto em portugues neste prompt forcado, independente do locale escolhido."
+    gate: ["npm run test", "npm run lint", "teste i18n: chave nova com paridade nos 12 locales"]
+    status: pending
+
+  - id: EXT-I18N-04
+    title: "asaasSubscriptionClient.js: 4 mensagens de erro de pagamento hardcoded pt-BR (pagina JA tem i18n)"
+    area: I18N
+    tier: S-
+    owner: agent_translation-localization + softwareengineer
+    scope: "Include: mover as 4 mensagens de fallback (linhas 203, 217, 257, 270 — falha ao criar assinatura, falha ao buscar dados de pagamento, etc.) pra chaves em strings.assinar.js (que ja existe, 625 linhas, e NAO usa essas 4). Exclude: mudar a logica de quando cada erro dispara."
+    why: "Scan: /assinar (a pagina que mexe com dinheiro real do doador) JA tem um shard de i18n dedicado, mas os 4 erros mais criticos (quando o pagamento FALHA) sao hardcoded pt-BR — um doador nao-pt-BR cujo pagamento falha ve erro em portugues na UNICA pagina que lida com seu dinheiro."
+    gate: ["npm run test", "npm run lint", "teste i18n: as 4 chaves com paridade nos 12 locales"]
+    status: pending
+
+  - id: EXT-I18N-05
+    title: "endereco.js/form.js: geocode hardcoda ', Brazil' mesmo com pais ativo != Brasil"
+    area: I18N
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: endereco.js:143 e form.js:92 — usar o pais ATIVO (ja existe INTL M1-M4 pra multi-pais) na query de geocode, nao a string fixa ', Brazil'. Exclude: mudar o provedor de geocode (Nominatim continua)."
+    why: "Scan: mesmo com o app suportando publicacao multi-pais, esses 2 arquivos (ainda vivos, importados por MainControls.js) forcam ', Brazil' na query — um endereco digitado pra outro pais e geocodificado no contexto ERRADO."
+    gate: ["npm run test", "teste: pais ativo != BR usa o pais certo na query"]
+    status: pending
+
+  - id: EXT-I18N-06
+    title: "Auditoria dos 507 marcadores [REVISAR-HUMANO] vivos em producao (copy nao revisada em 9 locales)"
+    area: I18N
+    tier: A+
+    owner: human-gated (revisao de tom) + agent_translation-localization
+    scope: "Include: priorizar a revisao humana dos [REVISAR-HUMANO] nas telas DIGNITY-SENSITIVE primeiro (report.* de fome, telas de pet perdido) antes do resto; produzir uma lista ordenada por criticidade de tom. Exclude: aprovar copy em nome do humano — so listar e priorizar."
+    why: "Scan: 507 marcadores [REVISAR-HUMANO] (strings.core.js 210, strings.page.js 140, strings.pets.js 153, strings.assinar.js 4) SHIPPAM em producao pros 9 locales nao-verificados — exatamente onde o tom mais importa (fome, pet perdido) e onde copy maquina-traduzida sem revisao e mais arriscada pro governador de dignidade."
+    gate: ["lista priorizada entregue", "sem mudanca de codigo neste item — so triagem"]
+    status: blocked-human
+    human_gate: true
+    note: "A REVISAO em si (aprovar/corrigir tom) e do humano por definicao (dignity-sensitive copy nunca e maquina-traduzida sem revisao, ja e a regra do proprio engine.js). Claude so prioriza a lista."
+
+  # ==================== BUILD — BUILD / DEPLOY ====================
+  - id: EXT-BUILD-01
+    title: "Validacao de env vars obrigatorias no boot do frontend (hoje so throw lazy no 1o uso)"
+    area: BUILD
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: um assert-de-boot (mesmo padrao do assertProductionConfig.js do asaas-backend, ja shippado como PAY-01) que valida TODAS as env vars obrigatorias do frontend (NEXT_PUBLIC_GOOGLESHEETID, NEXT_PUBLIC_GOOGLE_SERVICE_ACCOUNT_EMAIL, etc.) antes do build real de producao, nao so um throw lazy no 1o uso do sheetsClient. Exclude: mudar quais env vars sao obrigatorias."
+    why: "Scan: sheetsClient.js:30-31 so lanca ('NEXT_PUBLIC_GOOGLESHEETID is not set') na PRIMEIRA vez que e usado — nao no boot/build. O CI ja injeta stubs (ci.yml:53-57) so pra o build passar, mascarando o problema. Espelha o padrao fail-closed que o PAY-01 ja shipou no backend."
+    gate: ["npm run build (com env vars faltando -> falha CEDO e claro)", "npm run build (completo -> passa)"]
+    status: pending
+
+  - id: EXT-BUILD-02
+    title: "Documentar branch-protection/required-checks no repo (hoje so na UI do GitHub, nao versionado)"
+    area: BUILD
+    tier: A
+    owner: human-gated (config do GitHub) + softwareengineer (doc)
+    scope: "Include: um CODEOWNERS + um doc curto (ex.: CONTRIBUTING.md secao) descrevendo quais checks sao obrigatorios antes do merge, espelhando a config real da branch protection do GitHub. Exclude: mudar a config de branch-protection em si (fica na UI do GitHub, decisao do humano)."
+    why: "Scan: .github/ so tem ci.yml e a11y.yml — nada documenta/versiona QUE esses precisam passar antes de merge; a config real vive so na UI do GitHub, nao auditavel a partir do repo."
+    gate: ["CODEOWNERS + doc criados", "espelham a config real (humano confirma)"]
+    status: pending
+    human_gate: true
+    note: "A config de branch-protection em si fica na UI do GitHub — Claude so documenta/versiona o que existe, nao muda a config."
+
+  # ==================== PWA2 — PWA install/offline edge cases (pass 2) ====================
+  - id: EXT-PWA2-01
+    title: "Fila offline (fome + pets) nao trata IndexedDB indisponivel (Safari private mode) — throw nao capturado"
+    area: PWA2
+    tier: S
+    owner: softwareengineer
+    scope: "Include: publishQueue.js/petPublishQueue.js rejeitam com Error('indexeddb_unavailable') quando IndexedDB nao existe/falha (Safari private); os callers (App.js:735/755/760, usePetsApp.js:447/467) fazem await enqueue(...) SEM try/catch. Envolver essas chamadas em try/catch e degradar pra errors.offline em vez de deixar a unhandled rejection estourar. Exclude: mudar o contrato de enqueue em si."
+    why: "Scan pass 2: no Safari private mode (onde IndexedDB existe mas lanca em open()) um relato OFFLINE gera uma promise rejection NAO CAPTURADA em vez do toast calmo de 'ficou na fila' — o usuario ve um erro tecnico cru numa app que promete degradar com calma."
+    gate: ["npm run test", "teste: IndexedDB indisponivel simulado -> errors.offline mostrado, sem unhandled rejection"]
+    status: pending
+
+  - id: EXT-PWA2-02
+    title: "usePetsApp: enqueuePetPublish offline fica FORA do try/catch que classifica falha"
+    area: PWA2
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: usePetsApp.js:445-455 — mover a chamada de enqueuePetPublish (branch offline) pra DENTRO do mesmo try/catch que envolve o publish online (linhas 457-475), garantindo que uma falha (mesmo offline) passe por classifyPublishFailure/trackReportFailed. Exclude: mudar a logica de quando enfileirar vs publicar direto."
+    why: "Scan pass 2: mesmo uma falha BENIGNA de IndexedDB enquanto offline hoje pula a classificacao e produz um erro cru nao-PetPublishError, quebrando o contrato de erro estruturado que o resto do pets vertical usa."
+    gate: ["npm run test", "teste: falha offline classificada igual a falha online"]
+    status: pending
+
+  - id: EXT-PWA2-03
+    title: "useInstallPrompt: iPad (MacIntel touch) cai em 'unavailable' — nao reusa detectPlatform.isIOS"
+    area: PWA2
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: useInstallPrompt.js:99-103 troca o regex inline (que so pega iphone/ipad/ipod na UA) pelo classificador JA existente em detectPlatform.js (que ja resolve o caso iPadOS-como-Mac via maxTouchPoints). Exclude: reescrever detectPlatform.js."
+    why: "Scan pass 2: um iPad moderno se anuncia como 'MacIntel' na UA — o regex local nao pega isso e cai em 'unavailable' (nenhuma instrucao de instalacao mostrada), enquanto detectPlatform.js JA resolve esse caso corretamente em outro lugar do codebase — e so nao reusado aqui."
+    gate: ["npm run test", "teste: UA MacIntel+touch retorna 'ios', nao 'unavailable'"]
+    status: pending
+
+  - id: EXT-PWA2-04
+    title: "swRegister: falha de registro do SW so vira console.warn, sem trackError nem degradacao visivel"
+    area: PWA2
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: swRegister.js:168-171 — adicionar uma chamada trackError (ja existe em analytics.js) quando register() rejeita. Exclude: mudar o comportamento de fallback do app sem SW (continua funcionando sem cache offline, so o log muda)."
+    why: "Scan pass 2: uma falha de registro do SW (scope mismatch, storage restrito) e HOJE invisivel em producao — nenhum analytics, nenhum log estruturado, so um warn no console do dev que ninguem ve."
+    gate: ["npm run test", "teste: register() rejeitado dispara trackError"]
+    status: pending
+
+  # ==================== PET2 — MapaPet vertical depth (pass 2) ====================
+  - id: EXT-PET2-01
+    title: "petAgeDays nao clampa idade negativa (relogio adiantado ou dado futuro nunca arquiva)"
+    area: PET2
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: petTaxonomy.js:363-371 petAgeDays — clampar o delta a 0 quando nowMs-then for negativo (timestamp futuro por skew de relogio ou escrita buggy), documentando a decisao. Exclude: mudar a janela de archive em si (90d, ja trackeada como excluida no PET-03)."
+    why: "Scan pass 2: um pet com dateIso/freshnessAt no FUTURO (clock skew ou bug upstream) produz idade negativa, que e SEMPRE < windowDays — esse pet NUNCA arquiva por idade, ficando pra sempre 'fresco' no mapa."
+    gate: ["npm run test", "teste: timestamp futuro clampa pra idade 0, nao negativa"]
+    status: pending
+
+  - id: EXT-PET2-02
+    title: "Documentar a assimetria intencional entre o corte do archive (>=) e da janela de match (>)"
+    area: PET2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: um comentario explicito em petMatch.js:115 (janela de match, corte >) e petTaxonomy.js:382-386 (archive, corte >=) explicando que a assimetria e DELIBERADA (archive exclusivo, match inclusivo) e por que, prevenindo um 'fix' futuro que quebre um dos dois por engano. Exclude: mudar o comportamento (so documentar)."
+    why: "Scan pass 2: os dois cortes de tempo sao ASSIMETRICOS (>= vs >) sem nenhum comentario dizendo se e proposital — um mantenedor futuro 'alinhando' os dois pode quebrar silenciosamente o SLA do archive ou a janela do match."
+    gate: ["comentario adicionado", "npm run lint"]
+    status: pending
+
+  - id: EXT-PET2-03
+    title: "petShare: falha silenciosa quando coords invalidas (sem trackError, share sai vazio de area)"
+    area: PET2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: petShare.js buildDeepLinkUrl/describeArea — quando petCoordsKey(coords) ou describeArea retornam vazio por coords invalidas, disparar trackError uma vez (nao por compartilhamento, pra nao gerar ruido) sinalizando que uma coord upstream esta malformada. Exclude: mudar o fallback de UX (degrada com calma, ja correto)."
+    why: "Scan pass 2: hoje um pet com coords malformadas gera um share sem area E sem link focado, SEM NENHUM sinal — se um bug upstream comecar a gerar coords ruins sistematicamente, ninguem percebe."
+    gate: ["npm run test", "teste: coords invalidas dispara trackError uma vez"]
+    status: pending
+
+  - id: EXT-PET2-04
+    title: "sharePet: window.open bloqueado ainda retorna 'whatsapp' como sucesso (falso positivo)"
+    area: PET2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: petShare.js:151-159 sharePet — verificar o retorno de window.open (null/undefined = popup bloqueado) antes de reportar 'whatsapp' como o metodo usado; se bloqueado, reportar um metodo distinto (ex.: 'whatsapp-blocked') pra telemetria/testes nao confiarem num sucesso que nao aconteceu. Exclude: mudar o fluxo de fallback em si."
+    why: "Scan pass 2: se nav.share lanca sincrono E o popup do WhatsApp e bloqueado, a funcao ainda devolve 'whatsapp' como se tivesse funcionado — um falso-positivo de sucesso pra qualquer coisa que confie nesse retorno (telemetria, testes)."
+    gate: ["npm run test", "teste: popup bloqueado nao reporta 'whatsapp' como sucesso"]
+    status: pending
+
+  # ==================== ASAAS2 — Asaas backend edge cases (pass 2) ====================
+  - id: EXT-ASAAS2-01
+    title: "Webhook: idempotency key nao distingue replay de um 2o evento LEGITIMO do mesmo tipo+payment"
+    area: ASAAS2
+    tier: S-
+    owner: human-gated (decisao de produto) + softwareengineer
+    scope: "Include: avaliar se a chave de idempotencia (webhook.js:66, `${event.event}:${event.payment?.id}`) precisa de um componente de tempo/nonce pra distinguir um replay de um 2o evento genuino do MESMO tipo (ex.: PAYMENT_RECEIVED apos um reembolso-e-recobranca manual no painel Asaas). Exclude: mudar o TTL do store (60 dias, ja definido)."
+    why: "Scan pass 2: hoje, um 2o PAYMENT_RECEIVED legitimo pro MESMO payment id (cenario raro mas real: reembolso manual seguido de nova cobranca) seria dedupado como se fosse replay, DESCARTANDO um evento real. Precisa de decisao: e um risco aceitavel ou vale um campo extra na chave?"
+    gate: ["cd asaas-backend && npm test", "decisao registrada", "se mudar a chave: teste do novo comportamento"]
+    status: blocked-human
+    human_gate: true
+    note: "E uma decisao de produto (qual e o risco aceitavel de descartar 1 evento raro vs reprocessar 1 replay raro) — Claude PROPOE, humano decide."
+
+  - id: EXT-ASAAS2-02
+    title: "assertProductionConfig so valida quando ASAAS_ENV=production — staging com credenciais reais escapa"
+    area: ASAAS2
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: considerar um terceiro estado (ex.: ASAAS_ENV=staging) que TAMBEM exige idempotencia duravel se detectar uma API key real (nao-sandbox) da Asaas, mesmo sem ASAAS_ENV=production. Exclude: mudar a logica de producao ja shippada em PAY-01."
+    why: "Scan pass 2: um ambiente 'staging com credenciais reais da Asaas' mas ASAAS_ENV deixado como sandbox passa por baixo do fail-closed do PAY-01 — roda sem idempotencia duravel processando pagamentos REAIS."
+    gate: ["cd asaas-backend && npm test", "teste: staging com key real + ASAAS_ENV=sandbox e pego"]
+    status: pending
+    depends: [PAY-01]
+
+  - id: EXT-ASAAS2-03
+    title: "isValidEmail aceita formatos tecnicamente invalidos (a@b..com) — hygiene, nao seguranca"
+    area: ASAAS2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: validate.js:59-61 — trocar o regex simplista por uma validacao mais completa (ou uma lib pequena e testada) que rejeite pontos consecutivos/hifen-inicial-de-dominio. Exclude: aceitar formatos RFC raros (IP-literal, local-part citado) — fora de escopo pratico."
+    why: "Scan pass 2: o regex atual aceita 'a@b..com' (pontos consecutivos, invalido) — um e-mail malformado passa aqui e so falha depois na propria Asaas, com um erro generico processing_failed em vez de um erro de validacao claro."
+    gate: ["cd asaas-backend && npm test", "teste: pontos-consecutivos rejeitado"]
+    status: pending
+
+  # ==================== GEO — GEOFENCE / BBOX DE PAISES ====================
+  - id: EXT-GEO-01
+    title: "cv (Cabo Verde) e mv (Maldivas): 1 bbox unico admite pontos de oceano aberto entre ilhas"
+    area: GEO
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: avaliar dividir os bbox de cv/mv (nacoes arquipelago sem continente) em multiplos rects por ilha/grupo, na mesma logica ja usada pra excluir Annobon do bbox de gq. Exclude: mudar paises com bbox unico que ja sao majoritariamente continentais (nao arquipelago puro)."
+    why: "Scan pass 2: gq exclui uma ilha remota (Annobon) com um 2o rect, mas cv/mv (nacoes 100% arquipelago) usam 1 rect GRANDE que ADMITE pontos em oceano aberto entre as ilhas — politica inconsistente entre paises multi-ilha, documentada em lugar nenhum como decisao deliberada."
+    gate: ["npm run test", "npm run fitness (FF6 one-bbox-SOT continua verde)", "teste: ponto meio-oceano entre ilhas de cv e rejeitado"]
+    status: pending
+
+  - id: EXT-GEO-02
+    title: "fj (Fiji): coordenada exatamente no antimeridiano (180.0/-180.0) e rejeitada por ambos os rects"
+    area: GEO
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: documentar (comentario) o caso de borda de 180.0/-180.0 exato no split anti-meridiano de Fiji, e avaliar se vale um pequeno padding (ex.: 0.01 grau) nos limites E/W dos 2 rects pra cobrir esse caso raro de artefato de float do GPS. Exclude: redesenhar o split inteiro."
+    why: "Scan pass 2: um ponto EXATAMENTE em 180.0 ou -180.0 (artefato raro de float do GPS) nao casa NENHUM dos 2 rects do split de Fiji — seria rejeitado como fora do pais mesmo estando genuinamente no grupo Lau."
+    gate: ["npm run test", "teste: 180.0 exato e tratado (aceito ou documentado como aceitavelmente raro)"]
+    status: pending
+
+  - id: EXT-GEO-03
+    title: "us/ca bbox se sobrepoem em latitude 41.66-49.38 — nao sao mutuamente exclusivos"
+    area: GEO
+    tier: A
+    owner: softwareengineer
+    scope: "Include: documentar explicitamente (comentario no countries.js) que os bbox NAO particionam o globo (um ponto pode passar em mais de 1 pais) — e um risco latente SO SE uma feature futura assumir particao. Exclude: redesenhar os bbox pra serem mutuamente exclusivos (fora de escopo, o uso atual — validar 'esta DENTRO do pais selecionado' — nao precisa disso)."
+    why: "Scan pass 2: um ponto no sul de Ontario (Canada) passa tanto no bbox de us quanto no de ca — hoje isso e inofensivo (so valida o pais SELECIONADO), mas uma feature futura que assuma bbox-como-particao quebraria silenciosamente."
+    gate: ["comentario adicionado", "npm run fitness"]
+    status: pending
+
+  # ==================== MAP — LEAFLET MAP EDGE CASES ====================
+  - id: EXT-MAP-01
+    title: "MarkerClusterGroup sem chunkedLoading — trava a UI com muitos pins (10k+)"
+    area: MAP
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: MarkerGroup.js:144-153 — adicionar chunkedLoading={true} (+ chunkProgress opcional) no react-leaflet-markercluster, um knob de performance feito exatamente pra esse cenario (evita bloquear a thread principal). Exclude: mudar o maxClusterRadius ou o iconCreateFunction."
+    why: "Scan pass 2: leaflet.markercluster tem addLayers sincrono que pode travar a thread principal por centenas de ms a segundos com muitos marcadores — chunkedLoading e o knob documentado da propria lib pra isso, e nao esta ligado."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-MAP-02
+    title: "A key do MarkerGroup muda a cada minuto -> remonta TODOS os clusters visiveis a cada 60s"
+    area: MAP
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: map.js:233-234 (tickBucket/filterSig) — avaliar um caminho que atualiza o filtro de janela de tempo SEM forcar remount completo da arvore de cluster (ex.: filtrar os dados antes do MarkerClusterGroup em vez de trocar a key). Exclude: mudar a granularidade do filtro de tempo em si (continua por minuto)."
+    why: "Scan pass 2: e o mecanismo CONCRETO por tras do problema de performance com muitos pins — a cada 60s, TODA regiao com muitos marcadores rebuilda a arvore de cluster inteira, independente de interacao do usuario. Junto com EXT-MAP-01 (sem chunkedLoading), a UI congela periodicamente numa regiao movimentada."
+    gate: ["npm run test", "npm run build", "medir: sem remount completo a cada minuto"]
+    status: pending
+    depends: [EXT-MAP-01]
+
+  - id: EXT-MAP-03
+    title: "TileLayer sem errorTileUrl — provedor de tile fora do ar vira quadrados cinza sem aviso"
+    area: MAP
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: mapComponents.js:99-104 — adicionar errorTileUrl (um placeholder visual leve) e considerar uma mensagem 'mapa indisponivel, tente outra camada' se MUITOS tiles falharem em sequencia. Exclude: um health-check ativo/auto-switch de camada (fora de escopo, so o feedback visual)."
+    why: "Scan pass 2: um outage do Waze/OSM/Satellite hoje renderiza silenciosamente como quadrados cinza vazios — nenhum sinal diagnostico pro usuario trocar de camada (ja existe o seletor de camada, so falta o gatilho visual pra usar)."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-MAP-04
+    title: "removeOutsideVisibleBounds inconsistente entre grupos de marker (doadores otimizados, necessitados nao)"
+    area: MAP
+    tier: A
+    owner: softwareengineer
+    scope: "Include: map.js:263-267 — documentar OU alinhar removeOutsideVisibleBounds entre os 5 grupos (hoje 2 de 5 tem true, 3 tem false default, sem comentario explicando a escolha). Exclude: mudar o comportamento sem entender a razao original (pode ser intencional por prioridade de visibilidade de necessitados)."
+    why: "Scan pass 2: e uma politica de performance ATIVA mas nao documentada — 3 dos 5 grupos mantem TODOS os marcadores no DOM/arvore de cluster independente do viewport, o que pode ser intencional (nao esconder quem precisa) mas custa performance numa base nacional de dados, e ninguem sabe se e proposital."
+    gate: ["comentario adicionado ou comportamento alinhado", "npm run test"]
+    status: pending
+
+  # ==================== MOBILE — TECLADO MOBILE / VIEWPORT ====================
+  - id: EXT-MOBILE-01
+    title: "IosKeyboardInset sem fallback quando visualViewport esta ausente (Android in-app browser, iOS <13)"
+    area: MOBILE
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: IosKeyboardInset.js:17-18 — quando window.visualViewport nao existe, cair num fallback por polling de window.innerHeight (delta antes/depois do foco de um input) em vez de simplesmente bail out (--mdf-keyboard-inset fica 0px pra sempre). Exclude: reescrever a logica de calculo do inset em si (so adicionar o fallback)."
+    why: "Scan pass 2: sem visualViewport (WebView do Instagram/Facebook no Android, ou iOS <13), bottom sheets/toasts ficam ATRAS do teclado — sem NENHUM fallback, ao contrario de ser so 'menos preciso'."
+    gate: ["npm run test", "teste manual: WebView sem visualViewport ainda evita o teclado (fallback ativo)"]
+    status: pending
+
+  - id: EXT-MOBILE-02
+    title: "IosKeyboardInset nao re-tenta se visualViewport aparece DEPOIS do mount (flakiness documentada do WebKit)"
+    area: MOBILE
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: IosKeyboardInset.js:15,35 — trocar o effect de dependencia vazia por um pequeno retry/observer que detecta visualViewport aparecendo tardiamente (alguns WebKit tem esse atraso documentado) e liga o listener quando disponivel. Exclude: polling constante (so 1-2 tentativas com backoff curto)."
+    why: "Scan pass 2: o efeito so roda 1x no mount; se visualViewport ainda nao existir NESSE momento (atraso conhecido de algumas versoes WebKit), o app perde a chance pro resto da sessao inteira."
+    gate: ["npm run test", "npm run lint"]
+    status: pending
+
+  # ==================== PRIV — ANALYTICS / PRIVACIDADE (LGPD) ====================
+  - id: EXT-PRIV-01
+    title: "Nenhum banner de consentimento de cookies/LGPD existe — analytics.js nao tem gate de consentimento"
+    area: PRIV
+    tier: S-
+    owner: human-gated (politica de privacidade) + softwareengineer (seam)
+    scope: "Include: um seam hasConsent() (mesmo que hoje sempre retorne true, documentando a decisao) em analytics.js ANTES de qualquer window.gtag/dataLayer, pronto pra virar um gate real quando/se um banner for adicionado. Exclude: desenhar o banner de consentimento em si (decisao de produto/juridica do humano)."
+    why: "Scan pass 2: app Brasil-first (LGPD aplica) sem NENHUM seam de consentimento no analytics — hoje track() nao envia nada real (gtag e sempre undefined em producao), mas se alguem ligar GA/GTM no futuro SEM adicionar o gate primeiro, sai rastreando sem consentimento desde o dia 1."
+    gate: ["npm run test", "seam hasConsent() adicionado, documentado como sempre-true por ora"]
+    status: blocked-human
+    human_gate: true
+    note: "Se/quando um banner real for necessario e a UX dele sao decisao de produto/juridica; Claude PROPOE o seam tecnico agora pra nao virar divida quando o banner for decidido."
+
+  - id: EXT-PRIV-02
+    title: "trackError redige so padroes de token/secret/key — nao redige CPF/telefone/coords que vazem num error.message"
+    area: PRIV
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: analytics.js:83-96 — estender o regex de redacao pra tambem cobrir padroes de CPF (11 digitos formatados), telefone BR, e pares de coordenadas GPS que apareçam dentro de um error.message. Exclude: redigir todo numero de 11 digitos (falso-positivo alto) — usar padroes com formatacao (pontos/tracos) pra reduzir ruido."
+    why: "Scan pass 2: a redacao hoje e CREDENCIAL-shaped (token/secret/key), nao PII-shaped — um app brasileiro de fome/pets que lida com CPF e telefone em outros pontos do payload path deveria ter a MESMA cautela no telemetry de erro."
+    gate: ["npm run test", "teste: CPF/telefone/coords num error.message sao redigidos"]
+    status: pending
+
+  # ==================== DEP — STALENESS DE DEPENDENCIAS ====================
+  - id: EXT-DEP-01
+    title: "google-spreadsheet 2 majors atras (3.0.10 vs 5.3.0) — maior gap de versao do dependency tree"
+    area: DEP
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: avaliar o upgrade pra 5.x (API pode ter mudado entre majors — checar breaking changes) OU confirmar via EXT-SEC-03 que a troca de lib resolve isso junto. Exclude: fazer o upgrade sem ler o changelog de breaking changes entre 3->4->5."
+    why: "Scan pass 2: e o MAIOR gap de major version do dependency tree inteiro (3->5), e e a lib que fala com a fonte de dados de TODO pin/pet do app. Relacionado a EXT-SEC-03 (que ataca o mesmo problema pelo angulo de CVE); este item e o angulo de staleness/manutencao."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+    depends: [EXT-SEC-03]
+
+  - id: EXT-DEP-02
+    title: "react-leaflet-markercluster preso numa release-candidate (5.0.0-rc.0) em dependencies, nunca estabilizou"
+    area: DEP
+    tier: A
+    owner: softwareengineer
+    scope: "Include: verificar se existe uma alternativa estavel (outro pacote de cluster pro react-leaflet 5.x) ou se vale continuar na RC documentando a razao. Exclude: trocar sem antes confirmar que a API de cluster e compativel."
+    why: "Scan pass 2: um -rc.0 em dependencies (nao devDependencies) de producao nao carrega garantia de estabilidade semver — e alem disso a lib nunca progrediu pra uma 5.0.0 estavel publicada, sinal de que o pacote pode estar mal-mantido."
+    gate: ["decisao documentada (manter RC ou trocar)", "se trocar: npm run test + build + smoke200"]
+    status: pending
+
+  - id: EXT-DEP-03
+    title: "leaflet.markercluster sem publicacao desde jun/2022 — dependencia efetivamente sem manutencao upstream"
+    area: DEP
+    tier: A
+    owner: softwareengineer
+    scope: "Include: so DOCUMENTAR o risco (nenhum patch de seguranca/compat viria dessa lib) e monitorar; nao ha acao imediata alem de EXT-MAP-01 (chunkedLoading, que ja usa a API existente). Exclude: migrar de biblioteca de cluster sem uma razao concreta alem da idade."
+    why: "Scan pass 2: funcionalmente estavel hoje, mas qualquer trabalho de compat com Leaflet 2.x ou um CVE futuro nunca teria correcao upstream — risco de manutencao de longo prazo, nao urgencia."
+    gate: ["risco documentado no README ou neste arquivo"]
+    status: pending
+
+# ============================ FIM DO DOCUMENTO ============================
+# Total real (validado via parser YAML): 58 milestones em 18 areas, 0 ids
+# duplicados. 1 e cross-ref intencional (EXT-EH-02 -> PET-04, nao re-trabalhar).
+# Nenhum shipped ainda.
+# Tiers (contagem real): S+ 1 | S 5 | S- 21 | A+ 18 | A 13.
+# Status: pending 51 | blocked-human 6 | later 1 (cross-ref).
+# Proximo a pegar (maior tier, commitavel, sem dep aberta): EXT-SEC-01 (bump next,
+# fecha 2 CVEs HIGH, human_gate no bump em si) ou EXT-SEC-03 (upgrade da cadeia
+# axios/google-spreadsheet, SEM human_gate, pode comecar ja).
+# human_gate no scan (6 itens): EXT-SEC-01 (bump core), EXT-SEC-02/DX-03 (politica
+# CI), EXT-SEC-05 (config de hosting), EXT-DI-01 (arquitetura, junto com SEC-01
+# principal), EXT-OBS-01/03 (escolha de ferramenta/canal), EXT-I18N-06 (revisao
+# de tom humana), EXT-ASAAS2-01 (chave de idempotencia), EXT-PRIV-01 (seam de
+# consentimento).
