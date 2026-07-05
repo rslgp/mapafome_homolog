@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `9f96abd docs(roadmap)` (SEO-03 aguardando commit via agent_git-commit-specialist)
+> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `7227ebc docs(roadmap)` (SEC-03 aguardando commit via agent_git-commit-specialist)
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-04-I`](#2026-07-04-i--sec-03-shipped-higiene-de-petcontact-antes-de-persistir) — **SEC-03 SHIPPED**: pet.contact passa por sanitizeFreeText antes de gravar (strip de control-char, cap 60); telefone/e-mail legitimo intacto. +3 testes. Gate verde.
 - [`2026-07-04-H`](#2026-07-04-h--seo-03-shipped-json-ld-schemaorg-ngo--dataset) — **SEO-03 SHIPPED**: JSON-LD schema.org — NGO no root + Dataset nas 2 paginas de relatorio (SOT em structuredData.js). +7 testes. Gate verde.
 - [`2026-07-04-G`](#2026-07-04-g--i18n-01-shipped-relative-time-sensivel-ao-locale) — **I18N-01 SHIPPED** (parcial: core relative-time): formatRelativeTime segue o locale ativo (era pt-BR fixo); cleanold pinado em pt-BR. +7 testes. Corrigido export de DEFAULT_LOCALE. Gate verde.
 - [`2026-07-04-F`](#2026-07-04-f--pay-01-shipped-fail-closed-na-config-de-producao-do-asaas-backend) — **PAY-01 SHIPPED**: assertProductionConfig — o asaas-backend RECUSA subir em prod sem KV duravel ou sem allowlist de CORS. 98/98 backend.
@@ -24,13 +25,13 @@
 - [`2026-07-04-A`](#2026-07-04-a--deep-analysis--roadmap-multi-vertente) — Deep-analysis do produto (11 vertentes) + criado `ROADMAP_VERTENTES.yaml` (30 milestones) + este log + licao de padrao-de-log no vault.
 
 ### STATUS_TALLY (ROADMAP_VERTENTES.yaml)
-- **30 milestones** · pending **17** · blocked-human **5** · later **1** · **shipped 7** (SEO-01/02/03, QA-01, PET-02, PAY-01, I18N-01).
+- **30 milestones** · pending **16** · blocked-human **5** · later **1** · **shipped 8** (SEO-01/02/03, QA-01, PET-02, PAY-01, I18N-01, SEC-03).
 - Por tier: **S+ 3** · S 8 · A 10 · B 9.
-- Por vertente: V1 core-fome 2 · V2 pet 5 (1 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 · V11 governanca 1.
-- **Todos os S+/S commitaveis shippados.** Restam: 9 A + 8 B commitaveis + 5 blocked-human + 1 later.
+- Por vertente: V1 core-fome 2 · V2 pet 5 (1 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (1 shipped) · V11 governanca 1.
+- **Todos os S+/S commitaveis shippados.** Restam: 8 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
-1. **A-tier commitaveis** (proximos): SEC-03 (hygiene pet.contact), PET-03/PET-04, REP-01, PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
+1. **A-tier commitaveis** (proximos): PET-03/PET-04, REP-01, PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
 2. **SEC-01** (S+, blocked-human): chave Google no bundle -> proxy. RAIZ do risco. Claude PROPOE, humano provisiona.
 3. **PET-01/INIT-01/PAY-02/SEO-04/FOME-02** (blocked-human/later): acao humana (storage/destino/efeito/decisao) ou dep de SEC-01.
 2. **SEC-01** (S+, blocked-human): tirar a chave privada Google do bundle client via proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
@@ -305,3 +306,37 @@
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
 
 **Proximo:** proximo A commitavel (SEC-03 hygiene pet.contact, ou PET-03/04, REP-01, PWA-01, QA-02, FOME-01).
+
+---
+
+## 2026-07-04-I — SEC-03 shipped: higiene de pet.contact antes de persistir
+
+**Comando:** "ship until there is pending" (loop; A de seguranca).
+
+**O que foi feito:**
+
+| Arquivo / Acao | O que | Por que |
+|---|---|---|
+| `src/app/pets/petBlob.js` (edit) | `contact: sanitizeFreeText(contact, PET_FREETEXT_MAXLEN.contact)` (era `contact \|\| ''` cru). Comentario stale corrigido (otica de RENDER -> PERSISTENCIA). | pet.contact PERSISTE em Dados.contact; uma string forjada com control-chars entrava crua na planilha. |
+| `src/app/pets/petHygiene.js` (edit) | `PET_FREETEXT_MAXLEN.contact = 60` (espelha o maxLength do input). | Cap de comprimento no que persiste. |
+| `src/app/pets/petContactPrivacy.test.js` (edit, +3 casos, bloco SEC-03) | legit byte-a-byte (3 formatos), controle removido + digitos preservados + round-trip, cap 60. | Prova o strip sem mangle da formatacao legitima. |
+| `ROADMAP_VERTENTES.yaml` (edit) | SEC-03 pending -> shipped. | Flip so com gate verde lido. |
+
+**Chave:** `sanitizeFreeText` remove SO controle (C0/DEL/C1). Os imprimiveis de um telefone/e-mail (+, (), -, @, digitos, letras) sobrevivem — a formatacao legitima nao e mexida, so o vetor de injecao de controle fecha. O teste EXISTENTE que round-trip'a contact ('5581999990000') segue verde (sanitize e byte-identico pra ele).
+
+**Gate (verde, lido nesta sessao):**
+
+| Check | Resultado |
+|---|---|
+| lint | exit 0 |
+| fitness | exit 0 |
+| test | 1371/1371 passed (96 files, +3), exit 0 |
+| build | exit 0, compiled clean |
+| smoke200 | 16/16 rotas 200+render |
+| a11y | N/A (write-path; nenhum render mudou) |
+
+**Escopo (honesto):** o contrato de reveal-on-tap fica inalterado (excluido no scope). So a gravacao foi higienizada.
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+**Proximo:** proximo A (PET-03 freshnessAt, PET-04 quarentena, REP-01, PWA-01, QA-02, FOME-01).

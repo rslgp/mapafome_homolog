@@ -97,7 +97,9 @@ milestones:
     scope: "Include: rodar pet.contact pelo mesmo strip de control-char/cap-length que os outros campos (petHygiene) ANTES de gravar em petBlob (petBlob.js:73-76 hoje pula de proposito). Preserva reveal-on-tap; so limpa o que persiste. Exclude: mudar o contrato de reveal."
     why: "Analise: pet.contact e deliberadamente NAO higienizado (tratado como acao de reveal), mas ele PERSISTE em Dados.contact — uma string forjada com control-chars/injection entra na planilha. Reveal-on-tap e sobre EXIBIR; gravar sujo e um vetor separado."
     gate: ["npm run test", "npm run lint", "teste novo: contact com control-char e limpo na gravacao"]
-    status: pending
+    status: shipped
+    commit: "PENDENTE (routed pro agent_git-commit-specialist nesta sessao 2026-07-04)"
+    evidence: "petBlob.js:84 agora faz `contact: sanitizeFreeText(contact, PET_FREETEXT_MAXLEN.contact)` (era `contact || ''` cru). Adicionado PET_FREETEXT_MAXLEN.contact=60 (espelha o maxLength do input do PetReportSheet). sanitizeFreeText remove SO controle (C0/DEL/C1) — os imprimiveis de telefone/e-mail (+,(),-,@,digitos,letras) sobrevivem, formatacao intacta; so o vetor de injecao de controle fecha. Comentario stale (que dizia 'contact NAO e higienizado de proposito' pela otica de RENDER) corrigido pra otica de PERSISTENCIA. 3 testes novos (petContactPrivacy.test.js bloco SEC-03): legit byte-a-byte (3 formatos), controle removido + digitos preservados + round-trip, cap 60. VERIFICADO: o teste EXISTENTE que round-trip'a contact ('5581999990000') segue verde (sanitize e byte-identico pra ele). GATE VERDE: lint 0; fitness 0; test 1371/1371 (+3); build 0 (compiled clean); smoke200 16/16. Sem a11y (write-path, nenhum render mudou)."
 
   # ==================== V8 — SEO / DESCOBERTA ====================
   - id: SEO-01
