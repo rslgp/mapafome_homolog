@@ -22,6 +22,7 @@ import {
   parsePetRow,
   isPetRow,
   PET_RESOLVED_AT_KEY,
+  PET_FRESHNESS_AT_KEY,
   PET_CLOSURE_REASON_KEY,
   isValidClosureReason,
   PET_PUBLISH_RATE_LIMIT,
@@ -235,6 +236,37 @@ export async function resolvePet({ coords, resolvedAt, closureReason, idempotenc
     if (isValidClosureReason(closureReason)) {
       dados[PET_CLOSURE_REASON_KEY] = closureReason;
     }
+  });
+  if (idempotency_key) seenIdempotencyKeys.add(idempotency_key);
+  return row;
+}
+
+// ─── PET-M13 / PET-03 — RENOVAR ("ainda procurando") ─────────────────────────
+// Carimba freshnessAt na linha que casa as coords: o "fato vivo" de que o dono
+// ainda está procurando. Sem este writer, freshnessAt era LIDO (petTaxonomy /
+// petBlob expõem a chave) mas NUNCA escrito por nenhum módulo-fonte — então a
+// idade/arquivamento sempre media da 1ª publicação (DateISO), e um pet ainda
+// perdido sumia do mapa após a janela de archive mesmo com o dono renovando.
+//
+// Espelha resolvePet EXATAMENTE (mesma disciplina): tempo carimbado AQUI no
+// runtime (não no domínio puro), ISO INJETÁVEL (freshnessAt) para a fila offline
+// reaplicar idêntico (LSP), reescreve SÓ o campo freshnessAt via updatePetByCoords
+// (isolamento kind:'pet' + só a coluna Dados herdados), idempotente pelo
+// seenIdempotencyKeys compartilhado. Retorna a linha (ou null se a linha
+// sumiu/arquivou — o chamador degrada com calma, PET-M18). Difere do resolve em
+// UM ponto: renovar NÃO tira o pet do mapa ativo (não escreve resolvedAt) — só
+// reseta o relógio de idade que o M12/M13 mede contra freshnessAt.
+export async function renewPet({ coords, freshnessAt, idempotency_key, envVariables = {} }) {
+  // Idempotência: se já aplicamos esta renovação, devolve sem gravar de novo.
+  if (idempotency_key && seenIdempotencyKeys.has(idempotency_key)) {
+    return null;
+  }
+  // Carimba o tempo no runtime (não no domínio puro); aceita injeção para a fila.
+  const stampIso = freshnessAt || new Date().toISOString();
+  const coordsStr = JSON.stringify(coords);
+  const row = await updatePetByCoords(envVariables, coordsStr, (dados) => {
+    // Reescreve SÓ o campo de vivacidade; nada mais do blob (incl. resolvedAt) é tocado.
+    dados[PET_FRESHNESS_AT_KEY] = stampIso;
   });
   if (idempotency_key) seenIdempotencyKeys.add(idempotency_key);
   return row;
