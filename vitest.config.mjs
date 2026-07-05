@@ -28,13 +28,17 @@ export default defineConfig({
         // threads pool crashes the run (worker teardown / STACK_BUFFER_OVERRUN
         // -1073740791) and the parallel file scheduling also triggers the flaky
         // vitest-axe "Axe is already running" false failure. Force the forks pool
-        // with a single fork and no file parallelism so `vitest run` (and every
-        // caller, incl. CI and commit-gate agents) is serial-and-safe WITHOUT needing
-        // the --pool=forks --no-file-parallelism CLI flags every time. Trade-off:
+        // and disable file parallelism so `vitest run` (and every caller, incl. CI
+        // and commit-gate agents) is serial-and-safe WITHOUT needing the
+        // --pool=forks --no-file-parallelism CLI flags every time. Trade-off:
         // slower wall-clock, but a green gate beats a fast crash. Pair with
         // NODE_OPTIONS=--max-old-space-size=6144 for the heap headroom.
+        //
+        // Vitest 4 note: fileParallelism:false forces maxWorkers=1 (fully serial) on
+        // its own; poolOptions was REMOVED in v4 (its old { forks: { singleFork } }
+        // shape is now redundant AND emits a deprecation warning), so these two
+        // top-level options are the complete, warning-free config.
         pool: 'forks',
-        poolOptions: { forks: { singleFork: true } },
         fileParallelism: false,
         setupFiles: ['./test/setup.js'],
         include: ['test/**/*.test.{js,jsx,mjs}', 'src/**/*.test.{js,jsx,mjs}'],
