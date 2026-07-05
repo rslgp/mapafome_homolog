@@ -210,7 +210,9 @@ milestones:
     scope: "Include: no asaas-backend, um check de boot que RECUSA subir em producao (ASAAS_ENV=production) se as env de KV/Upstash nao estiverem setadas (idempotencia cairia pra in-memory) OU se o CORS estiver wildcard. Exclude: mudar o provedor de KV."
     why: "Analise: hoje e checklist-only. idempotencyStore.js:100-116 cai silencioso pra in-memory sem KV — um webhook re-entregue apos cold-start reprocessa o pagamento. Nada falha o boot. Transformar em fail-closed no boot e o padrao do webhookAuth (que ja e fail-closed)."
     gate: ["cd asaas-backend && npm test", "teste: boot em prod sem KV recusa; com KV sobe"]
-    status: pending
+    status: shipped
+    commit: "PENDENTE (routed pro agent_git-commit-specialist nesta sessao 2026-07-04)"
+    evidence: "Novo lib/assertProductionConfig.js: funcao PURA do env (nunca process.env nos testes, sem rede) que, quando ASAAS_ENV=production, LANCA PRODUCTION_CONFIG_INVALID se (a) sem KV duravel (KV_REST_API_URL/TOKEN ou UPSTASH_*) OU (b) sem ALLOWED_ORIGINS (senao o CORS de prod cai no fallback dev com localhost). Agrega os DOIS problemas numa mensagem so (err.problems machine-readable). Em sandbox/dev = no-op (boot local + node --test sem servicos). WIRING: chamada no MODULE-LOAD de api/asaas/webhook.js (onde selectIdempotencyStore ja roda) — um deploy de prod mal-configurado crasha no cold-start (500) ANTES de servir 1 evento, em vez de reprocessar pagamento no fallback in-memory. Mesma disciplina fail-closed do webhookAuth. VERIFICADO: os testes de webhook existentes nao setam ASAAS_ENV=production entao o guard e no-op neles (nao quebra). GATE VERDE: cd asaas-backend && npm test = 98/98 pass 0 fail (+11 casos novos: no-op nao-prod, aliases UPSTASH, cada hazard isolado, os dois juntos, whitespace-allowlist). Frontend lint 0 (asaas-backend fora do escopo do eslint do site); nenhum src/ do site tocado."
 
   - id: PAY-02
     title: "processEvent real no webhook (hoje pagamento confirmado e um console.log no-op)"

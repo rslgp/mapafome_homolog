@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `8576026 docs(roadmap)` (PET-02 + fixup do QA-01 aguardando commit via agent_git-commit-specialist)
+> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `693f735 docs(roadmap)` (PAY-01 aguardando commit via agent_git-commit-specialist)
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-04-F`](#2026-07-04-f--pay-01-shipped-fail-closed-na-config-de-producao-do-asaas-backend) — **PAY-01 SHIPPED**: assertProductionConfig — o asaas-backend RECUSA subir em prod sem KV duravel ou sem allowlist de CORS. 98/98 backend.
 - [`2026-07-04-E`](#2026-07-04-e--pet-02-shipped-dedup-visual-de-pets--fixup-do-qa-01) — **PET-02 SHIPPED**: liga o dedup de pets (dead code) no PetMarkers — 1 pino por grupo. + FIXUP do QA-01 (poolOptions removido no Vitest 4). Gate verde.
 - [`2026-07-04-D`](#2026-07-04-d--qa-01-shipped-gate-de-teste-oom-safe-por-default) — **QA-01 SHIPPED**: vitest.config forca forks+singleFork+no-file-parallelism; `npm run test` plano agora e OOM-safe. Gate verde. (config corrigida em 2026-07-04-E)
 - [`2026-07-04-C`](#2026-07-04-c--seo-02-shipped-sitemap--robots-dinamicos) — **SEO-02 SHIPPED**: sitemap.js + robots.js dinamicos; aposentados os 3 estaticos stale de 2022. Gate verde.
@@ -21,12 +22,12 @@
 - [`2026-07-04-A`](#2026-07-04-a--deep-analysis--roadmap-multi-vertente) — Deep-analysis do produto (11 vertentes) + criado `ROADMAP_VERTENTES.yaml` (30 milestones) + este log + licao de padrao-de-log no vault.
 
 ### STATUS_TALLY (ROADMAP_VERTENTES.yaml)
-- **30 milestones** · pending **20** · blocked-human **5** · later **1** · **shipped 4** (SEO-01, SEO-02, QA-01, PET-02).
+- **30 milestones** · pending **19** · blocked-human **5** · later **1** · **shipped 5** (SEO-01, SEO-02, QA-01, PET-02, PAY-01).
 - Por tier: **S+ 3** · S 8 · A 10 · B 9.
-- Por vertente: V1 core-fome 2 · V2 pet 5 (1 shipped) · V3 asaas 3 · V4 i18n 2 · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (2 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 · V11 governanca 1.
+- Por vertente: V1 core-fome 2 · V2 pet 5 (1 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (2 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 · V11 governanca 1.
 
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
-1. **PAY-01 / I18N-01** (S, pending, commitaveis): proximos maior-tier. PAY-01 (fail-closed no boot do asaas-backend sem KV/CORS) toca o backend (cd asaas-backend && npm test). Depois SEO-03 (A, JSON-LD) e os demais A.
+1. **I18N-01** (S, ultimo S pending commitavel): Intl relative-time/numero/data por locale (hoje fixo pt-BR). Depois os A: SEO-03 (JSON-LD), SEC-03, PET-03/04, REP-01, PWA-01, QA-02, FOME-01.
 2. **SEC-01** (S+, blocked-human): tirar a chave privada Google do bundle client via proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
 3. **PET-01 / INIT-01 / PAY-02 / SEO-04 / FOME-02** (blocked-human/later): dependem de acao humana (storage, destino, efeito de negocio, decisao de produto, ou dep de SEC-01). NAO auto-shippaveis.
 
@@ -195,3 +196,34 @@
 **Commit:** roteado pro `agent_git-commit-specialist` — 2 concerns: (1) fix(pets) o dedup wiring; (2) fix(test) o fixup da config QA-01; + docs(roadmap). Sem push/PR.
 
 **Proximo:** PAY-01 (fail-closed no boot do asaas-backend) ou I18N-01 (Intl por locale).
+
+---
+
+## 2026-07-04-F — PAY-01 shipped: fail-closed na config de producao do asaas-backend
+
+**Comando:** "ship until there is pending" (loop; pegou PAY-01, S do backend).
+
+**O que foi feito:**
+
+| Arquivo / Acao | O que | Por que |
+|---|---|---|
+| `asaas-backend/lib/assertProductionConfig.js` (novo) | Funcao PURA do env: em `ASAAS_ENV=production` LANCA `PRODUCTION_CONFIG_INVALID` se sem KV duravel (KV/UPSTASH url+token) OU sem `ALLOWED_ORIGINS`. Agrega os 2 hazards numa msg. No-op em sandbox/dev. | Idempotencia caia silenciosa pra in-memory sem KV (webhook re-entregue reprocessa pagamento); CORS sem allowlist caia no fallback dev (localhost). Nada falhava o boot. |
+| `asaas-backend/api/asaas/webhook.js` (edit) | Chama `assertProductionConfig()` no module-load (onde selectIdempotencyStore ja roda). | Um deploy de prod mal-configurado crasha no cold-start ANTES de servir 1 evento — mesma disciplina fail-closed do webhookAuth. |
+| `asaas-backend/test/assertProductionConfig.test.js` (novo) | 11 casos: no-op nao-prod, case-insensitive, aliases UPSTASH, cada hazard isolado, os dois juntos, url-sem-token, whitespace-allowlist. | Cobre o predicado puro sem boot/rede. |
+| `ROADMAP_VERTENTES.yaml` (edit) | PAY-01 pending -> shipped. | Flip so com gate verde lido. |
+
+**Nota de precisao (title vs realidade):** o title diz "CORS wildcard", mas em prod `applyCors` NUNCA emite wildcard por construcao — o hazard real e o `ALLOWED_ORIGINS` AUSENTE (cairia no fallback dev com localhost). O check pega isso exatamente.
+
+**Gate (verde, lido nesta sessao):**
+
+| Check | Resultado |
+|---|---|
+| backend test (`cd asaas-backend && npm test`) | **98/98 pass, 0 fail** (era 87; +11 novos). Guard e no-op nos testes de webhook existentes (nao setam ASAAS_ENV=production) — nao quebra. |
+| frontend lint | exit 0 (asaas-backend fora do escopo do eslint do site) |
+| frontend test/build/smoke200/a11y | N/A — nenhum src/ do site tocado; verdes desde PET-02. |
+
+**Escopo (honesto):** o check valida PRESENCA/shape da config, nao conectividade viva (funcao pura, offline). Um KV setado mas inalcancavel ainda cai no path fail-closed 500-and-retry do webhook em runtime. Nao mexi no provedor de KV.
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+**Proximo:** I18N-01 (Intl relative-time/numero/data por locale).
