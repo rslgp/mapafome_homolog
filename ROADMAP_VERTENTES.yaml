@@ -132,7 +132,9 @@ milestones:
     scope: "Include: <script type=application/ld+json> com Organization/NGO (nome, url, logo, sameAs, contactPoint) no root layout; Dataset schema nas duas paginas de relatorio (dados k-anonimizados de inseguranca alimentar sao um Dataset ideal). SOT dos literais em um modulo unico (sem hard-code duplicado, respeita FF9). Exclude: BreadcrumbList/FAQ (fase 2)."
     why: "Analise: ZERO structured data no site inteiro. NGO + Dataset dao rich results e tornam os relatorios descobriveis como dados abertos (o publico-alvo e MP/secretaria de saude/seguranca-alimentar) — casa com a missao."
     gate: ["npm run build", "npm run smoke200", "JSON-LD valido (parse) presente no HTML das rotas alvo"]
-    status: pending
+    status: shipped
+    commit: "PENDENTE (routed pro agent_git-commit-specialist nesta sessao 2026-07-04)"
+    evidence: "Novo src/app/structuredData.js (SOT dos literais): organizationLd() = schema.org NGO (nome, url, logo, image, description, slogan, sameAs, knowsLanguage 12 locales); reportDatasetLd({name,description,path}) = Dataset (isAccessibleForFree, measurementTechnique k-anonimo k=5, publisher NGO, encodingFormat html/csv/json). WIRING: <script type=application/ld+json> no <head> do root layout (organizationLd) + no relatorios/layout.js e relatorio-marketing/layout.js (reportDatasetLd proprio de cada). JSON.stringify seguro (so literais nossos, sem input de usuario). Novo structuredData.test.js (7 casos: shape NGO/Dataset, url canonica, publisher, encodings, serializa JSON valido). VERIFICADO no out/: home tem 1 bloco NGO; /relatorios e /relatorio-marketing tem NGO(root)+Dataset(+publisher NGO aninhado). GATE VERDE: lint 0; fitness 0 (raw-hex-SOT ok, nenhum literal novo hard-coded fora do SOT); test 1368/1368 (+7); build 0 (compiled successfully, 0 warnings); smoke200 16/16; axe / + /relatorios + /relatorio-marketing 0 violacoes; teardown limpo."
 
   - id: SEO-04
     title: "Resolver o sinal misto do ads.txt vs postura 'nao vende dados nem atencao'"

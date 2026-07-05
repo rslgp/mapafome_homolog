@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `cf14f45 docs(roadmap)` (I18N-01 aguardando commit via agent_git-commit-specialist)
+> **LAST_UPDATED:** 2026-07-04 · branch `loop/mapafome` · ultimo commit relevante: `9f96abd docs(roadmap)` (SEO-03 aguardando commit via agent_git-commit-specialist)
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-04-H`](#2026-07-04-h--seo-03-shipped-json-ld-schemaorg-ngo--dataset) — **SEO-03 SHIPPED**: JSON-LD schema.org — NGO no root + Dataset nas 2 paginas de relatorio (SOT em structuredData.js). +7 testes. Gate verde.
 - [`2026-07-04-G`](#2026-07-04-g--i18n-01-shipped-relative-time-sensivel-ao-locale) — **I18N-01 SHIPPED** (parcial: core relative-time): formatRelativeTime segue o locale ativo (era pt-BR fixo); cleanold pinado em pt-BR. +7 testes. Corrigido export de DEFAULT_LOCALE. Gate verde.
 - [`2026-07-04-F`](#2026-07-04-f--pay-01-shipped-fail-closed-na-config-de-producao-do-asaas-backend) — **PAY-01 SHIPPED**: assertProductionConfig — o asaas-backend RECUSA subir em prod sem KV duravel ou sem allowlist de CORS. 98/98 backend.
 - [`2026-07-04-E`](#2026-07-04-e--pet-02-shipped-dedup-visual-de-pets--fixup-do-qa-01) — **PET-02 SHIPPED**: liga o dedup de pets (dead code) no PetMarkers — 1 pino por grupo. + FIXUP do QA-01 (poolOptions removido no Vitest 4). Gate verde.
@@ -23,13 +24,13 @@
 - [`2026-07-04-A`](#2026-07-04-a--deep-analysis--roadmap-multi-vertente) — Deep-analysis do produto (11 vertentes) + criado `ROADMAP_VERTENTES.yaml` (30 milestones) + este log + licao de padrao-de-log no vault.
 
 ### STATUS_TALLY (ROADMAP_VERTENTES.yaml)
-- **30 milestones** · pending **18** · blocked-human **5** · later **1** · **shipped 6** (SEO-01, SEO-02, QA-01, PET-02, PAY-01, I18N-01).
+- **30 milestones** · pending **17** · blocked-human **5** · later **1** · **shipped 7** (SEO-01/02/03, QA-01, PET-02, PAY-01, I18N-01).
 - Por tier: **S+ 3** · S 8 · A 10 · B 9.
-- Por vertente: V1 core-fome 2 · V2 pet 5 (1 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (2 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 · V11 governanca 1.
-- **Todos os S+/S commitaveis shippados.** Restam: 10 A + 8 B commitaveis + 5 blocked-human + 1 later.
+- Por vertente: V1 core-fome 2 · V2 pet 5 (1 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 · V11 governanca 1.
+- **Todos os S+/S commitaveis shippados.** Restam: 9 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
-1. **A-tier commitaveis** (proximos): SEO-03 (JSON-LD Organization/Dataset), SEC-03 (hygiene pet.contact), PET-03/PET-04, REP-01, PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
+1. **A-tier commitaveis** (proximos): SEC-03 (hygiene pet.contact), PET-03/PET-04, REP-01, PWA-01, QA-02, FOME-01, INIT-02(dep INIT-01).
 2. **SEC-01** (S+, blocked-human): chave Google no bundle -> proxy. RAIZ do risco. Claude PROPOE, humano provisiona.
 3. **PET-01/INIT-01/PAY-02/SEO-04/FOME-02** (blocked-human/later): acao humana (storage/destino/efeito/decisao) ou dep de SEC-01.
 2. **SEC-01** (S+, blocked-human): tirar a chave privada Google do bundle client via proxy de escrita. RAIZ de quase todo risco de abuso. Claude PROPOE o desenho, humano provisiona o segredo.
@@ -267,3 +268,40 @@
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
 
 **Proximo:** todos os S+/S commitaveis feitos. Proximo tier = A (SEO-03 JSON-LD, SEC-03, PET-03/04, REP-01, PWA-01, QA-02, FOME-01).
+
+---
+
+## 2026-07-04-H — SEO-03 shipped: JSON-LD schema.org (NGO + Dataset)
+
+**Comando:** "ship until there is pending" (loop; 1o A-tier apos esgotar os S).
+
+**O que foi feito:**
+
+| Arquivo / Acao | O que | Por que |
+|---|---|---|
+| `src/app/structuredData.js` (novo, SOT) | `organizationLd()` = schema.org NGO (nome/url/logo/image/description/slogan/sameAs/knowsLanguage 12 locales); `reportDatasetLd({name,description,path})` = Dataset (free, k-anonimo k=5, publisher NGO, encodings html/csv/json). | O site tinha ZERO structured data. Um modulo unico evita hard-code duplicado por pagina (respeita FF9). |
+| `src/app/layout.js` (edit) | `<script type=application/ld+json>` com organizationLd() no `<head>`. | NGO da ao buscador a entidade MAPA FOME (rich results). |
+| `src/app/relatorios/layout.js` + `relatorio-marketing/layout.js` (edit) | Dataset JSON-LD proprio de cada. | Relatorios agregados sao dados abertos ideais como Dataset — descobriveis pelo publico-alvo (MP/saude/seguranca-alimentar). |
+| `src/app/structuredData.test.js` (novo, 7 casos) | shape NGO/Dataset, url canonica, publisher, encodings, JSON valido. | Prova os builders puros. |
+| `ROADMAP_VERTENTES.yaml` (edit) | SEO-03 pending -> shipped. | Flip so com gate verde lido. |
+
+**Verificado no `out/` gerado:** home = 1 bloco NGO; /relatorios + /relatorio-marketing = NGO(root herdado) + Dataset proprio (+ publisher NGO aninhado). JSON.stringify seguro (so literais nossos, sem input de usuario -> sem superficie de injecao).
+
+**Gate (verde, lido nesta sessao):**
+
+| Check | Resultado |
+|---|---|
+| lint | exit 0 |
+| fitness | exit 0 (raw-hex-SOT ok; nenhum literal fora do SOT) |
+| test | 1368/1368 passed (96 files, +7), exit 0 |
+| build | exit 0, compiled successfully, 0 warnings |
+| JSON-LD | presente e valido no HTML das 3 rotas alvo (grep no out/) |
+| smoke200 | 16/16 rotas 200+render |
+| a11y (axe) | / + /relatorios + /relatorio-marketing 0 violacoes |
+| teardown | serve morto, porta liberada, 0 orfaos |
+
+**Escopo (honesto):** BreadcrumbList/FAQ ficam pra fase 2 (excluido no scope do item).
+
+**Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+**Proximo:** proximo A commitavel (SEC-03 hygiene pet.contact, ou PET-03/04, REP-01, PWA-01, QA-02, FOME-01).
