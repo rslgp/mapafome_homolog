@@ -19,7 +19,7 @@
 #   ROADMAP_VERTENTES.yaml (shipped SO com gate verde lido; append-only).
 #
 # METODO
-#   Gerado por 5 passes de scan de evidencia (Explore agent, read-only).
+#   Gerado por 6 passes de scan de evidencia (Explore agent, read-only).
 #   Pass 1 (10 areas): testes, performance, error-handling, a11y, integridade
 #   de dados, DX, observabilidade, seguranca de deps, conteudo/i18n, build/deploy.
 #   Pass 2 (8 areas, mais fundo): PWA install/offline edge cases, MapaPet vertical
@@ -44,9 +44,16 @@
 #   de dados LGPD/GDPR (distinto do gap de CONSENTIMENTO ja encontrado), e a
 #   RACE CONDITION entre usuarios DIFERENTES escrevendo concorrentemente na
 #   mesma linha (distinta do gap de retry-idempotencia ja encontrado — aqui sao
-#   2 requests honestos e simultaneos, nao o mesmo request repetido). Cada item
-#   cita file:line real — nenhum fato inventado. Nao commitar nenhuma correcao
-#   sem antes reler o arquivo/linha citado (pode ter mudado desde o scan).
+#   2 requests honestos e simultaneos, nao o mesmo request repetido).
+#   Pass 6 (6 areas): multi-tab/multi-janela (claim de pin nao propaga entre
+#   abas), qualidade de mensagem de erro pro usuario (2 paginas vazam e.message
+#   cru pro publico NAO-tecnico de MP/secretarias), Notification API (feature
+#   100% inerte — pede permissao, salva prefs, nunca entrega nada), deploy
+#   config do asaas-backend (sem regiao pinada), paridade de env dev/CI/prod (o
+#   CI nunca exercita o path de geofence-ligado), acessibilidade de cluster de
+#   marcadores (sem aria-label). Cada item cita file:line real — nenhum fato
+#   inventado. Nao commitar nenhuma correcao sem antes reler o arquivo/linha
+#   citado (pode ter mudado desde o scan).
 
 areas:
   - id: T
@@ -125,6 +132,18 @@ areas:
     nome: "Direitos do titular de dados LGPD/GDPR (pass 5)"
   - id: RACE
     nome: "Race condition entre usuarios concorrentes (pass 5)"
+  - id: TAB
+    nome: "Multi-tab / multi-janela (pass 6)"
+  - id: ERRUX
+    nome: "Qualidade de mensagem de erro pro usuario (pass 6)"
+  - id: NOTIF
+    nome: "Notification API / permissoes (pass 6)"
+  - id: DEPLOY2
+    nome: "Deploy config Vercel/asaas-backend (pass 6)"
+  - id: ENVPAR
+    nome: "Paridade de env dev vs CI vs prod (pass 6)"
+  - id: CLUSTER
+    nome: "Acessibilidade de cluster de marcadores (pass 6)"
 
 milestones:
 
@@ -1239,17 +1258,136 @@ milestones:
     status: pending
     depends: [EXT-DSAR-01]
 
+  # ==================== TAB — MULTI-TAB / MULTI-JANELA (pass 6) ====================
+  - id: EXT-TAB-01
+    title: "Claim de pin nao propaga entre abas — 2a aba mostra estado obsoleto (nao-reclamado) indefinidamente"
+    area: TAB
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: App.js:641-656 — o claim ja escreve em localStorage (mdf_claim_${...}) mas NENHUM listener 'storage' consome isso em outra aba aberta. Adicionar um listener storage que atualiza o estado local quando outra aba escreve uma claim key. Exclude: sincronizacao completa de TODOS os dados entre abas (fora de escopo; so o claim, que ja tem o mecanismo de persistencia parcial)."
+    why: "Scan pass 6: se um usuario tem o mapa aberto em 2 abas e reclama/reporta um pin na aba A, a aba B mostra o pin como NAO-reclamado indefinidamente ate reload manual — o mesmo doador pode tentar reclamar o MESMO pin de novo na aba B, achando que ainda esta disponivel."
+    gate: ["npm run test", "teste: claim em uma aba simulada e visivel via storage event"]
+    status: pending
+
+  - id: EXT-TAB-02
+    title: "fetchPets/getRows cacheado em memoria de modulo, nunca invalidado — mesma staleness multi-aba no MapaPet"
+    area: TAB
+    tier: A
+    owner: softwareengineer
+    scope: "Include: usePetsApp.js:159-196 e appMainBootstrap.js (envVariables.rows) — documentar explicitamente (comentario) que o cache e por-ABA e nunca invalida sozinho; considerar um refresh periodico leve (nao urgente, so registrar a limitacao). Exclude: implementar polling agora (avaliar custo/beneficio primeiro, ja que cada refresh e um getRows() completo, ver EXT-SHEETDB-02)."
+    why: "Scan pass 6: mesmo padrao do EXT-TAB-01 mas pro MapaPet — o mapa de pets busca uma vez por aba e nunca re-busca, entao pets resolvidos/novos em outra aba/dispositivo ficam invisiveis ate reload manual."
+    gate: ["comentario adicionado", "decisao registrada sobre polling futuro"]
+    status: pending
+
+  # ==================== ERRUX — QUALIDADE DE MENSAGEM DE ERRO (pass 6) ====================
+  - id: EXT-ERRUX-01
+    title: "/relatorios e /relatorio-marketing renderizam e.message CRU num <code> pro usuario final (nao so no console)"
+    area: ERRUX
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: relatorios/page.js:50/106 e relatorio-marketing/page.js:48/93 — trocar setError(e.message) + <code>{error}</code> por uma mensagem generica e ACIONAVEL (t()) pro usuario, mantendo o e.message SO no console.error (padrao ja correto em outros lugares do app, ex.: App.js:669/690). Exclude: remover o log tecnico do console (fica, so sai da UI)."
+    why: "Scan pass 6: qualquer excecao (falha de auth do Sheets, erro de rede, JSON malformado) aparece VERBATIM num bloco <code> pro publico-alvo dessas paginas — Ministerio Publico e secretarias de saude, usuarios NAO-tecnicos que nao deveriam ver um stack trace ou mensagem de erro de API. O resto do codebase ja sabe fazer certo (warn no console, mensagem generica na UI) — essas 2 paginas sao a excecao."
+    gate: ["npm run test", "npm run lint", "teste: erro simulado nao aparece verbatim na UI"]
+    status: pending
+
+  - id: EXT-ERRUX-02
+    title: "Mensagem de erro de pagamento e generica demais pro que esta em jogo (dinheiro real, sem orientacao)"
+    area: ERRUX
+    tier: A
+    owner: softwareengineer
+    scope: "Include: asaasSubscriptionClient.js:203/257 e strings.assinar.js:30 (assinar.error.fallback) — avaliar mensagens mais especificas por tipo de falha conhecida (ex.: cartao recusado vs servidor indisponivel vs dados invalidos) em vez de um 'tente novamente' generico pra tudo. Exclude: expor detalhe tecnico da Asaas (continua abstrato pro usuario, so mais especifico sobre a ACAO recomendada)."
+    why: "Scan pass 6: numa pagina que lida com dinheiro real, uma mensagem generica de 'tente novamente' nao ajuda um doador cujo cartao foi recusado (ele vai tentar de novo e falhar de novo) vs um doador que bateu num problema transitorio de servidor (tentar de novo realmente ajudaria) — sem diferenciacao, o doador nao sabe o que fazer diferente."
+    gate: ["npm run test", "npm run lint"]
+    status: pending
+
+  - id: EXT-ERRUX-03
+    title: "Instrucao de instalar PWA no iOS usa window.alert() nativo — inconsistente com o padrao de modal-sheet do resto do app"
+    area: ERRUX
+    tier: A
+    owner: ict6-uiux-session
+    scope: "Include: header.js:34/36 (page.header.install_ios/install_other) — trocar o alert() nativo por um sheet/modal no MESMO padrao usado em outros lugares (ex.: NotificationPrefs, role=dialog). Exclude: mudar o CONTEUDO da instrucao (so o container visual)."
+    why: "Scan pass 6: um alert() nativo do browser e visualmente destoante (chrome do SO, nao da marca) numa dica de instalacao — o app ja tem um padrao de sheet/modal consistente em outros fluxos, essa e a excecao."
+    gate: ["npm run test", "npm run a11y"]
+    status: pending
+
+  # ==================== NOTIF — NOTIFICATION API / PERMISSOES (pass 6) ====================
+  - id: EXT-NOTIF-01
+    title: "NotificationPrefs pede permissao e salva radius/frequency, mas NADA le essas prefs de volta — feature 100% inerte"
+    area: NOTIF
+    tier: A+
+    owner: human-gated (decidir se a feature avanca) + softwareengineer
+    scope: "Include: decidir — implementar a entrega real (exigiria push subscription + service-worker push handler + algum job server-side que casa report-novo x prefs-do-usuario, escopo GRANDE) OU remover a UI de preferencias ate a entrega existir (nao prometer o que nao acontece). Exclude: implementar a entrega completa sem decisao de produto (e um projeto, nao um bugfix)."
+    why: "Scan pass 6: um usuario configura 'me avise em 2km, a cada hora' e NADA acontece — nenhum push subscription, nenhum handler de push no SW, nenhum job que consome radiusKm/frequency salvos em localStorage. A permissao do browser e concedida (pedida no momento certo, isso esta bem-feito) mas a promessa da feature nunca se cumpre. Silenciosamente quebra a confianca de quem configurou."
+    gate: ["decisao de produto registrada", "se remover: npm run test + build + a11y; se implementar: escopo separado (grande)"]
+    status: blocked-human
+    human_gate: true
+    note: "Decisao de ESCOPO DE PRODUTO (avancar a feature de verdade ou desligar a promessa) — Claude PROPOE a escolha binaria, humano decide."
+
+  # ==================== DEPLOY2 — DEPLOY CONFIG VERCEL/ASAAS-BACKEND (pass 6) ====================
+  - id: EXT-DEPLOY2-01
+    title: "asaas-backend sem regiao pinada no vercel.json — funcoes que falam com a Asaas (BR) rodam em regiao default (provavel US)"
+    area: DEPLOY2
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: adicionar regions:['gru1'] (Sao Paulo) ao vercel.json das funcoes api/asaas/*. Exclude: mudar o maxDuration existente (15s ja adequado)."
+    why: "Scan pass 6: sem regions pinada, as funcoes rodam na regiao DEFAULT da Vercel (tipicamente US) enquanto conversam com uma API brasileira (Asaas) — cada round-trip de pagamento/webhook paga uma latencia extra evitavel so fixando a regiao mais proxima."
+    gate: ["vercel.json atualizado", "deploy de teste confirma a regiao (humano ou proximo deploy real)"]
+    status: pending
+
+  - id: EXT-DEPLOY2-02
+    title: "Cold-start do webhook reseta idempotencia in-memory (ja documentado no .env.deploy.example) — sem mitigacao registrada como acao"
+    area: DEPLOY2
+    tier: A
+    owner: softwareengineer
+    scope: "Include: NENHUMA acao nova de codigo — este achado E o mesmo PAY-01/EXT-ASAAS2-02 ja trackeados (fail-closed em producao sem KV). Registrar como CROSS-REF, nao duplicar. Exclude: re-trabalhar."
+    why: "Scan pass 6 confirmou de novo, pelo angulo de deploy-config, o mesmo achado ja coberto: cold-start sem KV configurado reseta a idempotencia."
+    gate: ["ja coberto por PAY-01 (ROADMAP_VERTENTES.yaml) e EXT-ASAAS2-02 — cross-ref, nao re-trabalhar"]
+    status: later
+    note: "DUPLICATA INTENCIONAL de PAY-01 (ROADMAP_VERTENTES.yaml, ja shipped) e EXT-ASAAS2-02 (MILESTONES_EXTENDED.yaml) — mantido so pra registrar a confirmacao cruzada do pass 6."
+
+  # ==================== ENVPAR — PARIDADE DE ENV DEV/CI/PROD (pass 6) ====================
+  - id: EXT-ENVPAR-01
+    title: "CI nunca builda com NEXT_PUBLIC_GEOFENCE_LOCATION setado — o path de geofence-ligado nunca e exercitado pelo gate"
+    area: ENVPAR
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: ci.yml:53-57 — adicionar NEXT_PUBLIC_GEOFENCE_LOCATION (e os outros 3 vars faltando: _BING_MAPS_API_KEY, _ASAAS_BACKEND_URL, _GEOFENCE_IP) ao stub de env do CI, com valores de teste seguros. Exclude: usar credenciais reais no CI (stubs continuam sendo stubs)."
+    why: "Scan pass 6: geofenceConfig.js cai pro DEV_DEFAULT=false quando a env var esta ausente — como o CI NUNCA seta NEXT_PUBLIC_GEOFENCE_LOCATION, TODO build/smoke200/gate roda com o geofence DESLIGADO, mesmo que o dev local (.env.local) rode com ele LIGADO. Um regressao no path geofence-ligado passaria pelo gate inteiro sem ser pega."
+    gate: ["ci.yml atualizado", "1 CI run confirma o path geofence-ligado e exercitado"]
+    status: pending
+
+  - id: EXT-ENVPAR-02
+    title: "Nenhum .env.local.example pro app principal (so o asaas-backend tem .env.example)"
+    area: ENVPAR
+    tier: A
+    owner: softwareengineer
+    scope: "Include: criar .env.local.example na raiz com os 8 NEXT_PUBLIC_* vars nomeados (valores vazios/placeholder, nunca reais). Exclude: incluir qualquer valor real (nem de teste)."
+    why: "Scan pass 6: um dev novo nao tem NENHUM template pro app principal — so descobre quais env vars existem lendo o codigo-fonte ou perguntando. asaas-backend ja tem esse padrao (.env.example); o app principal nao."
+    gate: ["arquivo criado", "npm run build funciona com os vars preenchidos a partir do template"]
+    status: pending
+
+  # ==================== CLUSTER — ACESSIBILIDADE DE CLUSTER DE MARCADORES (pass 6) ====================
+  - id: EXT-CLUSTER-01
+    title: "Icone de cluster (contagem de pins agrupados) sem aria-label/role — leitor de tela nao anuncia a contagem"
+    area: CLUSTER
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: mapUtils.js:27-31 — adicionar aria-label (ex.: '${childCount} relatos agrupados') ao DivIcon do cluster. Exclude: mudar o visual do cluster (so a camada de acessibilidade)."
+    why: "Scan pass 6: o cluster mostra a contagem visualmente (span com childCount) mas um leitor de tela nao tem NENHUM sinal semantico de que aquele elemento representa um grupo de N relatos — so um div generico."
+    gate: ["npm run test", "npm run a11y"]
+    status: pending
+
 # ============================ FIM DO DOCUMENTO ============================
-# Total real (validado via parser YAML): 103 milestones em 38 areas, 0 ids
-# duplicados. 2 sao cross-ref intencional (EXT-EH-02 -> PET-04, EXT-SETSTATE-02
-# -> REP-01; nao re-trabalhar nenhum dos dois).
+# Total real (validado via parser YAML): 114 milestones em 44 areas, 0 ids
+# duplicados. 3 sao cross-ref intencional (EXT-EH-02 -> PET-04, EXT-SETSTATE-02
+# -> REP-01, EXT-DEPLOY2-02 -> PAY-01/EXT-ASAAS2-02; nao re-trabalhar nenhum).
 # 1 ja shipped fora deste arquivo: SEC-02/FF11 (ROADMAP_VERTENTES.yaml), que
-# implementou o item mais critico apontado por este scan (o vazamento real de
+# implementou o item mais critico apontado pelo pass 1 (o vazamento real de
 # NEXT_PUBLIC_GOOGLE_PRIVATE_KEY agora tem um gate mecanico, allowlisted por
 # hash, ate o SEC-01 principal cair).
-# Tiers (contagem real): S+ 1 | S 7 | S- 33 | A+ 31 | A 31.
-# Status: pending 90 | blocked-human 11 | later 2 (cross-refs).
-# 5 passes de scan: pass 1 (10 areas gerais) + pass 2 (8 areas fundas: PWA/
+# Tiers (contagem real): S+ 1 | S 7 | S- 36 | A+ 34 | A 36.
+# Status: pending 99 | blocked-human 12 | later 3 (cross-refs).
+# 6 passes de scan: pass 1 (10 areas gerais) + pass 2 (8 areas fundas: PWA/
 # pets/asaas/geo/mapa/mobile/privacidade/deps) + pass 3 (8 areas: relatorios/
 # marketing depth, parceiros/sponsors, validacao de formulario, CSV/injecao-de-
 # formula, iniciativas, links cross-app, timezone, memory leaks) + pass 4 (6
@@ -1258,19 +1396,26 @@ milestones:
 # (6 areas: Google Sheets como banco/concorrencia, corretude de criptografia,
 # setState em componente desmontado, stylesheet de impressao, direitos LGPD/
 # GDPR do titular de dados, race condition entre usuarios CONCORRENTES DIFERENTES
-# escrevendo na mesma linha — distinto do gap de retry-idempotencia ja conhecido).
-# Passes 4 e 5 tambem reportaram areas HONESTAMENTE SEM achado novo quando
+# escrevendo na mesma linha) + pass 6 (6 areas: multi-tab/multi-janela, qualidade
+# de mensagem de erro, Notification API inerte, deploy config Vercel/asaas-
+# backend, paridade de env dev/CI/prod, acessibilidade de cluster de marcadores).
+# Passes 4, 5 e 6 tambem reportaram areas HONESTAMENTE SEM achado novo quando
 # aplicavel — nao forcado milestone onde nao havia gap real.
-# ACHADO MAIS CRITICO DO PASS 5: EXT-RACE-01 (S) — flagPet/resolvePet perdem
-# escritas quando 2 USUARIOS DIFERENTES escrevem a mesma linha ao mesmo tempo
-# (nao um retry, 2 requests honestos concorrentes); row.save() e um PUT cego
-# sem CAS/ETag. E o CENARIO EXATO que petDomain.js chama de "sinal mais forte"
-# (2 denuncias simultaneas) e o codebase erra silenciosamente hoje.
+# ACHADO MAIS CRITICO DE TODO O DOCUMENTO: EXT-RACE-01 (S, pass 5) — flagPet/
+# resolvePet perdem escritas quando 2 USUARIOS DIFERENTES escrevem a mesma
+# linha ao mesmo tempo (nao um retry, 2 requests honestos concorrentes);
+# row.save() e um PUT cego sem CAS/ETag. E o CENARIO EXATO que petDomain.js
+# chama de "sinal mais forte" (2 denuncias simultaneas) e o codebase erra
+# silenciosamente hoje.
+# ACHADO NOTAVEL DO PASS 6: EXT-NOTIF-01 (A+) — a feature de preferencias de
+# notificacao (radius/frequencia) pede permissao de browser corretamente mas
+# NADA entrega de verdade (sem push subscription, sem handler no SW, sem job
+# server-side) — 100% inerte, quebra silenciosa de confianca de quem configura.
 # Proximo a pegar (maior tier, commitavel, sem dep aberta): EXT-SEC-01 (bump next,
 # fecha 2 CVEs HIGH, human_gate no bump em si), EXT-SEC-03 (upgrade da cadeia
 # axios/google-spreadsheet, SEM human_gate) ou EXT-REP2-01 (k-anonimizacao
 # faltando em 2 tabelas do relatorio publico — S tier, sem human_gate, sem deps).
-# human_gate no scan (11 itens): EXT-SEC-01 (bump core), EXT-SEC-02/DX-03 (politica
+# human_gate no scan (12 itens): EXT-SEC-01 (bump core), EXT-SEC-02/DX-03 (politica
 # CI), EXT-SEC-05 (config de hosting), EXT-DI-01 (arquitetura, junto com SEC-01
 # principal), EXT-OBS-01/03 (escolha de ferramenta/canal), EXT-I18N-06 (revisao
 # de tom humana), EXT-ASAAS2-01 (chave de idempotencia), EXT-PRIV-01 (seam de
@@ -1278,13 +1423,17 @@ milestones:
 # EXT-LOOP-01 (cap do goal-loop subiu sem re-autorizacao registrada), EXT-RACE-01
 # (CAS/locking no proxy, arquitetura junto com SEC-01), EXT-CRYPTO-01 (decisao
 # arquitetural sobre a criptografia teatro), EXT-DSAR-01 (escopo juridico/produto
-# do direito de exclusao).
+# do direito de exclusao), EXT-NOTIF-01 (decisao de escopo: entregar a feature
+# de notificacao de verdade ou desliga-la).
 #
-# CHECAGEM REAL DE QUOTA (nao um numero inventado — lida via monitor-tokens):
-# apos este pass 5, contexto da sessao ~65%+, sessao atual ~54%+, semana ~41%+
-# (valores do momento da checagem; sobem com cada pass adicional). O documento
-# esta genuinamente extensivo (103 itens, 38 areas, 5 passes independentes,
-# 100% evidencia file:line real, 2 areas honestamente vazias reportadas em vez
-# de preenchidas a forca). Decisao: este e o ponto de parada da fase de SCAN;
-# proximo passo natural e IMPLEMENTAR os itens de maior tier, nao continuar
-# escaneando ate esgotar o contexto da sessao.
+# CHECAGEM REAL DE QUOTA POR PASS (nao numero inventado — lida via monitor-tokens
+# a cada pass, /goal explicito pediu esse mecanismo):
+#   apos pass 5: contexto 65% | sessao 54-56% | semana 41%
+#   apos pass 6: contexto 73% | sessao 67%     | semana 42%
+# Trajetoria: ~5-6 pontos percentuais de sessao por pass. O documento ja e
+# extensivo por qualquer medida (114 itens, 44 areas, 6 passes independentes,
+# 100% evidencia file:line real, multiplas areas honestamente reportadas vazias
+# em vez de preenchidas a forca). A sessao segue com margem (67% usado, nao
+# critico), entao mais passes SAO possiveis se o usuario/hook exigir — mas o
+# valor marginal de cada pass adicional cai (areas cada vez mais nichadas) e o
+# custo de contexto sobe. Este e um checkpoint de decisao, nao um limite rigido.

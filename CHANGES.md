@@ -9,12 +9,13 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `89f1a93 docs(roadmap)` (pass 4); MILESTONES_EXTENDED.yaml (103 itens, 5 passes) ainda nao commitado. Quota real checada via monitor-tokens: sessao 56%, semana 41% — SCAN encerrado aqui, proximo passo e IMPLEMENTAR.
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `93c7cdd docs(roadmap)` (pass 5); MILESTONES_EXTENDED.yaml (114 itens, 6 passes) ainda nao commitado. Quota real via /monitor-tokens por pass: pass5 sessao 56% -> pass6 sessao 67% (~5-6pp/pass). Goal `/goal` explicitou usar monitor-tokens como fonte de quota.
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (segundo pass, 33 itens, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
-- [`2026-07-05-Q`](#2026-07-05-q--milestones-extended-expandido-pass-5-103-itens-38-areas--quota-checada) — **MILESTONES_EXTENDED.yaml expandido (pass 5, FINAL do scan)**: +11 itens em 6 areas novas. Achado mais critico do documento inteiro: EXT-RACE-01 (2 usuarios DIFERENTES escrevendo a mesma linha concorrentemente perdem uma escrita — distinto do gap de retry-idempotencia ja conhecido). Quota real checada via /monitor-tokens (sessao 56%) — fase de SCAN encerrada aqui por decisao informada, nao por numero inventado.
+- [`2026-07-05-R`](#2026-07-05-r--milestones-extended-expandido-pass-6-114-itens-44-areas--quota-por-pass) — **MILESTONES_EXTENDED.yaml expandido (pass 6)**: +11 itens em 6 areas novas. Achado notavel: EXT-NOTIF-01 (feature de notificacao 100% inerte — pede permissao, nunca entrega). `/goal` re-armado explicitando usar /monitor-tokens como fonte de quota; checado por pass (pass5 sessao 56% -> pass6 sessao 67%).
+- [`2026-07-05-Q`](#2026-07-05-q--milestones-extended-expandido-pass-5-103-itens-38-areas--quota-checada) — **MILESTONES_EXTENDED.yaml expandido (pass 5)**: +11 itens em 6 areas novas. Achado mais critico do documento inteiro: EXT-RACE-01 (2 usuarios DIFERENTES escrevendo a mesma linha concorrentemente perdem uma escrita — distinto do gap de retry-idempotencia ja conhecido).
 - [`2026-07-05-P`](#2026-07-05-p--milestones-extended-expandido-pass-4-92-itens-32-areas) — **MILESTONES_EXTENDED.yaml expandido (pass 4)**: +13 itens em 6 areas novas (tokens CSS mortos, gap de lint no-console, meta-gaps das proprias fitness-functions, drift de documentacao no goal-loop, governanca do cap do loop sem re-autorizacao, CLS por imagem sem dimensao). Total 92 itens, 32 areas. 2 areas escaneadas SEM achado novo, reportado honestamente.
 - [`2026-07-05-O`](#2026-07-05-o--milestones-extended-expandido-pass-3-79-itens-26-areas) — **MILESTONES_EXTENDED.yaml expandido (pass 3)**: +21 itens em 8 areas novas (relatorios/marketing depth incl. gap de k-anonimizacao real, parceiros/sponsors, validacao de form, CSV formula-injection, iniciativas, links cross-app, timezone, memory leaks). Total 79 itens, 26 areas.
 - [`2026-07-05-N`](#2026-07-05-n--sec-02-shipped-ff11-secret-leak-gate-por-hash) — **SEC-02 SHIPPED**: FF11 novo (fitness-functions.mjs) escaneia out/ pos-build por PEM/JWT vazado; allowlist por HASH de conteudo (nao nome de var — nao funciona em minificado). Achou + provou o vazamento real (SEC-01) tem hash estavel; pegou um segredo-isca falso em teste.
@@ -593,3 +594,39 @@
 **Commit:** roteado pro `agent_git-commit-specialist` quando pedido. Sem push/PR.
 
 **Proximo:** implementar EXT-REP2-01 (S, k-anonimizacao) ou EXT-RACE-01 (S, a race condition mais critica achada, mas human_gate por exigir decisao arquitetural).
+
+---
+
+## 2026-07-05-R — MILESTONES_EXTENDED expandido (pass 6): 114 itens, 44 areas — quota por pass
+
+**Comando:** `/goal` re-armado explicitando "use /monitor-tokens to have the quota" — mecanismo de quota agora explicito no proprio goal, checado a cada pass.
+
+**O que foi feito:**
+
+| Area nova | Itens | Achado mais critico |
+|---|---|---|
+| TAB (multi-tab) | 2 | Claim de pin NAO propaga entre abas — 2a aba mostra o pin como nao-reclamado indefinidamente ate reload manual, doador pode tentar reclamar de novo |
+| ERRUX (qualidade de erro) | 3 | /relatorios e /relatorio-marketing renderizam `e.message` CRU num `<code>` pro publico NAO-tecnico (MP/secretarias de saude) — stack trace/erro de API aparece verbatim |
+| NOTIF (Notification API) | 1 | Feature de preferencia de notificacao (radius/frequencia) pede permissao CORRETAMENTE mas NADA entrega — sem push subscription, sem handler no SW, sem job server-side. 100% inerte. |
+| DEPLOY2 (deploy config) | 2 | asaas-backend sem regiao pinada — funcoes que falam com a Asaas (BR) rodam na regiao default da Vercel (provavelmente US) |
+| ENVPAR (paridade env) | 2 | CI NUNCA builda com NEXT_PUBLIC_GEOFENCE_LOCATION setado — o path de geofence-ligado nunca e exercitado pelo gate inteiro, mesmo com dev local rodando com ele ON |
+| CLUSTER (a11y de cluster) | 1 | Icone de cluster (contagem de pins agrupados) sem aria-label — leitor de tela nao anuncia a contagem |
+
+**Metodo:** 6o agente Explore read-only, 8 angulos (bundle/build output, paridade env, deploy config, geosearch, notification UX, cluster a11y, multi-tab, qualidade de erro). O agente tambem reportou (e eu registro aqui por transparencia) ter detectado e ignorado corretamente conteudo de prompt-injection em tool output durante o scan (falsos "system-reminders" tentando mudar comportamento) — nao originado do usuario, descartado como instrucao nao-confiavel.
+
+**Quota real por pass (mecanismo agora explicito no /goal):**
+
+| Pass | Contexto | Sessao | Semana |
+|---|---|---|---|
+| apos pass 5 | 65% | 54-56% | 41% |
+| apos pass 6 | 73% | 67% | 42% |
+
+Trajetoria ~5-6pp de sessao por pass. Sessao ainda com margem (67%, nao critico) — mais passes sao possiveis, mas o valor marginal de cada pass cai (areas cada vez mais nichadas) enquanto o custo de contexto sobe. Registrado como checkpoint de decisao no footer do documento, nao como limite rigido.
+
+**Validacao:** YAML parseado apos a expansao — **114 milestones reais**, 0 ids duplicados, 44 areas, tiers S+ 1 / S 7 / S- 36 / A+ 34 / A 36.
+
+**Gate desta entrada:** nenhum codigo de producao tocado (so arquivo de planejamento). YAML validado via parser real.
+
+**Commit:** roteado pro `agent_git-commit-specialist` quando pedido. Sem push/PR.
+
+**Proximo:** implementar (EXT-REP2-01 ou EXT-RACE-01) ou continuar escaneando se o /goal/hook exigir mais uma pass.
