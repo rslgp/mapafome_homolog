@@ -19,20 +19,26 @@
 #   ROADMAP_VERTENTES.yaml (shipped SO com gate verde lido; append-only).
 #
 # METODO
-#   Gerado por 3 passes de scan de evidencia (Explore agent, read-only).
+#   Gerado por 4 passes de scan de evidencia (Explore agent, read-only).
 #   Pass 1 (10 areas): testes, performance, error-handling, a11y, integridade
 #   de dados, DX, observabilidade, seguranca de deps, conteudo/i18n, build/deploy.
 #   Pass 2 (8 areas, mais fundo): PWA install/offline edge cases, MapaPet vertical
 #   (match/taxonomy/share), Asaas backend edge cases (validacao/CORS/replay),
 #   geofence/bbox de paises, Leaflet map (cluster/tiles/perf), teclado mobile/
 #   viewport, analytics/privacidade (LGPD), staleness de dependencias.
-#   Pass 3 (8 areas novas): relatorios/marketing vertical depth (k-anonimizacao,
+#   Pass 3 (8 areas): relatorios/marketing vertical depth (k-anonimizacao,
 #   timezone), parceiros/sponsors/imprensa (badges enganosos, weight inerte),
 #   validacao de formulario/UX, export CSV/injecao-de-formula, iniciativas/
 #   cadastrar, links cross-app/integracao externa, timezone/data global, memory
-#   leaks (timers/listeners sem cleanup). Cada item cita file:line real — nenhum
-#   fato inventado. Nao commitar nenhuma correcao sem antes reler o arquivo/linha
-#   citado (pode ter mudado desde o scan).
+#   leaks (timers/listeners sem cleanup).
+#   Pass 4 (6 areas): arquitetura de design-token CSS (tokens mortos, drift de
+#   spacing/radius sem gate), gaps de regra de lint, meta-gaps das PROPRIAS
+#   fitness-functions (o que os 11 FFs existentes nao pegam), drift de
+#   documentacao (loop.yaml desatualizado sobre o proprio goal-loop), governanca
+#   do goal-loop (cap subiu sem re-autorizacao registrada), otimizacao de
+#   imagem/asset (CLS por falta de width/height). Cada item cita file:line real
+#   — nenhum fato inventado. Nao commitar nenhuma correcao sem antes reler o
+#   arquivo/linha citado (pode ter mudado desde o scan).
 
 areas:
   - id: T
@@ -87,6 +93,18 @@ areas:
     nome: "Timezone / data global"
   - id: LEAK
     nome: "Memory leaks (timers/listeners)"
+  - id: TOKEN
+    nome: "CSS design-token architecture (pass 4)"
+  - id: LINT
+    nome: "Code style / linting rule gaps (pass 4)"
+  - id: FFGAP
+    nome: "Fitness-functions meta-gaps (pass 4)"
+  - id: DOC
+    nome: "Documentation drift (pass 4)"
+  - id: LOOP
+    nome: "Loops/goal-loop governance (pass 4)"
+  - id: ASSET
+    nome: "Image/asset optimization (pass 4)"
 
 milestones:
 
@@ -937,25 +955,168 @@ milestones:
     gate: ["npm run test", "npm run lint"]
     status: pending
 
+  # ==================== TOKEN — CSS DESIGN-TOKEN ARCHITECTURE (pass 4) ====================
+  - id: EXT-TOKEN-01
+    title: "2 tokens mortos em tokens.css (--mdf-bp-* nunca lidos por JS, --mdf-hud-target nunca referenciado)"
+    area: TOKEN
+    tier: A
+    owner: softwareengineer
+    scope: "Include: tokens.css:143-145 (--mdf-bp-mobile/tablet/desktop, comentario diz 'for JS readers' mas nenhum JS le via var()/getPropertyValue) e :152 (--mdf-hud-target: 60px, nunca referenciado fora da propria declaracao) — remover OU documentar por que ficam (ex.: reserva pra uso futuro). Exclude: os tokens irmaos ativos (--mdf-fab-size, --mdf-touch-target continuam)."
+    why: "Scan pass 4: tokens mortos numa SOT de design system apodrecem silenciosamente — um proximo dev pode assumir que --mdf-bp-mobile e lido em algum lugar (o comentario ate afirma isso) e ficar confuso quando editar um breakpoint nao muda nada em JS."
+    gate: ["grep confirma 0 leitores", "npm run build", "removidos ou documentados"]
+    status: pending
+
+  - id: EXT-TOKEN-02
+    title: "FF9 so cobre cor hex — spacing/radius/duration literais duplicados sem gate (mesma classe de drift, sem guarda)"
+    area: TOKEN
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: uma FF12 (ou extensao do FF9) que varre CSS por literais numericos de spacing/radius (4px/8px/12px/16px/24px/48px etc.) fora de tokens.css, onde um --mdf-space-*/--mdf-radius-* com o MESMO valor ja existe (App.css:659-695, CountryFlagControl.css:78-181, page.module.css:37-115, parceiros.css:134 ja tem essa duplicacao hoje). Exclude: relocar os literais existentes agora (isso e trabalho separado; a FF so baseline-allowlista o que ja existe, pega o NOVO)."
+    why: "Scan pass 4: e a MESMA classe de drift que FF9 ja resolve pra cor (SOT vs literal duplicado), mas so pra cor — spacing/radius/duration tem 0 gate, entao o mesmo problema (2 fontes de verdade que podem divergir) existe sem deteccao mecanica."
+    gate: ["npm run fitness", "FF12 (ou extensao) roda sem quebrar o baseline do que ja existe"]
+    status: pending
+
+  # ==================== LINT — CODE STYLE / LINTING RULE GAPS (pass 4) ====================
+  - id: EXT-LINT-01
+    title: "Nenhuma regra no-console — console.log/warn de producao (appLifecycle, App.js) sem gate"
+    area: LINT
+    tier: A
+    owner: softwareengineer
+    scope: "Include: adicionar no-console (com allow: ['warn','error'] ou similar) ao eslint.config.mjs, comecando por limpar os console.log JA existentes em appLifecycle.js:131/135/149/154 e App.js:669/690 (paths de geo/claim-persist). Exclude: proibir console.error (uso legitimo em varios catch blocks ja documentados)."
+    why: "Scan pass 4: console.log de producao em paths de geo/claim ja SHIPPAM pro console de todo usuario, sem nenhum gate impedindo o proximo. As excecoes de react-hooks/exhaustive-deps ja sao bem-governadas (cada uma com comentario de razao) — este e o unico gap real de lint encontrado."
+    gate: ["npm run lint", "console.log de producao limpos ou justificados"]
+    status: pending
+
+  # ==================== FFGAP — FITNESS-FUNCTIONS META-GAPS (pass 4) ====================
+  - id: EXT-FFGAP-01
+    title: "Nenhuma FF pega useEffect com literal objeto/array inline na dependency array (loop infinito latente)"
+    area: FFGAP
+    tier: A
+    owner: softwareengineer
+    scope: "Include: uma FF (grep estrutural, mesmo padrao das outras) que detecta `}, [{...}])` ou `}, [[...]])` como dependency array de useEffect — um objeto/array literal inline SEMPRE re-cria identidade a cada render, causando loop infinito de re-execucao. Exclude: false-positives de arrays/objetos que NAO sao literais inline (ex.: uma variavel)."
+    why: "Scan pass 4: 0 instancias hoje (verificado por grep) — e um gap LATENTE no gate, nao um bug ativo. Mas e um dos erros de React mais caros e faceis de introduzir sem perceber (o linter padrao do Next nao pega isso de forma confiavel)."
+    gate: ["npm run fitness", "FF nova pega um caso-isca injetado e falha"]
+    status: pending
+
+  - id: EXT-FFGAP-02
+    title: "Nenhuma FF pega key={index} em .map() — bug classico de identidade de lista"
+    area: FFGAP
+    tier: A
+    owner: softwareengineer
+    scope: "Include: uma FF (grep estrutural) que detecta `key={index}` ou `key={i}` (variavel de indice de loop) como key de elemento mapeado. Exclude: false-positives onde 'index'/'i' e um ID real (nome generico coincidente) — aceitar um allowlist como FF9/FF10 se aparecer."
+    why: "Scan pass 4: 0 instancias hoje (verificado por grep) — gap latente. key={index} quebra reconciliacao do React quando a lista reordena/filtra (ex.: um filtro de mapa que muda a ordem dos pins), causando bugs de estado sutil dificeis de depurar."
+    gate: ["npm run fitness", "FF nova pega um caso-isca injetado e falha"]
+    status: pending
+
+  - id: EXT-FFGAP-03
+    title: "FF4 (TODO density) tem teto global de 50 mas nenhum teto POR ARQUIVO nem rastreio de idade"
+    area: FFGAP
+    tier: A
+    owner: softwareengineer
+    scope: "Include: adicionar um teto por-arquivo (ex.: max 10 TODOs num unico arquivo) complementar ao teto global existente. Exclude: rastreio de idade/staleness (exigiria git blame por linha, custo alto pro beneficio; deixar como ideia registrada, nao implementar agora)."
+    why: "Scan pass 4: hoje um UNICO arquivo poderia carregar 49 TODOs indefinidamente sem nunca estourar o teto global de 50 — um teto por-arquivo pega concentracao de divida tecnica que o teto global sozinho nao ve."
+    gate: ["npm run fitness", "teste: arquivo com >10 TODOs falha mesmo com o total global abaixo de 50"]
+    status: pending
+
+  # ==================== DOC — DOCUMENTATION DRIFT (pass 4) ====================
+  - id: EXT-DOC-01
+    title: "loops/loop.yaml documenta o guard como AUSENTE/loop-recusa-rodar-sem-supervisao — mas guard.yaml existe e RODOU 21 iteracoes"
+    area: DOC
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: atualizar loops/loop.yaml (linhas ~36-40 e ~99-113) pra refletir o estado REAL: guard.yaml existe (datado 2026-06-30), esta populado, e loops/runlog.jsonl mostra 21 iteracoes reais de execucao autonoma com resultados de gate e commits shippados. Exclude: mudar o comportamento do guard em si (so a documentacao)."
+    why: "Scan pass 4: loop.yaml AINDA AFIRMA 'guard.complete == false, entao um run desatendido e RECUSADO' — um leitor confiando SO nesse arquivo concluiria (ERRADO) que o loop nao pode rodar sem supervisao, quando na pratica ja rodou 21x. Documentacao desatualizada sobre um sistema de GOVERNANCA (o que ele PODE fazer sozinho) e um risco de confianca mal-calibrada, nao so um typo."
+    gate: ["loop.yaml atualizado", "reflete guard.yaml + runlog.jsonl reais"]
+    status: pending
+
+  - id: EXT-DOC-02
+    title: "README.md e boilerplate generico do create-next-app — nao diz que este repo E o MAPA FOME"
+    area: DOC
+    tier: A
+    owner: softwareengineer
+    scope: "Include: substituir o README.md generico por um resumo real do projeto (o que e o MAPA FOME, como rodar, onde esta o roadmap/CHANGES.md, o gate de verificacao) — nao precisa ser extenso, so PARAR de ser boilerplate. Exclude: duplicar o conteudo do CLAUDE.md (o README e pra um humano novo, CLAUDE.md e pro agente)."
+    why: "Scan pass 4: um contribuidor novo (humano) que abre so o README.md nao teria NENHUMA pista de que este e um PWA de doacao-de-alimento com um sistema de loop autonomo — o README nao MENTE (nao e drift no sentido estrito), mas nao ensina nada real sobre ESTE repo especifico."
+    gate: ["README.md atualizado com contexto real do projeto"]
+    status: pending
+
+  # ==================== LOOP — LOOPS/GOAL-LOOP GOVERNANCA (pass 4) ====================
+  - id: EXT-LOOP-01
+    title: "guard.yaml max_items_per_run subiu de 3 para 8 sem um 2o registro de re-autorizacao (so a 1a subida tem trilha)"
+    area: LOOP
+    tier: A+
+    owner: human-gated (politica de governanca do loop) + softwareengineer
+    scope: "Include: adicionar um campo de trilha de auditoria (ex.: authorized.history: [{date, from, to, reason}]) a guard.yaml, preenchendo retroativamente a subida conhecida de 3->8 (ou documentando que a trilha comeca agora se o historico exato nao for recuperavel). Exclude: mudar o valor atual de 8 sem decisao do humano."
+    why: "Scan pass 4: guard.yaml:9 mostra max_items_per_run=8 hoje, mas o COMENTARIO do arquivo so registra a autorizacao original de 3 ('conservative (3 items / 12 agent calls / 45 min)') — a subida pra 8/30/180 nao tem registro de re-autorizacao. Uma excecao pontual ('deixa terminar os 5 itens restantes') virou o DEFAULT permanente sem forcing-function pra reconsiderar."
+    gate: ["campo de trilha adicionado", "decisao registrada (humano confirma se o cap de 8 continua valido ou volta a 3)"]
+    status: blocked-human
+    human_gate: true
+    note: "O CAP em si (8 vs 3) e decisao de governanca do humano — Claude so PROPOE o mecanismo de trilha de auditoria, nao decide o numero."
+
+  - id: EXT-LOOP-02
+    title: "supervision:'attended' em guard.yaml e uma alegacao nao-verificavel — nada registra se um humano de fato observou"
+    area: LOOP
+    tier: A
+    owner: softwareengineer
+    scope: "Include: considerar um sinal FRACO de presenca (ex.: o runlog registra se houve QUALQUER interacao do usuario — mensagem, interrupcao — na janela do run) que pelo menos DIFERENCIE 'rodou sem nenhuma interacao por 180 min' de 'usuario mandou mensagens durante o run'. Exclude: um mecanismo forte de prova-de-presenca (fora de escopo, so um sinal fraco e barato)."
+    why: "Scan pass 4: 'attended' e uma ANOTACAO estatica no guard.yaml, nao um fato verificado por run — nada no selector.mjs ou no schema do runlog registra se a atencao humana realmente esteve presente numa janela de ate 180 minutos."
+    gate: ["sinal fraco de presenca adicionado ao runlog", "npm run test (selector.mjs continua 100% coberto)"]
+    status: pending
+
+  - id: EXT-LOOP-03
+    title: "max_tokens_per_tick e um teto FIXO, sem reducao progressiva conforme o run consome o cap de itens"
+    area: LOOP
+    tier: A
+    owner: softwareengineer
+    scope: "Include: avaliar um teto de token DECRESCENTE conforme max_items_per_run e consumido (ex.: o ultimo item do cap recebe um orcamento de token menor que o primeiro), reduzindo o gasto maximo possivel perto do fim de um run ja longo. Exclude: mudar o teto do PRIMEIRO item do run (fica no valor atual)."
+    why: "Scan pass 4: um run que ja shippou 7 de 8 itens ainda recebe o orcamento de token CHEIO (400k) pro 8o item — nao ha 'cool-down' que reduza o teto conforme o run avanca, entao o pior-caso de gasto total do run e sempre max_items x max_tokens_per_tick, sem desconto."
+    gate: ["decisao de design registrada", "se implementado: teste do teto decrescente"]
+    status: pending
+
+  # ==================== ASSET — IMAGE/ASSET OPTIMIZATION (pass 4) ====================
+  - id: EXT-ASSET-01
+    title: "6 <img> de logo CDN no InfoPanel sem width/height — causam layout shift (CLS) ao carregar"
+    area: ASSET
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: InfoPanel.js:40/51/110/118/172/415 — adicionar width/height explicitos nas 6 tags <img> de logo remoto (WhatsApp/Telegram/Google Play/App Store/Globo/GitHub), espelhando o padrao ja correto no MESMO arquivo (item.icon, linha 93, width=22 height=22). Exclude: mudar os assets em si ou hospeda-los localmente."
+    why: "Scan pass 4: o codebase ja SABE o idioma certo (a linha 93 do MESMO arquivo faz certo) mas nao aplicou consistentemente nesses 6 logos — cada um causa CLS real enquanto o asset remoto carrega, e nada em FF1-FF11 ou no lint pega imagem sem dimensao."
+    gate: ["npm run test", "npm run build", "npm run a11y (CLS nao e a11y mas o teste de render confirma sem quebra)"]
+    status: pending
+
+  - id: EXT-ASSET-02
+    title: "Thumbnail do press-kit (imprensa/page.js) tambem sem width/height — mesmo gap, pagina cujo proposito e visual"
+    area: ASSET
+    tier: A
+    owner: softwareengineer
+    scope: "Include: imprensa/page.js:109 — adicionar width/height a tag <img> do thumbnail de asset do press-kit, espelhando o padrao ja correto em imprensa/page.js:56 no MESMO arquivo. Exclude: mudar o layout do grid de assets."
+    why: "Scan pass 4: /imprensa existe especificamente pra apresentacao visual a jornalistas — CLS ali e mais visivel/embaracoso que em paginas funcionais, e o MESMO arquivo ja tem o padrao certo em outro lugar."
+    gate: ["npm run test", "npm run build"]
+    status: pending
+
 # ============================ FIM DO DOCUMENTO ============================
-# Total real (validado via parser YAML): 79 milestones em 26 areas, 0 ids
+# Total real (validado via parser YAML): 92 milestones em 32 areas, 0 ids
 # duplicados. 1 e cross-ref intencional (EXT-EH-02 -> PET-04, nao re-trabalhar).
 # 1 ja shipped fora deste arquivo: SEC-02/FF11 (ROADMAP_VERTENTES.yaml), que
 # implementou o item mais critico apontado por este scan (o vazamento real de
 # NEXT_PUBLIC_GOOGLE_PRIVATE_KEY agora tem um gate mecanico, allowlisted por
 # hash, ate o SEC-01 principal cair).
-# Tiers (contagem real): S+ 1 | S 6 | S- 28 | A+ 24 | A 20.
-# Status: pending 71 | blocked-human 7 | later 1 (cross-ref).
-# 3 passes de scan: pass 1 (10 areas gerais) + pass 2 (8 areas fundas: PWA/
-# pets/asaas/geo/mapa/mobile/privacidade/deps) + pass 3 (8 areas novas:
-# relatorios/marketing depth, parceiros/sponsors, validacao de formulario,
-# CSV/injecao-de-formula, iniciativas, links cross-app, timezone, memory leaks).
+# Tiers (contagem real): S+ 1 | S 6 | S- 29 | A+ 27 | A 29.
+# Status: pending 83 | blocked-human 8 | later 1 (cross-ref).
+# 4 passes de scan: pass 1 (10 areas gerais) + pass 2 (8 areas fundas: PWA/
+# pets/asaas/geo/mapa/mobile/privacidade/deps) + pass 3 (8 areas: relatorios/
+# marketing depth, parceiros/sponsors, validacao de formulario, CSV/injecao-de-
+# formula, iniciativas, links cross-app, timezone, memory leaks) + pass 4 (6
+# areas: tokens CSS, lint, meta-gaps das proprias fitness-functions, drift de
+# documentacao, governanca do goal-loop, otimizacao de asset/imagem). Pass 4
+# tambem reportou 2 areas HONESTAMENTE SEM achado novo (qualidade de teste alem
+# de cobertura, prop-drilling) — nao forcado milestone onde nao havia gap real.
 # Proximo a pegar (maior tier, commitavel, sem dep aberta): EXT-SEC-01 (bump next,
 # fecha 2 CVEs HIGH, human_gate no bump em si), EXT-SEC-03 (upgrade da cadeia
 # axios/google-spreadsheet, SEM human_gate) ou EXT-REP2-01 (k-anonimizacao
 # faltando em 2 tabelas do relatorio publico — S tier, sem human_gate, sem deps).
-# human_gate no scan (7 itens): EXT-SEC-01 (bump core), EXT-SEC-02/DX-03 (politica
+# human_gate no scan (8 itens): EXT-SEC-01 (bump core), EXT-SEC-02/DX-03 (politica
 # CI), EXT-SEC-05 (config de hosting), EXT-DI-01 (arquitetura, junto com SEC-01
 # principal), EXT-OBS-01/03 (escolha de ferramenta/canal), EXT-I18N-06 (revisao
 # de tom humana), EXT-ASAAS2-01 (chave de idempotencia), EXT-PRIV-01 (seam de
-# consentimento), EXT-PART2-01 (badges de loja enganosos, decisao de marca).
+# consentimento), EXT-PART2-01 (badges de loja enganosos, decisao de marca),
+# EXT-LOOP-01 (cap do goal-loop subiu sem re-autorizacao registrada).

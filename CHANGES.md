@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `2dfc813 docs(roadmap)` (SEC-02 shipped); MILESTONES_EXTENDED.yaml (79 itens, 3 passes) ainda nao commitado
+> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit relevante: `95a1829 docs(roadmap)` (pass 3); MILESTONES_EXTENDED.yaml (92 itens, 4 passes) ainda nao commitado
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
 > **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (segundo pass, 33 itens, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-05-P`](#2026-07-05-p--milestones-extended-expandido-pass-4-92-itens-32-areas) — **MILESTONES_EXTENDED.yaml expandido (pass 4)**: +13 itens em 6 areas novas (tokens CSS mortos, gap de lint no-console, meta-gaps das proprias fitness-functions, drift de documentacao no goal-loop, governanca do cap do loop sem re-autorizacao, CLS por imagem sem dimensao). Total 92 itens, 32 areas. 2 areas escaneadas SEM achado novo, reportado honestamente.
 - [`2026-07-05-O`](#2026-07-05-o--milestones-extended-expandido-pass-3-79-itens-26-areas) — **MILESTONES_EXTENDED.yaml expandido (pass 3)**: +21 itens em 8 areas novas (relatorios/marketing depth incl. gap de k-anonimizacao real, parceiros/sponsors, validacao de form, CSV formula-injection, iniciativas, links cross-app, timezone, memory leaks). Total 79 itens, 26 areas.
 - [`2026-07-05-N`](#2026-07-05-n--sec-02-shipped-ff11-secret-leak-gate-por-hash) — **SEC-02 SHIPPED**: FF11 novo (fitness-functions.mjs) escaneia out/ pos-build por PEM/JWT vazado; allowlist por HASH de conteudo (nao nome de var — nao funciona em minificado). Achou + provou o vazamento real (SEC-01) tem hash estavel; pegou um segredo-isca falso em teste.
 - [`2026-07-05-L`](#2026-07-05-l--milestones-extended-criado-33-itens-5-tiers) — **MILESTONES_EXTENDED.yaml criado**: 1o pass de gap-scan (10 areas: testes/perf/error-handling/a11y/integridade/DX/observabilidade/deps-CVE/i18n/build), 33 itens, tiers S+/S/S-/A+/A. Nenhum shipped ainda.
@@ -533,3 +534,32 @@
 **Commit:** roteado pro `agent_git-commit-specialist` quando pedido. Sem push/PR.
 
 **Proximo:** EXT-REP2-01 (S, k-anonimizacao faltando, sem human_gate/deps — o mais alto tier commitavel do documento inteiro agora) ou continuar expandindo se o goal nao liberar.
+
+---
+
+## 2026-07-05-P — MILESTONES_EXTENDED expandido (pass 4): 92 itens, 32 areas
+
+**Comando:** Stop-hook feedback rejeitou o encerramento anterior ("nenhuma evidencia de quota limit atingido") — 4o pass de scan.
+
+**O que foi feito:**
+
+| Area nova | Itens | Achado mais critico |
+|---|---|---|
+| TOKEN (CSS design-token) | 2 | FF9 so cobre cor hex — spacing/radius/duration literais duplicados (4px/8px/12px/16px/24px/48px) SEM nenhum gate, mesma classe de drift que FF9 ja resolve so pra cor |
+| LINT (regras de lint) | 1 | Zero regra no-console — console.log de producao em appLifecycle.js/App.js (paths de geo/claim) sem gate |
+| FFGAP (meta-gaps das FFs) | 3 | Nenhuma das 11 fitness-functions pega useEffect-com-literal-inline (loop infinito latente) nem key={index} (bug classico de lista) — 0 instancias hoje, gap LATENTE no gate |
+| DOC (drift de documentacao) | 2 | **loops/loop.yaml AINDA AFIRMA que o guard esta ausente e o loop RECUSA rodar sem supervisao** — mas guard.yaml existe (datado 2026-06-30) e loops/runlog.jsonl mostra 21 iteracoes reais de execucao autonoma ja rodadas. Documentacao desatualizada sobre um sistema de GOVERNANCA, nao so um typo. |
+| LOOP (governanca do goal-loop) | 3 | max_items_per_run subiu de 3 pra 8 SEM um 2o registro de re-autorizacao (so a 1a subida tem trilha) — uma excecao pontual virou default permanente sem forcing-function pra reconsiderar |
+| ASSET (imagem/otimizacao) | 2 | 6 `<img>` de logo CDN no InfoPanel sem width/height (CLS real) — o MESMO arquivo ja tem o padrao certo em outro lugar (linha 93), so nao aplicado consistente |
+
+**Honestidade do scan:** 2 areas investigadas (qualidade de teste alem de cobertura, prop-drilling/state architecture) reportaram **NADA de novo** — o scan disse isso explicitamente em vez de forcar um milestone fraco so pra preencher espaço. A arquitetura de hooks (usePetsApp/usePetDetailSheet/usePetReportSheet) ja resolve o problema que "prop-drilling vs context" normalmente pergunta.
+
+**Metodo:** 4o agente Explore read-only, 8 angulos (tokens CSS, lint, meta-gaps das proprias FFs, qualidade de teste, prop-drilling, drift de doc, governanca do loop, asset/imagem).
+
+**Validacao:** YAML parseado apos a expansao — **92 milestones reais**, 0 ids duplicados, 32 areas, tiers S+ 1 / S 6 / S- 29 / A+ 27 / A 29.
+
+**Gate desta entrada:** nenhum codigo de producao tocado (so arquivo de planejamento). YAML validado via parser real.
+
+**Commit:** roteado pro `agent_git-commit-specialist` quando pedido. Sem push/PR.
+
+**Proximo:** EXT-REP2-01 (S, k-anonimizacao, mais alto tier commitavel) ou EXT-DOC-01 (S-, drift de documentacao do loop.yaml, tambem sem human_gate/deps).
