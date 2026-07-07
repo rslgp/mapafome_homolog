@@ -263,7 +263,9 @@ milestones:
     scope: "Include: atualizar google-spreadsheet para uma major que nao dependa do axios legado (ou trocar por um client mais magro), reduzindo a cadeia de deps vulneraveis (axios, follow-redirects, node-forge, lodash, picomatch, flatted, undici, json-bigint, gcp-metadata) que hoje entra no BUNDLE CLIENTE (sheetsClient.js roda no browser). Exclude: mudar o schema/API do sheetsClient (contrato interno preservado)."
     why: "package.json:31 pina google-spreadsheet EXATO (sem ^), puxando axios@0.19.2 -- uma versao antiga com CVEs conhecidos, e ela roda NO BROWSER (nao so no servidor). E a raiz que bloqueia EXT-SEC-02 (restaurar o audit gate)."
     gate: ["npm audit (cadeia limpa ou reduzida)", "npm run test", "npm run build", "npm run smoke200", "cd asaas-backend (nao afetado, so frontend)"]
-    status: pending
+    status: blocked-human
+    decision: "2026-07-07 (humano): MANTER google-spreadsheet 3.0.10 pinado. NAO fazer o upgrade 3->4/5. package.json:31 fica como esta. O plano continua registrado (plan: abaixo) caso a decisao mude; ate la este item nao entra na fila de commitaveis. Nota: o axios CVE segue no bundle e o EXT-SEC-02 (restaurar o audit gate a --audit-level=high) segue bloqueado por consequencia — a raiz real (chave NEXT_PUBLIC_ no browser) e o SEC-01/proxy, tambem human-gated."
+    human_gate: true
     plan: "EXT-SEC-03-migration-plan.md (report-only, 2026-07-07): API v3->v4/5 verificada nos docs oficiais (context7). Breaking: pacote vira ESM-only (require->import), auth sai do useServiceAccountAuth pro construtor via JWT do google-auth-library, row.Dados vira row.get('Dados')/row.set(). ~10 call-sites (sheetsClient central primeiro). ARMADILHAS: (1) require de pacote ESM so quebra no build, nao no lint; (2) nao confundir row.Dados (row real -> .get()) com JSON.parse(row.Dados).Coordinates (blob parseado, fica igual). CAVEAT: remove o axios CVE do bundle mas a chave NEXT_PUBLIC_ continua no browser — a raiz e o proxy do SEC-01 (human-gate), nao este item. Nao executado por escolha do humano (wide/risky, dificil verificar sem creds vivas). Deixado pra sessao dedicada + gate completo."
 
   - id: EXT-SEC-04
