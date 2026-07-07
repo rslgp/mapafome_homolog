@@ -264,6 +264,7 @@ milestones:
     why: "package.json:31 pina google-spreadsheet EXATO (sem ^), puxando axios@0.19.2 -- uma versao antiga com CVEs conhecidos, e ela roda NO BROWSER (nao so no servidor). E a raiz que bloqueia EXT-SEC-02 (restaurar o audit gate)."
     gate: ["npm audit (cadeia limpa ou reduzida)", "npm run test", "npm run build", "npm run smoke200", "cd asaas-backend (nao afetado, so frontend)"]
     status: pending
+    plan: "EXT-SEC-03-migration-plan.md (report-only, 2026-07-07): API v3->v4/5 verificada nos docs oficiais (context7). Breaking: pacote vira ESM-only (require->import), auth sai do useServiceAccountAuth pro construtor via JWT do google-auth-library, row.Dados vira row.get('Dados')/row.set(). ~10 call-sites (sheetsClient central primeiro). ARMADILHAS: (1) require de pacote ESM so quebra no build, nao no lint; (2) nao confundir row.Dados (row real -> .get()) com JSON.parse(row.Dados).Coordinates (blob parseado, fica igual). CAVEAT: remove o axios CVE do bundle mas a chave NEXT_PUBLIC_ continua no browser — a raiz e o proxy do SEC-01 (human-gate), nao este item. Nao executado por escolha do humano (wide/risky, dificil verificar sem creds vivas). Deixado pra sessao dedicada + gate completo."
 
   - id: EXT-SEC-04
     title: "Rate-limit no create-subscription do asaas-backend (hoje so dedupe por email+rail, sem throttle)"
