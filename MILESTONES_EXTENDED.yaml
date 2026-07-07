@@ -864,7 +864,8 @@ milestones:
     scope: "Include: reports.js:214-222 (atendimento_por_regiao) e :374-385 (vulnerabilidade_alimentar_por_regiao) — aplicar o MESMO kAnonymize() que byCategory/byRegion ja usam (linhas 211-212), suprimindo/consolidando grupos < k=5. Exclude: mudar o k=5 em si (SOT ja definido)."
     why: "Scan pass 3: o proprio relatorio AFIRMA 'Grupos < 5 foram consolidados em outros' (nota_dignidade), mas essas 2 tabelas especificas publicam a contagem EXATA de uma regiao com so 1-2 pontos reportados — quebra a promessa de anonimizacao do proprio relatorio, e a tabela de vulnerabilidade e AINDA mais re-identificante (cruza categoria+regiao)."
     gate: ["npm run test", "teste: regiao com <5 pontos e suprimida/consolidada nas 2 tabelas"]
-    status: pending
+    status: shipped
+    evidence: "reports.js: novo helper kAnonymizeRegionRecords() dobra toda regiao com total<K_ANON(5) numa unica linha 'outros' (sem rotulo de regiao), somando os campos e recomputando taxa_atendimento; aplicado a atendimento_por_regiao e vulnerabilidade_alimentar_por_regiao. 3 testes novos em test/reports.test.js (SP<5 suprimida em ambas as tabelas + regiao exatamente k=5 sobrevive). Gate verde lido nesta sessao: eslint 0 erros; vitest 1379/1379 (forks); fitness OK (11 FFs); build 0; smoke200 16/16 PASS."
 
   - id: EXT-REP2-02
     title: "marketingReports.js: totais do resumo somados DEPOIS da k-anonimizacao por campanha (sub-contam o alcance real)"

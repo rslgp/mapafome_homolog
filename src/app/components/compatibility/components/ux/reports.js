@@ -118,6 +118,40 @@ function kAnonymize(obj, { minCount = K_ANON } = {}) {
   return out;
 }
 
+// Region-record k-anonymity: a per-region table whose value is a RECORD
+// (not a scalar) still leaks a single reporter when that region has < K_ANON
+// pins. Regions below the threshold are consolidated into a single 'outros'
+// row by summing their fields, so no region with 1-4 points publishes an exact
+// count — the same promise buildReport already makes for the scalar tables
+// (kAnonymize) and states in meta.nota_dignidade. `total` is the count used to
+// decide suppression; `sumKeys` are summed into 'outros'; taxa is recomputed
+// from the folded totals so it is never re-identifying either.
+function kAnonymizeRegionRecords(entries, { sumKeys, taxaFrom }) {
+  const kept = [];
+  const stash = {};
+  let stashedTotal = 0;
+  for (const [region, rec] of entries) {
+    if ((rec.total || 0) < K_ANON) {
+      for (const key of sumKeys) stash[key] = (stash[key] || 0) + (rec[key] || 0);
+      stashedTotal += 1;
+    } else {
+      kept.push([region, rec]);
+    }
+  }
+  const out = {};
+  for (const [region, rec] of kept) out[region] = rec;
+  // Fold every suppressed region into a single unlabelled 'outros' row (same
+  // contract as the scalar kAnonymize: a sub-5 bucket is stashed, never
+  // published as its exact region). 'outros' carries no region label, so it is
+  // strictly less re-identifying than naming a region with 1-4 points.
+  if (stashedTotal >= 1) {
+    const [num, den] = taxaFrom;
+    const taxa = (stash[den] || 0) > 0 ? Number(((stash[num] || 0) / stash[den]).toFixed(3)) : 0;
+    out.outros = { ...stash, taxa_atendimento: taxa };
+  }
+  return out;
+}
+
 // ────────────────────────────────────────────────────────────
 // Report builders
 
@@ -211,15 +245,21 @@ export function buildReport(rows, { now = Date.now() } = {}) {
   for (const cat of Object.keys(byCategory)) byCategory[cat] = kAnonymize(byCategory[cat]);
   for (const region of Object.keys(byRegion)) byRegion[region] = kAnonymize(byRegion[region]);
 
-  const attendance = {};
+  const attendanceRaw = {};
   for (const [region, rec] of attendanceByRegion) {
     const rate = rec.total > 0 ? rec.attended / rec.total : 0;
-    attendance[region] = {
+    attendanceRaw[region] = {
       total: rec.total,
       atendidos: rec.attended,
       taxa_atendimento: Number(rate.toFixed(3)),
     };
   }
+  // k-anonymity: a region with < K_ANON reported points would publish its exact
+  // count here, re-identifying a single person — collapse those into 'outros'.
+  const attendance = kAnonymizeRegionRecords(Object.entries(attendanceRaw), {
+    sumKeys: ['total', 'atendidos'],
+    taxaFrom: ['atendidos', 'total'],
+  });
 
   responseTimesH.sort((a, b) => a - b);
   const percentile = (p) => {
@@ -371,7 +411,11 @@ export function buildReport(rows, { now = Date.now() } = {}) {
     demanda_regiao_categoria,
     distribuicao_categorias,
     alerta_pontos_sem_atendimento,
-    vulnerabilidade_alimentar_por_regiao: Object.fromEntries(
+    // k-anonymity: this table cross-references region × food-subtype, so it is
+    // the MOST re-identifying of all — a region with < K_ANON points is folded
+    // into 'outros' (summing every subtype) so no single vulnerable household
+    // is ever isolated by region + subtype.
+    vulnerabilidade_alimentar_por_regiao: kAnonymizeRegionRecords(
       [...vulnerabilityByRegion.entries()]
         .sort((a, b) => b[1].total - a[1].total)
         .map(([region, rec]) => [region, {
@@ -382,6 +426,10 @@ export function buildReport(rows, { now = Date.now() } = {}) {
           atendidos: rec.atendidos,
           taxa_atendimento: rec.total > 0 ? Number((rec.atendidos / rec.total).toFixed(3)) : 0,
         }]),
+      {
+        sumKeys: ['alimento_pronto', 'cesta_basica', 'comida_generico', 'total', 'atendidos'],
+        taxaFrom: ['atendidos', 'total'],
+      },
     ),
   };
 }

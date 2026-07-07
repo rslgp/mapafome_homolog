@@ -95,6 +95,67 @@ describe('buildReport — k>=5 LGPD anonymity (kAnonymize)', () => {
   });
 });
 
+// A coordinate inside the São Paulo bbox (regionResolver -> a distinct region
+// from RECIFE), so we can build a report with two regions at different counts.
+const SAO_PAULO = [-23.55, -46.63];
+
+function reporterPinAt(coords, dateISO, category = 'comida', attended = true) {
+  return makeRow({ coords, DateISO: dateISO, Categorias: [category], AlimentoEntregue: attended });
+}
+
+describe('buildReport — k>=5 region k-anonymity (atendimento + vulnerabilidade)', () => {
+  it('collapses a region with < 5 points out of atendimento_por_regiao into "outros"', () => {
+    // Recife: 5 points (survives). São Paulo: 2 points (suppressed).
+    const rows = [
+      ...Array.from({ length: 5 }, () => reporterPinAt(RECIFE, '2025-05-02T09:00:00Z')),
+      ...Array.from({ length: 2 }, () => reporterPinAt(SAO_PAULO, '2025-05-02T09:00:00Z')),
+    ];
+    const report = buildReport(rows, { now: NOW });
+    const att = report.atendimento_por_regiao;
+
+    // Recife survives with its exact count; no other region publishes a count.
+    expect(att['pe-recife'].total).toBe(5);
+    // The sub-5 region is gone; its 2 points are folded into 'outros'.
+    const named = Object.keys(att).filter((k) => k !== 'outros');
+    expect(named).toEqual(['pe-recife']);
+    expect(att.outros).toBeDefined();
+    expect(att.outros.total).toBe(2);
+    expect(att.outros.atendidos).toBe(2);
+    expect(att.outros.taxa_atendimento).toBe(1);
+  });
+
+  it('collapses a region with < 5 points out of vulnerabilidade_alimentar_por_regiao', () => {
+    // Recife: 5 alimento_pronto (survives). São Paulo: 3 cesta_basica (suppressed).
+    const rows = [
+      ...Array.from({ length: 5 }, () =>
+        makeRow({ coords: RECIFE, DateISO: '2025-05-02T09:00:00Z', Roaster: 'Alimento pronto' })),
+      ...Array.from({ length: 3 }, () =>
+        makeRow({ coords: SAO_PAULO, DateISO: '2025-05-02T09:00:00Z', Roaster: 'CestaBasica' })),
+    ];
+    const report = buildReport(rows, { now: NOW });
+    const vul = report.vulnerabilidade_alimentar_por_regiao;
+
+    expect(vul['pe-recife'].total).toBe(5);
+    const named = Object.keys(vul).filter((k) => k !== 'outros');
+    expect(named).toEqual(['pe-recife']);
+    // The suppressed region's subtype counts are summed under 'outros'.
+    expect(vul.outros).toBeDefined();
+    expect(vul.outros.total).toBe(3);
+    expect(vul.outros.cesta_basica).toBe(3);
+    expect(vul.outros.alimento_pronto).toBe(0);
+  });
+
+  it('keeps a region at exactly k=5 unmasked in both region tables', () => {
+    const rows = Array.from({ length: 5 }, () =>
+      makeRow({ coords: SAO_PAULO, DateISO: '2025-05-02T09:00:00Z', Roaster: 'CestaBasica' }));
+    const report = buildReport(rows, { now: NOW });
+    // Exactly 5 -> region survives, no 'outros' bucket appears.
+    expect(report.atendimento_por_regiao.outros).toBeUndefined();
+    expect(report.vulnerabilidade_alimentar_por_regiao.outros).toBeUndefined();
+    expect(Object.keys(report.atendimento_por_regiao)).toHaveLength(1);
+  });
+});
+
 describe('buildReport — reporter-pin exclusion (isReporterPin)', () => {
   it('excludes donor/initiative rows that are not reporter pins', () => {
     const rows = [
