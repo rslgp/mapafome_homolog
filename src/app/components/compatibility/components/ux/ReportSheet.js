@@ -17,6 +17,7 @@ import { activeCountryFor } from '../geofence';
 import * as countryStore from '../countryStore';
 import { INTL_ENABLED } from '../intlConfig';
 import { newIdempotencyKey } from './idempotencyKey';
+import useBackToClose from './useBackToClose';
 
 // M1 — three-step reporter flow (design_brief § three_step_promise).
 // Step 1 (map click) happens outside; this sheet hosts Steps 2 and 3.
@@ -76,6 +77,10 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Android hardware/gesture Back closes the sheet instead of leaving the site
+  // (EXT-URLSTATE-01). Mirrors the Escape guard: ignore Back mid-publish.
+  useBackToClose(open, () => { if (status !== 'publishing') onClose?.(); });
 
   function onHandlePointerDown(e) {
     // Only enable drag on coarse pointers (touch) below the desktop breakpoint.

@@ -25,6 +25,7 @@ import {
 import { resizeImageFile } from './petPhoto';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
 import { newIdempotencyKey } from '../components/compatibility/components/ux/idempotencyKey';
+import useBackToClose from '../components/compatibility/components/ux/useBackToClose';
 
 const DEFAULT_SPECIES = 'outro';
 
@@ -126,6 +127,11 @@ export function usePetReportSheet({ open, coords, onClose, onPublish }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // EXT-URLSTATE-01: o BACK do Android fecha a sheet em vez de sair do site
+  // (perdendo o report em andamento). Espelha a guarda do Escape acima: ignora
+  // o Back durante a publicação.
+  useBackToClose(open, () => { if (phase !== 'publishing') onClose?.(); });
 
   // PET-M15: revoga o objectURL da prévia ao DESMONTAR (a fechada normal já
   // revoga no reset por-open acima; este effect cobre o unmount direto). Mantém

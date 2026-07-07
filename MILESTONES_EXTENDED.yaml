@@ -1569,7 +1569,8 @@ milestones:
     scope: "Include: pushState de uma entrada de historico ao abrir cada sheet/modal (PetReportSheet, PetDetailSheet, ReportSheet, InfoPanel, NotificationPrefs) + handler de popstate que fecha a sheet em vez de navegar. Exclude: URL state de mapa (EXT-URLSTATE-02, separado)."
     why: "Scan pass 8: NENHUMA sheet chama history.pushState/popstate (grep em src/ acha so o deep-link read de petIdentity.js); Escape-to-close existe (usePetReportSheet.js:116-119) mas o back de hardware nao — no Android (a classe de device alvo do PWA) o gesto de voltar com um report no meio navega pra fora e PERDE o que o usuario digitou."
     gate: ["npm run test (handler popstate testado)", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    evidence: "Novo hook compartilhado useBackToClose.js (ux/): no open faz pushState de 1 entrada {mdfSheet:true}; popstate (Back) fecha a sheet sem re-push; close normal (X/backdrop/Esc) faz history.back() da propria entrada (guardado por flag + marker pra nunca fazer over-pop). Ligado a 4 sheets: ReportSheet, NotificationPrefs, e via os hooks usePetReportSheet + usePetDetailSheet (PetReportSheet/PetDetailSheet). InfoPanel EXCLUIDO — verificado no codigo vivo que NAO e modal (painel inline em Grid, sem open/onClose/backdrop), a spec do scan estava desatualizada nesse ponto. 5 testes novos (test/useBackToClose.test.js). FF2_BASELINE refrescado pros 2 anchors que shiftaram de linha (NotificationPrefs 44->45, ReportSheet 28->29). Gate verde lido: eslint 0; vitest 1384/1384; fitness OK (11 FFs); build 0; smoke200 16/16."
 
   - id: EXT-URLSTATE-02
     title: "Mapa principal tem ZERO estado em URL — impossivel compartilhar posicao/zoom/pin de doacao (so ?pet= existe, no MapaPet)"

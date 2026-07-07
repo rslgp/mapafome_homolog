@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import './NotificationPrefs.css';
 import LocaleSwitch from './LocaleSwitch';
 import { t, useLocale } from './strings';
+import useBackToClose from './useBackToClose';
 
 // M8 — donor opt-in panel. Defaults to OFF. We only request the browser
 // permission AFTER the donor has acted on at least one pin (signal = a
@@ -59,6 +60,9 @@ export default function NotificationPrefs({ open, onClose }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  // Android Back closes the dialog instead of leaving the site (EXT-URLSTATE-01).
+  useBackToClose(open, onClose);
 
   if (!open) return null;
 

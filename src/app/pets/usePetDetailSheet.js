@@ -23,6 +23,7 @@ import { looksLikeDirectImageUrl } from './petPhoto';
 import { buildPetShareMessage, sharePet } from './petShare';
 import { flagPet, resolvePet } from './petsData';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
+import useBackToClose from '../components/compatibility/components/ux/useBackToClose';
 
 // PET-M4, estados do fluxo de denúncia (flag) na própria sheet (máquina de
 // estados pequena, dois passos: ocioso → confirmar → enviando → feito/erro).
@@ -143,6 +144,10 @@ export function usePetDetailSheet({ open, pet, matches = [], onOpenMatch, onReso
       }
     };
   }, [open, onClose]);
+
+  // EXT-URLSTATE-01: o BACK do Android fecha a sheet em vez de sair do site.
+  // Espelha o Escape acima (fecha sem guarda de fase).
+  useBackToClose(open, onClose);
 
   const derived = useMemo(() => {
     if (!pet) return null;
