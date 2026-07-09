@@ -41,6 +41,55 @@ export function filterRowsByCountry(rows, activeCountry) {
   return rows.filter((x) => x.kind !== 'pet' && rowCountry(x) === country);
 }
 
+// EXT-READROW-01 — resilient per-row read. The sheet is COLLABORATIVELY edited, so
+// a single row can carry a malformed/blank `Dados` or `Coordinates` cell. Mirrors
+// the /pets resilience (petBlob.parsePetRow returns null for a bad row so one bad
+// row never kills the batch): here the parse is wrapped per-row and a bad row is
+// SKIPPED, not thrown. Before this, an unguarded JSON.parse inside runMain's
+// forEach threw on the first bad cell, aborting the whole loop into the outer catch
+// (loadError:true) — the ENTIRE hunger map went to zero pins + error banner for
+// every visitor instead of hiding just the one bad row.
+//
+// Mutates the row IN PLACE (spreads the Dados blob onto x, sets x.mapCoords,
+// decrypts x.Telefone) exactly as the old inline body did — no behavior change for
+// a GOOD row. Returns true to KEEP the row, false to SKIP it (parse failure), so
+// the caller can filter skipped rows out before they reach the render set. `aes` is
+// passed in (not closed over) to keep this a pure function of its inputs, matching
+// the module's "pure function of its inputs" contract.
+export function mapFoodRow(x, aes) {
+  let dados;
+  try {
+    dados = JSON.parse(x.Dados);
+  } catch (_e) {
+    // Malformed/blank Dados cell — skip this one row, keep the rest of the map.
+    return false;
+  }
+  for (let key in dados) {
+    x[key] = dados[key];
+  }
+
+  if (dados.Coordinates) {
+    let mapCoords;
+    try {
+      mapCoords = JSON.parse(x.Coordinates);
+    } catch (_e) {
+      // Coordinates present but unparseable — a pin can't be placed, so skip the
+      // row rather than crash the whole batch (same non-fatal contract as above).
+      return false;
+    }
+    x.mapCoords = mapCoords;
+    if (dados.Telefone) {
+      try {
+        x.Telefone = aes.decrypt(x.Telefone);
+      } catch (e) {
+        //problema ao decriptar, string nao esta no formato hex
+      }
+    }
+  }
+
+  return true;
+}
+
 // Loads the Google Sheet, decrypts/flattens each row's Dados blob into the row
 // object, and pushes the result into the component state. Called once geolocation
 // resolves (success or failure) so the map has data to render.
@@ -100,7 +149,7 @@ export function runMain(self, deps) {
     }
     const sheet = doc.sheetsByIndex[regiao];
     if (envVariables.rows === undefined) envVariables.rows = await sheet.getRows();
-    const rows = envVariables.rows;
+    let rows = envVariables.rows;
     // rowCount is set further down from the PET-FILTERED dataMaps (not raw
     // rows), so a lost-pet pin never inflates the public "pontos mapeados"
     // headline or its aria-live announcement. See the kind!=='pet' filter.
@@ -125,34 +174,17 @@ export function runMain(self, deps) {
     //   })(x);
 
     // })
-    rows.forEach((x) => {
-      let dados = JSON.parse(x.Dados);
-      for (let key in dados) {
-        x[key] = dados[key];
-      }
-      // x.Roaster = dados.Roaster;
-      // x.URL = dados.URL;
-      // x.City = dados.City;
-      // x.DateISO = dados.DateISO;
-      // x.DiaSemana = dados.DiaSemana;
-      // x.Horario = dados.Horario;
-      // x.Mes = dados.Mes;
-      // x.AlimentoEntregue = dados.AlimentoEntregue;
-      // x.RedeSocial = dados.RedeSocial;
-      // x.Avaliacao = dados.Avaliacao;
-
-      if (dados.Coordinates) {
-        x.mapCoords = JSON.parse(x.Coordinates);
-        if (dados.Telefone) {
-          try {
-            x.Telefone = aes.decrypt(x.Telefone);
-          } catch (e) {
-            //problema ao decriptar, string nao esta no formato hex
-          }
-        }
-      }
-
-    });
+    // EXT-READROW-01 — per-row parse is now non-fatal. mapFoodRow spreads/decrypts
+    // a GOOD row in place (byte-identical to the old inline body) and returns false
+    // for a row whose Dados/Coordinates cell is malformed; those bad rows are
+    // filtered OUT here so ONE bad cell on the shared sheet can never abort the loop
+    // into the outer catch (which would blank the whole map). A real network/auth
+    // failure still rejects earlier and is caught by the outer try (unchanged).
+    // Reassigns both `rows` and envVariables.rows to the surviving set so the cached
+    // rows the country re-filter reuses (intlCountryChangeRefilter) also exclude the
+    // dropped rows.
+    rows = rows.filter((x) => mapFoodRow(x, aes));
+    envVariables.rows = rows;
     // Pet rows (/pets fork, Dados.kind === 'pet') share this same sheet but
     // are a different domain. Drop them from the hunger dataMaps at this one
     // chokepoint so NO hunger surface — markers, ListView, ContextBar, and
