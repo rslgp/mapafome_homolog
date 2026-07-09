@@ -8,6 +8,8 @@ import {
 import CircularProgress from '@mui/material/CircularProgress';
 import envVariables from '../variaveisAmbiente';
 import { t } from '../ux/strings';
+// EXT-EH-05: pure geocode-decision seam (stamp Coordinates or reject the address).
+import { resolveDadosWithCoordinates } from './enderecoGeocode';
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 
@@ -139,27 +141,23 @@ class NameForm extends Component {
 
         
         try{
-          let dadosJSON = JSON.parse(row.Dados);
           let providerResult = await provider.search({ query: self.state.value.replace('-',",") + ', Brazil' });
-  
-          if(providerResult.length !== 0 ){
-              // throw new Error("endereco-nao-encontrado");
-  
-              // console.log(providerResult);
-              let latlon = [providerResult[0].y,providerResult[0].x];
-              dadosJSON.Coordinates = JSON.stringify(latlon).replace(" ","");
-              row.Dados = JSON.stringify(dadosJSON); // Convert obj to string
-              //needsUpdates[index].mapCoords = latlon;
-          }else{
-             throw new Error("endereco-nao-encontrado");
-          }
+          // Stamp Coordinates into row.Dados, or throw "endereco-nao-encontrado"
+          // when the geocoder found nothing (EXT-EH-05 pure decision seam).
+          row.Dados = resolveDadosWithCoordinates(row.Dados, providerResult);
         }catch(e){
+            // EXT-EH-05: geocode failed → do NOT write a ghost pin (a row with no
+            // Coordinates pollutes the map/data). Surface the error to the user
+            // (same page.address.register_error alert as before) and abort the
+            // append: clear the spinner and return WITHOUT calling sheet.addRow.
             console.log("ERRO");
             console.log(e);
             alert(t('page.address.register_error'));
+            self.setState({isLoading: false});
+            return;
         }
         await sheet.addRow(row);
-       
+
         self.setState({isLoading: false});
         window.location.reload();
       })(this);
