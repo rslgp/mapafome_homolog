@@ -123,7 +123,10 @@ const FF2_BASELINE = new Set([
     //   full mount-wiring sequence was extracted into appLifecycle.installLifecycle
     //   (mirroring runMain), so it is now a thin wrapper under the limit and needs
     //   NO baseline entry — real decomposition, not a hidden allowlist.
-    'src/app/components/compatibility/App.js:136',
+    // Refresh 136 -> 133: 3 lines were removed above the constructor, shifting the
+    // anchor down. Same unchanged debt, refreshed anchor — the line-anchored keying
+    // requires the entry to track the constructor's current declaration line.
+    'src/app/components/compatibility/App.js:133',
     // Surfaced by the export-default / const-arrow widening (regex was blind to
     // these forms). Each is a pre-existing top-level page or sheet component whose
     // single render function is over the limit (real long-method debt), allowlisted
