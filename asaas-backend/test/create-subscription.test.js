@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const handler = require('../api/asaas/create-subscription.js');
+const { createMemoryRateLimitStore } = require('../lib/rateLimitStore');
 
 // Minimal fake res that records status + body — same shape as webhook.test.js.
 // status()/setHeader()/send()/end() are the only surface the http helpers touch.
@@ -22,6 +23,13 @@ function fakeRes() {
 // http helpers / handler may read it; headers defaults to {} so CORS is a no-op.
 function fakeReq({ method = 'POST', headers = {}, body = undefined } = {}) {
   return { method, headers, body, socket: { remoteAddress: '127.0.0.1' } };
+}
+
+// A fake req that presents a specific client IP via x-forwarded-for (Vercel's real
+// header). The rate-limit key is derived from clientIp(req), so this lets a test
+// simulate distinct callers without touching sockets.
+function fakeReqFromIp(ip, overrides = {}) {
+  return fakeReq({ ...overrides, headers: { 'x-forwarded-for': ip, ...(overrides.headers || {}) } });
 }
 
 // A complete, check-digit-valid body the validator accepts (pix rail).
@@ -195,4 +203,95 @@ test('create-subscription — a generic upstream throw is a 502 (asaas_error)', 
   const payload = JSON.parse(res.body);
   assert.equal(payload.error, 'asaas_error');
   assert.deepEqual(payload.messages, ['network down']);
+});
+
+// ── EXT-SEC-04: per-IP rate limiting ────────────────────────────────────────
+// Default limit is 8 requests / 60s per client IP (SUBSCRIBE_RATE_LIMIT_MAX). The
+// throttle runs AFTER validation and BEFORE any Asaas call. We inject a fresh
+// in-memory store with a FROZEN clock so the whole test sits in one fixed window
+// (deterministic — no wall-clock flakiness).
+const DEFAULT_LIMIT = 8;
+
+test('create-subscription — the (N+1)th request from ONE IP in the window is throttled (429)', async () => {
+  const { deps, calls } = makeDeps();
+  const store = createMemoryRateLimitStore(() => 1_000_000); // frozen clock
+
+  // The first DEFAULT_LIMIT requests from the same IP pass and reach Asaas.
+  for (let i = 0; i < DEFAULT_LIMIT; i++) {
+    const res = fakeRes();
+    await handler(fakeReqFromIp('203.0.113.7', { body: validBody() }), res, deps, store);
+    assert.equal(res.statusCode, 200, `request ${i + 1} should be allowed`);
+  }
+  assert.equal(calls.createSubscription.length, DEFAULT_LIMIT);
+
+  // The (N+1)th from the SAME IP in the SAME window is throttled: 429, a clear
+  // message, a Retry-After header, and — critically — NO extra Asaas call.
+  const res = fakeRes();
+  await handler(fakeReqFromIp('203.0.113.7', { body: validBody() }), res, deps, store);
+  assert.equal(res.statusCode, 429);
+  const payload = JSON.parse(res.body);
+  assert.equal(payload.error, 'rate_limited');
+  assert.match(payload.message, /Too many requests/);
+  assert.equal(res.headers['Retry-After'], '60');
+  // The throttle short-circuits before Asaas: still only DEFAULT_LIMIT calls.
+  assert.equal(calls.createSubscription.length, DEFAULT_LIMIT);
+});
+
+test('create-subscription — a DIFFERENT IP is not throttled by another IP\'s usage', async () => {
+  const { deps } = makeDeps();
+  const store = createMemoryRateLimitStore(() => 2_000_000); // frozen clock, own store
+
+  // Exhaust IP A's whole window.
+  for (let i = 0; i < DEFAULT_LIMIT; i++) {
+    const res = fakeRes();
+    await handler(fakeReqFromIp('198.51.100.1', { body: validBody() }), res, deps, store);
+    assert.equal(res.statusCode, 200);
+  }
+  // One more from A is throttled...
+  let res = fakeRes();
+  await handler(fakeReqFromIp('198.51.100.1', { body: validBody() }), res, deps, store);
+  assert.equal(res.statusCode, 429);
+
+  // ...but a request from a DIFFERENT IP has its own fresh counter -> allowed.
+  res = fakeRes();
+  await handler(fakeReqFromIp('198.51.100.2', { body: validBody() }), res, deps, store);
+  assert.equal(res.statusCode, 200);
+});
+
+test('create-subscription — the throttle FAILS OPEN when the store errors (donations not blocked)', async () => {
+  const { deps, calls } = makeDeps();
+  // A store whose hit() itself returns the fail-open shape (count=1, flagged): the
+  // durable adapter maps a KV outage to exactly this, so the handler must allow.
+  const failOpenStore = {
+    async hit() {
+      return { count: 1, limitedByStore: true };
+    },
+  };
+  const res = fakeRes();
+  await handler(fakeReqFromIp('203.0.113.9', { body: validBody() }), res, deps, failOpenStore);
+  // Fail-open: the request is served normally, Asaas is called — a KV blip must not
+  // become a donation outage (the deliberate opposite of the webhook fail-closed).
+  assert.equal(res.statusCode, 200);
+  assert.equal(calls.createSubscription.length, 1);
+});
+
+test('create-subscription — an invalid body is 400 BEFORE the throttle (no slot spent)', async () => {
+  const { deps } = makeDeps();
+  let hits = 0;
+  const countingStore = {
+    async hit() {
+      hits += 1;
+      return { count: hits };
+    },
+  };
+  const res = fakeRes();
+  // Garbage body -> 400 at the validation gate, which precedes the throttle.
+  await handler(
+    fakeReqFromIp('203.0.113.11', { body: { rail: 'crypto', value: 2, name: 'A', email: 'no', cpfCnpj: '1' } }),
+    res,
+    deps,
+    countingStore
+  );
+  assert.equal(res.statusCode, 400);
+  assert.equal(hits, 0, 'a rejected body must not consume a rate-limit slot');
 });

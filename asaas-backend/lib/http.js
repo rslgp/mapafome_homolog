@@ -94,4 +94,32 @@ function readJsonBody(req) {
   return null;
 }
 
-module.exports = { applyCors, handlePreflight, sendJson, readJsonBody, allowedOrigins };
+// Derive the client IP behind Vercel's proxy. Vercel (and every reverse proxy this
+// backend runs behind) sets `x-forwarded-for` as a comma-separated chain where the
+// LEFT-MOST entry is the original client; the platform appends its own hops on the
+// right. We take the first entry, fall back to `x-real-ip`, then the raw socket
+// address for a direct (non-proxied) local run. Returns 'unknown' if nothing is
+// derivable so a caller can still key on a stable string rather than crash.
+//
+// SECURITY NOTE: x-forwarded-for is client-SPOOFABLE in general, but on Vercel the
+// platform REWRITES the left-most hop to the true edge client IP, so the first
+// entry is trustworthy for this deployment. For a rate-limit key that is the right
+// tradeoff: worst case a spoofer rotates the header to dodge the throttle, which is
+// no worse than the no-throttle status quo, while the common abuse (one script, one
+// IP, varying emails) is caught. Do NOT use this value for authorization.
+function clientIp(req) {
+  const headers = (req && req.headers) || {};
+  const xff = headers['x-forwarded-for'];
+  if (typeof xff === 'string' && xff.trim()) {
+    // First hop = original client; the rest are proxy hops.
+    const first = xff.split(',')[0].trim();
+    if (first) return first;
+  }
+  const xReal = headers['x-real-ip'];
+  if (typeof xReal === 'string' && xReal.trim()) return xReal.trim();
+  const sock = req && req.socket && req.socket.remoteAddress;
+  if (sock) return sock;
+  return 'unknown';
+}
+
+module.exports = { applyCors, handlePreflight, sendJson, readJsonBody, allowedOrigins, clientIp };

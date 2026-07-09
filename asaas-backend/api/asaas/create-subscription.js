@@ -8,12 +8,28 @@
 // forwarded, logged, or stored here: the cartão rail uses Asaas's hosted
 // checkout, so no PAN/CVV crosses this server (no PCI scope).
 
-const { handlePreflight, applyCors, sendJson, readJsonBody } = require('../../lib/http');
+const { handlePreflight, applyCors, sendJson, readJsonBody, clientIp } = require('../../lib/http');
 const { validateSubscriptionInput } = require('../../lib/validate');
 const {
   ensureCustomer: defaultEnsureCustomer,
   createSubscription: defaultCreateSubscription,
 } = require('../../lib/asaasClient');
+const { selectRateLimitStore } = require('../../lib/rateLimitStore');
+
+// EXT-SEC-04 (tier S-): per-IP throttle, IN ADDITION to the email+rail dedupe
+// below. The dedupe stops a DOUBLE-submit of the SAME donation; it does nothing
+// against a script that VARIES the email to create many real customers. This
+// window caps how many create attempts one client IP can make per minute.
+//
+// RATE_LIMIT_MAX requests per RATE_LIMIT_WINDOW_SECONDS, per client IP. Defaults
+// are deliberately generous for a human donor (who submits once, maybe retries a
+// couple of times) but strangle a scripted loop. Override via env for a deploy.
+const RATE_LIMIT_MAX = Number(process.env.SUBSCRIBE_RATE_LIMIT_MAX) || 8;
+const RATE_LIMIT_WINDOW_SECONDS = Number(process.env.SUBSCRIBE_RATE_LIMIT_WINDOW_SECONDS) || 60;
+
+// One store per module instance, chosen from the env at load: durable KV adapter if
+// configured, else the in-memory fallback (mirrors idempotencyStore / webhook.js).
+const defaultRateLimitStore = selectRateLimitStore();
 
 // A stable external reference makes the whole flow idempotent: the same person
 // + rail maps to the same customer/subscription, so a double-submit doesn't
@@ -35,7 +51,8 @@ function todayISO() {
 module.exports = async function handler(
   req,
   res,
-  deps = { ensureCustomer: defaultEnsureCustomer, createSubscription: defaultCreateSubscription }
+  deps = { ensureCustomer: defaultEnsureCustomer, createSubscription: defaultCreateSubscription },
+  rateLimitStore = defaultRateLimitStore
 ) {
   const { ensureCustomer, createSubscription } = deps;
 
@@ -50,6 +67,24 @@ module.exports = async function handler(
   const { ok, errors, clean } = validateSubscriptionInput(body);
   if (!ok) {
     return sendJson(res, 400, { error: 'validation_failed', messages: errors });
+  }
+
+  // EXT-SEC-04 — per-IP throttle. Runs AFTER validation (a garbage body is the
+  // cheap 400 and does not spend a rate-limit slot) but BEFORE any Asaas call, so
+  // a throttled request creates zero customers/subscriptions. The store is
+  // fail-OPEN by construction (see rateLimitStore.js): a KV outage allows the
+  // request rather than blocking all donations — an abuse throttle must not become
+  // a donation outage. On exceed, 429 with a clear message and a Retry-After hint.
+  const ip = clientIp(req);
+  const { count } = await rateLimitStore.hit(`subscribe:${ip}`, RATE_LIMIT_WINDOW_SECONDS);
+  if (count > RATE_LIMIT_MAX) {
+    res.setHeader('Retry-After', String(RATE_LIMIT_WINDOW_SECONDS));
+    return sendJson(res, 429, {
+      error: 'rate_limited',
+      message:
+        `muitas tentativas — aguarde ${RATE_LIMIT_WINDOW_SECONDS}s e tente novamente. ` +
+        `Too many requests: limit ${RATE_LIMIT_MAX} per ${RATE_LIMIT_WINDOW_SECONDS}s.`,
+    });
   }
 
   const ref = externalRef(clean.email, clean.rail);
