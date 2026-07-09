@@ -76,6 +76,7 @@ describe('validateBeforeSubmit', () => {
     name: 'Maria Silva',
     email: 'maria@example.com',
     cpfCnpj: '529.982.247-25', // valid CPF
+    mobilePhone: '11 98765-4321', // >= MIN_PHONE_DIGITS after strip
   };
 
   it('passes a valid Pix input', () => {
@@ -146,6 +147,37 @@ describe('validateBeforeSubmit', () => {
   it('handles undefined optional fields without throwing', () => {
     // cpfCnpj/email/creditCard omitted entirely — the guards null-coalesce.
     expect(() => validateBeforeSubmit({ rail: 'pix', value: 25, name: 'Maria' })).not.toThrow();
+  });
+
+  // --- EXT-FORM-01: donor phone floor (generic digit-count, multi-country) ---
+
+  it('rejects an empty / undefined phone (no digits after strip)', () => {
+    // On the only page handling real donor money, a blank phone must not pass.
+    expect(validateBeforeSubmit({ ...valid, mobilePhone: undefined })).toContain('Informe um telefone válido.');
+    expect(validateBeforeSubmit({ ...valid, mobilePhone: '' })).toContain('Informe um telefone válido.');
+    // A mask with no digits (only punctuation) is also empty after strip.
+    expect(validateBeforeSubmit({ ...valid, mobilePhone: '() -' })).toContain('Informe um telefone válido.');
+  });
+
+  it('rejects a too-short phone (1 digit) but not for the wrong reason', () => {
+    const errs = validateBeforeSubmit({ ...valid, mobilePhone: '9' });
+    expect(errs).toContain('Informe um telefone válido.');
+    // The rest of the input is valid, so phone is the ONLY error surfaced.
+    expect(errs).toEqual(['Informe um telefone válido.']);
+  });
+
+  it('accepts a phone with >= 8 digits, ignoring mask punctuation', () => {
+    expect(validateBeforeSubmit({ ...valid, mobilePhone: '11 98765-4321' })).toEqual([]);
+    expect(validateBeforeSubmit({ ...valid, mobilePhone: '+55 (11) 98765-4321' })).toEqual([]);
+    // A short international number (8 digits) is accepted — not a BR-specific mask.
+    expect(validateBeforeSubmit({ ...valid, mobilePhone: '12345678' })).toEqual([]);
+  });
+
+  it('accepts the pt-BR "telefone" field name as an alias for mobilePhone', () => {
+    const { mobilePhone, ...noMobile } = valid;
+    void mobilePhone;
+    expect(validateBeforeSubmit({ ...noMobile, telefone: '11 98765-4321' })).toEqual([]);
+    expect(validateBeforeSubmit({ ...noMobile, telefone: '1' })).toContain('Informe um telefone válido.');
   });
 });
 
@@ -427,5 +459,69 @@ describe('fetchSubscriptionPayment', () => {
     const res = await fetchSubscriptionPayment('sub_x', { fetchImpl, baseUrl });
     expect(res.ok).toBe(false);
     expect(res.messages[0]).toMatch(/buscar os dados de pagamento/i);
+  });
+});
+
+// EXT-TIMEOUT-01: a backend that accepts the socket but never answers must be
+// aborted after the timeout instead of hanging the donor's UI forever. A
+// signal-aware fetch impl that only ever settles on abort exercises the real
+// AbortController wiring; a tiny opts.timeoutMs keeps the test fast.
+describe('request timeout (AbortController) — EXT-TIMEOUT-01', () => {
+  const baseUrl = 'https://b.test';
+
+  // fetch that NEVER resolves on its own — it settles ONLY when aborted, mirroring
+  // a backend holding the socket open. Rejects with an AbortError, exactly like a
+  // real fetch honoring signal.
+  const hangingUntilAbort = (url, init) =>
+    new Promise((_resolve, reject) => {
+      const signal = init && init.signal;
+      if (!signal) return; // never settles → would hang; the test always passes a signal
+      if (signal.aborted) {
+        const e = new Error('aborted'); e.name = 'AbortError'; return reject(e);
+      }
+      signal.addEventListener('abort', () => {
+        const e = new Error('aborted'); e.name = 'AbortError'; reject(e);
+      });
+    });
+
+  it('createSubscription: a never-resolving fetch is aborted and surfaces the retryable envelope', async () => {
+    const input = { rail: 'pix', value: 25, name: 'Maria', email: 'm@e.com', cpfCnpj: '52998224725', mobilePhone: '11 98765-4321' };
+    const res = await createSubscription(input, { fetchImpl: hangingUntilAbort, baseUrl, timeoutMs: 20 });
+    // The abort lands in the same per-candidate catch as any connection failure, so
+    // the existing error/retry UI catches it via the friendly {ok:false} envelope —
+    // the spinner resolves instead of hanging forever.
+    expect(res.ok).toBe(false);
+    expect(res.messages[0]).toMatch(/servidor de pagamentos/i);
+  });
+
+  it('fetchSubscriptionPayment: a never-resolving fetch is aborted and surfaces the retryable envelope', async () => {
+    const res = await fetchSubscriptionPayment('sub_x', { fetchImpl: hangingUntilAbort, baseUrl, timeoutMs: 20 });
+    expect(res.ok).toBe(false);
+    expect(res.messages[0]).toMatch(/buscar os dados de pagamento/i);
+  });
+
+  it('does not abort a fetch that resolves before the timeout (normal fast path)', async () => {
+    let signalAborted = null;
+    const fastFetch = async (url, init) => {
+      // Give the timer a chance to fire if it were wrongly short-circuiting.
+      await new Promise((r) => setTimeout(r, 5));
+      signalAborted = init && init.signal ? init.signal.aborted : null;
+      return { ok: true, json: async () => ({ ok: true, subscriptionId: 's_fast' }) };
+    };
+    const input = { rail: 'pix', value: 25, name: 'M', email: 'm@e.com', cpfCnpj: '52998224725', mobilePhone: '11 98765-4321' };
+    const res = await createSubscription(input, { fetchImpl: fastFetch, baseUrl, timeoutMs: 500 });
+    expect(res.ok).toBe(true);
+    expect(res.subscriptionId).toBe('s_fast');
+    expect(signalAborted).toBe(false); // the timer was cleared, signal never fired
+  });
+
+  it('opts.timeoutMs=0 disables the timeout (signal still merged but never fires)', async () => {
+    // A resolving fetch must still work with the timeout disabled; the point is that
+    // no timer is armed (no AbortController), so a 0/negative budget is opt-out.
+    const fetchImpl = async () => ({ ok: true, json: async () => ({ ok: true, subscriptionId: 's_no_timeout' }) });
+    const input = { rail: 'pix', value: 25, name: 'M', email: 'm@e.com', cpfCnpj: '52998224725', mobilePhone: '11 98765-4321' };
+    const res = await createSubscription(input, { fetchImpl, baseUrl, timeoutMs: 0 });
+    expect(res.ok).toBe(true);
+    expect(res.subscriptionId).toBe('s_no_timeout');
   });
 });

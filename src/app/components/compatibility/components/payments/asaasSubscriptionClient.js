@@ -82,6 +82,16 @@ export const ASSINAR_I18N_KEYS = [
 // still call it without a mixed-content block.
 const DEFAULT_INTERNAL_BACKEND_URL = 'http://localhost:3005';
 
+// Per-attempt fetch timeout for the donation calls. Without it, a backend that
+// accepts the socket but never answers hangs the donor's submit spinner and the
+// payment-artifacts loading screen FOREVER, with no error/retry — a silently-lost
+// donation. Mirrors reverseGeocodeGuard's AbortController pattern, but with a longer
+// budget (a subscription create/charge is a heavier op than a reverse-geocode). On
+// timeout we abort the socket, which rejects the fetch and lands in the same
+// per-candidate catch as any connection failure — so the existing error/retry UI
+// catches it with no new plumbing. Override per-call via opts.timeoutMs (tests).
+const DEFAULT_REQUEST_TIMEOUT_MS = 12000;
+
 function trimUrl(u) {
   return String(u || '').replace(/\/$/, '');
 }
@@ -158,13 +168,26 @@ async function requestWithFallback(method, path, init, opts, logLabel = '') {
     );
   }
 
+  // Abort each attempt after a timeout so a backend that accepts the socket but
+  // never responds cannot hang the UI forever (opts.timeoutMs overrides; <=0 or
+  // no AbortController support disables). See DEFAULT_REQUEST_TIMEOUT_MS.
+  const hasAbort = typeof AbortController === 'function';
+  const timeoutMs = opts.timeoutMs === undefined ? DEFAULT_REQUEST_TIMEOUT_MS : opts.timeoutMs;
+
   let lastErr = null;
   for (let i = 0; i < bases.length; i++) {
     const url = `${bases[i]}${path}`;
     asaasLog(method, url, logLabel);
+    const controller = hasAbort && timeoutMs > 0 ? new AbortController() : null;
+    let timer = null;
+    if (controller) timer = setTimeout(() => controller.abort(), timeoutMs);
+    const attemptInit = controller ? { ...init, signal: controller.signal } : init;
     try {
-      return { res: await fetchImpl(url, init), url };
+      const res = await fetchImpl(url, attemptInit);
+      if (timer) clearTimeout(timer);
+      return { res, url };
     } catch (err) {
+      if (timer) clearTimeout(timer);
       lastErr = err;
       logConnectionFailure(url, err);
       if (i < bases.length - 1) asaasLog(`backend unreachable — trying fallback ${bases[i + 1]}`);
@@ -290,7 +313,14 @@ export async function fetchSubscriptionPayment(subscriptionId, opts = {}) {
 // The cartão rail no longer requires inline card data: the CREDIT_CARD
 // subscription is created card-less and Asaas collects the PAN/CVV on its hosted
 // checkout (invoiceUrl), so there is no card-field check here.
-export function validateBeforeSubmit({ rail, value, name, email, cpfCnpj }) {
+// Minimum digit count for a donor phone. Generic (digit-count only), NOT a
+// locale-specific BR mask: the app is multi-country, so a short country code +
+// subscriber number can be well under a BR mobile's 10-11 digits. 8 is a
+// conservative floor that rejects empty/1-digit junk while accepting the shortest
+// real international numbers. The server remains authoritative on exact format.
+const MIN_PHONE_DIGITS = 8;
+
+export function validateBeforeSubmit({ rail, value, name, email, cpfCnpj, mobilePhone, telefone }) {
   const errors = [];
   if (!RAILS.some((r) => r.id === rail)) errors.push('Escolha uma forma de pagamento.');
   if (!(Number(value) >= MIN_SUBSCRIPTION_VALUE)) errors.push(`O valor mínimo é R$ ${MIN_SUBSCRIPTION_VALUE}.`);
@@ -298,5 +328,9 @@ export function validateBeforeSubmit({ rail, value, name, email, cpfCnpj }) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '')) errors.push('Informe um e-mail válido.');
   const digits = String(cpfCnpj || '').replace(/\D/g, '');
   if (digits.length !== 11 && digits.length !== 14) errors.push('Informe um CPF ou CNPJ válido.');
+  // Phone: reject empty / too-short (undefined after strip counts as 0 digits).
+  // Accept mobilePhone (JSDoc name) or telefone (pt-BR form field) interchangeably.
+  const phoneDigits = String(mobilePhone || telefone || '').replace(/\D/g, '');
+  if (phoneDigits.length < MIN_PHONE_DIGITS) errors.push('Informe um telefone válido.');
   return errors;
 }
