@@ -260,6 +260,8 @@ areas:
     nome: "Handler global unhandledrejection ausente (pass 13)"
   - id: SWSHELL
     nome: "SHELL_CACHE do SW sem cap de tamanho (pass 13)"
+  - id: WEBHOOKIDEM
+    nome: "Idempotencia do webhook Asaas nao-atomica (check-then-set) (pass 14)"
 
 milestones:
 
@@ -2058,6 +2060,18 @@ milestones:
     gate: ["npm run build", "npm run smoke200"]
     status: pending
 
+  # ---- PASS 14 ----
+
+  - id: EXT-WEBHOOKIDEM-01
+    title: "Idempotencia do webhook Asaas e check-then-set NAO-atomico mesmo no path de KV duravel — duas entregas concorrentes do mesmo event id passam ambas e double-aplicam"
+    area: WEBHOOKIDEM
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: tornar o claim-da-chave ATOMICO no idempotencyStore.js — usar SET key 1 NX EX <ttl> e tratar 'nao setou (ja existia)' como o sinal de dedupe, substituindo o par isProcessed()+markProcessed() por um unico claim atomico. Exclude: o hole de cold-start-reset (ja fechado pelo store duravel/PAY-01); a idempotencia in-memory do write path de pets/fome (e o EXT-DI-01, distinto)."
+    why: "Scan pass 14 (CONFIRMED, unico finding de um scan majoritariamente vazio ~90%): webhook.js:71-80 faz if (await store.isProcessed(key)) ... depois await store.markProcessed(key), e o markProcessed do Upstash e um SET key 1 EX <ttl> puro (idempotencyStore.js:88-91) SEM NX/guard atomico. A Asaas re-tenta agressivamente e pode entregar o mesmo PAYMENT_CONFIRMED a duas instancias serverless em paralelo; ambas leem isProcessed=false antes de qualquer uma marcar, e ambas rodam processEvent -> double-apply (doacao contada 2x / acesso concedido 2x). O store duravel fechou o hole de cold-start (coberto) mas NAO o hole de concorrencia. webhook.test.js:96-130 so exercita cold starts SEQUENCIAIS, nunca entrega concorrente, entao nenhum teste pega isto."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
 # ============================ FIM DO DOCUMENTO ============================
 # Total real (validado via parser YAML apos PASS 13): 167 milestones em 88
 # areas, 0 ids duplicados. 3 sao cross-ref intencional (EXT-EH-02 -> PET-04,
@@ -2066,8 +2080,9 @@ milestones:
 # shipped fora deste arquivo (ROADMAP_VERTENTES.yaml) implementou o item mais
 # critico do pass 1 (o vazamento de NEXT_PUBLIC_GOOGLE_PRIVATE_KEY agora tem
 # gate mecanico allowlisted por hash, ate o SEC-01 principal cair).
-# Tiers (contagem real do parser): S+ 2 | S 11 | S- 54 | A+ 47 | A 53.
-# Status (parser): pending 143 | blocked-human 19 | later 3 | shipped 2.
+# Tiers (contagem real do parser): S+ 2 | S 11 | S- 55 | A+ 47 | A 53.
+# Status (parser): pending 144 | blocked-human 19 | later 3 | shipped 2.
+# Total real (validado via parser YAML apos PASS 14): 168 milestones em 89 areas.
 # PASS 13 (invocado explicitamente via /milestone-mapafome-expand; quota pre-
 # pass: sessao 21% | semana 17% — folga confortavel). 4 areas novas, 4 findings
 # (1 S, 1 S-, 2 A+), TODOS commitaveis (nenhum human-gate). Novos ids:
@@ -2093,6 +2108,29 @@ milestones:
 # fallback execCommand+wa.me em todo lugar. Taxa de vazio 9/13 ~69% — o codigo
 # maduro se defende sozinho na grande maioria dos angulos novos; confirma
 # fortemente que o valor restante esta em IMPLEMENTAR, nao em escanear.
+# PASS 14 (invocado explicitamente via /milestone-mapafome-expand; quota pre-
+# pass: sessao 25% | semana 18% — folga confortavel). 1 area nova, 1 finding
+# unico CONFIRMED num scan majoritariamente VAZIO (~90%, 9 de 10 angulos limpos).
+# Novo id: EXT-WEBHOOKIDEM-01 (S-). Standout (o unico): a idempotencia do
+# webhook Asaas e um check-then-set NAO-atomico mesmo no path de KV duravel —
+# webhook.js:71-80 faz isProcessed() depois markProcessed(), e o markProcessed
+# do Upstash e um SET key 1 EX puro SEM NX (idempotencyStore.js:88-91); duas
+# entregas concorrentes do mesmo event id leem ambas isProcessed=false antes de
+# qualquer uma marcar e double-aplicam (doacao contada 2x). O store duravel
+# fechou o hole de cold-start (PAY-01) mas nao o de CONCORRENCIA; webhook.test.js
+# so testa cold starts sequenciais, nunca entrega concorrente. Fix: SET NX
+# atomico. EMPTIES (9 angulos, forca confirmada): append de Sheet e addRow
+# server-side atomico sem row-index client-held (sheetsClient.js:172), mapa de
+# pets usa <MapContainer> que faz map.remove() no unmount (PetMap.js:106, sem
+# leak de instancia), valor de doacao enviado como Number nao string localizada
+# (assinar/page.js:67 + validate.js:74), a11y do /assinar forte (label/input,
+# role=radiogroup+roving tabindex, role=alert nos erros), deep-link de pet e
+# query-param ?pet= na rota estatica /pets sem 404 duro, nenhum secret alem da
+# chave Google conhecida inline (so NEXT_PUBLIC_ASAAS_BACKEND_URL ship-safe),
+# zero pixel de tracking un-gated (analytics.js so despacha se gtag ja existe).
+# Taxa de vazio 9/10 ~90% — SATURACAO confirmada. O scan esgotou o valor facil;
+# a partir daqui o retorno de mais um pass e marginal. IMPLEMENTAR e a unica
+# jogada de valor: EXT-DBLSUBMIT-01 (S+), EXT-READROW-01 (S), EXT-REP2-01 (S).
 # PASS 7 (7 passes totais agora, 6 areas novas: moeda/pagamento multi-pais BRL
 # hardcoded, escopo de pais inconsistente entre leitura(pets)/escrita, drift de
 # conteudo da legenda de cores ColorsHint vs sistema real de marcadores M2,
