@@ -226,6 +226,16 @@ areas:
     nome: "security.txt / canal de disclosure (pass 10)"
   - id: GOV2
     nome: "Governanca de repo / README onboarding (pass 10)"
+  - id: ERRBOUND
+    nome: "React error boundary / crash containment (pass 11)"
+  - id: LOADSTATE
+    nome: "Loading skeleton do mapa principal na leitura do Sheet (pass 11)"
+  - id: SWRCACHE
+    nome: "Cache persistente stale-while-revalidate do payload do Sheet (pass 11)"
+  - id: READRETRY
+    nome: "Retry/backoff no fetch inicial de leitura do Sheet (pass 11)"
+  - id: DEDUPFOOD
+    nome: "Deteccao de duplicata na escrita do path de fome (pass 11)"
 
 milestones:
 
@@ -1816,16 +1826,89 @@ milestones:
     gate: ["revisao de conteudo + npm run build (sanidade)"]
     status: pending
 
+  # ---- PASS 11 ----
+
+  - id: EXT-ERRBOUND-01
+    title: "ZERO error boundary no app inteiro — uma excecao de render em qualquer componente pinta a tela toda de branco, sem recuperacao"
+    area: ERRBOUND
+    tier: A
+    owner: softwareengineer
+    scope: "Include: um React error boundary envolvendo a arvore montada (App), OU um error.js/global-error.js do Next no App Router, renderizando um shell da marca com botao de recarregar. Exclude: instrumentacao de telemetria de erro (fica pra area OBS)."
+    why: "Scan pass 11: busca repo-wide por componentDidCatch|getDerivedStateFromError|ErrorBoundary retorna ZERO arquivos e nao existe src/app/error.js nem global-error.js; a raiz e um mount client-only (src/app/page.js:6 dynamic import com ssr:false), entao nao ha fallback SSR. Uma linha malformada do Sheet, um glitch do Leaflet ou um erro num overlay derruba o mapa de fome inteiro pra TODO visitante sem UI de recuperacao."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-LOADSTATE-01
+    title: "Mapa principal sem skeleton na leitura do Sheet — enquanto os pins carregam o mapa parece VAZIO e pronto (indistinguivel de 'ninguem precisa de ajuda aqui')"
+    area: LOADSTATE
+    tier: A
+    owner: softwareengineer
+    scope: "Include: um estado de loading sobre a area do mapa (skeleton/overlay) consumindo state.isLoading, com paridade ao vertical /pets que ja tem. Exclude: mudar a coluna de controles (o spinner de texto atual fica)."
+    why: "Scan pass 11: AppMain.js:57-61 renderiza AppMapGrid mas nunca consome state.isLoading pra um skeleton no mapa; o unico sinal de loading e um texto+spinner minusculo em MainControls.js:103. Numa conexao mobile lenta, os segundos de auth+loadInfo+getRows deixam o mapa parecendo vazio e finalizado, e o usuario de primeira viagem pode sair antes de qualquer pin aparecer. O /pets JA tem skeleton real (PetMapLoadStates.js:34-49) — falta paridade no mapa principal."
+    gate: ["npm run test", "npm run build", "npm run smoke200", "npm run a11y"]
+    status: pending
+
+  - id: EXT-SWRCACHE-01
+    title: "Sem cache persistente stale-while-revalidate do payload do Sheet — toda visita e um cold fetch atras de auth+loadInfo+getRows, so cache em memoria por sessao"
+    area: SWRCACHE
+    tier: A
+    owner: softwareengineer + human-gated (TTL de staleness e trade-off de frescor vs velocidade)
+    scope: "Include: persistir as rows em localStorage/IndexedDB e pintar os pins do cache imediatamente, revalidando em background (stale-while-revalidate). Exclude: mudar a estrategia networkFirst do SW pra dados (e o fallback offline correto) — aqui e um path de first-paint rapido distinto."
+    why: "Scan pass 11: appMainBootstrap.js:102 so guarda rows em memoria de modulo (if envVariables.rows === undefined … = await sheet.getRows()), perdido no reload; nao ha leitura de rows de localStorage/IndexedDB e sw.js:120 serve dados via networkFirst (rede ganha primeiro, entao nunca ha pintura rapida com stale). Usuarios recorrentes e reloads sempre esperam o round-trip completo antes de qualquer pin — em publico de baixa conectividade e o gargalo de percepcao mais direto."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: blocked-human
+    human_gate: true
+
+  - id: EXT-READRETRY-01
+    title: "Leitura inicial do Sheet faz UMA tentativa sem retry/backoff — qualquer blip de rede cai direto no banner manual 'Tentar de novo'"
+    area: READRETRY
+    tier: A
+    owner: softwareengineer
+    scope: "Include: retry com backoff exponencial (2-3 tentativas) no doAuth/loadInfo/getRows antes de expor o loadError; manter o botao manual como ultimo recurso. Exclude: mudar a UI do LoadErrorBanner."
+    why: "Scan pass 11: appMainBootstrap.js:50-224 e um unico try { useServiceAccountAuth … loadInfo … getRows } catch { setState isLoading:false, loadError:true } sem loop de retry; a recuperacao e so o botao manual em App.js:829-832 (handleRetryLoad) -> LoadErrorBanner.js:18-24. Um soluco unico de rede mobile no primeiro load forca o usuario a notar e tocar em retry em vez do app se recuperar sozinho — custa conversao exatamente nas conexoes instaveis do publico-alvo."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-MAP-05
+    title: "MapContainer sem minZoom/maxBounds/worldCopyJump e TileLayer sem noWrap — usuario faz zoom-out pro globo inteiro em copias repetidas do mundo"
+    area: MAP
+    tier: A
+    owner: softwareengineer
+    scope: "Include: minZoom + maxBounds (ou worldCopyJump) no MapContainer e noWrap no TileLayer pra travar em uma copia do mundo. Exclude: mudar o provedor de tiles (e o EXT-TILES2-01)."
+    why: "Scan pass 11: map.js:337-352 seta maxZoom mas nao minZoom/maxBounds/worldCopyJump; mapComponents.js:99-103 tem TileLayer sem noWrap; busca por minZoom retorna nada. Em zoom baixo as tiles do mundo repetem horizontalmente e pins/toques caem em copias duplicadas do mundo — view confusa de 'varios Brasis' e toques que resolvem em coordenadas espelhadas."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-DI-02
+    title: "Path de escrita de FOME nao chama validatePinPayload/validateCoordinatePair — a barricada numerica (finito/NaN/in-country) so roda no /pets"
+    area: DI
+    tier: A
+    owner: softwareengineer
+    scope: "Include: chamar o validador tipado de coordenada (finite lat/lng + in-country) no publish de fome antes do addRow, em paridade com o /pets. Exclude: mudar o validador em si (ja existe e e testado)."
+    why: "Scan pass 11: reverseGeocodeGuard.js:7 declara 'NO Layer-B data barricade (DATA-1: only /pets calls validateCoordinatePair)'; o publish de fome em appPinActions.js:355 faz await sheet.addRow(row) sem validatePinPayload, e handleClickMap so checa if (!envVariables.dentroLimites(latlng)) (App.js:493, bbox frouxo). Uma coordenada malformada que passe pelo bbox pode ser gravada no Sheet sem o guard numerico estrito."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-DEDUPFOOD-01
+    title: "Path de FOME sem deteccao de duplicata na escrita — dois reports honestos do mesmo ponto minutos depois viram 2 linhas distintas (so o cluster visual esconde)"
+    area: DEDUPFOOD
+    tier: A
+    owner: softwareengineer
+    scope: "Include: um predicado de quase-duplicata na escrita de fome (proximidade + janela de tempo), espelhando o /pets. Exclude: a RACE de escrita concorrente (EXT-RACE-01) e o modelo de posse (EXT-OWNERSHIP-01) — distintos; aqui sao 2 reports honestos, nao 1 request repetido nem posse."
+    why: "Scan pass 11: o publish de fome appPinActions.js:323-355 grava incondicionalmente sem checagem de proximidade/tempo, e os marcadores de fome so agrupam VISUALMENTE via ReporterMarkers.js:51-61 (MarkerClusterGroup), diferente do /pets que tem predicado real de quase-dup na escrita (petDedup.js:111 isNearDuplicate). O Sheet acumula linhas duplicadas de necessidade que inflam a manchete publica de 'pontos mapeados' e distorcem relatorios."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
 # ============================ FIM DO DOCUMENTO ============================
-# Total real (validado via parser YAML): 123 milestones em 50 areas, 0 ids
-# duplicados. 3 sao cross-ref intencional (EXT-EH-02 -> PET-04, EXT-SETSTATE-02
-# -> REP-01, EXT-DEPLOY2-02 -> PAY-01/EXT-ASAAS2-02; nao re-trabalhar nenhum).
-# 1 ja shipped fora deste arquivo: SEC-02/FF11 (ROADMAP_VERTENTES.yaml), que
-# implementou o item mais critico apontado pelo pass 1 (o vazamento real de
-# NEXT_PUBLIC_GOOGLE_PRIVATE_KEY agora tem um gate mecanico, allowlisted por
-# hash, ate o SEC-01 principal cair).
-# Tiers (contagem real): S+ 1 | S 7 | S- 40 | A+ 38 | A 37.
-# Status: pending 107 | blocked-human 13 | later 3 (cross-refs).
+# Total real (validado via parser YAML apos PASS 11): 154 milestones em 76
+# areas, 0 ids duplicados. 3 sao cross-ref intencional (EXT-EH-02 -> PET-04,
+# EXT-SETSTATE-02 -> REP-01, EXT-DEPLOY2-02 -> PAY-01/EXT-ASAAS2-02; nao
+# re-trabalhar nenhum). 2 marcados shipped no proprio arquivo; SEC-02/FF11 ja
+# shipped fora deste arquivo (ROADMAP_VERTENTES.yaml) implementou o item mais
+# critico do pass 1 (o vazamento de NEXT_PUBLIC_GOOGLE_PRIVATE_KEY agora tem
+# gate mecanico allowlisted por hash, ate o SEC-01 principal cair).
+# Tiers (contagem real do parser): S+ 1 | S 9 | S- 51 | A+ 43 | A 50.
+# Status (parser): pending 131 | blocked-human 18 | later 3 | shipped 2.
 # PASS 7 (7 passes totais agora, 6 areas novas: moeda/pagamento multi-pais BRL
 # hardcoded, escopo de pais inconsistente entre leitura(pets)/escrita, drift de
 # conteudo da legenda de cores ColorsHint vs sistema real de marcadores M2,
@@ -1989,3 +2072,26 @@ milestones:
 # PROXIMA SESSAO: nao rodar pass 11 por default — 10 passes cobriram ~71 areas
 # e a taxa de angulo-vazio esta subindo; o valor agora esta em IMPLEMENTAR.
 # Comecar pelo indice COMECE AQUI (EXT-REP2-01 primeiro).
+# PASS 11 (invocado explicitamente via /milestone-mapafome-expand; quota
+# pre-pass: sessao 10% | semana 16% — folga confortavel). 5 areas novas +2 em
+# areas existentes (MAP, DI). 7 findings, TODOS tier A com file:line real, e
+# 4 empties que documentam FORCA do codigo. Novos ids: EXT-ERRBOUND-01,
+# EXT-LOADSTATE-01, EXT-SWRCACHE-01 (human_gated: TTL de staleness),
+# EXT-READRETRY-01, EXT-MAP-05, EXT-DI-02, EXT-DEDUPFOOD-01.
+# Standouts (os que doem): (1) EXT-ERRBOUND-01 — ZERO error boundary no app
+# inteiro (grep repo-wide de componentDidCatch/ErrorBoundary = 0 arquivos, sem
+# error.js/global-error.js), entao qualquer excecao de render pinta o mapa de
+# fome de branco pra todo visitante. (2) EXT-DI-02 — o path de escrita de FOME
+# nunca chama a barricada numerica de coordenada (so o /pets chama), confirmado
+# pelo proprio comentario reverseGeocodeGuard.js:7. (3) EXT-DEDUPFOOD-01 — fome
+# grava reports duplicados sem checagem de proximidade/tempo (so cluster visual
+# esconde), enquanto /pets ja tem petDedup.isNearDuplicate.
+# EMPTIES (forca confirmada): offline WRITE queue robusto com quarantine
+# (publishQueue.js), foto do /pets re-encoda JPEG e STRIPA EXIF/GPS
+# (petPhoto.js:39), empty-state pos-load com CTA (AppOverlays.js:84), consent
+# de termos no publish (ReportSheet.js:296). A taxa de vazio subiu (4 empties /
+# 11 angulos ~36%) — confirma o aviso do pass 10: o valor migrou pra IMPLEMENTAR.
+# Total pos-pass 11 (parser): 154 milestones | 76 areas | 0 dups.
+# Tiers: S+ 1 | S 9 | S- 51 | A+ 43 | A 50. Status: pending 131 |
+# blocked-human 18 | later 3 | shipped 2.
+# PROXIMA SESSAO (reafirmado): parar de escanear — IMPLEMENTAR pelo COMECE AQUI.

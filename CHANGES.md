@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-05 · branch `loop/mapafome` · ultimo commit: `1e52269` (pass 10). **QUOTA LIMIT ATINGIDO (2a vez): sessao 74-77% pre-pass-11; um pass custa 10-21pp, cruzaria a zona vermelha (>=80%) no meio** — pass 11 NAO rodado; fechamento gastou o resto em valor barato (indice COMECE AQUI no topo do MILESTONES_EXTENDED.yaml). Estado final: 147 itens/71 areas/10 passes. Proxima sessao: IMPLEMENTAR, comecando por EXT-REP2-01.
+> **LAST_UPDATED:** 2026-07-09 · branch `loop/mapafome` · **PASS 11 rodado** (invocado explicitamente via /milestone-mapafome-expand; quota pre-pass sessao 10% | semana 16% — folga confortavel, sem tocar zona vermelha). +7 itens em 5 areas novas +2 existentes (MAP/DI). Estado: **154 itens/76 areas/11 passes** (validado por parser). Achado que dói: EXT-ERRBOUND-01 (ZERO error boundary no app — qualquer excecao pinta o mapa de branco). Taxa de angulo-vazio subiu (~36%) — reafirmado: proxima sessao IMPLEMENTA, comecando por EXT-REP2-01.
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
-> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan ativo no loop, 147 itens/71 areas/10 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
+> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan ativo no loop, 154 itens/76 areas/11 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-09-Y`](#2026-07-09-y--pass-11-154-itens-76-areas) — **Pass 11** (invocado via /milestone-mapafome-expand, quota folgada 10%): +7 itens (5 areas novas + MAP/DI existentes), TODOS tier A com file:line. Achados que doem: EXT-ERRBOUND-01 (zero error boundary — excecao de render pinta o mapa de fome de branco pra todo mundo), EXT-DI-02 (path de escrita de FOME nao chama a barricada numerica de coordenada — so /pets chama), EXT-DEDUPFOOD-01 (fome grava reports duplicados sem checagem de proximidade/tempo). 4 angulos honestamente vazios documentam FORCA (offline write-queue com quarantine, foto /pets stripa EXIF/GPS, empty-state com CTA, consent no publish). Taxa de vazio ~36% — o valor migrou pra IMPLEMENTAR.
 - [`2026-07-05-W`](#2026-07-05-w--pass-10-no-loop-147-itens-71-areas) — **Pass 10 (loop)**: +9 itens em 8 areas novas. Achados: EXT-IOSPWA-01 (zero apple-touch-icon — install iOS da icone borrado fora de standalone), EXT-SWNAV-01 (SW sem fallback de navegacao offline — erro nativo pro publico de baixa conectividade), EXT-SHARELOC-01 (share WhatsApp hardcoded pt-BR na superficie viral), EXT-RTL-01 (dir=rtl sem CSS logico — arabe meio-espelhado). 5 angulos honestamente vazios (log PII do backend LIMPO, safe-area correta, 404 chain OK).
 - [`2026-07-05-V`](#2026-07-05-v--pass-9-no-loop-de-10min-138-itens-63-areas) — **Pass 9 (loop de 10min)**: +6 itens (5 areas novas + EXT-ASSET-03). Achados: EXT-HREFLANG-01 (12 locales, zero hreflang — publico internacional nao acha o site na propria lingua), EXT-FOCUSTRAP-01 (aria-modal sem trap — Tab escapa pro mapa escondido), EXT-ANTIABUSE-01 (time_from_start_ms medido e descartado; sem honeypot/min-time). 7 angulos honestamente vazios (SW lifecycle exemplar, reduced-motion honrado, hidratacao coberta por ssr:false, bundle bem dividido).
 - [`2026-07-05-U`](#2026-07-05-u--quota-resetada-scan-reaberto-pass-8-132-itens-58-areas) — **Quota resetada (re-login) — scan REABERTO, pass 8**: +9 itens em 8 areas novas. Achados que doem: EXT-URLSTATE-01 (back do Android fecha o SITE com report no meio), EXT-OWNERSHIP-01 (token de posse spec'ado mas nunca escrito — posse de pin 100% nocional), EXT-EMBED3P-01 (iframe Creators http:// = bloqueado como mixed content em producao HOJE). 4 angulos honestamente vazios.
@@ -43,9 +44,9 @@
 - Por vertente: V1 core-fome 2 · V2 pet 5 (2 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (2 shipped) · V11 governanca 1.
 - **Todos os S+/S commitaveis shippados.** Restam: 7 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
-### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 10 passes, scan ativo no loop, tiers S+/S/S-/A+/A)
-- **147 milestones** em **71 areas** · pending **128** · blocked-human **16** · later **3** (cross-refs intencionais). Validado via parser YAML: 0 ids duplicados.
-- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · **S 9** · S- 51 · A+ 43 · A 43.
+### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 11 passes, scan ativo no loop, tiers S+/S/S-/A+/A)
+- **154 milestones** em **76 areas** · pending **131** · blocked-human **18** · later **3** (cross-refs) · **shipped 2**. Validado via parser YAML: 0 ids duplicados.
+- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · **S 9** · S- 51 · A+ 43 · A 50.
 - 1 achado ja shipped fora do arquivo: SEC-02/FF11 (gate mecanico de secret-leak no bundle, allowlist por hash).
 - Achados mais criticos: **EXT-RACE-01** (S) — 2 usuarios diferentes escrevendo a mesma linha perdem uma escrita (row.save() = PUT cego sem CAS) · **EXT-URLSTATE-01** (S, pass 8) — back do Android fecha o site com report no meio · **EXT-OWNERSHIP-01** (S, pass 8) — posse de pin 100% nocional. Corretude: **EXT-LEGEND-01** — o hint de cores descreve o sistema de marcadores ANTIGO · **EXT-EMBED3P-01** — secao Creators renderiza VAZIA em producao (iframe http bloqueado).
 - **Proximo a pegar (commitavel, sem human_gate, sem deps):** EXT-REP2-01 (k-anonimizacao faltando em 2 tabelas do relatorio publico, S tier) ou EXT-SEC-03 (upgrade da cadeia axios/google-spreadsheet).
@@ -767,3 +768,29 @@ Trajetoria ~5-6pp de sessao por pass. Sessao ainda com margem (67%, nao critico)
 **Gate:** planning/docs-only; parser real 147/71/0.
 
 **Commit:** roteado pro `agent_git-commit-specialist`. Sem push/PR.
+
+---
+
+## 2026-07-09-Y — Pass 11 (154 itens, 76 areas)
+
+**Contexto:** pass reaberto porque o usuario invocou `/milestone-mapafome-expand` explicitamente. Quota pre-pass via `-Once`: sessao **10%** · semana **16%** — folga confortavel, longe da zona vermelha (>=80%), entao a passada rodou apesar do aviso de "IMPLEMENTAR" do pass 10 (o gate objetivo e a quota, e ela deu verde). Nota: os totais no footer/Zona 1 estavam stale em 147/71 (uma sessao concorrente ja havia expandido o doc alem do que o texto registrava); os numeros abaixo sao do PARSER, a fonte da verdade.
+
+**Pass 11 (Explore read-only, 7 findings + 4 empties):**
+
+| Area | Itens | Achado central |
+|---|---|---|
+| ERRBOUND | 1 | **EXT-ERRBOUND-01 (A)**: grep repo-wide de componentDidCatch/getDerivedStateFromError/ErrorBoundary = 0 arquivos, sem error.js/global-error.js; raiz e mount client-only (page.js:6 ssr:false) — qualquer excecao de render pinta o mapa de fome de branco pra todo visitante, sem recuperacao. |
+| DI | 1 | **EXT-DI-02 (A)**: o path de escrita de FOME (appPinActions.js:355 addRow) nunca chama validatePinPayload/validateCoordinatePair — a barricada numerica so roda no /pets (confirmado por reverseGeocodeGuard.js:7). |
+| DEDUPFOOD | 1 | **EXT-DEDUPFOOD-01 (A)**: fome grava reports duplicados sem checagem de proximidade/tempo (appPinActions.js:323-355); so o cluster visual (ReporterMarkers.js:51) esconde, enquanto /pets tem petDedup.isNearDuplicate. Infla a manchete de "pontos mapeados". |
+| LOADSTATE | 1 | EXT-LOADSTATE-01 (A): AppMain.js:57-61 nao consome state.isLoading pro mapa — durante auth+loadInfo+getRows o mapa parece vazio e pronto; /pets ja tem skeleton (PetMapLoadStates.js:34). |
+| SWRCACHE | 1 | EXT-SWRCACHE-01 (A, human_gate: TTL): appMainBootstrap.js:102 so cacheia rows em memoria de sessao; toda visita e cold fetch, sem stale-while-revalidate persistente. |
+| READRETRY | 1 | EXT-READRETRY-01 (A): appMainBootstrap.js:50-224 faz 1 tentativa sem retry/backoff — blip de rede cai direto no banner manual (App.js:829). |
+| MAP | 1 | EXT-MAP-05 (A): map.js:337 sem minZoom/maxBounds/worldCopyJump e TileLayer sem noWrap (mapComponents.js:99) — zoom-out pro globo em copias repetidas do mundo. |
+
+**4 angulos honestamente vazios (documentam FORCA):** offline WRITE queue robusto com quarantine e classificador permanente-vs-transiente (publishQueue.js:61-188); foto do /pets re-encoda JPEG e STRIPA EXIF/GPS + cap de tamanho + validacao de tipo (petPhoto.js:39,126,169); empty-state pos-load com CTA suprimido durante loading (AppOverlays.js:84); consent de privacidade+termos no publish do reporter (ReportSheet.js:296-334). Nota fora de escopo: iniciativas/cadastrar persiste PII so em localStorage com tela de "registrado" falsa (page.js:63) — defeito real mas a area ja esta na lista exausta, nao re-reportado.
+
+**Gate:** planning/docs-only (so YAML+MD). Parser real apos o pass: **154 milestones, 76 areas, 0 dups**; tiers S+1/S9/S-51/A+43/A50; status pending131/blocked-human18/later3/shipped2 — footer e Zona 1 conferem com o parser.
+
+**Taxa de vazio:** 4 empties / 11 angulos ~36% (pass 9 ~70%, pass 10 ~36%) — reafirma o criterio: o valor marginal esta em IMPLEMENTAR (comecar por EXT-REP2-01), nao em mais scan.
+
+**Commit:** roteado pro `agent_git-commit-specialist`, staging so `MILESTONES_EXTENDED.yaml` + `CHANGES.md` por path. Sem push/PR/bump.
