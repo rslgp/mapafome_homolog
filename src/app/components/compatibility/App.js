@@ -25,9 +25,6 @@ import { enqueue as enqueuePublish, bindOnlineFlush, queueSize } from './compone
 // import CoffeeTable from './components/table';
 // import ReactGA from 'react-ga';
 
-//call to action content creators
-import CreatorsMapaFome from './components/CreatorsMapaFome.js'
-
 import envVariables, { setActiveCountryResolver } from './components/variaveisAmbiente';
 import { PERIOD_DEFAULT, applyPeriodToEnv } from './components/mapConstants'; // FILTRO_TEMPO period SOT
 import { activeCountryFor } from './components/geofence';
@@ -138,6 +135,7 @@ class App extends Component {
 
     this.state = {
       isLoading: true,
+      isPublishing: false, // EXT-DBLSUBMIT-01: a "Confirmar ponto" publish is in flight (re-entry guard + button busy state); distinct from isLoading (initial/retry Sheets load)
       loadError: false, // UX-M26: Sheets load failed; show a retry banner
       dataMaps: [],
       dataHeader: [{ label: "Índice" }, { label: "Lugar" }],
@@ -472,6 +470,13 @@ class App extends Component {
   }
 
   handleClickMap() {
+    // EXT-DBLSUBMIT-01: re-entry guard. A rapid double-tap of "Confirmar ponto"
+    // used to fire two identical Sheet writes (the async publish is fire-and-forget).
+    // Bail out if a publish is already in flight — this covers BOTH the synchronous
+    // _publishMarkFromMap path AND the async _enforceLocationGeofenceThenPublish path,
+    // because both are only reached from below this line. isPublishing is the DEDICATED
+    // flag (not the overloaded isLoading, which also gates the initial Sheets load).
+    if (this.state.isPublishing) return;
     // Resolve a coordinate pair before any async work:
     //   1. Preferred: the pin the user dropped on the map (envVariables.lastMarked — a Leaflet marker).
     //   2. Fallback: the user's GPS (envVariables.currentLocation), behind an explicit confirm prompt
@@ -500,6 +505,15 @@ class App extends Component {
       alert(outOfCountryMessage());
       return;
     }
+
+    // EXT-DBLSUBMIT-01: from here on we are committed to a publish (all early
+    // returns above rejected the click). Set the busy flag at THIS single point so
+    // it covers BOTH downstream paths from the very first tap — including the async
+    // _enforceLocationGeofenceThenPublish window, during which a second tap would
+    // otherwise slip past the top-of-function guard (isPublishing still false) and
+    // start a second geofence check + second write. Cleared on the geofence-block
+    // early return, on the publish .catch, and implicitly on success (page reload).
+    this.setState({ isPublishing: true });
 
     // LOCATION-GEOFENCE (dark-ship, default OFF): an ADDITIONAL, stricter gate layered
     // ON TOP of the selected-country gate above — it does NOT replace it. The binding
@@ -555,7 +569,9 @@ class App extends Component {
     this.setState({ geofenceEligible: elig.eligible });
     dispatchGeofenceEligibility(elig);
     if (!gate.allowed) {
-      this.setState({ offlineToast: geofenceBlockMessage(gate.status) });
+      // EXT-DBLSUBMIT-01: blocked before any write — release the busy flag so the
+      // button is usable again (no page reload happens on this path).
+      this.setState({ offlineToast: geofenceBlockMessage(gate.status), isPublishing: false });
       return;
     }
     // Allowed: publish bound to the VERIFIED GPS-physical country (gate.physical == the binding
@@ -584,6 +600,7 @@ class App extends Component {
       const isOutOfCountry = reason === 'OUT_OF_COUNTRY_BBOX' || reason === 'out_of_bounds';
       this.setState({
         isLoading: false,
+        isPublishing: false, // EXT-DBLSUBMIT-01: write failed — release so the button never sticks disabled
         offlineToast: isOutOfCountry ? outOfCountryMessage() : t('errors.publish_failed'),
       });
     });

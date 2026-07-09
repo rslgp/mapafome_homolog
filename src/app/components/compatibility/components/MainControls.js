@@ -22,6 +22,7 @@ import Link from 'next/link';
 
 const MainControls = ({
   isLoading,
+  isPublishing = false,
   alimento,
   telefoneEncryptado,
   diaSemana,
@@ -322,7 +323,15 @@ const MainControls = ({
                     redesocial={redesocial}
                     mes={mes}
                   />
-                  {false ? (
+                  {/* EXT-DBLSUBMIT-01: this branch was dead (`{false ? …}`), so the
+                      busy spinner never rendered and the button was never disabled
+                      during an in-flight publish — a rapid double-tap wrote the pin
+                      twice. It is now driven by the real `isPublishing` signal (App.js
+                      state, threaded via AppMapGrid). With no publish in flight
+                      isPublishing is false, so the button renders byte-identically to
+                      before (DARK-SHIP INVARIANT); while publishing, the spinner shows
+                      and the button leaves the DOM so it cannot be tapped again. */}
+                  {isPublishing ? (
                     <CircularProgress aria-label={t('mainctl.confirm.aria_busy')} />
                   ) : (
                     <button
@@ -331,7 +340,7 @@ const MainControls = ({
                       onClick={onClickMap}
                       aria-label={hasMarker ? t('mainctl.confirm.aria_ready') : t('mainctl.confirm.aria_pending')}
                       aria-disabled={!hasMarker}
-                      disabled={!eligible}
+                      disabled={!eligible || isPublishing}
                     >
                       {hasMarker ? t('mainctl.confirm.label_ready') : t('mainctl.confirm.label')}
                     </button>

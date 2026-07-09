@@ -38,6 +38,7 @@ export default function AppMapGrid({ state, handlers, refs }) {
             />
             <MainControls
                 isLoading={state.isLoading}
+                isPublishing={state.isPublishing}
                 alimento={state.alimento}
                 telefoneEncryptado={state.telefoneEncryptado}
                 diaSemana={state.diaSemana}
