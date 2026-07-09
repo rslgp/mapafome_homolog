@@ -236,6 +236,22 @@ areas:
     nome: "Retry/backoff no fetch inicial de leitura do Sheet (pass 11)"
   - id: DEDUPFOOD
     nome: "Deteccao de duplicata na escrita do path de fome (pass 11)"
+  - id: DBLSUBMIT
+    nome: "Guarda de double-submit no botao de publicar fome (pass 12)"
+  - id: GEOLOC
+    nome: "Geolocation API ausente derruba o bootstrap do mapa (pass 12)"
+  - id: TIMEOUT
+    nome: "Ceiling de timeout em fetches (leitura Sheet + doacao Asaas) (pass 12)"
+  - id: ARIALIVE
+    nome: "Anuncio aria-live do mapa hardcoded pt-BR nos 12 locales (pass 12)"
+  - id: UNLOAD
+    nome: "Guarda beforeunload no ReportSheet em progresso (pass 12)"
+  - id: INTLFMT
+    nome: "Formatacao Intl de numero/percent por locale (pass 12)"
+  - id: SCROLLLOCK
+    nome: "Body-scroll-lock em sheet aria-modal (pass 12)"
+  - id: SAVEDATA
+    nome: "Respeito a Save-Data/effectiveType em conexao limitada (pass 12)"
 
 milestones:
 
@@ -1899,16 +1915,109 @@ milestones:
     gate: ["npm run test", "npm run build", "npm run smoke200"]
     status: pending
 
+  # ---- PASS 12 ----
+
+  - id: EXT-DBLSUBMIT-01
+    title: "Botao de publicar fome nunca fica disabled durante o publish (spinner num ramo {false ?}) — double-tap grava 2 linhas identicas"
+    area: DBLSUBMIT
+    tier: S+
+    owner: softwareengineer
+    scope: "Include: desabilitar o botao de confirmar ponto enquanto o publish esta em voo (state de isPublishing) + guarda de re-entrada em handleClickMap. Exclude: a dedup de quase-duplicata honesta (EXT-DEDUPFOOD-01, distinta — la sao 2 reports separados, aqui e 1 acao disparada 2x)."
+    why: "Scan pass 12: MainControls.js:325 embrulha o spinner num ramo morto {false ? <spinner> : <button>} entao o botao nunca fica disabled durante o publish, e handleClickMap (App.js:471) nao tem checagem de re-entrada por isLoading; um double-tap rapido dispara sheet.addRow duas vezes. Dois pontos de fome identicos gravados por uma acao, poluindo o mapa e TODA contagem/relatorio downstream com duplicatas fantasma. O /assinar e o ReportSheet ja se protegem com disabled={status==='...'} (assinar/page.js:248, ReportSheet.js:314) — so este botao legado do MainControls esta exposto."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-GEOLOC-01
+    title: "installLifecycle chama navigator.geolocation.getCurrentPosition sem checar se a API existe — webview sem geolocation estoura o mount e o mapa nunca carrega pins"
+    area: GEOLOC
+    tier: S
+    owner: softwareengineer
+    scope: "Include: guardar if (navigator.geolocation) antes do getCurrentPosition em appLifecycle.js e garantir que runMain roda mesmo quando a API esta ausente (fallback pro centro default), espelhando o guard que o /pets ja tem. Exclude: o handling de permission-denied (ja LIMPO — appLifecycle.js:153-159 cai no centro default)."
+    why: "Scan pass 12: appLifecycle.js:132 chama navigator.geolocation.getCurrentPosition( sem checar a existencia da API, dentro do componentDidMount sem try/catch, e runMain so e invocado de DENTRO dos callbacks de geolocation; em qualquer browser/webview onde navigator.geolocation e undefined (webviews embarcados stripados, alguns contextos inseguros ou browsers corporativos travados) o mount joga TypeError antes do runMain — o mapa nunca carrega pin nenhum e o fluxo find/report morre. O /pets ja guarda navigator.geolocation antes (usePetsApp.js:214)."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-TIMEOUT-01
+    title: "Fetches de doacao Asaas sem AbortController/timeout — backend que aceita o socket mas nao responde trava o spinner do doador pra sempre"
+    area: TIMEOUT
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: AbortController + timeout (ex.: 10-15s) no requestWithFallback do asaasSubscriptionClient (createSubscription e fetchSubscriptionPayment), espelhando o padrao de 4s do reverseGeocodeGuard. Exclude: mudar a UI de erro (ja existe estado de erro/retry no PaymentArtifacts)."
+    why: "Scan pass 12: asaasSubscriptionClient.js:166 faz await fetchImpl(url, init) sem signal/timeout pros dois fetches de doacao, diferente do reverseGeocodeGuard.js:134 que aborta em 4s. Se o backend aceita o socket e nunca responde, o spinner de submit do doador (status==='submitting') e a tela de loading dos artefatos de pagamento travam pra sempre sem erro nem retry — doacao silenciosamente perdida."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-TIMEOUT-02
+    title: "Path de LEITURA do Sheet (loadInfo/getRows) sem ceiling de timeout enquanto o path de ESCRITA tem withTimeout(10000)"
+    area: TIMEOUT
+    tier: A
+    owner: softwareengineer
+    scope: "Include: envolver doc.loadInfo() e sheet.getRows() num withTimeout (o helper ja existe e e usado na escrita) pra o load inicial nao ficar preso pra sempre. Exclude: retry/backoff (e o EXT-READRETRY-01, distinto — aqui e ceiling, nao re-tentativa)."
+    why: "Scan pass 12: appMainBootstrap.js:57 await doc.loadInfo() e :102 sheet.getRows() nao tem withTimeout, enquanto o publish envolve getSheet/addRow em withTimeout(...,10000) (appPinActions.js:199). Numa conexao mobile estagnada (aceita mas silenciosa) o load inicial de pins pode ficar preso com isLoading true indefinidamente — o try/catch so dispara quando a request eventualmente rejeita, o que um socket travado pode nunca fazer, deixando um estado de loading permanente."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-ARIALIVE-01
+    title: "Anuncio aria-live do mapa (LiveAnnouncer) hardcoded pt-BR — leitor de tela em EN/ES/etc ouve 'Novo ponto publicado.' em portugues"
+    area: ARIALIVE
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: mover as strings do LiveAnnouncer pra t() nos 12 locales (via agent_translation-localization pros 7 core). Exclude: mudar o mecanismo de aria-live em si (ja correto)."
+    why: "Scan pass 12: LiveAnnouncer.js:34-35 empurra literais 'Novo ponto publicado.'/'Um ponto foi atendido.' sem t(), enquanto toda outra string renderizada e localizada; a regiao e montada viva em AppMain.js:49. O UNICO update em tempo real do mapa e ininteligivel pra usuarios de tecnologia assistiva em 11 dos 12 locales — o mesmo tipo de gap de 'ultimo metro' do EXT-SHARELOC-01."
+    gate: ["npm run test (parity de chave nos 12 locales)", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-UNLOAD-01
+    title: "Sem guarda beforeunload no ReportSheet em progresso — fechar a aba ou voltar com o form preenchido descarta o report em silencio"
+    area: UNLOAD
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: um listener beforeunload (ou guard equivalente) ativo enquanto o ReportSheet tem estado significativo (categorias/detalhe/contato preenchidos), removido no publish/close. Exclude: guard de navegacao SPA (o app e majoritariamente single-view)."
+    why: "Scan pass 12: ReportSheet.js:30-33 guarda estado real do form (Set de categorias, detail, contact) mas um grep repo-wide por beforeunload|onbeforeunload em src nao retorna nada; fechar a aba ou voltar com o report no meio descarta tudo sem prompt de 'voce vai perder seu report'. Drop-off real no fluxo de escrita central do app."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-INTLFMT-01
+    title: "Percentuais formatados com toFixed(1) ignoram o separador decimal do locale — pt-BR ve '12.3%' onde a convencao e '12,3%'"
+    area: INTLFMT
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: formatar numeros/percentuais com Intl.NumberFormat(locale) nas tabelas de relatorio (page.js:161 e :335), em paridade com toLocaleDateString(locale) que ja e usado na mesma pagina. Exclude: mudar o conteudo dos numeros; so a formatacao."
+    why: "Scan pass 12: relatorios/page.js:161 renderiza (rec.taxa_atendimento*100).toFixed(1) que sempre usa ponto decimal, mesmo com o locale ativo dirigindo toLocaleDateString(locale) duas linhas depois (:363) e pt-BR/es/fr escreverem decimal com virgula. O usuario brasileiro/europeu le '12.3%' onde a convencao e '12,3%' — inconsistencia que mina a credibilidade do relatorio publico exatamente com o publico (pt-BR) que ele mira."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-SCROLLLOCK-01
+    title: "Sheet aria-modal (PinDetailSheet) nao trava o scroll do body — o mapa/lista atras rola sob o modal e perde a posicao ao fechar"
+    area: SCROLLLOCK
+    tier: A
+    owner: softwareengineer
+    scope: "Include: travar overflow do document.body enquanto o PinDetailSheet aria-modal esta aberto e restaurar ao fechar. Exclude: o focus management (ja LIMPO — PinDetailSheet.js:93-108 salva/restaura foco)."
+    why: "Scan pass 12: PinDetailSheet.js:202-208 abre o dialog aria-modal + backdrop mas o effect de abertura (:91-110) nunca trava o scroll do body, e nao existe toggle de overflow:hidden na arvore; no mobile o scroll dentro/perto da sheet encadeia pro mapa/lista de fundo, que pula atras do modal e perde a posicao do usuario ao fechar — interacao desorientadora na superficie primaria de resposta do doador."
+    gate: ["npm run test", "npm run build", "npm run smoke200", "npm run a11y"]
+    status: pending
+
+  - id: EXT-SAVEDATA-01
+    title: "Zero respeito a navigator.connection.saveData/effectiveType — tiles e imagens em full-res mesmo em conexao 2G/save-data do publico-alvo"
+    area: SAVEDATA
+    tier: A
+    owner: "softwareengineer + human-gated (definir a estrategia de degradacao: quais assets aliviar e como)"
+    scope: "Include: ler saveData/effectiveType e aliviar tiles/imagens (ex.: menor densidade, lazy mais agressivo) em conexao limitada. Exclude: refatorar o provedor de tiles (e o EXT-TILES2-01)."
+    why: "Scan pass 12: grep repo-wide por navigator.connection|saveData|effectiveType|prefers-reduced-data em src nao retorna nada, apesar de servir um publico (pessoas em situacao de fome) desproporcionalmente em dado metrado barato. Tiles Leaflet full-res e imagens de sponsor/Instagram sao buscadas mesmo em save-data/2G, queimando o budget de dados limitado e deixando o mapa lento pra quem menos pode pagar."
+    gate: ["npm run build", "npm run smoke200"]
+    status: blocked-human
+    human_gate: true
+
 # ============================ FIM DO DOCUMENTO ============================
-# Total real (validado via parser YAML apos PASS 11): 154 milestones em 76
+# Total real (validado via parser YAML apos PASS 12): 163 milestones em 84
 # areas, 0 ids duplicados. 3 sao cross-ref intencional (EXT-EH-02 -> PET-04,
 # EXT-SETSTATE-02 -> REP-01, EXT-DEPLOY2-02 -> PAY-01/EXT-ASAAS2-02; nao
 # re-trabalhar nenhum). 2 marcados shipped no proprio arquivo; SEC-02/FF11 ja
 # shipped fora deste arquivo (ROADMAP_VERTENTES.yaml) implementou o item mais
 # critico do pass 1 (o vazamento de NEXT_PUBLIC_GOOGLE_PRIVATE_KEY agora tem
 # gate mecanico allowlisted por hash, ate o SEC-01 principal cair).
-# Tiers (contagem real do parser): S+ 1 | S 9 | S- 51 | A+ 43 | A 50.
-# Status (parser): pending 131 | blocked-human 18 | later 3 | shipped 2.
+# Tiers (contagem real do parser): S+ 2 | S 10 | S- 53 | A+ 45 | A 53.
+# Status (parser): pending 139 | blocked-human 19 | later 3 | shipped 2.
 # PASS 7 (7 passes totais agora, 6 areas novas: moeda/pagamento multi-pais BRL
 # hardcoded, escopo de pais inconsistente entre leitura(pets)/escrita, drift de
 # conteudo da legenda de cores ColorsHint vs sistema real de marcadores M2,
@@ -2095,3 +2204,33 @@ milestones:
 # Tiers: S+ 1 | S 9 | S- 51 | A+ 43 | A 50. Status: pending 131 |
 # blocked-human 18 | later 3 | shipped 2.
 # PROXIMA SESSAO (reafirmado): parar de escanear — IMPLEMENTAR pelo COMECE AQUI.
+# PASS 12 (invocado explicitamente via /milestone-mapafome-expand; quota pre-
+# pass: sessao 14% | semana 17% — folga confortavel). 8 areas novas, 9 findings
+# (o scan mais denso em SEVERIDADE ate agora: 1 S+, 1 S, 2 S-, alem de A+/A).
+# Novos ids: EXT-DBLSUBMIT-01 (S+), EXT-GEOLOC-01 (S), EXT-TIMEOUT-01/02,
+# EXT-ARIALIVE-01, EXT-UNLOAD-01, EXT-INTLFMT-01, EXT-SCROLLLOCK-01,
+# EXT-SAVEDATA-01. Standouts (os que doem): (1) EXT-DBLSUBMIT-01 — o botao de
+# publicar fome NUNCA fica disabled durante o publish (spinner num ramo morto
+# {false ?} em MainControls.js:325) entao double-tap grava 2 pontos identicos,
+# poluindo mapa e toda contagem; o /assinar e o ReportSheet ja se protegem, so
+# este botao legado nao. (2) EXT-GEOLOC-01 — installLifecycle chama
+# navigator.geolocation.getCurrentPosition (appLifecycle.js:132) sem checar se
+# a API existe, e runMain so roda de dentro do callback: webview sem geolocation
+# estoura o mount e o mapa nunca carrega pin (o /pets ja guarda). (3)
+# EXT-ARIALIVE-01 — o unico anuncio aria-live em tempo real do mapa e literal
+# pt-BR (LiveAnnouncer.js:34) — leitor de tela em 11/12 locales ouve portugues.
+# EMPTIES (7 angulos, forca confirmada): clipboard com fallback execCommand
+# (PinReadout.js:82), localStorage.setItem sempre try/caught (countryStore.js:51
+# +5 sites), permission-denied de GPS cai no centro default (appLifecycle.js:153),
+# focus save/restore no PinDetailSheet (:93-108), double-submit ja bloqueado em
+# assinar/ReportSheet (assinar/page.js:248), fluxo de erro do checkout Asaas com
+# retry (PaymentArtifacts.js:147), long-press/context-menu do mapa com
+# preventDefault (mapComponents.js:289). Taxa de vazio 7/16 ~44% — o codigo
+# maduro se defende sozinho na maioria dos angulos novos; o valor restante esta
+# claramente em IMPLEMENTAR, comecando pelo S+ novo (EXT-DBLSUBMIT-01) e pelo
+# EXT-REP2-01 do COMECE AQUI.
+# Total pos-pass 12 (parser): 163 milestones | 84 areas | 0 dups.
+# Tiers: S+ 2 | S 10 | S- 53 | A+ 45 | A 53. Status: pending 139 |
+# blocked-human 19 | later 3 | shipped 2.
+# PROXIMA SESSAO (re-reafirmado): IMPLEMENTAR. Novo top commitavel sem human-
+# gate: EXT-DBLSUBMIT-01 (S+, guard de double-submit, fix pequeno e testavel).

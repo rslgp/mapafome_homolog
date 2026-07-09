@@ -9,11 +9,12 @@
 
 <!-- ============ ZONA 1: ACESSO RAPIDO (so este bloco se reescreve) ============ -->
 
-> **LAST_UPDATED:** 2026-07-09 · branch `loop/mapafome` · **PASS 11 rodado** (invocado explicitamente via /milestone-mapafome-expand; quota pre-pass sessao 10% | semana 16% — folga confortavel, sem tocar zona vermelha). +7 itens em 5 areas novas +2 existentes (MAP/DI). Estado: **154 itens/76 areas/11 passes** (validado por parser). Achado que dói: EXT-ERRBOUND-01 (ZERO error boundary no app — qualquer excecao pinta o mapa de branco). Taxa de angulo-vazio subiu (~36%) — reafirmado: proxima sessao IMPLEMENTA, comecando por EXT-REP2-01.
+> **LAST_UPDATED:** 2026-07-09 · branch `loop/mapafome` · **PASS 12 rodado** (invocado explicitamente via /milestone-mapafome-expand; quota pre-pass sessao 14% | semana 17% — folga confortavel). +9 itens em 8 areas novas. Estado: **163 itens/84 areas/12 passes** (validado por parser). Scan mais denso em SEVERIDADE ate agora (1 S+, 1 S, 2 S-). Achado que dói: EXT-DBLSUBMIT-01 (S+) — o botao de publicar fome NUNCA fica disabled durante o publish, double-tap grava 2 pontos identicos. **Novo top commitavel: EXT-DBLSUBMIT-01** (fix pequeno e testavel), depois EXT-REP2-01. Taxa de vazio ~44% — o codigo maduro se defende; valor restante = IMPLEMENTAR.
 > **HOW_TO_READ:** o topo (esta zona) e o RESUMO do estado atual — leia so isto pra se orientar. O corpo abaixo e APPEND-ONLY cronologico; desca por uma ancora do QUICK_INDEX quando precisar do detalhe. So esta zona 1 e reescrita; nunca edite uma entrada antiga da zona 2.
-> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan ativo no loop, 154 itens/76 areas/11 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
+> **ROADMAPS:** `ROADMAP_VERTENTES.yaml` (multi-vertente, 30 itens) · `MILESTONES_EXTENDED.yaml` (gap-scan ativo no loop, 163 itens/84 areas/12 passes, 5 tiers S+/S/S-/A+/A) · `UIUX_MILESTONES.yaml` (UI/UX) · `MILESTONES.yaml` (P-series/pagamento). Gate SOT em `CLAUDE.md`.
 
 ### QUICK_INDEX (mais novo -> mais velho)
+- [`2026-07-09-Z`](#2026-07-09-z--pass-12-163-itens-84-areas) — **Pass 12** (invocado via /milestone-mapafome-expand, quota folgada 14%): +9 itens em 8 areas novas — o scan mais denso em SEVERIDADE (1 S+, 1 S, 2 S-). Achados que doem: EXT-DBLSUBMIT-01 (S+, botao de publicar fome nunca fica disabled durante o publish — double-tap grava 2 pontos identicos; /assinar e ReportSheet ja se protegem, so o botao legado do MainControls nao), EXT-GEOLOC-01 (S, navigator.geolocation.getCurrentPosition sem checar se a API existe — webview sem geolocation estoura o mount e o mapa nunca carrega pin), EXT-ARIALIVE-01 (S-, o unico anuncio aria-live do mapa e literal pt-BR — leitor de tela em 11/12 locales ouve portugues). 7 angulos honestamente vazios documentam FORCA (clipboard com fallback, localStorage sempre try/caught, GPS permission-denied cai no centro default, focus save/restore, double-submit ja bloqueado em assinar/ReportSheet, erro de checkout Asaas com retry, long-press do mapa com preventDefault). Taxa de vazio ~44%.
 - [`2026-07-09-Y`](#2026-07-09-y--pass-11-154-itens-76-areas) — **Pass 11** (invocado via /milestone-mapafome-expand, quota folgada 10%): +7 itens (5 areas novas + MAP/DI existentes), TODOS tier A com file:line. Achados que doem: EXT-ERRBOUND-01 (zero error boundary — excecao de render pinta o mapa de fome de branco pra todo mundo), EXT-DI-02 (path de escrita de FOME nao chama a barricada numerica de coordenada — so /pets chama), EXT-DEDUPFOOD-01 (fome grava reports duplicados sem checagem de proximidade/tempo). 4 angulos honestamente vazios documentam FORCA (offline write-queue com quarantine, foto /pets stripa EXIF/GPS, empty-state com CTA, consent no publish). Taxa de vazio ~36% — o valor migrou pra IMPLEMENTAR.
 - [`2026-07-05-W`](#2026-07-05-w--pass-10-no-loop-147-itens-71-areas) — **Pass 10 (loop)**: +9 itens em 8 areas novas. Achados: EXT-IOSPWA-01 (zero apple-touch-icon — install iOS da icone borrado fora de standalone), EXT-SWNAV-01 (SW sem fallback de navegacao offline — erro nativo pro publico de baixa conectividade), EXT-SHARELOC-01 (share WhatsApp hardcoded pt-BR na superficie viral), EXT-RTL-01 (dir=rtl sem CSS logico — arabe meio-espelhado). 5 angulos honestamente vazios (log PII do backend LIMPO, safe-area correta, 404 chain OK).
 - [`2026-07-05-V`](#2026-07-05-v--pass-9-no-loop-de-10min-138-itens-63-areas) — **Pass 9 (loop de 10min)**: +6 itens (5 areas novas + EXT-ASSET-03). Achados: EXT-HREFLANG-01 (12 locales, zero hreflang — publico internacional nao acha o site na propria lingua), EXT-FOCUSTRAP-01 (aria-modal sem trap — Tab escapa pro mapa escondido), EXT-ANTIABUSE-01 (time_from_start_ms medido e descartado; sem honeypot/min-time). 7 angulos honestamente vazios (SW lifecycle exemplar, reduced-motion honrado, hidratacao coberta por ssr:false, bundle bem dividido).
@@ -44,12 +45,12 @@
 - Por vertente: V1 core-fome 2 · V2 pet 5 (2 shipped) · V3 asaas 3 (1 shipped) · V4 i18n 2 (1 shipped) · V5 pwa 3 · V6 relatorios 2 · V7 parceiros 3 · V8 seo 4 (3 shipped) · V9 qa 2 (1 shipped) · V10 seguranca 3 (2 shipped) · V11 governanca 1.
 - **Todos os S+/S commitaveis shippados.** Restam: 7 A + 8 B commitaveis + 5 blocked-human + 1 later.
 
-### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 11 passes, scan ativo no loop, tiers S+/S/S-/A+/A)
-- **154 milestones** em **76 areas** · pending **131** · blocked-human **18** · later **3** (cross-refs) · **shipped 2**. Validado via parser YAML: 0 ids duplicados.
-- Por tier: **S+ 1** (EXT-SEC-01, CVE ativo no next 16.2.4) · **S 9** · S- 51 · A+ 43 · A 50.
+### STATUS_TALLY (MILESTONES_EXTENDED.yaml — 12 passes, scan ativo no loop, tiers S+/S/S-/A+/A)
+- **163 milestones** em **84 areas** · pending **139** · blocked-human **19** · later **3** (cross-refs) · **shipped 2**. Validado via parser YAML: 0 ids duplicados.
+- Por tier: **S+ 2** (EXT-SEC-01 CVE next 16.2.4 + EXT-DBLSUBMIT-01 double-submit de fome) · **S 10** · S- 53 · A+ 45 · A 53.
 - 1 achado ja shipped fora do arquivo: SEC-02/FF11 (gate mecanico de secret-leak no bundle, allowlist por hash).
-- Achados mais criticos: **EXT-RACE-01** (S) — 2 usuarios diferentes escrevendo a mesma linha perdem uma escrita (row.save() = PUT cego sem CAS) · **EXT-URLSTATE-01** (S, pass 8) — back do Android fecha o site com report no meio · **EXT-OWNERSHIP-01** (S, pass 8) — posse de pin 100% nocional. Corretude: **EXT-LEGEND-01** — o hint de cores descreve o sistema de marcadores ANTIGO · **EXT-EMBED3P-01** — secao Creators renderiza VAZIA em producao (iframe http bloqueado).
-- **Proximo a pegar (commitavel, sem human_gate, sem deps):** EXT-REP2-01 (k-anonimizacao faltando em 2 tabelas do relatorio publico, S tier) ou EXT-SEC-03 (upgrade da cadeia axios/google-spreadsheet).
+- Achados mais criticos: **EXT-DBLSUBMIT-01** (S+, pass 12) — double-tap no botao de publicar fome grava 2 pontos identicos (botao nunca fica disabled) · **EXT-RACE-01** (S) — 2 usuarios diferentes escrevendo a mesma linha perdem uma escrita (row.save() PUT cego sem CAS) · **EXT-GEOLOC-01** (S, pass 12) — geolocation sem guard de existencia derruba o mount em webview · **EXT-URLSTATE-01** (S, pass 8) — back do Android fecha o site com report no meio. Corretude: **EXT-LEGEND-01** — o hint de cores descreve o sistema de marcadores ANTIGO.
+- **Proximo a pegar (commitavel, sem human_gate, sem deps):** EXT-DBLSUBMIT-01 (S+, guard de double-submit, fix pequeno e testavel) ou EXT-REP2-01 (k-anonimizacao faltando em 2 tabelas do relatorio publico, S tier).
 
 ### OPEN_THREADS (o que a proxima sessao pega primeiro)
 1. **EXT-REP2-01** (S, MILESTONES_EXTENDED, sem human_gate, sem deps): k-anonimizacao (k=5) faltando em 2 tabelas do relatorio publico — melhor primeiro alvo pos-scan.
@@ -792,5 +793,32 @@ Trajetoria ~5-6pp de sessao por pass. Sessao ainda com margem (67%, nao critico)
 **Gate:** planning/docs-only (so YAML+MD). Parser real apos o pass: **154 milestones, 76 areas, 0 dups**; tiers S+1/S9/S-51/A+43/A50; status pending131/blocked-human18/later3/shipped2 — footer e Zona 1 conferem com o parser.
 
 **Taxa de vazio:** 4 empties / 11 angulos ~36% (pass 9 ~70%, pass 10 ~36%) — reafirma o criterio: o valor marginal esta em IMPLEMENTAR (comecar por EXT-REP2-01), nao em mais scan.
+
+**Commit:** roteado pro `agent_git-commit-specialist`, staging so `MILESTONES_EXTENDED.yaml` + `CHANGES.md` por path. Sem push/PR/bump.
+
+---
+
+## 2026-07-09-Z — Pass 12 (163 itens, 84 areas)
+
+**Contexto:** pass reaberto porque o usuario invocou `/milestone-mapafome-expand` de novo. Quota pre-pass via `-Once`: sessao **14%** · semana **17%** — folga confortavel, longe da zona vermelha. O scan mais denso em SEVERIDADE ate agora: 9 findings com 1 S+, 1 S e 2 S- (os passes recentes vinham dando so tier A). Um gotcha de YAML mordeu e foi corrigido: o owner do EXT-SAVEDATA-01 tinha `:` dentro dos parenteses nao-quotado (o mesmo erro que o skill avisa) — quotado, parser voltou a passar.
+
+**Pass 12 (Explore read-only, 9 findings + 7 empties):**
+
+| Area | Itens | Achado central |
+|---|---|---|
+| DBLSUBMIT | 1 | **EXT-DBLSUBMIT-01 (S+)**: MainControls.js:325 embrulha o spinner num ramo morto {false ?} — o botao de publicar fome NUNCA fica disabled durante o publish e handleClickMap (App.js:471) nao checa re-entrada; double-tap grava 2 pontos identicos, poluindo mapa e toda contagem. /assinar e ReportSheet ja se protegem; so o botao legado nao. |
+| GEOLOC | 1 | **EXT-GEOLOC-01 (S)**: appLifecycle.js:132 chama navigator.geolocation.getCurrentPosition sem checar se a API existe, e runMain so roda de dentro do callback — webview sem geolocation estoura o mount (TypeError) e o mapa nunca carrega pin. O /pets ja guarda (usePetsApp.js:214). |
+| TIMEOUT | 2 | **EXT-TIMEOUT-01 (S-)**: fetches de doacao Asaas (asaasSubscriptionClient.js:166) sem AbortController/timeout — backend que aceita mas nao responde trava o spinner do doador pra sempre. **EXT-TIMEOUT-02 (A)**: path de leitura do Sheet (appMainBootstrap.js:57,102) sem withTimeout enquanto a escrita tem (appPinActions.js:199). |
+| ARIALIVE | 1 | **EXT-ARIALIVE-01 (S-)**: LiveAnnouncer.js:34-35 empurra 'Novo ponto publicado.'/'Um ponto foi atendido.' literais sem t() — o unico anuncio aria-live em tempo real do mapa e ininteligivel em 11/12 locales. |
+| UNLOAD | 1 | EXT-UNLOAD-01 (A+): ReportSheet.js:30-33 guarda estado real do form mas nao ha beforeunload em src — fechar a aba/voltar com o report no meio descarta em silencio. |
+| INTLFMT | 1 | EXT-INTLFMT-01 (A+): relatorios/page.js:161,335 usa (x*100).toFixed(1) com ponto decimal, mesmo com o locale dirigindo toLocaleDateString(locale) na mesma pagina — pt-BR ve '12.3%' onde a convencao e '12,3%'. |
+| SCROLLLOCK | 1 | EXT-SCROLLLOCK-01 (A): PinDetailSheet.js:202-208 abre dialog aria-modal sem travar o scroll do body — o fundo rola sob o modal e perde a posicao ao fechar. |
+| SAVEDATA | 1 | EXT-SAVEDATA-01 (A, human_gate): zero leitura de navigator.connection.saveData/effectiveType em src — tiles/imagens full-res mesmo em 2G/save-data do publico-alvo. |
+
+**7 angulos honestamente vazios (documentam FORCA):** clipboard com fallback execCommand (PinReadout.js:82-102, copyText.js:9-30); todo localStorage.setItem individualmente try/caught (countryStore.js:51 +5 sites); permission-denied de GPS cai no centro default e mantem o mapa usavel (appLifecycle.js:153-159, PetLocateControl.js:101); focus save/restore no PinDetailSheet (:93-108); double-submit ja bloqueado em assinar (assinar/page.js:248) e ReportSheet (:314); fluxo de erro do checkout Asaas com mensagem localizada + retry (asaasSubscriptionClient.js:201, PaymentArtifacts.js:147); long-press/context-menu do mapa com preventDefault + dedup (mapComponents.js:289-305).
+
+**Gate:** planning/docs-only (so YAML+MD). Parser real apos o pass: **163 milestones, 84 areas, 0 dups**; tiers S+2/S10/S-53/A+45/A53; status pending139/blocked-human19/later3/shipped2 — footer e Zona 1 conferem com o parser.
+
+**Taxa de vazio:** 7 empties / 16 angulos ~44% — o codigo maduro se defende sozinho na maioria dos angulos novos. Mas o pass tambem provou que ainda ha achados de alta severidade nao pescados (1 S+ + 1 S novos), entao o scan nao esgotou por completo; o valor imediato ainda esta em IMPLEMENTAR, agora com um novo S+ commitavel no topo (EXT-DBLSUBMIT-01).
 
 **Commit:** roteado pro `agent_git-commit-specialist`, staging so `MILESTONES_EXTENDED.yaml` + `CHANGES.md` por path. Sem push/PR/bump.
