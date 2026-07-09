@@ -252,6 +252,14 @@ areas:
     nome: "Body-scroll-lock em sheet aria-modal (pass 12)"
   - id: SAVEDATA
     nome: "Respeito a Save-Data/effectiveType em conexao limitada (pass 12)"
+  - id: READROW
+    nome: "Resiliencia por-linha no parse da leitura de fome (pass 13)"
+  - id: BOOTGUARD
+    nome: "Fail-closed boot guard so wired em 1 de 4 handlers Asaas (pass 13)"
+  - id: UNHANDLED
+    nome: "Handler global unhandledrejection ausente (pass 13)"
+  - id: SWSHELL
+    nome: "SHELL_CACHE do SW sem cap de tamanho (pass 13)"
 
 milestones:
 
@@ -2008,16 +2016,83 @@ milestones:
     status: blocked-human
     human_gate: true
 
+  # ---- PASS 13 ----
+
+  - id: EXT-READROW-01
+    title: "Path de LEITURA de fome faz JSON.parse por linha sem try/catch por-linha — 1 celula Dados/Coordinates malformada derruba o mapa inteiro"
+    area: READROW
+    tier: S
+    owner: softwareengineer
+    scope: "Include: envolver o parse de cada linha (JSON.parse de Dados e de Coordinates) num try/catch por-linha que PULA a linha ruim e segue, espelhando o que o /pets ja faz (parsePetRow retorna null e e filtrado). Exclude: a ausencia de ErrorBoundary global (e o EXT-ERRBOUND-01, distinto — la um boundary ainda mostra zero pins, aqui o guard por-linha mostra todos os pins bons)."
+    why: "Scan pass 13: appMainBootstrap.js:128-155 faz rows.forEach((x) => { let dados = JSON.parse(x.Dados); ... x.mapCoords = JSON.parse(x.Coordinates); }) SEM try/catch por-linha — uma unica celula Dados/Coordinates em branco ou malformada num Sheet editavel por multiplas maos joga e ABORTA o forEach inteiro, caindo no catch externo que seta loadError:true. O path de /pets ja e assimetricamente resiliente (petsData.js:95-98 pula nulos via parsePetRow). Uma linha corrompida derruba o mapa de fome INTEIRO (zero pins + banner de erro) pra todo visitante em vez de esconder so a linha ruim — o oposto de carga em lote resiliente numa fonte de dado colaborativa."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-BOOTGUARD-01
+    title: "assertProductionConfig (fail-closed PAY-01) so e chamado no webhook.js — o endpoint de CRIAR assinatura (dinheiro) nunca valida e cai no CORS de DEV em silencio"
+    area: BOOTGUARD
+    tier: S-
+    owner: softwareengineer
+    scope: "Include: chamar assertProductionConfig() no module-load de create-subscription.js (e subscription-payment.js) em paridade com webhook.js:31, pra o boot de producao com ALLOWED_ORIGINS/KV ausente FALHAR FECHADO no endpoint que recebe dinheiro. Exclude: reescrever a propria checagem (ja existe e funciona no webhook); a exposicao geral de env vazia (coberta por Deploy config/Env parity)."
+    why: "Scan pass 13: asaas-backend/api/asaas/webhook.js:31 invoca assertProductionConfig() no load, mas create-subscription.js:35-43 (o endpoint primario de doacao) e subscription-payment.js/health.js NUNCA chamam. Um deploy de prod com ALLOWED_ORIGINS nao setado ou KV ausente boota o endpoint de criacao de assinatura com sucesso e cai silenciosamente no CORS de DEV (inclui localhost). A guarda que deveria recusar um boot inseguro protege 1 de 4 handlers — e nao o que movimenta dinheiro — exatamente a inconsistencia que o PAY-01 foi escrito pra impedir. Gap de FIACAO, nao de env-parity generico."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-UNHANDLED-01
+    title: "Zero handler window.onunhandledrejection no app inteiro — rejeicao de promise fora dos caminhos catch-locais morre sem feedback nem telemetria"
+    area: UNHANDLED
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: registrar um window.addEventListener('unhandledrejection', ...) de ultimo recurso no bootstrap do app (layout/AppMain) que loga/telemetriza e, se possivel, mostra um toast neutro. Exclude: refatorar os try/catch locais que ja existem (runMain, createSubscription); e so um backstop global, nao substitui os locais."
+    why: "Scan pass 13: um grep repo-wide de unhandledrejection sobre *.{js,jsx,html} retorna ZERO — nao ha rede de seguranca global. Os paths async conhecidos sao capturados localmente (runMain, Asaas createSubscription), mas qualquer rejeicao de borda (ex.: asaasSubscriptionClient.js:205/259 re-throw de erros de misconfig pros callers) nao tem handler de ultimo recurso nem hook de observabilidade. Uma rejeicao perdida morre em silencio, sem feedback pro doador e sem captura em log. Moderado-baixo: a maioria dos paths conhecidos ja e capturada; e a ausencia de um backstop, nao um crash ativo."
+    gate: ["npm run test", "npm run build", "npm run smoke200"]
+    status: pending
+
+  - id: EXT-SWSHELL-01
+    title: "SHELL_CACHE do service worker cache-first sem cap de tamanho (so TILE_CACHE e limitado por MAX_TILES) — cresce sem evicao dentro de uma versao do SW"
+    area: SWSHELL
+    tier: A+
+    owner: softwareengineer
+    scope: "Include: aplicar um trimCache/cap no SHELL_CACHE (LRU ou teto de N entradas) espelhando o MAX_TILES do TILE_CACHE, pro shell nao acumular todo chunk/imagem/fonte ja buscado dentro de uma versao. Exclude: a limpeza cross-versao (ja LIMPA — activate deleta caches de versao antiga em sw.js:31-41); o branch navigate/offline.html (coberto pass 10)."
+    why: "Scan pass 13: public/sw.js:99-106 (cacheFirst/SHELL_CACHE) e :124-127 cacheiam TODO GET same-origin (chunks JS/CSS hashados, imagens, fontes, rotas navegadas) cache-first SEM cap de tamanho; so o TILE_CACHE e podado por MAX_TILES (:78). Caches de versao antiga sao apagados no activate, entao o crescimento cross-versao e limitado, mas DENTRO de uma unica versao do SW o shell acumula sem evicao. Numa instalacao de vida longa entre deploys, o cache do shell cresce sem controle nos celulares de baixo custo que sao o publico-alvo. Distinto do finding do pass 10 (branch navigate/offline.html faltando)."
+    gate: ["npm run build", "npm run smoke200"]
+    status: pending
+
 # ============================ FIM DO DOCUMENTO ============================
-# Total real (validado via parser YAML apos PASS 12): 163 milestones em 84
+# Total real (validado via parser YAML apos PASS 13): 167 milestones em 88
 # areas, 0 ids duplicados. 3 sao cross-ref intencional (EXT-EH-02 -> PET-04,
 # EXT-SETSTATE-02 -> REP-01, EXT-DEPLOY2-02 -> PAY-01/EXT-ASAAS2-02; nao
 # re-trabalhar nenhum). 2 marcados shipped no proprio arquivo; SEC-02/FF11 ja
 # shipped fora deste arquivo (ROADMAP_VERTENTES.yaml) implementou o item mais
 # critico do pass 1 (o vazamento de NEXT_PUBLIC_GOOGLE_PRIVATE_KEY agora tem
 # gate mecanico allowlisted por hash, ate o SEC-01 principal cair).
-# Tiers (contagem real do parser): S+ 2 | S 10 | S- 53 | A+ 45 | A 53.
-# Status (parser): pending 139 | blocked-human 19 | later 3 | shipped 2.
+# Tiers (contagem real do parser): S+ 2 | S 11 | S- 54 | A+ 47 | A 53.
+# Status (parser): pending 143 | blocked-human 19 | later 3 | shipped 2.
+# PASS 13 (invocado explicitamente via /milestone-mapafome-expand; quota pre-
+# pass: sessao 21% | semana 17% — folga confortavel). 4 areas novas, 4 findings
+# (1 S, 1 S-, 2 A+), TODOS commitaveis (nenhum human-gate). Novos ids:
+# EXT-READROW-01 (S), EXT-BOOTGUARD-01 (S-), EXT-UNHANDLED-01 (A+),
+# EXT-SWSHELL-01 (A+). Standouts (os que doem): (1) EXT-READROW-01 — o path de
+# leitura de fome faz JSON.parse por linha SEM try/catch por-linha
+# (appMainBootstrap.js:128-155), entao 1 celula Dados/Coordinates malformada num
+# Sheet colaborativo aborta o forEach inteiro e derruba o mapa pra todo
+# visitante, enquanto o /pets ja pula a linha ruim (petsData.js:95-98) — mesma
+# fonte de dados, resiliencia assimetrica. (2) EXT-BOOTGUARD-01 — a guarda
+# fail-closed do PAY-01 (assertProductionConfig) so esta wired no webhook.js:31,
+# NAO no create-subscription.js que recebe dinheiro, entao um prod com
+# ALLOWED_ORIGINS/KV ausente boota o endpoint de doacao caindo no CORS de DEV em
+# silencio — a exata inconsistencia que o PAY-01 devia impedir, agora num gap de
+# FIACAO (1 de 4 handlers). EMPTIES (9 angulos, forca confirmada): icone Leaflet
+# e divIcon SVG inline sem asset externo pra quebrar sob basePath (mdfMarkers.js
+# :75-88), listas memoizam O(n log n) sem re-render por-tecla (ListView.js:76),
+# coords sempre dot-decimal JSON (endereco.js:149), <html lang> tem escritor
+# unico (i18n/engine.js:78), severidade do pin e shape-encoded nao so-cor
+# (petMarkerIcon.js:114-165), sem acesso row[N] por indice numerico (Dados e
+# blob JSON com chaves nomeadas), first-paint e mapa sem hero-img (imagens
+# lazy), on-map actions sao <button> em ordem de DOM, clipboard/share tem
+# fallback execCommand+wa.me em todo lugar. Taxa de vazio 9/13 ~69% — o codigo
+# maduro se defende sozinho na grande maioria dos angulos novos; confirma
+# fortemente que o valor restante esta em IMPLEMENTAR, nao em escanear.
 # PASS 7 (7 passes totais agora, 6 areas novas: moeda/pagamento multi-pais BRL
 # hardcoded, escopo de pais inconsistente entre leitura(pets)/escrita, drift de
 # conteudo da legenda de cores ColorsHint vs sistema real de marcadores M2,
