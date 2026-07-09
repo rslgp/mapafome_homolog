@@ -312,7 +312,8 @@ milestones:
     scope: "Include: um throttle por IP/tempo (ex.: N requests/min) no endpoint create-subscription.js, alem do dedupe existente por externalRef(email,rail). Exclude: mudar o dedupe existente (fica como esta)."
     why: "Scan: o endpoint valida input e aplica CORS mas nao tem throttle por-IP — um script pode chamar POST repetidamente pra criar clientes/assinaturas reais na Asaas (custo + quota). O dedupe por email+rail nao impede um atacante variando o email."
     gate: ["cd asaas-backend && npm test", "teste novo: N+1 requests do mesmo IP em janela curta e throttled"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-09 commit 7a71135 — throttle per-IP fixed-window (429 + Retry-After) no create-subscription, store dual memory/Upstash (espelha idempotencyStore), fail-OPEN deliberado. Backend 98->112 testes. Gate verde lido."
 
   - id: EXT-SEC-05
     title: "Configurar security headers (CSP, X-Frame-Options, HSTS, Permissions-Policy) no edge/CDN"
@@ -427,7 +428,8 @@ milestones:
     scope: "Include: endereco.js:141-161 — mover o addRow() pra DENTRO do try, ou bloquear o append quando geocode falhar, em vez de cair pro sheet.addRow(row) fora do try/catch com Coordinates ausente. Exclude: mudar o provedor de geocode."
     why: "Scan: hoje, quando o geocode falha, o codigo AINDA GRAVA a linha (fora do try/catch) sem Coordinates — publica um pino \"fantasma\" sem localizacao, sem qualquer sinal visivel ao usuario de que faltou a coordenada."
     gate: ["npm run test", "teste: geocode-fail nao grava linha incompleta"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-09 commit d4f857a — resolveDadosWithCoordinates (seam puro); catch alerta + limpa spinner + return ANTES do addRow, sem ghost pin. Success path byte-identico. Testes novos. Gate verde lido: full 1433."
 
   # ==================== A11Y — ALEM DO ROADMAP EXISTENTE ====================
   - id: EXT-A11Y-01
@@ -988,7 +990,8 @@ milestones:
     scope: "Include: validateBeforeSubmit (asaasSubscriptionClient.js:293-302) ganha um floor de digitos minimos pro mobilePhone/telefone (hoje so valida rail/valor/nome/email/CPF-CNPJ). Exclude: exigir formato BR especifico (o app e multi-pais)."
     why: "Scan pass 3: um telefone vazio (undefined apos strip) ou um numero de 1 digito passa pela validacao do CLIENTE sem nenhum aviso — na UNICA pagina que lida com dinheiro real do doador."
     gate: ["npm run test", "teste: telefone vazio/curto e rejeitado antes do submit"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-09 commit a8488f6 — MIN_PHONE_DIGITS=8 floor generico em validateBeforeSubmit (aceita mobilePhone/telefone). Testes novos. Gate verde lido: lint/test 1433/fitness/build/smoke200 16-16."
 
   - id: EXT-FORM-02
     title: "ReportSheet: chips de categoria sem aria-required, apesar de handlePublish bloquear com 0 categorias"
@@ -1029,7 +1032,8 @@ milestones:
     scope: "Include: csv.js csvEsc() — prefixar um apostrofo (') ou aspas simples quando o valor comeca com =, +, -, ou @ (o guard padrao contra formula-injection ao abrir em Excel/Sheets). Exclude: mudar o escaping de aspas/virgula/quebra-de-linha existente (ja correto)."
     why: "Scan pass 3: verificado diretamente — csvEsc('=SUM(A1:A9)') passa sem escape. Hoje as colunas populadas sao controladas internamente (baixo risco real), mas e o UNICO serializer compartilhado (reports.js, marketingReports.js) e zero teste cobre isso — uma coluna futura de texto livre (detail/contact) herdaria o gap silenciosamente."
     gate: ["npm run test", "teste novo: valor iniciando com =/+/-/@ e escapado no CSV"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-09 commit 387cb2f — csvEsc prefixa ' quando o valor comeca com =/+/-/@ (CWE-1236), antes do quoting existente. 6 testes novos. Gate verde lido: lint/test 1433/fitness/build/smoke200 16-16."
 
   # ==================== INIT3 — INICIATIVAS/CADASTRAR (pass 3) ====================
   - id: EXT-INIT3-01
@@ -1935,7 +1939,8 @@ milestones:
     scope: "Include: desabilitar o botao de confirmar ponto enquanto o publish esta em voo (state de isPublishing) + guarda de re-entrada em handleClickMap. Exclude: a dedup de quase-duplicata honesta (EXT-DEDUPFOOD-01, distinta — la sao 2 reports separados, aqui e 1 acao disparada 2x)."
     why: "Scan pass 12: MainControls.js:325 embrulha o spinner num ramo morto {false ? <spinner> : <button>} entao o botao nunca fica disabled durante o publish, e handleClickMap (App.js:471) nao tem checagem de re-entrada por isLoading; um double-tap rapido dispara sheet.addRow duas vezes. Dois pontos de fome identicos gravados por uma acao, poluindo o mapa e TODA contagem/relatorio downstream com duplicatas fantasma. O /assinar e o ReportSheet ja se protegem com disabled={status==='...'} (assinar/page.js:248, ReportSheet.js:314) — so este botao legado do MainControls esta exposto."
     gate: ["npm run test", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-09 commit 4542763 — isPublishing flag desabilita o botao + guard de re-entrada em handleClickMap (cobre path sync e async geofence). Gate verde lido: lint/test 1433/fitness/build/smoke200 16-16."
 
   - id: EXT-GEOLOC-01
     title: "installLifecycle chama navigator.geolocation.getCurrentPosition sem checar se a API existe — webview sem geolocation estoura o mount e o mapa nunca carrega pins"
@@ -1955,7 +1960,8 @@ milestones:
     scope: "Include: AbortController + timeout (ex.: 10-15s) no requestWithFallback do asaasSubscriptionClient (createSubscription e fetchSubscriptionPayment), espelhando o padrao de 4s do reverseGeocodeGuard. Exclude: mudar a UI de erro (ja existe estado de erro/retry no PaymentArtifacts)."
     why: "Scan pass 12: asaasSubscriptionClient.js:166 faz await fetchImpl(url, init) sem signal/timeout pros dois fetches de doacao, diferente do reverseGeocodeGuard.js:134 que aborta em 4s. Se o backend aceita o socket e nunca responde, o spinner de submit do doador (status==='submitting') e a tela de loading dos artefatos de pagamento travam pra sempre sem erro nem retry — doacao silenciosamente perdida."
     gate: ["npm run test", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-09 commit a8488f6 — AbortController 12s no requestWithFallback (createSubscription + fetchSubscriptionPayment), timeout cai no retry-envelope existente. Testes novos. Gate verde lido: lint/test 1433/fitness/build/smoke200 16-16."
 
   - id: EXT-TIMEOUT-02
     title: "Path de LEITURA do Sheet (loadInfo/getRows) sem ceiling de timeout enquanto o path de ESCRITA tem withTimeout(10000)"
@@ -2028,7 +2034,8 @@ milestones:
     scope: "Include: envolver o parse de cada linha (JSON.parse de Dados e de Coordinates) num try/catch por-linha que PULA a linha ruim e segue, espelhando o que o /pets ja faz (parsePetRow retorna null e e filtrado). Exclude: a ausencia de ErrorBoundary global (e o EXT-ERRBOUND-01, distinto — la um boundary ainda mostra zero pins, aqui o guard por-linha mostra todos os pins bons)."
     why: "Scan pass 13: appMainBootstrap.js:128-155 faz rows.forEach((x) => { let dados = JSON.parse(x.Dados); ... x.mapCoords = JSON.parse(x.Coordinates); }) SEM try/catch por-linha — uma unica celula Dados/Coordinates em branco ou malformada num Sheet editavel por multiplas maos joga e ABORTA o forEach inteiro, caindo no catch externo que seta loadError:true. O path de /pets ja e assimetricamente resiliente (petsData.js:95-98 pula nulos via parsePetRow). Uma linha corrompida derruba o mapa de fome INTEIRO (zero pins + banner de erro) pra todo visitante em vez de esconder so a linha ruim — o oposto de carga em lote resiliente numa fonte de dado colaborativa."
     gate: ["npm run test", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-09 commit 8a38957 — mapFoodRow: parse por-linha em try/catch, pula a linha ruim (espelha /pets parsePetRow). 13 testes novos. Gate verde lido: lint/test 1433/fitness/build/smoke200 16-16."
 
   - id: EXT-BOOTGUARD-01
     title: "assertProductionConfig (fail-closed PAY-01) so e chamado no webhook.js — o endpoint de CRIAR assinatura (dinheiro) nunca valida e cai no CORS de DEV em silencio"
