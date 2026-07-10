@@ -21,17 +21,12 @@ import { DICT } from './dictionary.js';
 // Dictionary structure: DICT[locale][key] = string. Components read via t(key).
 
 const LOCALE_KEY = 'mdf_locale';
-// Exported as the SOT default locale so consumers (e.g. relativeTime's fallback
-// on a bad tag) reference the ONE canonical default instead of re-hardcoding it.
-export const DEFAULT_LOCALE = 'pt-BR';
-// Twelve UI locales. The first seven mirror the SOLONE game's language set (ptbr,
-// en, es, de, fr, ru, cn->zh); INTL HUMANITARIAN EXPANSION adds ar/bn/uk (per
-// INTERNATIONAL_EXPANSION.md, ordered by humanitarian return: Arabic, Bengali,
-// Ukrainian). INTL DEMAND EXPANSION adds hi (Hindi -> India) and tr (Turkish ->
-// Turkey, the world's largest refugee-hosting country): both high-need geographies
-// whose primary language sat outside the prior set. de/fr/ru/zh/ar/bn/uk/hi/tr ship
-// with dignity-sensitive copy drafted (`[REVISAR-HUMANO] `) pending human tone review.
-export const SUPPORTED_LOCALES = ['pt-BR', 'es', 'en-US', 'de', 'fr', 'ru', 'zh', 'ar', 'bn', 'uk', 'hi', 'tr'];
+// DEFAULT_LOCALE and SUPPORTED_LOCALES are the PURE locale SOT — they live in
+// ./locales.js (no React, no 'use client') so SERVER metadata code can read the
+// list without importing this Client Component. Re-exported here (and through
+// ../strings.js) so every existing client consumer keeps its current import path.
+export { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './locales.js';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './locales.js';
 
 // RTL_LOCALES — the set of right-to-left UI locales among SUPPORTED_LOCALES. Only
 // Arabic (ar) is RTL in this set; pt-BR/es/en-US/de/fr/ru/zh/bn/uk/hi/tr are all LTR
