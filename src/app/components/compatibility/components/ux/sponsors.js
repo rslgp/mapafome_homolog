@@ -113,6 +113,124 @@ export const SPONSORS = [
   // },
 ];
 
+// ────────────────────────────────────────────────────────────────────
+// TIER EXAMPLES — one sponsor entry per /parceiros sponsorship tier.
+// Copy the block you need into the SPONSORS array above (and remove the
+// leading `// `) to ship it. Each example encodes the tier's CONTRACT from
+// strings.page.js (page.partners.tier_<id>_{scope,window,slots,ref,who})
+// as real data fields, so what a sponsor GETS matches the plan they bought:
+//   • Território → regions[] and/or center + radiusKm
+//   • Janela     → startsAt / expiresAt exposure window
+//   • Slots      → how many PLACEMENTS the sponsor opts into
+// The tier is NOT a stored field — it is expressed by these knobs. Dates
+// below are illustrative durations; set the real contract dates on ship.
+//
+// ── Tier BAIRRO — R$ 500 · raio ~3 km · 1 mês · 1 placement ──
+// Típico: pizzaria, restaurante local, farmácia de bairro, comércio de rua.
+//   {
+//     id: 'pizzaria-bairro',
+//     img: '/sponsors/pizzaria-bairro.png',
+//     href: 'https://exemplo-pizzaria.com.br',
+//     alt: 'Pizzaria do Bairro — parceira do MAPA FOME',
+//     label: 'Pizzaria do Bairro',
+//     description: 'A cada pedido no bairro, uma refeição vai para alguém mapeado aqui. Peça e ajude sem sair de casa.',
+//     placements: [PLACEMENTS.INFO_PANEL_FOOTER],       // 1 placement
+//     regions: null,                                     // reach-only, sem bucket amplo
+//     center: [-7.1195, -34.8450],                       // João Pessoa (centro do estabelecimento)
+//     radiusKm: 3,                                        // raio ~3 km
+//     startsAt: '2026-08-01',
+//     expiresAt: '2026-08-31',                            // janela de 1 mês
+//     weight: 3,                                          // reach-hit já sobe; peso reforça
+//   },
+//
+// ── Tier CIDADE — R$ 2.500 · cidade inteira · 3 meses · 2 placements ──
+// Típico: rede regional, supermercado local, cooperativa, franquia.
+// Não há slug de cidade no regionResolver → "cidade inteira" é coberta por
+// um raio grande centrado na cidade. Campina Grande: [-7.2306,-35.8811], ~12 km.
+//   {
+//     id: 'supermercado-cidade',
+//     img: '/sponsors/supermercado-cidade.png',
+//     href: 'https://exemplo-supermercado.com.br',
+//     alt: 'Supermercado da Cidade — parceiro do MAPA FOME',
+//     label: 'Supermercado da Cidade',
+//     description: 'Parte de cada compra vira doação para famílias mapeadas na cidade. Sua marca ao lado de quem ajuda.',
+//     placements: [PLACEMENTS.INFO_PANEL_FOOTER, PLACEMENTS.APOIAR_GRID], // 2 placements
+//     regions: null,
+//     center: [-7.1195, -34.8450],                       // João Pessoa (centro)
+//     radiusKm: 15,                                       // cobre a cidade inteira
+//     startsAt: '2026-08-01',
+//     expiresAt: '2026-10-31',                            // janela de 3 meses
+//     weight: 2,
+//   },
+//
+// ── Tier ESTADUAL — R$ 10.000 · Paraíba inteira · 6 meses · 3 placements ──
+// Típico: distribuidora estadual, universidade, fundação regional.
+// Sem slug de estado → raio amplo no centro geográfico da PB. (Alternativa
+// mais precisa: adicionar slugs pb-* no regionResolver e usar regions[].)
+//   {
+//     id: 'distribuidora-estadual',
+//     img: '/sponsors/distribuidora-estadual.png',
+//     href: 'https://exemplo-distribuidora.com.br',
+//     alt: 'Distribuidora Estadual — parceira do MAPA FOME',
+//     label: 'Distribuidora Estadual',
+//     description: 'Presente em toda a Paraíba, apoiando quem enfrenta a fome. Conheça a parceria estadual.',
+//     placements: [
+//       PLACEMENTS.INFO_PANEL_FOOTER,
+//       PLACEMENTS.APOIAR_GRID,
+//       PLACEMENTS.INITIATIVES_FOOTER,
+//     ],                                                  // 3 placements
+//     regions: null,
+//     center: [-7.24, -36.72],                            // centro geográfico da PB
+//     radiusKm: 260,                                       // cobre o estado
+//     startsAt: '2026-08-01',
+//     expiresAt: '2027-01-31',                             // janela de 6 meses
+//     weight: 2,
+//   },
+//
+// ── Tier NACIONAL — R$ 30.000 · Brasil · 12 meses · todos os placements ──
+// Típico: multinacional, fundação empresarial, banco.
+// Cobertura nacional = regions ['*'] (fallback global), sem geo.
+//   {
+//     id: 'banco-nacional',
+//     img: '/sponsors/banco-nacional.png',
+//     href: 'https://exemplo-banco.com.br',
+//     alt: 'Banco Nacional — parceiro do MAPA FOME',
+//     label: 'Banco Nacional',
+//     description: 'Apoio nacional ao combate à fome, em todas as regiões atendidas pelo MAPA FOME.',
+//     placements: [
+//       PLACEMENTS.INFO_PANEL_FOOTER,
+//       PLACEMENTS.INFO_PANEL_PARCEIROS,
+//       PLACEMENTS.APOIAR_GRID,
+//       PLACEMENTS.INITIATIVES_FOOTER,
+//     ],                                                  // todos os placements
+//     regions: ['*'],                                     // Brasil inteiro (fallback global)
+//     center: null,
+//     radiusKm: null,
+//     startsAt: '2026-08-01',
+//     expiresAt: '2027-07-31',                             // janela de 12 meses
+//     weight: 1,
+//   },
+//
+// ── Tier CONTRAPARTIDA — produto/serviço · variável · até 1 placement ──
+// Típico: cestas básicas, fretes, horas de agência, hospedagem.
+// Sem preço em R$; território e janela a combinar por contrato (evergreen/
+// global por padrão abaixo).
+//   {
+//     id: 'agencia-contrapartida',
+//     img: '/sponsors/agencia-contrapartida.png',
+//     href: 'https://exemplo-agencia.com.br',
+//     alt: 'Agência Parceira — contrapartida ao MAPA FOME',
+//     label: 'Agência Parceira',
+//     description: 'Doou horas de trabalho ao MAPA FOME. Uma contrapartida que vira alcance para quem precisa.',
+//     placements: [PLACEMENTS.INFO_PANEL_FOOTER],         // até 1 placement
+//     regions: ['*'],                                      // território variável — global por padrão
+//     center: null,
+//     radiusKm: null,
+//     startsAt: null,                                      // janela variável — evergreen por padrão
+//     expiresAt: null,
+//     weight: 1,
+//   },
+
 // Lenient date parser for contract-style strings. Accepts:
 //   • ISO 'YYYY-MM-DD' or full ISO with time/timezone
 //   • US 'MM-DD-YYYY' (e.g. '02-17-2026')

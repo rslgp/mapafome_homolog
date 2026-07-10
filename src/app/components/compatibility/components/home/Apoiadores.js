@@ -2,7 +2,9 @@
 // objeto { nome, instagram } no array — o link do Instagram é montado a partir
 // do handle (sem o @).
 const APOIADORES = [
-    { nome: 'Ediel Costa', instagram: 'edielcosta', role: 'influenciador digital' },
+    { nome: 'Ediel Costa desde 2023', instagram: 'edielcosta', role: 'influenciador digital' },
+    { nome: 'Breno Pfister desde 2026', instagram: '_brenopfister', role: 'influenciador digital' },
+    { nome: 'Radioceleste desde 2026', instagram: 'radioceleste.com.br', role: 'radio celeste de Santa Catarina' },
     { nome: 'Você ajudando como pode o ', instagram: 'mapafome' },
 ];
 
