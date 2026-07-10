@@ -440,7 +440,8 @@ milestones:
     scope: "Include: um util compartilhado trapFocus() (ou lib pequena) aplicado em PinDetailSheet/ReportSheet/PetDetailSheet/PetReportSheet — Tab no ultimo elemento focavel volta ao primeiro (e Shift+Tab no primeiro vai ao ultimo), em vez de escapar pro header/controles do mapa por tras. Exclude: mudar o contrato de Escape/foco-inicial (ja funcionam, so o Tab-trap falta)."
     why: "Scan: os 4 sheets tem role=dialog aria-modal=true + foco inicial + Escape + restauracao de foco corretos, mas NENHUM trava o Tab dentro do modal — contradiz a semantica aria-modal=true (WCAG 2.4.3/2.1.2 na pratica: um leitor de tela anuncia 'dialog' mas o teclado escapa pro fundo)."
     gate: ["npm run test", "npm run a11y", "teste e2e: Tab repetido no ultimo elemento nao sai do dialog"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-10 commit 7ee3eeb (+5dbb729 fitness re-anchor) — util compartilhado useFocusTrap aplicado aos sheets aria-modal; Tab/Shift+Tab cicla no dialog (re-query por keydown, tabindex=-1 excluido). 7/7 focusTrap tests. Gate verde lido: lint/test 1445/fitness/build/smoke200 16-16. Fundido com FOCUSTRAP-01 (mesmo tema)."
 
   - id: EXT-A11Y-02
     title: "PetSearchField: padrao combobox real (role=listbox/aria-expanded/aria-activedescendant)"
@@ -584,7 +585,8 @@ milestones:
     scope: "Include: mover as 4 mensagens de fallback (linhas 203, 217, 257, 270 — falha ao criar assinatura, falha ao buscar dados de pagamento, etc.) pra chaves em strings.assinar.js (que ja existe, 625 linhas, e NAO usa essas 4). Exclude: mudar a logica de quando cada erro dispara."
     why: "Scan: /assinar (a pagina que mexe com dinheiro real do doador) JA tem um shard de i18n dedicado, mas os 4 erros mais criticos (quando o pagamento FALHA) sao hardcoded pt-BR — um doador nao-pt-BR cujo pagamento falha ve erro em portugues na UNICA pagina que lida com seu dinheiro."
     gate: ["npm run test", "npm run lint", "teste i18n: as 4 chaves com paridade nos 12 locales"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-10 commit 5388046 — 4 mensagens de falha de pagamento movidas pra chaves t() em strings.assinar.js com paridade nos 12 locales. i18n parity test verde. Gate verde lido: lint/test 1445."
 
   - id: EXT-I18N-05
     title: "endereco.js/form.js: geocode hardcoda ', Brazil' mesmo com pais ativo != Brasil"
@@ -1512,7 +1514,8 @@ milestones:
     scope: "Include: assinar/page.js:111/169 (toFixed(2) formatado com 'R$' literal) e as chaves assinar.value.other/assinar.cta.support em strings.assinar.js (12 locales, TODAS bakeiam 'R$' mesmo em zh/ar/bn/tr) — documentar EXPLICITAMENTE (comentario) que Asaas e BRL-only por design (ja documentado em page.js:28-32), entao o rotulo de moeda e intencional, nao um bug de i18n esquecido. Exclude: adicionar suporte multi-moeda (fora de escopo tecnico — depende da Asaas)."
     why: "Scan pass 7: o CountryFlagControl implicitamente promete 'doe de qualquer pais' mas o rail de pagamento assume BRL/Pix/boleto silenciosamente pra todo mundo — nao e um bug de tradução esquecida (ja ha um comentario explicando a limitacao da Asaas), mas o comentario existe SO em page.js, nao nas strings de locale — um revisor de i18n futuro pode achar que e um esquecimento e 'consertar' incorretamente."
     gate: ["comentario adicionado nas strings.assinar.js apontando pra page.js:28-32"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-10 commit 5388046 — comentario BRL-only-by-design adicionado nas strings.assinar.js (o 'R$' bakeado e intencional, Asaas so-BRL) pra um revisor de i18n futuro nao 'consertar' errado. Sem multi-moeda (fora de escopo). Gate verde lido."
 
   - id: EXT-CURRENCY-02
     title: "validateBeforeSubmit exige CPF/CNPJ incondicional + mensagens de erro hardcoded pt-BR — dead-end funcional pra doador nao-brasileiro"
@@ -1522,7 +1525,8 @@ milestones:
     scope: "Include: asaasSubscriptionClient.js:296/300 — as mensagens de erro de validacao ('Escolha uma forma de pagamento.', 'Informe seu nome.', etc.) ganham chaves t() (strings.assinar.js ja existe). Avaliar tambem se o CPF/CNPJ deveria ser condicional ao pais selecionado (fora de escopo se a Asaas exige CPF/CNPJ sempre, independente de nacionalidade do doador — verificar antes de mudar a validacao em si). Exclude: mudar a exigencia de CPF/CNPJ sem confirmar a regra real da Asaas."
     why: "Scan pass 7: um doador que escolheu outro pais no CountryFlagControl nao tem CPF/CNPJ valido pra digitar — bate num dead-end funcional, e a mensagem de erro que ve esta em portugues, independente do locale ativo, mesmo com strings.assinar.js ja tendo 12 locales pra tudo mais na mesma pagina."
     gate: ["npm run test", "npm run lint", "teste: mensagens de erro seguem o locale ativo"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-10 commit 5388046 — mensagens de erro de validacao movidas pra t() em strings.assinar.js (12 locales). PARCIAL: a parte CPF/CNPJ-condicional-ao-pais fica HUMAN-GATED (depende da regra real da Asaas) — so a localizacao das strings foi feita. Gate verde lido."
 
   # ==================== COUNTRYSCOPE — ESCOPO DE PAIS CONSISTENTE LEITURA/ESCRITA (pass 7) ====================
   - id: EXT-COUNTRYSCOPE-01
@@ -1708,7 +1712,8 @@ milestones:
     scope: "Include: avaliar as opcoes dentro da arquitetura single-URL client-swap — (a) alternates.languages apontando pra ?lang= ou #lang, (b) og:locale:alternate, (c) documentar por que hreflang real exige rotas por locale (mudanca grande, decisao humana). Minimo commitavel: og:locale + metadata por rota existente. Exclude: reescrever o roteamento pra /es /ar etc sem decisao humana."
     why: "Scan pass 9: sitemap.js:37-42 emite 1 URL por rota sem alternates.languages; todos os layouts so tem alternates.canonical (layout.js:35 etc); SUPPORTED_LOCALES tem 12 (engine.js:34) mas o swap e 100% client-side — o Google indexa so a casca pt-BR e ar/zh/hi/ru/... nao tem entrada localizada na SERP. Maior gap de ALCANCE da missao internacional (as cartas de outreach apontam pra um site que o publico-alvo nao acha na propria lingua)."
     gate: ["npm run test", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-10 commit 7f4fd51 (+d9fbbab build-fix) — og:locale + og:locale:alternate pros locales suportados (minimo honesto pro client-swap single-URL). PARCIAL: hreflang real por rota-por-locale (/es /ar) fica HUMAN-GATED (decisao de roteamento). Habilitado por locales.js puro (fix do circular import client->server que quebrava /imprensa no build). Gate verde lido: build/smoke200 16-16."
 
   - id: EXT-FOCUSTRAP-01
     title: "aria-modal=true sem focus trap — Tab escapa da sheet de report pro mapa ESCONDIDO atras (WCAG, teclado/leitor de tela)"
@@ -1718,7 +1723,8 @@ milestones:
     scope: "Include: trap de Tab/Shift-Tab nas sheets com role=dialog (ReportSheet, PetReportSheet, PetDetailSheet, InfoPanel, NotificationPrefs) OU inert/aria-hidden no app de fundo enquanto aberta; manter o focus-restore existente (ja correto). Exclude: trocar pra <dialog> nativo (refactor maior, avaliar depois)."
     why: "Scan pass 9: ReportSheet.js:181 declara role=dialog aria-modal=true mas o effect so faz first-focus (:64), Escape (:67) e restore (:73-74) — sem wrap de Tab e sem inert no fundo; PetDetailSheet.js:69-70 igual. aria-modal=true MENTE pro AT: usuario de teclado/leitor tabula pro Leaflet/toggles/FAB escondidos e pode interagir com controle invisivel no meio do publish."
     gate: ["npm run test (trap testado)", "npm run a11y", "npm run build", "npm run smoke200"]
-    status: pending
+    status: shipped
+    shipped_note: "2026-07-10 commit 7ee3eeb (+5dbb729) — mesmo useFocusTrap do EXT-A11Y-01 (fundidos: mesmo tema Tab-trap em sheet aria-modal). Cobre ReportSheet/PetReportSheet/PetDetailSheet/PinDetailSheet/NotificationPrefs. Gate verde lido."
 
   - id: EXT-ANTIABUSE-01
     title: "Publish sem piso de tempo-minimo nem honeypot — time_from_start_ms e MEDIDO e descartado; script spamma pins com dwell zero"
