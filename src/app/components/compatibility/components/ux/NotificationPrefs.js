@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './NotificationPrefs.css';
 import LocaleSwitch from './LocaleSwitch';
 import { t, useLocale } from './strings';
 import useBackToClose from './useBackToClose';
+import useFocusTrap from './useFocusTrap';
 
 // M8 — donor opt-in panel. Defaults to OFF. We only request the browser
 // permission AFTER the donor has acted on at least one pin (signal = a
@@ -46,6 +47,7 @@ export default function NotificationPrefs({ open, onClose }) {
   useLocale(); // re-render on locale change so t() re-reads
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [perm, setPerm] = useState('default');
+  const dialogRef = useRef(null); // EXT-FOCUSTRAP-01: the aria-modal root the Tab-trap scopes to
 
   useEffect(() => {
     if (!open) return undefined;
@@ -64,6 +66,13 @@ export default function NotificationPrefs({ open, onClose }) {
   // Android Back closes the dialog instead of leaving the site (EXT-URLSTATE-01).
   useBackToClose(open, onClose);
 
+  // EXT-A11Y-01 / EXT-FOCUSTRAP-01: this is a real aria-modal dialog, so Tab on the
+  // last control still walks out the back to the map behind it. Wrap Tab/Shift+Tab
+  // inside the dialog. ADDS ONLY the Tab-wrap — the Escape close in the open effect
+  // is untouched. (This sheet does not yet own an initial-focus / focus-restore
+  // effect like the others; that gap is out of scope for this behavior-only fix.)
+  useFocusTrap(open, dialogRef);
+
   if (!open) return null;
 
   async function requestPermission() {
@@ -79,7 +88,7 @@ export default function NotificationPrefs({ open, onClose }) {
   }
 
   return (
-    <div className="mdf-notif" role="dialog" aria-modal="true" aria-labelledby="mdf-notif-title">
+    <div className="mdf-notif" role="dialog" aria-modal="true" aria-labelledby="mdf-notif-title" ref={dialogRef}>
       <div className="mdf-notif__backdrop" onClick={() => onClose?.()} aria-hidden="true" />
       <section className="mdf-notif__panel">
         <header className="mdf-notif__header">

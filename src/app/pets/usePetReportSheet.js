@@ -26,6 +26,7 @@ import { resizeImageFile } from './petPhoto';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
 import { newIdempotencyKey } from '../components/compatibility/components/ux/idempotencyKey';
 import useBackToClose from '../components/compatibility/components/ux/useBackToClose';
+import useFocusTrap from '../components/compatibility/components/ux/useFocusTrap';
 
 const DEFAULT_SPECIES = 'outro';
 
@@ -74,6 +75,7 @@ export function usePetReportSheet({ open, coords, onClose, onPublish }) {
   const [publishError, setPublishError] = useState(null); // { reasonCode, queued }, falha de publicação
 
   const sheetRef = useRef(null);
+  const dialogRef = useRef(null); // EXT-FOCUSTRAP-01: the aria-modal root the Tab-trap scopes to
   const firstFocusRef = useRef(null);
   const triggerRef = useRef(null);
   const dragRef = useRef(null);
@@ -132,6 +134,12 @@ export function usePetReportSheet({ open, coords, onClose, onPublish }) {
   // (perdendo o report em andamento). Espelha a guarda do Escape acima: ignora
   // o Back durante a publicação.
   useBackToClose(open, () => { if (phase !== 'publishing') onClose?.(); });
+
+  // EXT-A11Y-01 / EXT-FOCUSTRAP-01: wrap Tab/Shift+Tab inside the dialog so focus
+  // cannot escape to the map header / Leaflet controls / FAB behind the modal.
+  // ADDS ONLY the Tab-wrap — the first-focus (firstFocusRef, rAF), Escape, and
+  // focus-restore in the per-open effect above are untouched.
+  useFocusTrap(open, dialogRef);
 
   // PET-M15: revoga o objectURL da prévia ao DESMONTAR (a fechada normal já
   // revoga no reset por-open acima; este effect cobre o unmount direto). Mantém
@@ -320,6 +328,7 @@ export function usePetReportSheet({ open, coords, onClose, onPublish }) {
     // refs the JSX binds
     photoInputRef,
     sheetRef,
+    dialogRef,
     firstFocusRef,
     // handlers
     onHandlePointerDown,

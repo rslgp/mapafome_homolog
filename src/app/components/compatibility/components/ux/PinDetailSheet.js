@@ -10,6 +10,7 @@ import { t, useLocale } from './strings';
 import envVariables from '../variaveisAmbiente';
 import { coordsFromPin } from '../../domain/pinCoords';
 import { NEED_CATEGORY_MAP, needLabel } from './needCategories';
+import useFocusTrap from './useFocusTrap';
 
 // M3 — donor response surface: status, distance, time-since, soft claim,
 // mark-as-attended. Reporter contact is only ever exposed as a tap-to-act
@@ -84,6 +85,7 @@ function directionsUrl(coords) {
 export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim, onMarkAttended }) {
   const triggerRef = useRef(null);
   const closeRef = useRef(null);
+  const dialogRef = useRef(null); // EXT-FOCUSTRAP-01: the aria-modal root the Tab-trap scopes to
   const [busy, setBusy] = useState(null); // 'claim' | 'attended' | null
   const [shareNote, setShareNote] = useState(''); // UX-M35 "link copiado" note
   useLocale(); // re-render on locale change so t() re-reads
@@ -132,6 +134,12 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
       attended: Boolean(pin?.AlimentoEntregue),
     };
   }, [pin, userCoords]);
+
+  // EXT-A11Y-01 / EXT-FOCUSTRAP-01: wrap Tab/Shift+Tab inside the dialog so focus
+  // cannot escape to the map header / Leaflet controls / FAB behind the modal.
+  // ADDS ONLY the Tab-wrap — the first-focus (closeRef, rAF), Escape, and
+  // focus-restore in the open effect above are untouched.
+  useFocusTrap(open, dialogRef);
 
   if (!open || !pin || !derived) return null;
 
@@ -204,6 +212,7 @@ export default function PinDetailSheet({ open, pin, userCoords, onClose, onClaim
       role="dialog"
       aria-modal="true"
       aria-labelledby="mdf-pin-title"
+      ref={dialogRef}
     >
       <div className="mdf-pin-sheet__backdrop" aria-hidden="true" onClick={() => onClose?.()} />
       <div className="mdf-pin-sheet__panel">

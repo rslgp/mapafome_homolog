@@ -44,6 +44,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
     sheetHeightVh,
     photoInputRef,
     sheetRef,
+    dialogRef,
     firstFocusRef,
     onHandlePointerDown,
     onHandlePointerMove,
@@ -60,7 +61,7 @@ export default function PetReportSheet({ open, coords, onClose, onPublish }) {
   if (!open) return null;
 
   return (
-    <div className="mdf-sheet" role="dialog" aria-modal="true" aria-labelledby="pet-sheet-title">
+    <div className="mdf-sheet" role="dialog" aria-modal="true" aria-labelledby="pet-sheet-title" ref={dialogRef}>
       <div
         className="mdf-sheet__backdrop"
         aria-hidden="true"

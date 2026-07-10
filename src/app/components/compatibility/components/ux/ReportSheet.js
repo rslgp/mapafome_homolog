@@ -18,6 +18,7 @@ import * as countryStore from '../countryStore';
 import { INTL_ENABLED } from '../intlConfig';
 import { newIdempotencyKey } from './idempotencyKey';
 import useBackToClose from './useBackToClose';
+import useFocusTrap from './useFocusTrap';
 
 // M1 — three-step reporter flow (design_brief § three_step_promise).
 // Step 1 (map click) happens outside; this sheet hosts Steps 2 and 3.
@@ -39,6 +40,7 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
   useLocale(); // re-render this client component on locale change so t() re-reads
   const startedAtRef = useRef(null);
   const sheetRef = useRef(null);
+  const dialogRef = useRef(null); // EXT-FOCUSTRAP-01: the aria-modal root the Tab-trap scopes to
   const firstFocusRef = useRef(null);
   const triggerRef = useRef(null);
   const dragRef = useRef(null);
@@ -81,6 +83,12 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
   // Android hardware/gesture Back closes the sheet instead of leaving the site
   // (EXT-URLSTATE-01). Mirrors the Escape guard: ignore Back mid-publish.
   useBackToClose(open, () => { if (status !== 'publishing') onClose?.(); });
+
+  // EXT-A11Y-01 / EXT-FOCUSTRAP-01: wrap Tab/Shift+Tab inside the dialog so focus
+  // cannot escape to the map header / Leaflet controls / FAB behind the modal.
+  // ADDS ONLY the Tab-wrap — the first-focus (rAF above), Escape, and focus-restore
+  // in the open effect are untouched.
+  useFocusTrap(open, dialogRef);
 
   function onHandlePointerDown(e) {
     // Only enable drag on coarse pointers (touch) below the desktop breakpoint.
@@ -183,7 +191,7 @@ export default function ReportSheet({ open, coords, onClose, onPublish }) {
     : t('page.report.location_tap');
 
   return (
-    <div className="mdf-sheet" role="dialog" aria-modal="true" aria-labelledby="mdf-sheet-title">
+    <div className="mdf-sheet" role="dialog" aria-modal="true" aria-labelledby="mdf-sheet-title" ref={dialogRef}>
       <div
         className="mdf-sheet__backdrop"
         aria-hidden="true"

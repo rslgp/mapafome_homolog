@@ -24,6 +24,7 @@ import { buildPetShareMessage, sharePet } from './petShare';
 import { flagPet, resolvePet } from './petsData';
 import { t, useLocale } from '../components/compatibility/components/ux/strings';
 import useBackToClose from '../components/compatibility/components/ux/useBackToClose';
+import useFocusTrap from '../components/compatibility/components/ux/useFocusTrap';
 
 // PET-M4, estados do fluxo de denúncia (flag) na própria sheet (máquina de
 // estados pequena, dois passos: ocioso → confirmar → enviando → feito/erro).
@@ -69,6 +70,7 @@ export function usePetDetailSheet({ open, pet, matches = [], onOpenMatch, onReso
   useLocale();
   const triggerRef = useRef(null);
   const closeRef = useRef(null);
+  const dialogRef = useRef(null); // EXT-FOCUSTRAP-01: the aria-modal root the Tab-trap scopes to
   const revealRef = useRef(null);
   // PET-M7b, leva o foco para o estado de fechamento DONE depois da transição,
   // para um usuário de leitor de tela não ficar preso no botão que sumiu (mesma
@@ -148,6 +150,12 @@ export function usePetDetailSheet({ open, pet, matches = [], onOpenMatch, onReso
   // EXT-URLSTATE-01: o BACK do Android fecha a sheet em vez de sair do site.
   // Espelha o Escape acima (fecha sem guarda de fase).
   useBackToClose(open, onClose);
+
+  // EXT-A11Y-01 / EXT-FOCUSTRAP-01: prende Tab/Shift+Tab dentro do dialog para o
+  // foco não escapar para o header do mapa / controles do Leaflet / FAB atrás do
+  // modal. ADICIONA SÓ o Tab-wrap — o first-focus (closeRef, rAF), o Escape e o
+  // focus-restore do effect acima permanecem intactos.
+  useFocusTrap(open, dialogRef);
 
   const derived = useMemo(() => {
     if (!pet) return null;
@@ -300,7 +308,7 @@ export function usePetDetailSheet({ open, pet, matches = [], onOpenMatch, onReso
   return {
     visible: Boolean(open && pet && derived),
     derived,
-    refs: { closeRef, revealRef, lifecycleDoneRef },
+    refs: { closeRef, dialogRef, revealRef, lifecycleDoneRef },
     revealed,
     setRevealed,
     revealedContact,

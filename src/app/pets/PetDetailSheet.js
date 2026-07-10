@@ -57,7 +57,7 @@ export default function PetDetailSheet(props) {
 
   if (!visible) return null;
 
-  const { closeRef, revealRef, lifecycleDoneRef } = refs;
+  const { closeRef, dialogRef, revealRef, lifecycleDoneRef } = refs;
   const { statusMeta } = derived;
   const statusClass = statusMeta ? `pet-detail__status--${statusMeta.id}` : '';
   const statusLabel = statusMeta ? t(`pets.status.${statusMeta.id}.label`) : t('pets.detail.status.fallback');
@@ -69,6 +69,7 @@ export default function PetDetailSheet(props) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="pet-detail-title"
+      ref={dialogRef}
     >
       <div className="mdf-pin-sheet__backdrop" aria-hidden="true" onClick={() => onClose?.()} />
       <div className="mdf-pin-sheet__panel">
