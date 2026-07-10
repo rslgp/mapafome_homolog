@@ -11,6 +11,21 @@
 // SOT: the base URL mirrors package.json "homepage" and the root layout's
 // metadataBase (https://mapafome.com.br). lastmod is the build date, so every
 // deploy re-stamps freshness without a hand-edit.
+//
+// EXT-HREFLANG-01 (DEFERRED, HUMAN-GATED) — international-SEO hreflang alternates
+// are intentionally NOT emitted here. Real per-URL hreflang (a sitemap
+// <xhtml:link rel="alternate" hreflang="es" href=".../es"> per locale, or route
+// metadata.alternates.languages) requires a DISTINCT, CRAWLABLE URL that serves
+// EACH of the 12 UI locales on first paint. This app has none: the locale swap is
+// 100% CLIENT-SIDE on ONE URL per route (the static export prerenders pt-BR and
+// applies a locale only AFTER hydration — no query-param/path locale read exists,
+// grep-verified in i18n/engine.js). Emitting hreflang against `?lang=` or a single
+// URL would serve the identical pt-BR shell to crawlers = a duplicate-content
+// signal Google penalizes. The COMMITTABLE half shipped as og:locale +
+// og:locale:alternate in the root layout (structuredData.js ogLocaleFor). Full
+// hreflang is blocked on adding per-locale ROUTES (/es, /ar, ...), a routing
+// rewrite that is a HUMAN decision — do NOT add hreflang alternates here or in
+// route metadata until those routes exist.
 
 // output:'export' requires metadata route handlers to be statically resolvable.
 export const dynamic = 'force-static';

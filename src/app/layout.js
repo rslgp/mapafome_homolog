@@ -2,7 +2,7 @@
 import './globals.css';
 import LocaleAutoDetect from './components/LocaleAutoDetect';
 import LocationLocaleDetect from './components/LocationLocaleDetect';
-import { organizationLd } from './structuredData';
+import { organizationLd, ogLocaleFor } from './structuredData';
 
 export const metadata = {
   metadataBase: new URL('https://mapafome.com.br'),
@@ -17,6 +17,14 @@ export const metadata = {
     // WhatsApp preview card links to.
     url: 'https://mapafome.com.br/',
     type: 'website',
+    // EXT-HREFLANG-01 (committable minimum): og:locale (pt-BR, the prerendered
+    // default) + og:locale:alternate for every OTHER supported UI locale, DERIVED
+    // from SUPPORTED_LOCALES (i18n/engine.js SOT via structuredData.js). This is an
+    // honest per-DOCUMENT "offered in these languages" hint. It deliberately does
+    // NOT add alternates.languages/hreflang: the locale swap is client-only on ONE
+    // URL, so real hreflang needs per-locale routes (/es, /ar, ...) — a routing
+    // rewrite that is HUMAN-GATED and deferred. See structuredData.js ogLocaleFor.
+    ...ogLocaleFor(),
   },
   twitter: {
     card: 'summary_large_image',
