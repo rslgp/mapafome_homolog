@@ -10,6 +10,17 @@
 // `R$` and the `{value}` placeholder are preserved verbatim (the backend bills in
 // BRL). New en-US strings avoid the em-dash (use commas/parentheses).
 
+// CURRENCY / BRL-ONLY BY DESIGN (EXT-CURRENCY-01) — READ BEFORE "FIXING" ANY `R$`.
+// The literal `R$` baked into `assinar.value.other`, `assinar.cta.support` and
+// `assinar.validate.min` (in EVERY locale, incl. zh/ar/bn/tr) is INTENTIONAL, not a
+// forgotten translation. The Asaas payment rails (Pix / cartão / boleto) are
+// BRL-ONLY by design — Asaas bills exclusively in Brazilian Real — so every donor,
+// whatever their UI locale or CountryFlagControl selection, is charged in R$. The
+// full rationale (and the "no débito rail" note) lives in src/app/assinar/page.js:28-32
+// and asaasSubscriptionClient.js RAILS. Do NOT localize/swap the `R$` symbol per
+// locale and do NOT route it through a locale currency formatter: multi-currency
+// support is out of scope and depends on Asaas. A currency change is a DATA decision
+// for a human, never an i18n edit ([Flag-for-human], LBR-05).
 export const pt = {
   // ── /assinar — recurring support subscription (Asaas) ──────────────────
   'assinar.back':            '← Voltar ao mapa',
@@ -28,6 +39,22 @@ export const pt = {
   'assinar.cta.support':     'Apoiar com R$ {value}/mês',
   'assinar.note':            'Pagamento processado pela Asaas. Você pode cancelar quando quiser.',
   'assinar.error.fallback':  'Não foi possível concluir. Tente novamente.',
+  // Payment-failure fallbacks (EXT-I18N-04) — returned by asaasSubscriptionClient
+  // when the backend is unreachable or answers with no message. Formal/reassuring,
+  // all mechanical (system status), so finalized in every locale.
+  'assinar.error.server':    'Não foi possível falar com o servidor de pagamentos. Tente novamente.',
+  'assinar.error.create':    'Não foi possível criar a assinatura. Verifique os dados.',
+  'assinar.error.fetch':     'Não foi possível buscar os dados de pagamento. Tente novamente.',
+  'assinar.error.payment':   'Não foi possível obter o pagamento.',
+  // Client-side validation errors (EXT-CURRENCY-02) — surfaced by validateBeforeSubmit.
+  // `assinar.validate.min` bakes `R$` and carries a {min} token (see the BRL-only note
+  // at the top of this file; {min} is the shared money floor, kept as a placeholder).
+  'assinar.validate.rail':    'Escolha uma forma de pagamento.',
+  'assinar.validate.min':     'O valor mínimo é R$ {min}.',
+  'assinar.validate.name':    'Informe seu nome.',
+  'assinar.validate.email':   'Informe um e-mail válido.',
+  'assinar.validate.cpfcnpj': 'Informe um CPF ou CNPJ válido.',
+  'assinar.validate.phone':   'Informe um telefone válido.',
   'assinar.success.title':   'Obrigado pelo apoio 💛',
   'assinar.success.sub':     'Sua assinatura de {value} por mês foi criada.',
   'assinar.success.active':  'A cobrança recorrente já está ativa.',
@@ -78,6 +105,18 @@ export const es = {
   'assinar.cta.support':     'Apoyar con R$ {value}/mes',
   'assinar.note':            'Pago procesado por Asaas. Puedes cancelar cuando quieras.',
   'assinar.error.fallback':  'No se pudo completar. Vuelve a intentarlo.',
+  // Errores de pago (EXT-I18N-04) y de validación (EXT-CURRENCY-02). `R$` y {min}
+  // se conservan (moneda BRL por diseño, ver la nota al inicio del archivo).
+  'assinar.error.server':    'No se pudo contactar al servidor de pagos. Vuelve a intentarlo.',
+  'assinar.error.create':    'No se pudo crear la suscripción. Verifica los datos.',
+  'assinar.error.fetch':     'No se pudieron obtener los datos de pago. Vuelve a intentarlo.',
+  'assinar.error.payment':   'No se pudo obtener el pago.',
+  'assinar.validate.rail':    'Elige una forma de pago.',
+  'assinar.validate.min':     'El importe mínimo es R$ {min}.',
+  'assinar.validate.name':    'Indica tu nombre.',
+  'assinar.validate.email':   'Indica un correo electrónico válido.',
+  'assinar.validate.cpfcnpj': 'Indica un CPF o CNPJ válido.',
+  'assinar.validate.phone':   'Indica un teléfono válido.',
   'assinar.success.title':   'Gracias por tu apoyo 💛',
   'assinar.success.sub':     'Tu suscripción de {value} al mes fue creada.',
   'assinar.success.active':  'El cobro recurrente ya está activo.',
@@ -128,6 +167,18 @@ export const enUS = {
   'assinar.cta.support':     'Support with R$ {value}/month',
   'assinar.note':            'Payment processed by Asaas. You can cancel anytime.',
   'assinar.error.fallback':  'We could not complete it. Please try again.',
+  // Payment-failure fallbacks (EXT-I18N-04) + validation errors (EXT-CURRENCY-02).
+  // `R$` and {min} are kept verbatim (BRL-only by design, see the note at the top).
+  'assinar.error.server':    'We could not reach the payment server. Please try again.',
+  'assinar.error.create':    'We could not create the subscription. Please check your details.',
+  'assinar.error.fetch':     'We could not load the payment details. Please try again.',
+  'assinar.error.payment':   'We could not retrieve the payment.',
+  'assinar.validate.rail':    'Choose a payment method.',
+  'assinar.validate.min':     'The minimum amount is R$ {min}.',
+  'assinar.validate.name':    'Enter your name.',
+  'assinar.validate.email':   'Enter a valid email.',
+  'assinar.validate.cpfcnpj': 'Enter a valid CPF or CNPJ.',
+  'assinar.validate.phone':   'Enter a valid phone number.',
   'assinar.success.title':   'Thank you for your support 💛',
   'assinar.success.sub':     'Your subscription of {value} per month has been created.',
   'assinar.success.active':  'The recurring charge is already active.',
@@ -184,6 +235,19 @@ export const de = {
   'assinar.cta.support':     'Mit R$ {value}/Monat unterstützen',
   'assinar.note':            'Zahlung abgewickelt über Asaas. Du kannst jederzeit kündigen.',
   'assinar.error.fallback':  'Abschluss nicht möglich. Bitte versuche es erneut.',
+  // Zahlungsfehler (EXT-I18N-04) + Validierungsfehler (EXT-CURRENCY-02). Register:
+  // du (an den bestehenden Block angeglichen). `R$` und {min} bleiben unverändert
+  // (BRL by design, siehe Hinweis am Dateianfang).
+  'assinar.error.server':    'Der Zahlungsserver konnte nicht erreicht werden. Bitte versuche es erneut.',
+  'assinar.error.create':    'Das Abo konnte nicht erstellt werden. Bitte prüfe deine Angaben.',
+  'assinar.error.fetch':     'Die Zahlungsdaten konnten nicht geladen werden. Bitte versuche es erneut.',
+  'assinar.error.payment':   'Die Zahlung konnte nicht abgerufen werden.',
+  'assinar.validate.rail':    'Wähle eine Zahlungsart.',
+  'assinar.validate.min':     'Der Mindestbetrag ist R$ {min}.',
+  'assinar.validate.name':    'Gib deinen Namen an.',
+  'assinar.validate.email':   'Gib eine gültige E-Mail-Adresse an.',
+  'assinar.validate.cpfcnpj': 'Gib eine gültige CPF oder CNPJ an.',
+  'assinar.validate.phone':   'Gib eine gültige Telefonnummer an.',
   'assinar.success.title':   'Danke für deine Unterstützung 💛',
   'assinar.success.sub':     'Dein Abo von {value} pro Monat wurde erstellt.',
   'assinar.success.active':  'Die wiederkehrende Abbuchung ist bereits aktiv.',
@@ -233,6 +297,19 @@ export const fr = {
   'assinar.cta.support':     'Soutenir avec R$ {value}/mois',
   'assinar.note':            'Paiement traité par Asaas. Tu peux annuler à tout moment.',
   'assinar.error.fallback':  'Impossible de finaliser. Réessaie, s\'il te plaît.',
+  // Erreurs de paiement (EXT-I18N-04) + de validation (EXT-CURRENCY-02). Registre :
+  // tu (aligné sur le bloc existant). `R$` et {min} sont conservés (BRL par
+  // conception, voir la note en tête de fichier).
+  'assinar.error.server':    'Impossible de joindre le serveur de paiement. Réessaie.',
+  'assinar.error.create':    'Impossible de créer l\'abonnement. Vérifie tes informations.',
+  'assinar.error.fetch':     'Impossible de charger les données de paiement. Réessaie.',
+  'assinar.error.payment':   'Impossible de récupérer le paiement.',
+  'assinar.validate.rail':    'Choisis un mode de paiement.',
+  'assinar.validate.min':     'Le montant minimum est de R$ {min}.',
+  'assinar.validate.name':    'Indique ton nom.',
+  'assinar.validate.email':   'Indique un e-mail valide.',
+  'assinar.validate.cpfcnpj': 'Indique un CPF ou CNPJ valide.',
+  'assinar.validate.phone':   'Indique un téléphone valide.',
   'assinar.success.title':   'Merci pour ton soutien 💛',
   'assinar.success.sub':     'Ton abonnement de {value} par mois a été créé.',
   'assinar.success.active':  'Le prélèvement récurrent est déjà actif.',
@@ -282,6 +359,19 @@ export const ru = {
   'assinar.cta.support':     'Поддержать на R$ {value}/мес',
   'assinar.note':            'Платёж обрабатывается Asaas. Вы можете отменить в любой момент.',
   'assinar.error.fallback':  'Не удалось завершить. Попробуйте снова.',
+  // Ошибки оплаты (EXT-I18N-04) и проверки (EXT-CURRENCY-02). Регистр: Вы (как в
+  // существующем блоке). `R$` и {min} сохранены (BRL by design, см. примечание в
+  // начале файла).
+  'assinar.error.server':    'Не удалось связаться с сервером платежей. Попробуйте снова.',
+  'assinar.error.create':    'Не удалось создать подписку. Проверьте данные.',
+  'assinar.error.fetch':     'Не удалось загрузить данные оплаты. Попробуйте снова.',
+  'assinar.error.payment':   'Не удалось получить платёж.',
+  'assinar.validate.rail':    'Выберите способ оплаты.',
+  'assinar.validate.min':     'Минимальная сумма — R$ {min}.',
+  'assinar.validate.name':    'Укажите ваше имя.',
+  'assinar.validate.email':   'Укажите действительный адрес эл. почты.',
+  'assinar.validate.cpfcnpj': 'Укажите действительный CPF или CNPJ.',
+  'assinar.validate.phone':   'Укажите действительный номер телефона.',
   'assinar.success.title':   'Спасибо за вашу поддержку 💛',
   'assinar.success.sub':     'Ваша подписка на {value} в месяц создана.',
   'assinar.success.active':  'Регулярное списание уже активно.',
@@ -331,6 +421,18 @@ export const zh = {
   'assinar.cta.support':     '以 R$ {value}/月 支持',
   'assinar.note':            '由 Asaas 处理付款。你可以随时取消。',
   'assinar.error.fallback':  '无法完成。请重试。',
+  // 支付错误 (EXT-I18N-04) 与校验错误 (EXT-CURRENCY-02)。`R$` 与 {min} 保持不变
+  // （按设计以 BRL 计费，见文件顶部说明）。
+  'assinar.error.server':    '无法连接支付服务器。请重试。',
+  'assinar.error.create':    '无法创建订阅。请检查你填写的信息。',
+  'assinar.error.fetch':     '无法加载支付数据。请重试。',
+  'assinar.error.payment':   '无法获取付款。',
+  'assinar.validate.rail':    '请选择一种支付方式。',
+  'assinar.validate.min':     '最低金额为 R$ {min}。',
+  'assinar.validate.name':    '请填写你的姓名。',
+  'assinar.validate.email':   '请填写有效的电子邮箱。',
+  'assinar.validate.cpfcnpj': '请填写有效的 CPF 或 CNPJ。',
+  'assinar.validate.phone':   '请填写有效的电话号码。',
   'assinar.success.title':   '感谢你的支持 💛',
   'assinar.success.sub':     '你每月 {value} 的订阅已创建。',
   'assinar.success.active':  '周期性扣款已经生效。',
@@ -388,6 +490,18 @@ export const ar = {
   'assinar.cta.support':     'ادعم بـ R$ {value}/شهر',
   'assinar.note':            'تتم معالجة الدفع عبر Asaas. يمكنك الإلغاء في أي وقت.',
   'assinar.error.fallback':  'تعذّر الإكمال. حاول مرة أخرى.',
+  // أخطاء الدفع (EXT-I18N-04) وأخطاء التحقق (EXT-CURRENCY-02). يُترك `R$ {min}`
+  // كما هو (BRL حسب التصميم، انظر الملاحظة في أعلى الملف)؛ المتصفح يعالج اتجاه النص.
+  'assinar.error.server':    'تعذّر الاتصال بخادم الدفع. حاول مرة أخرى.',
+  'assinar.error.create':    'تعذّر إنشاء الاشتراك. تحقّق من بياناتك.',
+  'assinar.error.fetch':     'تعذّر تحميل بيانات الدفع. حاول مرة أخرى.',
+  'assinar.error.payment':   'تعذّر الحصول على الدفعة.',
+  'assinar.validate.rail':    'اختر طريقة دفع.',
+  'assinar.validate.min':     'الحد الأدنى للمبلغ هو R$ {min}.',
+  'assinar.validate.name':    'أدخل اسمك.',
+  'assinar.validate.email':   'أدخل بريدًا إلكترونيًا صالحًا.',
+  'assinar.validate.cpfcnpj': 'أدخل CPF أو CNPJ صالحًا.',
+  'assinar.validate.phone':   'أدخل رقم هاتف صالحًا.',
   'assinar.success.title':   'شكرًا على دعمك 💛',
   'assinar.success.sub':     'تم إنشاء اشتراكك بقيمة {value} شهريًا.',
   'assinar.success.active':  'الخصم المتكرّر مُفعَّل بالفعل.',
@@ -437,6 +551,18 @@ export const bn = {
   'assinar.cta.support':     'R$ {value}/মাসে সমর্থন করুন',
   'assinar.note':            'পেমেন্ট Asaas দ্বারা প্রক্রিয়া করা হয়. আপনি যেকোনো সময় বাতিল করতে পারেন.',
   'assinar.error.fallback':  'সম্পূর্ণ করা যায়নি. আবার চেষ্টা করুন.',
+  // পেমেন্ট ত্রুটি (EXT-I18N-04) ও যাচাই ত্রুটি (EXT-CURRENCY-02)। `R$` ও {min}
+  // অপরিবর্তিত রাখা হয়েছে (ডিজাইন অনুযায়ী BRL, ফাইলের শীর্ষে নোট দেখুন)।
+  'assinar.error.server':    'পেমেন্ট সার্ভারের সাথে সংযোগ করা যায়নি. আবার চেষ্টা করুন.',
+  'assinar.error.create':    'সাবস্ক্রিপশন তৈরি করা যায়নি. আপনার তথ্য যাচাই করুন.',
+  'assinar.error.fetch':     'পেমেন্ট ডেটা লোড করা যায়নি. আবার চেষ্টা করুন.',
+  'assinar.error.payment':   'পেমেন্ট পাওয়া যায়নি.',
+  'assinar.validate.rail':    'একটি পেমেন্ট পদ্ধতি বেছে নিন.',
+  'assinar.validate.min':     'সর্বনিম্ন পরিমাণ R$ {min}.',
+  'assinar.validate.name':    'আপনার নাম লিখুন.',
+  'assinar.validate.email':   'একটি বৈধ ইমেল লিখুন.',
+  'assinar.validate.cpfcnpj': 'একটি বৈধ CPF বা CNPJ লিখুন.',
+  'assinar.validate.phone':   'একটি বৈধ ফোন নম্বর লিখুন.',
   'assinar.success.title':   'আপনার সমর্থনের জন্য ধন্যবাদ 💛',
   'assinar.success.sub':     'প্রতি মাসে {value}-এর আপনার সাবস্ক্রিপশন তৈরি হয়েছে.',
   'assinar.success.active':  'পুনরাবৃত্ত চার্জ ইতিমধ্যে সক্রিয়.',
@@ -486,6 +612,19 @@ export const uk = {
   'assinar.cta.support':     'Підтримати на R$ {value}/міс',
   'assinar.note':            'Платіж обробляється Asaas. Ви можете скасувати будь-коли.',
   'assinar.error.fallback':  'Не вдалося завершити. Спробуйте знову.',
+  // Помилки оплати (EXT-I18N-04) та перевірки (EXT-CURRENCY-02). Регістр: Ви (як у
+  // наявному блоці). `R$` і {min} збережено (BRL за задумом, див. примітку на
+  // початку файлу).
+  'assinar.error.server':    'Не вдалося зв\'язатися із сервером платежів. Спробуйте знову.',
+  'assinar.error.create':    'Не вдалося створити підписку. Перевірте дані.',
+  'assinar.error.fetch':     'Не вдалося завантажити дані оплати. Спробуйте знову.',
+  'assinar.error.payment':   'Не вдалося отримати платіж.',
+  'assinar.validate.rail':    'Виберіть спосіб оплати.',
+  'assinar.validate.min':     'Мінімальна сума — R$ {min}.',
+  'assinar.validate.name':    'Вкажіть ваше ім\'я.',
+  'assinar.validate.email':   'Вкажіть дійсну електронну пошту.',
+  'assinar.validate.cpfcnpj': 'Вкажіть дійсний CPF або CNPJ.',
+  'assinar.validate.phone':   'Вкажіть дійсний номер телефону.',
   'assinar.success.title':   'Дякуємо за вашу підтримку 💛',
   'assinar.success.sub':     'Вашу підписку на {value} на місяць створено.',
   'assinar.success.active':  'Регулярне списання вже активне.',
@@ -543,6 +682,18 @@ export const hi = {
   'assinar.cta.support':     'R$ {value}/माह से समर्थन करें',
   'assinar.note':            'भुगतान Asaas द्वारा प्रोसेस किया जाता है. आप जब चाहें रद्द कर सकते हैं.',
   'assinar.error.fallback':  'पूरा नहीं किया जा सका. कृपया फिर से प्रयास करें.',
+  // भुगतान त्रुटियाँ (EXT-I18N-04) और सत्यापन त्रुटियाँ (EXT-CURRENCY-02)। `R$` और
+  // {min} अपरिवर्तित रखे गए हैं (डिज़ाइन के अनुसार BRL, फ़ाइल के शीर्ष पर नोट देखें)।
+  'assinar.error.server':    'भुगतान सर्वर से संपर्क नहीं हो सका. कृपया फिर से प्रयास करें.',
+  'assinar.error.create':    'सदस्यता नहीं बनाई जा सकी. कृपया अपनी जानकारी जाँचें.',
+  'assinar.error.fetch':     'भुगतान डेटा लोड नहीं हो सका. कृपया फिर से प्रयास करें.',
+  'assinar.error.payment':   'भुगतान प्राप्त नहीं हो सका.',
+  'assinar.validate.rail':    'एक भुगतान विधि चुनें.',
+  'assinar.validate.min':     'न्यूनतम राशि R$ {min} है.',
+  'assinar.validate.name':    'अपना नाम दर्ज करें.',
+  'assinar.validate.email':   'एक मान्य ईमेल दर्ज करें.',
+  'assinar.validate.cpfcnpj': 'एक मान्य CPF या CNPJ दर्ज करें.',
+  'assinar.validate.phone':   'एक मान्य फ़ोन नंबर दर्ज करें.',
   'assinar.success.title':   'आपके समर्थन के लिए धन्यवाद 💛',
   'assinar.success.sub':     'प्रति माह {value} की आपकी सदस्यता बना दी गई है.',
   'assinar.success.active':  'आवर्ती शुल्क पहले से ही सक्रिय है.',
@@ -592,6 +743,19 @@ export const tr = {
   'assinar.cta.support':     'R$ {value}/ay ile destekle',
   'assinar.note':            'Ödeme Asaas tarafından işlenir. İstediğin zaman iptal edebilirsin.',
   'assinar.error.fallback':  'Tamamlanamadı. Lütfen tekrar dene.',
+  // Ödeme hataları (EXT-I18N-04) + doğrulama hataları (EXT-CURRENCY-02). Kayıt: sen
+  // (mevcut blokla uyumlu). `R$` ve {min} olduğu gibi bırakıldı (tasarım gereği BRL,
+  // dosyanın başındaki nota bak).
+  'assinar.error.server':    'Ödeme sunucusuna ulaşılamadı. Lütfen tekrar dene.',
+  'assinar.error.create':    'Abonelik oluşturulamadı. Lütfen bilgilerini kontrol et.',
+  'assinar.error.fetch':     'Ödeme verileri yüklenemedi. Lütfen tekrar dene.',
+  'assinar.error.payment':   'Ödeme alınamadı.',
+  'assinar.validate.rail':    'Bir ödeme yöntemi seç.',
+  'assinar.validate.min':     'En düşük tutar R$ {min}.',
+  'assinar.validate.name':    'Adını gir.',
+  'assinar.validate.email':   'Geçerli bir e-posta gir.',
+  'assinar.validate.cpfcnpj': 'Geçerli bir CPF veya CNPJ gir.',
+  'assinar.validate.phone':   'Geçerli bir telefon numarası gir.',
   'assinar.success.title':   'Desteğin için teşekkürler 💛',
   'assinar.success.sub':     'Ayda {value} tutarındaki aboneliğin oluşturuldu.',
   'assinar.success.active':  'Yinelenen tahsilat zaten etkin.',

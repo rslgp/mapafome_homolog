@@ -8,6 +8,14 @@
 
 // MIN_SUBSCRIPTION_VALUE is the shared front-end money floor (see subscriptionConfig).
 import { MIN_SUBSCRIPTION_VALUE } from './subscriptionConfig';
+// i18n resolver: the donor-facing failure/validation messages are localized via the
+// same t() the /assinar page uses, so a non-pt-BR donor whose payment fails or whose
+// input is rejected sees copy in the ACTIVE locale (EXT-I18N-04 / EXT-CURRENCY-02),
+// not pt-BR. t() is a pure lookup (no React); it defaults to pt-BR, so the pt-BR key
+// values are byte-identical to the strings that used to be hardcoded here. The keys
+// live in strings.assinar.js at 12-locale parity. `R$`/{min} in assinar.validate.min
+// stay verbatim (BRL-only by design — see strings.assinar.js header + page.js:28-32).
+import { t } from '../ux/strings';
 
 // RAILS is the structural source of truth: the rail ids + their stable order are
 // authoritative here (and asserted by asaasSubscriptionClient.test.js). The
@@ -223,7 +231,7 @@ export async function createSubscription(input, opts = {}) {
   } catch (err) {
     if (err?.connectionFailed) {
       // Every backend (internal localhost + public) was unreachable.
-      return { ok: false, messages: ['Não foi possível falar com o servidor de pagamentos. Tente novamente.'] };
+      return { ok: false, messages: [t('assinar.error.server')] };
     }
     throw err; // misconfig / fetch indisponível — unchanged throw contract
   }
@@ -237,7 +245,7 @@ export async function createSubscription(input, opts = {}) {
 
   if (!res.ok || !data?.ok) {
     const messages =
-      data?.messages || [data?.message || 'Não foi possível criar a assinatura. Verifique os dados.'];
+      data?.messages || [data?.message || t('assinar.error.create')];
     return { ok: false, status: res.status, messages };
   }
 
@@ -277,7 +285,7 @@ export async function fetchSubscriptionPayment(subscriptionId, opts = {}) {
     ));
   } catch (err) {
     if (err?.connectionFailed) {
-      return { ok: false, messages: ['Não foi possível buscar os dados de pagamento. Tente novamente.'] };
+      return { ok: false, messages: [t('assinar.error.fetch')] };
     }
     throw err;
   }
@@ -290,7 +298,7 @@ export async function fetchSubscriptionPayment(subscriptionId, opts = {}) {
   }
 
   if (!res.ok || !data?.ok) {
-    const messages = data?.messages || [data?.message || 'Não foi possível obter o pagamento.'];
+    const messages = data?.messages || [data?.message || t('assinar.error.payment')];
     return { ok: false, status: res.status, messages };
   }
 
@@ -322,15 +330,28 @@ const MIN_PHONE_DIGITS = 8;
 
 export function validateBeforeSubmit({ rail, value, name, email, cpfCnpj, mobilePhone, telefone }) {
   const errors = [];
-  if (!RAILS.some((r) => r.id === rail)) errors.push('Escolha uma forma de pagamento.');
-  if (!(Number(value) >= MIN_SUBSCRIPTION_VALUE)) errors.push(`O valor mínimo é R$ ${MIN_SUBSCRIPTION_VALUE}.`);
-  if (!name || name.trim().length < 2) errors.push('Informe seu nome.');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '')) errors.push('Informe um e-mail válido.');
+  // Messages are localized via t() (EXT-CURRENCY-02): a rejected donor sees the error
+  // in the ACTIVE locale, not pt-BR. The RULES below are UNCHANGED — in particular the
+  // CPF/CNPJ length check stays exactly as it was; only its message is localized.
+  if (!RAILS.some((r) => r.id === rail)) errors.push(t('assinar.validate.rail'));
+  // {min} keeps the money floor as a placeholder (not concatenated in code, LBR-04);
+  // `R$` in the value is BRL-only by design (see strings.assinar.js header).
+  if (!(Number(value) >= MIN_SUBSCRIPTION_VALUE)) {
+    errors.push(t('assinar.validate.min').replace('{min}', MIN_SUBSCRIPTION_VALUE));
+  }
+  if (!name || name.trim().length < 2) errors.push(t('assinar.validate.name'));
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '')) errors.push(t('assinar.validate.email'));
   const digits = String(cpfCnpj || '').replace(/\D/g, '');
-  if (digits.length !== 11 && digits.length !== 14) errors.push('Informe um CPF ou CNPJ válido.');
+  // NOTE FOR HUMAN (EXT-CURRENCY-02, out of scope here): this CPF/CNPJ length check is
+  // UNCONDITIONAL — a donor who selected a non-BR country in CountryFlagControl has no
+  // valid CPF/CNPJ to enter and hits a functional dead-end. Whether CPF/CNPJ should be
+  // conditional on nationality depends on Asaas's real rule (Asaas is a BR PSP and may
+  // require it for every payer); that is a HUMAN/data decision, so the LOGIC is left
+  // untouched here and only the message is localized.
+  if (digits.length !== 11 && digits.length !== 14) errors.push(t('assinar.validate.cpfcnpj'));
   // Phone: reject empty / too-short (undefined after strip counts as 0 digits).
   // Accept mobilePhone (JSDoc name) or telefone (pt-BR form field) interchangeably.
   const phoneDigits = String(mobilePhone || telefone || '').replace(/\D/g, '');
-  if (phoneDigits.length < MIN_PHONE_DIGITS) errors.push('Informe um telefone válido.');
+  if (phoneDigits.length < MIN_PHONE_DIGITS) errors.push(t('assinar.validate.phone'));
   return errors;
 }
