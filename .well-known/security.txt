@@ -1,0 +1,13 @@
+# MAPA FOME — security contact (RFC 9116)
+#
+# This file exists so a researcher who finds a flaw has a documented place to
+# send it. The product handles donation flows and location data about people
+# asking for food, so a silent finding is the worst outcome.
+#
+# The contact below is the same address already published as the contact point
+# in /privacy.html and /terms.html — no new channel, and no new exposure.
+
+Contact: mailto:rslgp@cin.ufpe.br
+Expires: 2027-07-21T00:00:00.000Z
+Preferred-Languages: pt-BR, en
+Canonical: https://mapafome.com.br/.well-known/security.txt
